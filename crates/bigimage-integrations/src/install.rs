@@ -229,9 +229,17 @@ fn refresh_xdg_caches(paths: &ScopePaths) {
         .status();
     if let Some(hicolor) = hicolor {
         for bin in ["gtk4-update-icon-cache", "gtk-update-icon-cache"] {
+            // `--ignore-theme-index` é obrigatório no escopo user: esta
+            // função só roda para `Scope::User` (ver `install`), e
+            // `~/.local/share/icons/hicolor` não tem `index.theme` próprio
+            // (só o tema system em `/usr/share` tem). Sem essa flag o
+            // comando recusa com "No theme index file" e — como o stderr é
+            // descartado — o cache nunca é gerado, deixando o ícone fora da
+            // busca do GNOME até um logout/login.
             let _ = Command::new(bin)
                 .arg("-q")
                 .arg("-f")
+                .arg("--ignore-theme-index")
                 .arg(hicolor)
                 .stdout(Stdio::null())
                 .stderr(Stdio::null())

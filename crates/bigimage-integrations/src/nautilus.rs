@@ -20,7 +20,7 @@
 use std::io;
 use std::path::{Path, PathBuf};
 
-use crate::scope::ScopePaths;
+use crate::scope::{Scope, ScopePaths};
 
 const STALE_TREE_ROOT: &str = "BigIris";
 const PYTHON_EXTENSION_FILENAME: &str = "bigiris-menu.py";
@@ -70,9 +70,8 @@ pub(crate) fn install_with_system_path(
     let ext_dir = paths.nautilus_python_extensions();
 
     // User-scope sobre um system-wide já presente = menu duplicado.
-    // Detecta pelo prefixo `home` do ScopePaths: tudo que não é
-    // user-scope (Scope::System / DESTDIR) tem `home == /` ou =destdir.
-    let is_user_scope = ext_dir.starts_with(&paths.home);
+    // DESTDIR may share the same prefix as home; use the explicit scope.
+    let is_user_scope = paths.scope == Scope::User;
     if is_user_scope && system_ext.exists() {
         // Limpa qualquer resíduo user-scope (.py, .pyc/__pycache__) que
         // possa ressuscitar a duplicação. Ignora erros — a próxima
@@ -160,6 +159,33 @@ mod tests {
         assert_eq!(written.len(), 1);
         let ext = paths.nautilus_python_extensions().join(PYTHON_EXTENSION_FILENAME);
         assert!(ext.exists(), "extensão python não instalada");
+    }
+
+    #[test]
+    fn packaging_keeps_extension_even_when_host_already_has_it() {
+        let tmp = TempDir::new().unwrap();
+        let host = tmp.path().join("host-extension.py");
+        std::fs::write(&host, "host stays unchanged").unwrap();
+        let paths = ScopePaths::system_with_destdir(tmp.path().join("package"));
+        let written = install_with_system_path(&paths, &host).unwrap();
+        assert_eq!(written.len(), 1);
+        assert_eq!(std::fs::read_to_string(&written[0]).unwrap(), PYTHON_EXTENSION);
+        assert_eq!(std::fs::read_to_string(&host).unwrap(), "host stays unchanged");
+        assert_eq!(paths.scope, Scope::System);
+    }
+
+    #[test]
+    fn user_install_avoids_duplicate_and_preserves_system_extension() {
+        let tmp = TempDir::new().unwrap();
+        let host = tmp.path().join("host-extension.py");
+        std::fs::write(&host, "host stays unchanged").unwrap();
+        let paths = ScopePaths::rooted_at(tmp.path().join("user"));
+        let ext = paths.nautilus_python_extensions().join(PYTHON_EXTENSION_FILENAME);
+        std::fs::create_dir_all(ext.parent().unwrap()).unwrap();
+        std::fs::write(&ext, "obsolete personal extension").unwrap();
+        assert!(install_with_system_path(&paths, &host).unwrap().is_empty());
+        assert!(!ext.exists());
+        assert_eq!(std::fs::read_to_string(&host).unwrap(), "host stays unchanged");
     }
 
     #[test]

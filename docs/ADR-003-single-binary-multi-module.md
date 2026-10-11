@@ -24,8 +24,8 @@ Duas arquiteturas foram consideradas:
 
 ## Justificativa
 
-1. **Preview ao vivo gratuito (R7).** O canvas GPU do viewer é o mesmo usado nos diálogos de edição e IA. Em dois binários, todo esse pipeline (render GPU, color management, HDR, film strip) teria de ser duplicado. Num só, é herdado.
-2. **Cache de modelo de IA em RAM.** BiRefNet carrega em ~1–3 s e ocupa centenas de MB. Um processo long-running reusa a `ort::Session` entre viewer (preview de remoção de fundo) e diálogo batch. Dois processos = duplo custo.
+1. **Componentes compartilhados.** Viewer e diálogos usam o mesmo core de decode, transformação, preview e encode, sem duplicar regras de segurança e nomes de saída.
+2. **Cache de modelo dentro de cada lote.** Uma sessão BiRefNet é reutilizada pelos arquivos processados no mesmo fluxo de IA; diálogos independentes continuam isolados em processos próprios.
 3. **Velocidade de desenvolvimento.** Um codebase, um CI, um PKGBUILD, uma submissão BigCommunity/BigLinux/Flathub.
 4. **UX sem fragmentação.** Usuário instala `bigiris` e tem tudo. Service menus disparam `bigiris --dialog=X` — mesma identidade, mesmo ícone, mesmo histórico, mesmas preferências.
 5. **Precedente sólido.** LibreOffice (soffice) faz exatamente isso: um binário, múltiplos `.desktop`, várias identidades de app percebida.
@@ -33,7 +33,7 @@ Duas arquiteturas foram consideradas:
 ## Trade-offs aceitos
 
 - **Inchaço**: binário carrega código de todos os módulos mesmo quando usuário só quer converter. Mitigado por lazy-load: widgets IA só instanciados quando o diálogo IA é aberto; feature `ai` opcional no Cargo.toml permite distro enxuta.
-- **Raio de explosão de crash**: panic em módulo X derruba tudo. Mitigado por isolamento de panics na boundary do core (rayon catch) e por diálogos serem modais short-lived com reabertura custando < 5 ms.
+- **Raio de explosão de crash**: um panic derruba o processo corrente. Os diálogos avançados são lançados como processos independentes, limitando o impacto sobre o viewer já aberto.
 - **Imagem de marca**: "Prisma" perde visibilidade como produto separado. Mitigado mantendo "Prisma" como nome do módulo de conversão nos títulos de diálogo e em material de marketing — a narrativa Íris/Prisma sobrevive sem custo arquitetural.
 
 ## Rota de reversão

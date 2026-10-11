@@ -15,6 +15,7 @@ use crate::{BigImageError, Result};
 
 /// Everything we extracted from the image's EXIF segment.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Metadata {
     /// Human-readable `(name, value)` pairs, ready to show in a sidebar.
     pub tags: Vec<(String, String)>,
@@ -39,7 +40,19 @@ impl Metadata {
 /// non-camera sources) — the caller decides whether that's notable.
 pub fn read(path: impl AsRef<Path>) -> Result<Metadata> {
     let path = path.as_ref();
-    let file = std::fs::File::open(path).map_err(BigImageError::Io)?;
+    if let Some(backend) = crate::backend::configured() {
+        return (backend.metadata)(path);
+    }
+    use std::os::unix::fs::OpenOptionsExt;
+    let file = std::fs::OpenOptions::new()
+        .read(true)
+        .custom_flags(rustix::fs::OFlags::NONBLOCK.bits() as i32)
+        .open(path)
+        .map_err(BigImageError::Io)?;
+    let info = file.metadata().map_err(BigImageError::Io)?;
+    if !info.is_file() || info.len() > 1024 * 1024 * 1024 {
+        return Err(BigImageError::InvalidInput("entrada de metadados inválida".into()));
+    }
     let mut reader = std::io::BufReader::new(file);
 
     let exif_reader = exif::Reader::new();

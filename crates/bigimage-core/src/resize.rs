@@ -48,7 +48,7 @@ impl ResizeMode {
         }
     }
 
-    fn target_dims(&self, src_w: u32, src_h: u32) -> Result<(u32, u32)> {
+    pub(crate) fn target_dims(&self, src_w: u32, src_h: u32) -> Result<(u32, u32)> {
         if src_w == 0 || src_h == 0 {
             return Err(BigImageError::InvalidInput(format!(
                 "origem com dimensão zero: {src_w}x{src_h}"
@@ -165,8 +165,7 @@ pub fn resize_file(
 
     tracing::debug!(?input, ?output, ?target, ?mode, ?filter, "resize: computing");
     let resized = apply_to(&src, mode, filter)?;
-    let output = pipeline::encode_and_cleanup(resized, output, target, opts)?;
-    Ok(ConvertOutcome::Written { output })
+    pipeline::encode_and_cleanup(resized, output, target, opts, policy)
 }
 
 /// Pure in-memory variant — resizes an already-decoded image and returns
@@ -174,6 +173,7 @@ pub fn resize_file(
 /// `crate::preview`.
 pub fn apply_to(src: &DynamicImage, mode: ResizeMode, filter: Filter) -> Result<DynamicImage> {
     let (new_w, new_h) = mode.target_dims(src.width(), src.height())?;
+    pipeline::check_dimensions(new_w, new_h, src.color().bytes_per_pixel())?;
     if (new_w, new_h) == (src.width(), src.height()) {
         return Ok(src.clone());
     }

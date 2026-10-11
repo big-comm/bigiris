@@ -18,8 +18,8 @@ use fast_image_resize::{ResizeAlg, ResizeOptions, Resizer};
 use image::DynamicImage;
 
 use crate::{
-    adjust, crop, flip, pipeline, resize, rotate, AdjustOps, CropRect, Filter, FlipAxis, Format,
-    ResizeMode, Result, Rotation,
+    adjust, crop, extent, flip, pipeline, resize, rotate, AdjustOps, CropRect, ExtentOptions,
+    ExtentSize, Filter, FlipAxis, Format, ResizeMode, Result, Rotation,
 };
 
 /// Max edge for the cached thumbnail. 800px keeps the whole preview image
@@ -51,6 +51,10 @@ pub enum PreviewOp {
     /// Rectangular crop — validated against the source's *natural* size,
     /// not the thumbnail (see [`PreviewSession::apply`] for the scaling).
     Crop(CropRect),
+    /// Canvas extension with letterbox — destination size is derived
+    /// against the source's *natural* dimensions and then scaled into the
+    /// thumbnail space inside [`PreviewSession::apply`].
+    Extent(ExtentOptions),
     /// No-op; useful when the GUI wants to show the original thumbnail.
     Identity,
 }
@@ -73,6 +77,7 @@ pub struct PreviewSession {
     /// crop rectangles from the caller's "source pixel" coordinates into
     /// the thumbnail coordinates before applying the crop.
     thumbnail_scale: f64,
+    has_gps: bool,
 }
 
 impl PreviewSession {
@@ -80,6 +85,9 @@ impl PreviewSession {
     /// cache everything in memory.
     pub fn open(input: impl AsRef<Path>) -> Result<Self> {
         let input = input.as_ref();
+        if let Some(backend) = crate::backend::configured() {
+            return (backend.preview)(input);
+        }
         let (src, source_format) = pipeline::decode_with_source_format(input)?;
         let natural_size = (src.width(), src.height());
 
@@ -92,6 +100,34 @@ impl PreviewSession {
             source_format,
             thumbnail,
             thumbnail_scale,
+            has_gps: crate::metadata::has_gps(input),
+        })
+    }
+
+    /// Reconstruct a validated preview returned by an isolated decoder.
+    pub fn from_cached(
+        input: std::path::PathBuf,
+        natural_size: (u32, u32),
+        source_format: Format,
+        thumbnail: DynamicImage,
+        has_gps: bool,
+    ) -> Result<Self> {
+        if natural_size.0 == 0
+            || natural_size.1 == 0
+            || thumbnail.width() == 0
+            || thumbnail.height() == 0
+            || thumbnail.width() > PREVIEW_MAX_EDGE
+            || thumbnail.height() > PREVIEW_MAX_EDGE
+        {
+            return Err(crate::BigImageError::InvalidInput("preview inválido".into()));
+        }
+        Ok(Self {
+            source_path: input,
+            natural_size,
+            source_format,
+            thumbnail_scale: thumbnail.width() as f64 / natural_size.0 as f64,
+            thumbnail,
+            has_gps,
         })
     }
 
@@ -121,13 +157,52 @@ impl PreviewSession {
             PreviewOp::Resize { mode, filter } => {
                 // Resize targets scale with the thumbnail so a
                 // "50% of source" preview genuinely looks like 50%.
-                resize::apply_to(&self.thumbnail, *mode, *filter)
+                let (w, h) = mode.target_dims(self.thumbnail.width(), self.thumbnail.height())?;
+                let (width, height) = bounded_size(w, h);
+                resize::apply_to(&self.thumbnail, ResizeMode::Exact { width, height }, *filter)
             }
             PreviewOp::Rotate(r) => Ok(rotate::apply_to(&self.thumbnail, *r)),
             PreviewOp::Flip(a) => Ok(flip::apply_to(&self.thumbnail, *a)),
             PreviewOp::Crop(rect) => {
                 let scaled = scale_rect(*rect, self.thumbnail_scale);
                 crop::apply_to(&self.thumbnail, scaled)
+            }
+            PreviewOp::Extent(opts) => {
+                // The thumbnail preserves the source aspect ratio, so an
+                // `Aspect` extent resolved against the thumbnail picks the
+                // same grow-axis and yields a visually identical letterbox —
+                // and being extend-only it can never come out smaller than
+                // the thumbnail. For an `Exact` target we scale it into
+                // thumbnail space but clamp to the thumbnail's own size so
+                // the canvas always contains it (independent rounding of the
+                // canvas vs. the thumbnail used to drift a pixel below it and
+                // make `resolve` reject the preview).
+                let (tw, th) = (self.thumbnail.width(), self.thumbnail.height());
+                let preview_opts = match opts.size {
+                    ExtentSize::Aspect { .. } => *opts,
+                    ExtentSize::Exact { width, height } => {
+                        let pw = ((width as f64) * self.thumbnail_scale).round().max(f64::from(tw))
+                            as u32;
+                        let ph = ((height as f64) * self.thumbnail_scale).round().max(f64::from(th))
+                            as u32;
+                        ExtentOptions { size: ExtentSize::Exact { width: pw, height: ph }, ..*opts }
+                    }
+                };
+                let (w, h) = preview_opts.size.resolve(tw, th)?;
+                let (width, height) = bounded_size(w, h);
+                let scale = f64::from(width) / f64::from(w);
+                let src = resize::apply_to(
+                    &self.thumbnail,
+                    ResizeMode::Exact {
+                        width: ((f64::from(tw) * scale).round() as u32).clamp(1, width),
+                        height: ((f64::from(th) * scale).round() as u32).clamp(1, height),
+                    },
+                    Filter::Lanczos3,
+                )?;
+                extent::apply_to(
+                    &src,
+                    &ExtentOptions { size: ExtentSize::Exact { width, height }, ..preview_opts },
+                )
             }
         }
     }
@@ -161,12 +236,15 @@ impl PreviewSession {
 
     /// Whether the source file has GPS coordinates in its EXIF. Used by
     /// the smart-prompt banner ("Esta imagem contém sua localização…")
-    /// in the convert / resize dialogs. Not cached, so the first call
-    /// opens the file a second time; subsequent ones are cheap because
-    /// the OS has the header in page cache.
+    /// in the convert / resize dialogs. Cached during background preparation.
     pub fn source_has_gps(&self) -> bool {
-        crate::metadata::has_gps(&self.source_path)
+        self.has_gps
     }
+}
+
+fn bounded_size(w: u32, h: u32) -> (u32, u32) {
+    let scale = (f64::from(PREVIEW_MAX_EDGE) / f64::from(w.max(h))).min(1.0);
+    (((f64::from(w) * scale).round() as u32).max(1), ((f64::from(h) * scale).round() as u32).max(1))
 }
 
 /// Resize `img` so the longest edge is ≤ `max_edge`; returns a clone when
@@ -306,6 +384,25 @@ mod tests {
             .unwrap();
         // 400x400 thumbnail at 50% → 200x200.
         assert_eq!((halved.width(), halved.height()), (200, 200));
+    }
+
+    #[test]
+    fn extent_aspect_grows_preview_canvas() {
+        // Source 800x400 (2:1, fits the cap so thumbnail == source).
+        // Aspect 1:1 → final 800x800 → thumbnail-space preview 800x800.
+        let dir = TempDir::new().unwrap();
+        let src = write_fixture(dir.path(), "e.png", 800, 400);
+        let sess = PreviewSession::open(&src).unwrap();
+        let opts = ExtentOptions {
+            size: ExtentSize::Aspect { w: 1, h: 1 },
+            background: [255, 0, 0, 0xFF],
+            gravity: crate::Gravity::Center,
+        };
+        let out = sess.apply(&PreviewOp::Extent(opts)).unwrap();
+        assert_eq!((out.width(), out.height()), (800, 800));
+        // Top-row corner is bg (red), source sits centered vertically.
+        let rgba = out.to_rgba8();
+        assert_eq!(rgba.get_pixel(0, 0).0, [255, 0, 0, 0xFF]);
     }
 
     #[test]

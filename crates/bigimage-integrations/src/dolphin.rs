@@ -7,7 +7,7 @@ use std::io;
 use std::path::PathBuf;
 
 use crate::action::{Action, ACTIONS, TOP_LEVEL_LABEL};
-use crate::safe_fs::safe_write;
+use crate::safe_fs::safe_write_with_mode;
 use crate::scope::{remove_matching, ScopePaths};
 
 /// Install one `.desktop` per [`Action`] into `~/.local/share/kio/servicemenus/`.
@@ -17,7 +17,10 @@ pub fn install(paths: &ScopePaths) -> io::Result<Vec<PathBuf>> {
     let mut written = Vec::new();
     for action in ACTIONS {
         let file = dir.join(file_name(action));
-        safe_write(&file, render(action))?;
+        // Dolphin treats executable permission as the trust marker for
+        // user-owned ServiceMenus and silently rejects a regular `0644`
+        // desktop file. Re-applying the mode also repairs older installs.
+        safe_write_with_mode(&file, render(action), 0o755)?;
         written.push(file);
     }
     Ok(written)
@@ -87,6 +90,9 @@ mod tests {
 
     #[test]
     fn install_writes_one_file_per_action() {
+        #[cfg(target_os = "linux")]
+        use std::os::unix::fs::PermissionsExt;
+
         let tmp = TempDir::new().unwrap();
         let paths = ScopePaths::rooted_at(tmp.path());
         let written = install(&paths).unwrap();
@@ -96,6 +102,12 @@ mod tests {
             let name = path.file_name().unwrap().to_string_lossy();
             assert!(name.starts_with("bigiris-"));
             assert!(name.ends_with(".desktop"));
+            #[cfg(target_os = "linux")]
+            assert_eq!(
+                std::fs::metadata(path).unwrap().permissions().mode() & 0o777,
+                0o755,
+                "Dolphin rejects non-executable user ServiceMenus"
+            );
         }
     }
 

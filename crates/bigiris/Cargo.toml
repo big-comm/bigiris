@@ -1,6 +1,6 @@
 [package]
 name = "bigiris"
-description = "Modern image viewer and converter for Linux (BigLinux family)"
+description = "Fast image viewer and batch converter for Linux"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -14,7 +14,7 @@ name = "bigiris"
 path = "src/main.rs"
 
 [dependencies]
-bigimage-core = { path = "../bigimage-core" }
+bigimage-core = { path = "../bigimage-core", features = ["serde"] }
 bigimage-ai = { path = "../bigimage-ai" }
 bigimage-integrations = { path = "../bigimage-integrations" }
 clap.workspace = true
@@ -27,6 +27,11 @@ libadwaita = { workspace = true, optional = true }
 # and the GIF animate path needs it too. Compile cost is shared anyway
 # because `bigimage-core` already pulls it in.
 image.workspace = true
+serde.workspace = true
+toml.workspace = true
+serde_json = "1"
+tempfile = "3"
+rustix = { version = "1", features = ["fs"] }
 # i18n: libintl wrapper. Always-on (no extra system deps — libintl is in
 # glibc on Linux). Translations live under data/po; .mo files are
 # compiled by the PKGBUILD and loaded from /usr/share/locale.
@@ -37,9 +42,6 @@ gettext-rs = { workspace = true }
 # path. Trivial integration cost (one `#[global_allocator]` line) and no
 # runtime dep — the allocator is statically linked.
 mimalloc = { version = "0.1", default-features = false }
-
-[dev-dependencies]
-tempfile = "3"
 
 [features]
 # Off by default so CI and headless builds stay lean (no GTK/libadwaita

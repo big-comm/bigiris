@@ -1,0 +1,301 @@
+--- /tmp/claude-1000/-home-athayde/f6348541-d1ea-438f-b33d-79f67a1958a8/scratchpad/gui.rs.antes	2026-09-09 19:21:29.103975516 -0300
++++ crates/bigiris/src/gui.rs	2026-09-09 19:23:22.036020430 -0300
+@@ -61,6 +61,10 @@
+ 
+ /// Start the viewer event loop. Returns the exit code GTK produced.
+ pub fn run_viewer(files: Vec<PathBuf>) -> i32 {
++    // Um clique no gerenciador de arquivos entrega um caminho só. Sem isto,
++    // `files.len() == 1` desliga setas, film strip e slideshow, e o
++    // visualizador vira uma janela de imagem única.
++    let (files, start_idx) = expand_to_folder(files);
+     // NON_UNIQUE: sem isso o GApplication tenta single-instance via D-Bus
+     // e, se uma janela do BigIris tá se fechando no momento em que outra
+     // tenta abrir (ex.: dashboard spawna novo processo e fecha), a nova
+@@ -74,7 +78,7 @@
+     let files = Rc::new(files);
+     app.connect_activate(move |app| {
+         install_theater_css();
+-        build_window(app, files.clone()).present();
++        build_window(app, files.clone(), start_idx).present();
+     });
+ 
+     // Empty argv: clap already consumed the interesting bits and we don't want
+@@ -83,6 +87,142 @@
+     i32::from(u8::from(code))
+ }
+ 
++/// Quando o visualizador recebe um arquivo só, varre a pasta dele e
++/// devolve todas as imagens irmãs em ordem natural, junto do índice do
++/// arquivo pedido. É o que faz o clique no gerenciador de arquivos abrir
++/// a coleção inteira em vez de uma imagem sozinha: setas, `Home`/`End`,
++/// film strip e slideshow já operam sobre `files`, então basta entregar a
++/// lista certa.
++///
++/// Com dois ou mais arquivos na entrada nada muda: quem passou uma seleção
++/// explícita na linha de comando quer exatamente aquela seleção.
++///
++/// Qualquer tropeço na varredura (pasta ilegível, arquivo pedido fora da
++/// lista de formatos) cai de volta na entrada original. Abrir a imagem que
++/// o usuário pediu importa mais do que oferecer navegação.
++fn expand_to_folder(files: Vec<PathBuf>) -> (Vec<PathBuf>, usize) {
++    if files.len() != 1 {
++        return (files, 0);
++    }
++
++    let target = &files[0];
++    if !target.is_file() {
++        return (files, 0);
++    }
++
++    // `parent()` de um caminho sem diretório ("foto.png") devolve "", que
++    // não é legível por read_dir; nesse caso a pasta é a atual.
++    let dir = match target.parent() {
++        Some(d) if !d.as_os_str().is_empty() => d.to_path_buf(),
++        Some(_) => PathBuf::from("."),
++        None => return (files, 0),
++    };
++
++    let Ok(entries) = std::fs::read_dir(&dir) else {
++        return (files, 0);
++    };
++
++    let mut siblings: Vec<PathBuf> = entries
++        .filter_map(|entry| entry.ok())
++        .map(|entry| entry.path())
++        .filter(|path| path.is_file() && is_viewable(path))
++        .collect();
++
++    if siblings.len() < 2 {
++        return (files, 0);
++    }
++
++    siblings.sort_by(|a, b| {
++        let an = a.file_name().unwrap_or_default().to_string_lossy().into_owned();
++        let bn = b.file_name().unwrap_or_default().to_string_lossy().into_owned();
++        // Desempate pelo nome cru para a ordem não depender da ordem de
++        // entrega do read_dir quando dois nomes só diferem em maiúsculas.
++        natural_cmp(&an, &bn).then_with(|| an.cmp(&bn))
++    });
++
++    // O gerenciador de arquivos pode entregar symlink ou caminho relativo
++    // diferente do que o read_dir devolve, então o caminho canônico decide.
++    let canonical_target = target.canonicalize().ok();
++    let found = siblings.iter().position(|path| {
++        path == target
++            || (canonical_target.is_some() && path.canonicalize().ok() == canonical_target)
++    });
++
++    match found {
++        Some(idx) => (siblings, idx),
++        None => (files, 0),
++    }
++}
++
++/// `true` quando a extensão do arquivo é um formato que o BigIris abre.
++/// Usa a mesma tabela do resto do programa ([`bigimage_core::Format`]),
++/// para a varredura da pasta não divergir do que o visualizador aceita.
++///
++/// A checagem é por extensão de propósito: farejar o conteúdo de cada
++/// arquivo custaria uma leitura por item da pasta só para montar a lista.
++/// Um arquivo com extensão mentirosa continua abrindo normalmente quando é
++/// ele o alvo do clique, porque aí quem decodifica é
++/// [`bigimage_core::open_image`], que fareja o conteúdo.
++fn is_viewable(path: &Path) -> bool {
++    path.extension()
++        .and_then(|ext| ext.to_str())
++        .is_some_and(|ext| bigimage_core::Format::parse(ext).is_ok())
++}
++
++/// Compara nomes tratando sequências de dígitos como número, e não como
++/// texto. É o que põe `2.png` antes de `10.png`; a ordem lexicográfica pura
++/// devolveria `1, 10, 100, 11, …`, que é justamente o padrão das coleções
++/// numeradas de wallpaper e das fotos saídas de câmera (`IMG_2.jpg`).
++///
++/// Entre dois números de mesmo valor, vence o que tem menos zeros à
++/// esquerda, então `7` vem antes de `007` e a ordem fica estável.
++fn natural_cmp(a: &str, b: &str) -> std::cmp::Ordering {
++    use std::cmp::Ordering;
++
++    let a: Vec<char> = a.chars().collect();
++    let b: Vec<char> = b.chars().collect();
++    let (mut i, mut j) = (0usize, 0usize);
++
++    while i < a.len() && j < b.len() {
++        if a[i].is_ascii_digit() && b[j].is_ascii_digit() {
++            let start_a = i;
++            while i < a.len() && a[i].is_ascii_digit() {
++                i += 1;
++            }
++            let start_b = j;
++            while j < b.len() && b[j].is_ascii_digit() {
++                j += 1;
++            }
++
++            let num_a: String = a[start_a..i].iter().collect();
++            let num_b: String = b[start_b..j].iter().collect();
++            let trim_a = num_a.trim_start_matches('0');
++            let trim_b = num_b.trim_start_matches('0');
++
++            // Sem zeros à esquerda, mais dígitos significa número maior.
++            let ord = trim_a.len().cmp(&trim_b.len()).then_with(|| trim_a.cmp(trim_b));
++            if ord != Ordering::Equal {
++                return ord;
++            }
++            let ord = num_a.len().cmp(&num_b.len());
++            if ord != Ordering::Equal {
++                return ord;
++            }
++        } else {
++            let ca = a[i].to_lowercase().next().unwrap_or(a[i]);
++            let cb = b[j].to_lowercase().next().unwrap_or(b[j]);
++            let ord = ca.cmp(&cb);
++            if ord != Ordering::Equal {
++                return ord;
++            }
++            i += 1;
++            j += 1;
++        }
++    }
++
++    (a.len() - i).cmp(&(b.len() - j))
++}
++
+ /// Mutable viewer state shared between the window and its controllers.
+ ///
+ /// The UI is edge-triggered: cursor near the top reveals the header,
+@@ -179,7 +319,11 @@
+     }
+ }
+ 
+-fn build_window(app: &adw::Application, files: Rc<Vec<PathBuf>>) -> adw::ApplicationWindow {
++fn build_window(
++    app: &adw::Application,
++    files: Rc<Vec<PathBuf>>,
++    start_idx: usize,
++) -> adw::ApplicationWindow {
+     let window = adw::ApplicationWindow::builder()
+         .application(app)
+         .default_width(1024)
+@@ -315,7 +459,7 @@
+ 
+     let state = Rc::new(RefCell::new(ViewerState {
+         files: files.clone(),
+-        idx: 0,
++        idx: start_idx.min(files.len().saturating_sub(1)),
+         picture: picture.clone(),
+         scroller: scroller.clone(),
+         title: title.clone(),
+@@ -692,6 +836,16 @@
+         }
+         s.strip_revealer.set_reveal_child(true);
+     }
++    // A faixa nasce rolada no começo. Como o visualizador agora pode abrir
++    // no meio da pasta (clique num arquivo qualquer), a miniatura ativa
++    // ficaria fora de vista na primeira vez que o strip aparece. Recentrar
++    // fica para o idle seguinte porque, enquanto o revealer não alocou a
++    // faixa, `compute_bounds` devolve largura zero e a conta de centragem
++    // não teria em que se apoiar.
++    {
++        let clone = state.clone();
++        glib::idle_add_local_once(move || refresh_film_strip_active(&clone));
++    }
+     cancel_bottom_hide(state);
+     if state.borrow().ui_pinned {
+         return;
+@@ -6360,3 +6514,96 @@
+         assert_eq!(p, PathBuf::from("solo_nobg.png"));
+     }
+ }
++
++#[cfg(test)]
++mod folder_nav_tests {
++    use super::{expand_to_folder, is_viewable, natural_cmp};
++    use std::cmp::Ordering;
++    use std::path::{Path, PathBuf};
++
++    fn touch(dir: &Path, name: &str) -> PathBuf {
++        let path = dir.join(name);
++        std::fs::write(&path, b"").expect("escrever arquivo de teste");
++        path
++    }
++
++    #[test]
++    fn digits_compare_as_numbers_not_text() {
++        assert_eq!(natural_cmp("2.png", "10.png"), Ordering::Less);
++        assert_eq!(natural_cmp("10.png", "2.png"), Ordering::Greater);
++        assert_eq!(natural_cmp("100.png", "99.png"), Ordering::Greater);
++    }
++
++    #[test]
++    fn equal_values_order_by_leading_zeros() {
++        assert_eq!(natural_cmp("7.png", "007.png"), Ordering::Less);
++        assert_eq!(natural_cmp("7.png", "7.png"), Ordering::Equal);
++    }
++
++    #[test]
++    fn text_compares_case_insensitively() {
++        assert_eq!(natural_cmp("alpha.png", "Beta.png"), Ordering::Less);
++        assert_eq!(natural_cmp("IMG_2.jpg", "img_10.jpg"), Ordering::Less);
++    }
++
++    #[test]
++    fn viewable_follows_the_core_format_table() {
++        assert!(is_viewable(Path::new("a.png")));
++        assert!(is_viewable(Path::new("a.JPEG")));
++        assert!(is_viewable(Path::new("a.avif")));
++        assert!(!is_viewable(Path::new("a.txt")));
++        assert!(!is_viewable(Path::new("sem-extensao")));
++    }
++
++    #[test]
++    fn single_file_expands_to_its_folder_in_natural_order() {
++        let dir = tempfile::tempdir().expect("tempdir");
++        for name in ["10.png", "2.png", "1.png", "notas.txt"] {
++            touch(dir.path(), name);
++        }
++        let clicked = dir.path().join("2.png");
++
++        let (files, idx) = expand_to_folder(vec![clicked.clone()]);
++
++        let names: Vec<String> =
++            files.iter().map(|p| p.file_name().unwrap().to_string_lossy().into_owned()).collect();
++        assert_eq!(names, vec!["1.png", "2.png", "10.png"], "o .txt fica de fora");
++        assert_eq!(idx, 1, "abre posicionado no arquivo clicado");
++    }
++
++    #[test]
++    fn explicit_selection_is_left_alone() {
++        let dir = tempfile::tempdir().expect("tempdir");
++        let a = touch(dir.path(), "1.png");
++        let b = touch(dir.path(), "2.png");
++        touch(dir.path(), "3.png");
++
++        let (files, idx) = expand_to_folder(vec![a.clone(), b.clone()]);
++
++        assert_eq!(files, vec![a, b], "seleção da linha de comando é respeitada");
++        assert_eq!(idx, 0);
++    }
++
++    #[test]
++    fn lone_image_in_folder_stays_alone() {
++        let dir = tempfile::tempdir().expect("tempdir");
++        let only = touch(dir.path(), "unica.png");
++        touch(dir.path(), "leia-me.txt");
++
++        let (files, idx) = expand_to_folder(vec![only.clone()]);
++
++        assert_eq!(files, vec![only]);
++        assert_eq!(idx, 0);
++    }
++
++    #[test]
++    fn missing_file_falls_back_to_the_input() {
++        let dir = tempfile::tempdir().expect("tempdir");
++        let ghost = dir.path().join("nao-existe.png");
++
++        let (files, idx) = expand_to_folder(vec![ghost.clone()]);
++
++        assert_eq!(files, vec![ghost]);
++        assert_eq!(idx, 0);
++    }
++}

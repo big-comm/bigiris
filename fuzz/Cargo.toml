@@ -1,0 +1,30 @@
+[package]
+name = "bigiris-fuzz"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+bigimage-core = { path = "../crates/bigimage-core" }
+tempfile = "3"
+image = { version = "0.25", default-features = false }
+
+[[bin]]
+name = "decode"
+path = "fuzz_targets/decode.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "icc"
+path = "fuzz_targets/icc.rs"
+test = false
+doc = false
+bench = false
+
+[workspace]

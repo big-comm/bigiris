@@ -14,15 +14,21 @@ use thiserror::Error;
 
 pub mod adjust;
 pub mod animate;
+pub mod backend;
+pub mod color;
+mod container_bounds;
+pub mod content;
 mod convert;
 pub mod crop;
 mod encode;
+pub mod extent;
 pub mod flip;
 mod format;
 pub mod metadata;
 mod pipeline;
 pub mod preview;
 pub mod resize;
+pub mod resources;
 pub mod rotate;
 
 pub use adjust::{adjust_file, AdjustOps};
@@ -30,6 +36,7 @@ pub use animate::{make_gif, AnimateOptions, LoopMode};
 pub use convert::{convert_file, convert_file_to, ConvertOutcome, OverwritePolicy};
 pub use crop::{crop_file, CropRect};
 pub use encode::EncodeOptions;
+pub use extent::{extent_file, parse_hex_color, ExtentOptions, ExtentSize, Gravity};
 pub use flip::{flip_file, FlipAxis};
 pub use format::Format;
 pub use metadata::Metadata;
@@ -52,13 +59,29 @@ pub fn version() -> &'static str {
 /// valid PNG/JPEG/etc. Sniffing the header avoids the false negative; on a
 /// well-named file it costs the same.
 pub fn open_image(path: impl AsRef<std::path::Path>) -> image::ImageResult<image::DynamicImage> {
-    image::ImageReader::open(path.as_ref())?.with_guessed_format()?.decode()
+    let path = path.as_ref();
+    pipeline::decode_image(path).map(|(img, _)| img)
 }
 
 /// Read just the dimensions of an image, dispatching the decoder by content.
 /// See [`open_image`] for why this matters.
 pub fn image_dimensions(path: impl AsRef<std::path::Path>) -> image::ImageResult<(u32, u32)> {
-    image::ImageReader::open(path.as_ref())?.with_guessed_format()?.into_dimensions()
+    if let Some(backend) = backend::configured() {
+        return (backend.dimensions)(path.as_ref());
+    }
+    pipeline::bounded_dimensions(path.as_ref())
+}
+
+/// Encode pixels atomically with shared color, format and privacy policy.
+/// This is also used by the viewer and AI outputs instead of ad-hoc writes.
+pub fn save_image(
+    image: image::DynamicImage,
+    output: impl AsRef<std::path::Path>,
+    target: Format,
+    options: &EncodeOptions,
+    policy: OverwritePolicy,
+) -> Result<ConvertOutcome> {
+    pipeline::encode_and_cleanup(image, output.as_ref().to_path_buf(), target, options, policy)
 }
 
 /// Errors returned by core pipelines.

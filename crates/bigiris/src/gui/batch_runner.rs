@@ -22,6 +22,8 @@
 //! batch is skipped cleanly.
 
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering};
+use std::sync::{mpsc, Arc};
 use std::time::{Duration, Instant};
 
 use bigimage_core::ConvertOutcome;
@@ -135,7 +137,7 @@ pub(super) fn finish_dialog(
 }
 
 /// Progress message sent from the worker pool to the UI poll.
-enum AsyncBatchEvent {
+pub(super) enum AsyncBatchEvent {
     /// One file finished (in any of the workers, in any order). `done`
     /// is the cumulative count of finished files; `total` is fixed at
     /// the start. `file` is the bare file name (no directory) of the
@@ -153,16 +155,136 @@ enum AsyncBatchEvent {
         elapsed: Duration,
         bytes_in: u64,
         bytes_out: u64,
+        done: usize,
+        total: usize,
+        cancelled: bool,
     },
 }
 
-/// Pick a worker count that uses most of the box but never starves the
-/// GUI thread. On a 16-core desktop we burn 15 threads on the batch and
-/// leave one for the main loop / file manager / browser. On a 2-core
-/// laptop we still parallelize across both cores (saturating `max(1)`
-/// keeps single-core hardware functional).
-fn worker_pool_size() -> usize {
-    std::thread::available_parallelism().map(|n| n.get().saturating_sub(1).max(1)).unwrap_or(1)
+/// Spawn the GTK-independent worker pool. The generic dialog and the richer
+/// folder/batch window share this exact engine, so progress, cancellation,
+/// parallelism and accounting cannot drift apart again.
+pub(super) fn spawn_batch_workers<W>(
+    files: Vec<PathBuf>,
+    work: W,
+    cancelled: Arc<AtomicBool>,
+) -> mpsc::Receiver<AsyncBatchEvent>
+where
+    W: Fn(&Path) -> bigimage_core::Result<ConvertOutcome> + Send + Sync + 'static,
+{
+    let (tx, rx) = mpsc::channel::<AsyncBatchEvent>();
+    std::thread::spawn(move || {
+        let total = files.len();
+        let start = Instant::now();
+        let bytes_in = Arc::new(AtomicU64::new(0));
+        let files = Arc::new(files);
+        let next_idx = Arc::new(AtomicUsize::new(0));
+        let progress_done = Arc::new(AtomicUsize::new(0));
+        let bytes_out = Arc::new(AtomicU64::new(0));
+        let work = Arc::new(work);
+        let n_workers = bigimage_core::resources::batch_worker_count(&files);
+
+        let workers: Vec<_> = (0..n_workers)
+            .map(|_| {
+                let files = files.clone();
+                let next_idx = next_idx.clone();
+                let progress_done = progress_done.clone();
+                let bytes_out = bytes_out.clone();
+                let bytes_in = bytes_in.clone();
+                let cancelled = cancelled.clone();
+                let work = work.clone();
+                let tx = tx.clone();
+                std::thread::spawn(move || {
+                    let mut ok = 0usize;
+                    let mut skip = 0usize;
+                    let mut fail = 0usize;
+                    let mut first_err: Option<String> = None;
+                    loop {
+                        if cancelled.load(Ordering::Relaxed) {
+                            break;
+                        }
+                        let idx = next_idx.fetch_add(1, Ordering::Relaxed);
+                        if idx >= total {
+                            break;
+                        }
+                        let path = &files[idx];
+                        let display = path
+                            .file_name()
+                            .map(|n| n.to_string_lossy().into_owned())
+                            .unwrap_or_default();
+                        let input_bytes = std::fs::metadata(path).map(|m| m.len()).unwrap_or(0);
+                        let result =
+                            std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| work(path)))
+                                .unwrap_or_else(|_| {
+                                    Err(bigimage_core::BigImageError::Other(
+                                        "falha inesperada no worker".to_string(),
+                                    ))
+                                });
+                        match result {
+                            Ok(ConvertOutcome::Written { output }) => {
+                                ok += 1;
+                                bytes_in.fetch_add(input_bytes, Ordering::Relaxed);
+                                if let Ok(meta) = std::fs::metadata(&output) {
+                                    bytes_out.fetch_add(meta.len(), Ordering::Relaxed);
+                                }
+                            }
+                            Ok(ConvertOutcome::Skipped { .. }) => skip += 1,
+                            Err(e) => {
+                                fail += 1;
+                                if first_err.is_none() {
+                                    first_err = Some(format!("{}: {e}", path.display()));
+                                }
+                            }
+                        }
+                        let done = progress_done.fetch_add(1, Ordering::Relaxed) + 1;
+                        if tx
+                            .send(AsyncBatchEvent::Progress { done, total, file: display })
+                            .is_err()
+                        {
+                            break;
+                        }
+                    }
+                    (ok, skip, fail, first_err)
+                })
+            })
+            .collect();
+
+        let mut ok = 0usize;
+        let mut skip = 0usize;
+        let mut fail = 0usize;
+        let mut first_err: Option<String> = None;
+        for handle in workers {
+            match handle.join() {
+                Ok((local_ok, local_skip, local_fail, local_first_err)) => {
+                    ok += local_ok;
+                    skip += local_skip;
+                    fail += local_fail;
+                    if first_err.is_none() {
+                        first_err = local_first_err;
+                    }
+                }
+                Err(_) => {
+                    fail += 1;
+                    first_err
+                        .get_or_insert_with(|| "um worker terminou inesperadamente".to_string());
+                }
+            }
+        }
+        let done = progress_done.load(Ordering::Relaxed);
+        let _ = tx.send(AsyncBatchEvent::Done {
+            ok,
+            skip,
+            fail,
+            first_err,
+            elapsed: start.elapsed(),
+            bytes_in: bytes_in.load(Ordering::Relaxed),
+            bytes_out: bytes_out.load(Ordering::Relaxed),
+            done,
+            total,
+            cancelled: cancelled.load(Ordering::Relaxed),
+        });
+    });
+    rx
 }
 
 /// Run a per-file batch across a worker pool, polling progress on the
@@ -188,11 +310,6 @@ pub(super) fn run_batch_async<W>(
 ) where
     W: Fn(&Path) -> bigimage_core::Result<ConvertOutcome> + Send + Sync + 'static,
 {
-    use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
-    use std::sync::mpsc;
-    use std::sync::Arc;
-
-    let (tx, rx) = mpsc::channel::<AsyncBatchEvent>();
     let cancelled = Arc::new(AtomicBool::new(false));
 
     {
@@ -203,103 +320,7 @@ pub(super) fn run_batch_async<W>(
         });
     }
 
-    let coordinator_cancelled = cancelled.clone();
-    std::thread::spawn(move || {
-        let total = files.len();
-        let start = Instant::now();
-        // Sum input bytes upfront — cheap (one stat per file) and
-        // sequential so the order is stable. We only count files we can
-        // stat; missing files surface later as a Decode error per-file.
-        let bytes_in: u64 =
-            files.iter().filter_map(|p| std::fs::metadata(p).ok()).map(|m| m.len()).sum();
-        let files = Arc::new(files);
-        let next_idx = Arc::new(AtomicUsize::new(0));
-        let progress_done = Arc::new(AtomicUsize::new(0));
-        let bytes_out = Arc::new(std::sync::atomic::AtomicU64::new(0));
-        let work = Arc::new(work);
-        let n_workers = worker_pool_size().min(total.max(1));
-
-        let workers: Vec<_> = (0..n_workers)
-            .map(|_| {
-                let files = files.clone();
-                let next_idx = next_idx.clone();
-                let progress_done = progress_done.clone();
-                let bytes_out = bytes_out.clone();
-                let cancelled = coordinator_cancelled.clone();
-                let work = work.clone();
-                let tx = tx.clone();
-                std::thread::spawn(move || {
-                    // Per-thread tally — merged at the end so we don't
-                    // need a Mutex for the counters.
-                    let mut ok = 0usize;
-                    let mut skip = 0usize;
-                    let mut fail = 0usize;
-                    let mut first_err: Option<String> = None;
-                    loop {
-                        if cancelled.load(Ordering::Relaxed) {
-                            break;
-                        }
-                        let idx = next_idx.fetch_add(1, Ordering::Relaxed);
-                        if idx >= total {
-                            break;
-                        }
-                        let path = &files[idx];
-                        let display = path
-                            .file_name()
-                            .map(|n| n.to_string_lossy().into_owned())
-                            .unwrap_or_default();
-                        match work(path) {
-                            Ok(ConvertOutcome::Written { output }) => {
-                                ok += 1;
-                                if let Ok(meta) = std::fs::metadata(&output) {
-                                    bytes_out.fetch_add(meta.len(), Ordering::Relaxed);
-                                }
-                            }
-                            Ok(ConvertOutcome::Skipped { .. }) => skip += 1,
-                            Err(e) => {
-                                fail += 1;
-                                if first_err.is_none() {
-                                    first_err = Some(format!("{}: {e}", path.display()));
-                                }
-                            }
-                        }
-                        let done = progress_done.fetch_add(1, Ordering::Relaxed) + 1;
-                        let _ = tx.send(AsyncBatchEvent::Progress { done, total, file: display });
-                    }
-                    (ok, skip, fail, first_err)
-                })
-            })
-            .collect();
-
-        // Merge per-thread tallies. `first_err` keeps the lexicographically
-        // first non-None seen — tally order matches worker spawn order so
-        // results are deterministic given the same input list.
-        let mut ok = 0usize;
-        let mut skip = 0usize;
-        let mut fail = 0usize;
-        let mut first_err: Option<String> = None;
-        for h in workers {
-            if let Ok((l_ok, l_skip, l_fail, l_first_err)) = h.join() {
-                ok += l_ok;
-                skip += l_skip;
-                fail += l_fail;
-                if first_err.is_none() {
-                    first_err = l_first_err;
-                }
-            }
-        }
-        let elapsed = start.elapsed();
-        let bytes_out = bytes_out.load(Ordering::Relaxed);
-        let _ = tx.send(AsyncBatchEvent::Done {
-            ok,
-            skip,
-            fail,
-            first_err,
-            elapsed,
-            bytes_in,
-            bytes_out,
-        });
-    });
+    let rx = spawn_batch_workers(files, work, cancelled);
 
     gtk4::glib::timeout_add_local(std::time::Duration::from_millis(50), move || loop {
         match rx.try_recv() {
@@ -314,6 +335,7 @@ pub(super) fn run_batch_async<W>(
                 elapsed,
                 bytes_in,
                 bytes_out,
+                ..
             }) => {
                 finish_dialog(
                     &status,
@@ -334,4 +356,76 @@ pub(super) fn run_batch_async<W>(
             Err(mpsc::TryRecvError::Disconnected) => return gtk4::glib::ControlFlow::Break,
         }
     });
+}
+
+#[cfg(test)]
+mod worker_tests {
+    use super::*;
+
+    fn summary(rx: mpsc::Receiver<AsyncBatchEvent>) -> AsyncBatchEvent {
+        loop {
+            let event = rx.recv_timeout(Duration::from_secs(5)).expect("workers failed to finish");
+            if matches!(event, AsyncBatchEvent::Done { .. }) {
+                return event;
+            }
+        }
+    }
+
+    #[test]
+    fn cancellation_before_start_processes_no_files() {
+        let cancelled = Arc::new(AtomicBool::new(true));
+        let rx = spawn_batch_workers(
+            vec![PathBuf::from("unread.png")],
+            |_| panic!("work after cancellation"),
+            cancelled,
+        );
+        assert!(matches!(summary(rx), AsyncBatchEvent::Done { done: 0, cancelled: true, .. }));
+    }
+
+    #[test]
+    fn worker_panic_is_reported_as_failure_without_losing_other_jobs() {
+        let dir = tempfile::tempdir().unwrap();
+        let files: Vec<_> = (0..10)
+            .map(|i| {
+                let path = dir.path().join(format!("{i}.png"));
+                image::RgbImage::new(4, 4).save(&path).unwrap();
+                path
+            })
+            .collect();
+        let rx = spawn_batch_workers(
+            files,
+            |path| {
+                if path.file_name().unwrap() == "3.png" {
+                    panic!("synthetic failure");
+                }
+                Ok(ConvertOutcome::Skipped { output: path.to_path_buf() })
+            },
+            Arc::new(AtomicBool::new(false)),
+        );
+        assert!(matches!(summary(rx), AsyncBatchEvent::Done { fail: 1, skip: 9, done: 10, .. }));
+    }
+
+    #[test]
+    fn compression_accounting_excludes_skipped_inputs() {
+        let dir = tempfile::tempdir().unwrap();
+        let written = dir.path().join("written.png");
+        let skipped = dir.path().join("skipped.png");
+        std::fs::write(&written, [0u8; 10]).unwrap();
+        std::fs::write(&skipped, [0u8; 100]).unwrap();
+        let rx = spawn_batch_workers(
+            vec![written, skipped],
+            |path| {
+                if path.file_name().unwrap() == "written.png" {
+                    Ok(ConvertOutcome::Written { output: path.to_path_buf() })
+                } else {
+                    Ok(ConvertOutcome::Skipped { output: path.to_path_buf() })
+                }
+            },
+            Arc::new(AtomicBool::new(false)),
+        );
+        assert!(matches!(
+            summary(rx),
+            AsyncBatchEvent::Done { ok: 1, skip: 1, bytes_in: 10, bytes_out: 10, .. }
+        ));
+    }
 }

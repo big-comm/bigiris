@@ -1,15 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //! Target encoding formats and their metadata.
 //!
-//! Three tiers of support (see PLAN.md §3.2):
-//!
-//! - **Tier 1** — pure Rust + one system lib (libdav1d for AVIF decode). Always
-//!   on: PNG, JPEG, WebP, TIFF, BMP, GIF, ICO, PNM, TGA, QOI, HDR, OpenEXR, AVIF.
-//! - **Tier 2** — opt-in behind Cargo features, requires C system libs or extra
-//!   tooling: HEIC/HEIF (`heic`), JPEG XL (`jxl`), camera RAW (`raw`). Feature
-//!   flags are reserved in `Cargo.toml`; decoders land in a follow-up iteration.
-//! - **Tier 3** — exotic read-only formats (PSD, XCF, KRA, SVG vector, PDF
-//!   multi-page). Roadmap only.
+//! The enum is the single source of truth for formats the current build can
+//! actually decode and encode. Future formats are added only with a working
+//! implementation, so feature discovery and desktop metadata stay honest.
 
 use image::ImageFormat;
 
@@ -110,7 +104,7 @@ impl Format {
 
     /// Map an [`ImageFormat`] back to one of our variants. Returns `None` if
     /// the `image` crate surfaced a format we haven't promoted here yet.
-    pub(crate) fn from_image_format(fmt: ImageFormat) -> Option<Self> {
+    pub fn from_image_format(fmt: ImageFormat) -> Option<Self> {
         Some(match fmt {
             ImageFormat::Png => Format::Png,
             ImageFormat::Jpeg => Format::Jpeg,

@@ -16,14 +16,15 @@
 #[global_allocator]
 static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
+mod codec;
 #[cfg(feature = "gui")]
 mod gui;
 
 use std::path::PathBuf;
 
 use bigimage_core::{
-    AdjustOps, AnimateOptions, ConvertOutcome, CropRect, EncodeOptions, Filter, FlipAxis, Format,
-    LoopMode, OverwritePolicy, ResizeMode, Rotation,
+    AdjustOps, AnimateOptions, ConvertOutcome, CropRect, EncodeOptions, ExtentOptions, ExtentSize,
+    Filter, FlipAxis, Format, Gravity, LoopMode, OverwritePolicy, ResizeMode, Rotation,
 };
 use clap::{Args, Parser, Subcommand, ValueEnum};
 
@@ -31,7 +32,7 @@ use clap::{Args, Parser, Subcommand, ValueEnum};
 #[command(
     name = "bigiris",
     version,
-    about = "Visualizador e conversor de imagens moderno (família BigLinux)",
+    about = "Visualizador rápido e conversor de imagens para Linux",
     long_about = None,
 )]
 struct Cli {
@@ -59,6 +60,7 @@ enum Dialog {
     Rotate,
     Flip,
     Crop,
+    Extent,
     Adjust,
     Metadata,
     Compare,
@@ -222,6 +224,85 @@ impl std::str::FromStr for CropGeom {
     }
 }
 
+/// Aspect ratio in the form `W:H` (e.g. `1:1`, `9:16`, `4:5`). Whitespace
+/// around the separator is tolerated so users can quote `"9 : 16"` without
+/// the parse failing.
+#[derive(Debug, Clone, Copy)]
+struct Aspect {
+    w: u32,
+    h: u32,
+}
+
+impl std::str::FromStr for Aspect {
+    type Err = String;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let trimmed = s.trim();
+        let (a, b) = trimmed
+            .split_once(':')
+            .ok_or_else(|| format!("esperado W:H (ex. 1:1, 9:16), recebido: {s:?}"))?;
+        let w: u32 = a.trim().parse().map_err(|e| format!("razão W inválido: {e}"))?;
+        let h: u32 = b.trim().parse().map_err(|e| format!("razão H inválido: {e}"))?;
+        if w == 0 || h == 0 {
+            return Err(format!("razão com componente zero não faz sentido: {s:?}"));
+        }
+        Ok(Aspect { w, h })
+    }
+}
+
+#[derive(ValueEnum, Debug, Clone, Copy, Default)]
+#[value(rename_all = "kebab-case")]
+enum GravityArg {
+    NorthWest,
+    North,
+    NorthEast,
+    West,
+    #[default]
+    Center,
+    East,
+    SouthWest,
+    South,
+    SouthEast,
+}
+
+impl From<GravityArg> for Gravity {
+    fn from(v: GravityArg) -> Self {
+        match v {
+            GravityArg::NorthWest => Gravity::NorthWest,
+            GravityArg::North => Gravity::North,
+            GravityArg::NorthEast => Gravity::NorthEast,
+            GravityArg::West => Gravity::West,
+            GravityArg::Center => Gravity::Center,
+            GravityArg::East => Gravity::East,
+            GravityArg::SouthWest => Gravity::SouthWest,
+            GravityArg::South => Gravity::South,
+            GravityArg::SouthEast => Gravity::SouthEast,
+        }
+    }
+}
+
+/// Required exactly-one selector between explicit size and aspect ratio.
+#[derive(Args, Debug, Clone)]
+#[group(required = true, multiple = false)]
+struct ExtentSizeArgs {
+    /// Tamanho exato do canvas em pixels (WxH).
+    #[arg(long, value_name = "WxH")]
+    size: Option<WxH>,
+    /// Razão alvo (W:H). O canvas é estendido o mínimo necessário para
+    /// caber a imagem nessa proporção.
+    #[arg(long, value_name = "W:H")]
+    aspect: Option<Aspect>,
+}
+
+impl ExtentSizeArgs {
+    fn into_size(self) -> ExtentSize {
+        match self {
+            Self { size: Some(d), .. } => ExtentSize::Exact { width: d.width, height: d.height },
+            Self { aspect: Some(a), .. } => ExtentSize::Aspect { w: a.w, h: a.h },
+            _ => unreachable!("clap ArgGroup garante exatamente um modo selecionado"),
+        }
+    }
+}
+
 #[derive(Subcommand, Debug)]
 enum Command {
     /// Converter arquivos (headless)
@@ -316,6 +397,26 @@ enum Command {
         #[arg(value_name = "FILE", required = true)]
         files: Vec<PathBuf>,
     },
+    /// Estender a tela em volta da imagem (letterbox). Exatamente um modo
+    /// entre --size e --aspect é obrigatório. O canvas é preenchido com
+    /// --bg e a imagem original é posicionada por --gravity.
+    Extent {
+        #[command(flatten)]
+        size: ExtentSizeArgs,
+        /// Cor de fundo em hexadecimal (#RRGGBB ou #RRGGBBAA).
+        #[arg(long, default_value = "#000000")]
+        bg: String,
+        /// Posição da imagem original no canvas estendido.
+        #[arg(long, value_enum, default_value_t = GravityArg::Center)]
+        gravity: GravityArg,
+        /// Formato de destino (opcional).
+        #[arg(long)]
+        to: Option<String>,
+        #[arg(long = "overwrite", value_enum, default_value_t = OverwriteArg::Skip)]
+        overwrite: OverwriteArg,
+        #[arg(value_name = "FILE", required = true)]
+        files: Vec<PathBuf>,
+    },
     /// Ajustar cor/tom (brilho, contraste, saturação, gamma).
     Adjust {
         /// Brilho -100..100 (0 = sem mudança).
@@ -376,7 +477,7 @@ enum Command {
         #[arg(value_name = "FRAME", required = true)]
         frames: Vec<PathBuf>,
     },
-    /// Processar lote a partir de um perfil TOML (headless)
+    /// Processar arquivos ou pastas em paralelo a partir de um perfil TOML
     Batch {
         /// Arquivo de perfil .toml
         #[arg(long)]
@@ -409,6 +510,9 @@ enum Command {
 }
 
 fn main() -> color_eyre::Result<()> {
+    if std::env::args_os().nth(1).is_some_and(|arg| arg == "--codec-worker") {
+        return codec::worker();
+    }
     color_eyre::install()?;
     tracing_subscriber::fmt()
         .with_env_filter(
@@ -420,6 +524,8 @@ fn main() -> color_eyre::Result<()> {
     init_i18n();
 
     let cli = Cli::parse();
+
+    codec::configure();
 
     if cli.self_test {
         return self_test();
@@ -476,6 +582,14 @@ fn main() -> color_eyre::Result<()> {
         Some(Command::Crop { rect, to, overwrite, files }) => {
             run_crop(rect.rect, to.as_deref(), overwrite.into(), &files)
         }
+        Some(Command::Extent { size, bg, gravity, to, overwrite, files }) => run_extent(
+            size.into_size(),
+            &bg,
+            gravity.into(),
+            to.as_deref(),
+            overwrite.into(),
+            &files,
+        ),
         Some(Command::Adjust { brightness, contrast, saturation, gamma, to, overwrite, files }) => {
             run_adjust(
                 AdjustOps { brightness, contrast, saturation, gamma },
@@ -507,15 +621,16 @@ fn main() -> color_eyre::Result<()> {
 /// silently returns source strings — acceptable graceful degrade for a
 /// dev `cargo run` where no catalogs are installed yet.
 fn init_i18n() {
-    gettextrs::setlocale(gettextrs::LocaleCategory::LcAll, "");
+    // GTK initializes the user locale during startup, before GUI workers.
     let _ = gettextrs::bindtextdomain("bigiris", "/usr/share/locale");
     let _ = gettextrs::bind_textdomain_codeset("bigiris", "UTF-8");
     let _ = gettextrs::textdomain("bigiris");
 }
 
 fn self_test() -> color_eyre::Result<()> {
+    codec::self_test()?;
     println!(
-        "bigiris self-test OK  (bigiris={}  core={}  ai={} [onnx={}]  integrations={})",
+        "bigiris self-test OK [sandbox + decode]  (bigiris={}  core={}  ai={} [onnx={}]  integrations={})",
         env!("CARGO_PKG_VERSION"),
         bigimage_core::version(),
         bigimage_ai::version(),
@@ -572,6 +687,22 @@ fn run_crop(
     let target = parse_optional_target(to)?;
     tracing::info!(?rect, ?target, ?policy, count = files.len(), "crop");
     run_per_file(files, "crop", |f| bigimage_core::crop_file(f, rect, target, policy))
+}
+
+fn run_extent(
+    size: ExtentSize,
+    bg: &str,
+    gravity: Gravity,
+    to: Option<&str>,
+    policy: OverwritePolicy,
+    files: &[PathBuf],
+) -> color_eyre::Result<()> {
+    let target = parse_optional_target(to)?;
+    let background = bigimage_core::parse_hex_color(bg)
+        .map_err(|e| color_eyre::eyre::eyre!("--bg inválido: {e}"))?;
+    let opts = ExtentOptions { size, background, gravity };
+    tracing::info!(?opts, ?target, ?policy, count = files.len(), "extent");
+    run_per_file(files, "extent", |f| bigimage_core::extent_file(f, opts, target, policy))
 }
 
 fn run_adjust(
@@ -639,13 +770,14 @@ fn run_remove_bg(model: &str, files: &[PathBuf]) -> color_eyre::Result<()> {
         std::process::exit(2);
     }
     if model != "birefnet-lite" {
-        eprintln!("aviso: modelo '{model}' ainda não implementado; usando birefnet-lite.");
+        return Err(color_eyre::eyre::eyre!("modelo não suportado: {model}"));
     }
 
     let mut ok = 0usize;
     let mut fail = 0usize;
+    let mut session = bigimage_ai::background::BgSession::new(|_| {})?;
     for f in files {
-        match remove_bg_one(f) {
+        match remove_bg_one(f, &mut session) {
             Ok(out) => {
                 ok += 1;
                 println!("ok  {} -> {}", f.display(), out.display());
@@ -663,17 +795,25 @@ fn run_remove_bg(model: &str, files: &[PathBuf]) -> color_eyre::Result<()> {
     Ok(())
 }
 
-fn remove_bg_one(path: &std::path::Path) -> color_eyre::Result<PathBuf> {
+fn remove_bg_one(
+    path: &std::path::Path,
+    session: &mut bigimage_ai::background::BgSession,
+) -> color_eyre::Result<PathBuf> {
+    bigimage_core::content::ensure_static(path)?;
     let img =
         bigimage_core::open_image(path).map_err(|e| color_eyre::eyre::eyre!("decode: {e}"))?;
-    let out_img = bigimage_ai::background::remove_background(&img)
-        .map_err(|e| color_eyre::eyre::eyre!("{e}"))?;
+    let out_img = session.process(&img).map_err(|e| color_eyre::eyre::eyre!("{e}"))?;
     let stem = path.file_stem().and_then(|s| s.to_str()).unwrap_or("output");
     let parent = path.parent().unwrap_or_else(|| std::path::Path::new("."));
     let dest = parent.join(format!("{stem}_nobg.png"));
-    out_img
-        .save_with_format(&dest, image::ImageFormat::Png)
-        .map_err(|e| color_eyre::eyre::eyre!("encode: {e}"))?;
+    bigimage_core::save_image(
+        out_img,
+        &dest,
+        Format::Png,
+        &EncodeOptions::default(),
+        OverwritePolicy::Replace,
+    )
+    .map_err(|e| color_eyre::eyre::eyre!("encode: {e}"))?;
     Ok(dest)
 }
 
@@ -713,9 +853,156 @@ fn run_animate(
     Ok(())
 }
 
-fn run_batch(profile: &std::path::Path, files: &[PathBuf]) -> color_eyre::Result<()> {
-    tracing::info!(?profile, count = files.len(), "batch (stub)");
-    println!("[stub] batch profile={}  ({} files)", profile.display(), files.len());
+#[derive(Debug, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+struct BatchProfile {
+    /// Target extension/name accepted by `Format::parse`.
+    format: String,
+    quality: Option<u8>,
+    #[serde(default)]
+    progressive: bool,
+    #[serde(default)]
+    optimize: bool,
+    #[serde(default = "default_batch_overwrite")]
+    overwrite: String,
+    output_dir: Option<PathBuf>,
+}
+
+fn default_batch_overwrite() -> String {
+    "skip".to_string()
+}
+
+fn run_batch(profile: &std::path::Path, inputs: &[PathBuf]) -> color_eyre::Result<()> {
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::sync::{mpsc, Arc};
+
+    let text = std::fs::read_to_string(profile)
+        .map_err(|e| color_eyre::eyre::eyre!("não foi possível ler {}: {e}", profile.display()))?;
+    let profile: BatchProfile =
+        toml::from_str(&text).map_err(|e| color_eyre::eyre::eyre!("perfil TOML inválido: {e}"))?;
+    if profile.quality.is_some_and(|quality| !(1..=100).contains(&quality)) {
+        return Err(color_eyre::eyre::eyre!("quality deve estar entre 1 e 100"));
+    }
+    let format = Format::parse(&profile.format)
+        .map_err(|e| color_eyre::eyre::eyre!("formato do perfil inválido: {e}"))?;
+    let policy = match profile.overwrite.trim().to_ascii_lowercase().as_str() {
+        "skip" => OverwritePolicy::Skip,
+        "replace" => OverwritePolicy::Replace,
+        "increment" => OverwritePolicy::Increment,
+        other => {
+            return Err(color_eyre::eyre::eyre!(
+                "overwrite inválido: {other:?}; use skip, replace ou increment"
+            ));
+        }
+    };
+    if let Some(dir) = &profile.output_dir {
+        std::fs::create_dir_all(dir).map_err(|e| {
+            color_eyre::eyre::eyre!("não foi possível criar {}: {e}", dir.display())
+        })?;
+    }
+
+    let mut files = Vec::new();
+    for input in inputs {
+        if input.is_dir() {
+            let entries = std::fs::read_dir(input).map_err(|e| {
+                color_eyre::eyre::eyre!("não foi possível ler {}: {e}", input.display())
+            })?;
+            files.extend(entries.flatten().map(|entry| entry.path()).filter(|path| {
+                path.is_file()
+                    && path
+                        .extension()
+                        .and_then(|ext| ext.to_str())
+                        .is_some_and(|ext| Format::parse(ext).is_ok())
+            }));
+        } else {
+            files.push(input.clone());
+        }
+    }
+    files.sort();
+    files.dedup();
+    if files.is_empty() {
+        return Err(color_eyre::eyre::eyre!("nenhuma imagem encontrada para o lote"));
+    }
+
+    let total = files.len();
+    let opts = EncodeOptions {
+        quality: profile.quality,
+        progressive: profile.progressive,
+        optimize: profile.optimize,
+        ..EncodeOptions::default()
+    };
+    let files = Arc::new(files);
+    let output_dir = Arc::new(profile.output_dir);
+    let next = Arc::new(AtomicUsize::new(0));
+    let (tx, rx) = mpsc::channel();
+    let worker_count = bigimage_core::resources::batch_worker_count(&files);
+    tracing::info!(?format, ?policy, total, worker_count, "batch");
+
+    let workers: Vec<_> = (0..worker_count)
+        .map(|_| {
+            let files = files.clone();
+            let output_dir = output_dir.clone();
+            let next = next.clone();
+            let tx = tx.clone();
+            std::thread::spawn(move || loop {
+                let idx = next.fetch_add(1, Ordering::Relaxed);
+                if idx >= files.len() {
+                    break;
+                }
+                let input = files[idx].clone();
+                let result = bigimage_core::convert_file_to(
+                    &input,
+                    output_dir.as_deref(),
+                    format,
+                    &opts,
+                    policy,
+                )
+                .map_err(|e| e.to_string());
+                if tx.send((input, result)).is_err() {
+                    break;
+                }
+            })
+        })
+        .collect();
+    drop(tx);
+
+    let mut ok = 0usize;
+    let mut skipped = 0usize;
+    let mut failed = 0usize;
+    let mut first_error = None;
+    for (done, (input, result)) in rx.into_iter().enumerate() {
+        match result {
+            Ok(ConvertOutcome::Written { output }) => {
+                ok += 1;
+                println!(
+                    "[{}/{}] ok   {} -> {}",
+                    done + 1,
+                    total,
+                    input.display(),
+                    output.display()
+                );
+            }
+            Ok(ConvertOutcome::Skipped { output }) => {
+                skipped += 1;
+                println!("[{}/{}] skip {}", done + 1, total, output.display());
+            }
+            Err(error) => {
+                failed += 1;
+                first_error.get_or_insert_with(|| format!("{}: {error}", input.display()));
+                eprintln!("[{}/{}] erro {}: {error}", done + 1, total, input.display());
+            }
+        }
+    }
+    for worker in workers {
+        if worker.join().is_err() {
+            failed += 1;
+            first_error.get_or_insert_with(|| "um worker terminou inesperadamente".to_string());
+        }
+    }
+    println!("batch: {ok} gravado(s), {skipped} ignorado(s), {failed} falha(s)");
+    if let Some(error) = first_error {
+        return Err(color_eyre::eyre::eyre!(error));
+    }
     Ok(())
 }
 
@@ -838,7 +1125,11 @@ fn print_install_report(report: &bigimage_integrations::Report, verb: &str) {
         let status = if outcome.error.is_some() {
             "FALHA"
         } else if outcome.files.is_empty() {
-            "vazio"
+            if outcome.detected {
+                "sem alterações"
+            } else {
+                "ignorado"
+            }
         } else {
             verb
         };
@@ -898,6 +1189,7 @@ fn dispatch_gui(dialog: Option<Dialog>, files: &[PathBuf]) -> color_eyre::Result
             Some(Dialog::Animate) => gui::run_animate_dialog(files.to_vec()),
             Some(Dialog::RemoveBg) => gui::run_remove_bg_dialog(files.to_vec()),
             Some(Dialog::Crop) => gui::run_crop_dialog(files.to_vec()),
+            Some(Dialog::Extent) => gui::run_extent_dialog(files.to_vec()),
             Some(Dialog::Upscale) => gui::run_upscale_dialog(files.to_vec()),
             Some(Dialog::Batch) => gui::run_batch_dialog(files.to_vec()),
             None => gui::run_viewer(files.to_vec()),

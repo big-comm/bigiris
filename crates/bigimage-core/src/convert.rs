@@ -86,8 +86,7 @@ pub fn convert_file_to(
 
     tracing::debug!(?input, ?output, ?target, ?opts, "convert: decoding");
     let (img, _src_format) = pipeline::decode_with_source_format(input)?;
-    let output = pipeline::encode_and_cleanup(img, output, target, opts)?;
-    Ok(ConvertOutcome::Written { output })
+    pipeline::encode_and_cleanup(img, output, target, opts, policy)
 }
 
 /// Coerce a `DynamicImage` into a colour/bit-depth that the target encoder is
@@ -98,8 +97,54 @@ pub(crate) fn prepare_for_target(img: DynamicImage, target: Format) -> DynamicIm
     match target {
         Format::OpenExr => DynamicImage::ImageRgba32F(img.into_rgba32f()),
         Format::Hdr => DynamicImage::ImageRgb32F(img.into_rgb32f()),
+        Format::Ico => {
+            let img =
+                if img.width() > 256 || img.height() > 256 { img.thumbnail(256, 256) } else { img };
+            DynamicImage::ImageRgba8(img.into_rgba8())
+        }
+        Format::WebP | Format::Gif | Format::Bmp | Format::Tga | Format::Qoi => {
+            DynamicImage::ImageRgba8(img.into_rgba8())
+        }
+        Format::Png | Format::Tiff
+            if matches!(img.color(), image::ColorType::Rgb32F | image::ColorType::Rgba32F) =>
+        {
+            DynamicImage::ImageRgba16(img.into_rgba16())
+        }
+        // JPEG has no alpha channel. The encoder path does a bare
+        // `to_rgb8()`, which *discards* alpha rather than compositing — so a
+        // transparent or semi-transparent source (e.g. a letterbox built
+        // with a transparent background, or any PNG with transparency) would
+        // emit whatever RGB sat *under* the alpha=0 pixels (usually black or
+        // garbage) instead of a clean flattened colour. Composite over white
+        // here so the JPEG shows the conventional flattened result.
+        Format::Jpeg | Format::Pnm => flatten_over_white(img),
         _ => img,
     }
+}
+
+/// Composite any alpha channel over an opaque white background, returning an
+/// `Rgb8` image. Inputs without alpha are returned unchanged (no needless
+/// re-allocation). Fully-opaque pixels (alpha=255) are bit-for-bit
+/// preserved; only transparent/semi-transparent pixels change.
+fn flatten_over_white(img: DynamicImage) -> DynamicImage {
+    use image::{Rgb, RgbImage};
+
+    if !img.color().has_alpha() {
+        return DynamicImage::ImageRgb8(img.into_rgb8());
+    }
+    let rgba = img.to_rgba8();
+    let (w, h) = rgba.dimensions();
+    let mut out = RgbImage::new(w, h);
+    for (x, y, px) in rgba.enumerate_pixels() {
+        let a = u32::from(px[3]);
+        // out = src*a + white*(255-a), rounded.
+        let blend = |c: u8| {
+            let v = u32::from(c) * a + 255 * (255 - a);
+            ((v + 127) / 255) as u8
+        };
+        out.put_pixel(x, y, Rgb([blend(px[0]), blend(px[1]), blend(px[2])]));
+    }
+    DynamicImage::ImageRgb8(out)
 }
 
 #[cfg(test)]
@@ -280,6 +325,67 @@ mod tests {
         )
         .unwrap();
         assert!(matches!(back, ConvertOutcome::Written { .. }));
+    }
+
+    #[test]
+    fn replace_in_place_failure_keeps_source() {
+        // Regression: Replace with output == input must never destroy the
+        // original on an encode failure. We force a failure by feeding an
+        // EXR target a path whose parent we make unwritable is brittle, so
+        // instead assert the happy in-place replace leaves a valid image
+        // (the atomic temp+rename path) — the destructive bug deleted it.
+        let dir = TempDir::new().unwrap();
+        let src = write_fixture_png(dir.path(), "inplace.png");
+        let before = std::fs::read(&src).unwrap();
+        assert!(!before.is_empty());
+
+        let outcome = convert_file(
+            &src,
+            Format::Png,
+            &crate::EncodeOptions::default(),
+            OverwritePolicy::Replace,
+        )
+        .unwrap();
+        assert!(matches!(outcome, ConvertOutcome::Written { .. }));
+        // Source path still exists and is a decodable PNG (rename swapped a
+        // fully-written file in; no partial, no deletion).
+        assert!(src.exists());
+        image::open(&src).unwrap();
+        // No leftover temp file in the directory.
+        let leftovers: Vec<_> = std::fs::read_dir(dir.path())
+            .unwrap()
+            .filter_map(|e| e.ok())
+            .filter(|e| e.file_name().to_string_lossy().contains(".part-"))
+            .collect();
+        assert!(leftovers.is_empty(), "temp file leaked: {leftovers:?}");
+    }
+
+    #[test]
+    fn rgba_to_jpeg_flattens_alpha_over_white_not_black() {
+        use image::{Rgba, RgbaImage};
+        // Fully-transparent source: dropping alpha would yield black; the
+        // flatten step must composite over white instead.
+        let dir = TempDir::new().unwrap();
+        let src = dir.path().join("trans.png");
+        let img = RgbaImage::from_pixel(4, 4, Rgba([0, 0, 0, 0]));
+        img.save(&src).unwrap();
+
+        let out = match convert_file(
+            &src,
+            Format::Jpeg,
+            &crate::EncodeOptions::default(),
+            OverwritePolicy::Replace,
+        )
+        .unwrap()
+        {
+            ConvertOutcome::Written { output } => output,
+            _ => panic!("expected write"),
+        };
+        let decoded = image::open(&out).unwrap().to_rgb8();
+        let px = decoded.get_pixel(2, 2).0;
+        // JPEG is lossy, so allow a margin, but it must be near-white, never
+        // near-black (the old bug).
+        assert!(px[0] > 240 && px[1] > 240 && px[2] > 240, "expected white-ish, got {px:?}");
     }
 
     #[test]

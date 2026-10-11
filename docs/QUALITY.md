@@ -60,8 +60,8 @@ históricos não foram reescritos para aparentar aprovação.
 | Estabilidade curta | 300,079 s, 3.029 ciclos | RSS estável, descritores e threads estáveis |
 | IA real | Passou antes da correção do empacotamento; 21,172 s para duas imagens | RGB/alpha preservados, sessão reutilizada; pico de 6.847.848 KiB (~6,53 GiB). Repetição no binário final recusada por RAM disponível abaixo de 8 GiB |
 | RustSec | Gate final passou | Zero vulnerabilidades e zero avisos unsound na base consultada; um aviso de manutenção |
-| Memcheck | Sem aprovação local | Valgrind não inicia por falta de símbolos compatíveis do loader glibc; job preparado no CI, sem execução remota nesta campanha |
-| Oito horas | Consultar `long-soak/status.json` | `running` significa pendente, nunca aprovação |
+| Memcheck | Passou no CI em oito ciclos sintéticos do core | Zero erros, zero bytes definitivamente/indiretamente perdidos; 48 bytes possivelmente perdidos e 548 bytes ainda alcançáveis. Não cobre GUI ou ONNX; impedimento local do loader glibc permanece |
+| Oito horas do core | Passou; 28.800,047 s e 298.657 ciclos | RSS inicial/final de 13.200/7.988 KiB, pico de 26.108 KiB; quatro descritores e uma thread antes/depois. Binário e estado final registrados em `long-soak/`; não cobre o produto completo |
 
 Os testes GTK executam loaders locais no binário de teste. O executável final
 usa o worker confinado, exercitado pelos testes da CLI/release. Nenhum desses
@@ -222,8 +222,21 @@ navegação TIFF multipágina ou gestão HDR/tone mapping completa. A estabilida
 medida e a liberação de referências não provam ausência de leaks nativos.
 Os logs GTK registraram aviso de tema e indisponibilidade do barramento AT-SPI;
 Orca permanece pendente. O pacote é recomposto do release testado, não um build
-limpo certificado. CI remoto não foi acionado/publicado nesta campanha; seus
-gates não desabilitam AppArmor nem ampliam privilégios do contêiner Arch.
+limpo certificado.
+
+O primeiro [CI remoto do PR nº 1](https://github.com/xathay/bigiris/actions/runs/38161983238)
+terminou com dez jobs aprovados e quatro falhas. O fuzzing selecionou stable
+por causa de `rust-toolchain.toml`, antes de testar o corpus. Os dois jobs de
+testes funcionais e o self-test do release foram bloqueados na configuração
+de loopback do Bubblewrap no runner Ubuntu. O build release em si compilou.
+A correção define `RUSTUP_TOOLCHAIN=nightly` apenas no fuzzing e carrega o
+perfil de Bubblewrap fornecido pelo pacote `apparmor-profiles` nos três jobs
+de runtime, com perfil dos filhos que nega capabilities. Um preflight exige
+isolamento e capabilities efetivas zeradas antes de compilar. AppArmor e as
+restrições globais permanecem ativos; o contêiner Arch não recebe privilégios
+amplos. A nova configuração exige nova execução remota antes de aprovação.
+O teste gráfico já inclui as transições de zoom e agora publica o relatório
+dos quadros pintados como artefato do CI.
 
 ## Referências e reprodução
 

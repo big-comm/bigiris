@@ -73,9 +73,13 @@ do host, então permanece pendente com pelo menos 8 GiB disponíveis. As duas
 inferências reais aprovadas precedem a correção de empacotamento Nautilus.
 Os testes de recusa sob 4 GiB passaram também no binário final.
 
-O CI contém gates preparados; sua execução remota e a compatibilidade do
-sandbox no contêiner Arch continuam a conferir. Não foram concedidos
-privilégios amplos ao contêiner para contornar essa restrição. A publicação
+O primeiro CI do PR nº 1 aprovou dez jobs, inclusive o empacotamento Arch e
+o Memcheck de oito ciclos do core. Quatro jobs falharam por seleção de stable
+no fuzzing e indisponibilidade do sandbox no runner Ubuntu. A configuração
+foi corrigida, mas a confirmação exige nova execução remota. O ensaio local
+de oito horas do core também terminou aprovado; GUI/GPU/ONNX não fazem parte
+desse ensaio. Resultados e limites estão em [QUALITY.md](QUALITY.md).
+Não foram concedidos privilégios amplos ao contêiner Arch. A publicação
 no repositório da distribuição e a associação MIME padrão exigem decisão
 de manutenção após a homologação.
 

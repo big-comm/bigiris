@@ -14,7 +14,7 @@
 
 pkgname=bigiris
 pkgver=0.1.0.local
-pkgrel=2
+pkgrel=3
 arch=('x86_64')
 license=('GPL-3.0-or-later')
 url="https://github.com/xathay/bigiris"

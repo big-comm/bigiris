@@ -310,7 +310,7 @@ struct ViewerState {
     texture: Option<gdk::Texture>,
     zoom_pointer: Option<(f64, f64)>,
     pending_zoom: Option<PendingZoom>,
-    zoom_source: Option<glib::SourceId>,
+    zoom_source: Option<gtk::TickCallbackId>,
     /// Natural pixel dimensions of the currently-loaded image.
     natural: (u32, u32),
     /// Toolbar view holding the header bar; revealed/hidden by edge-reveal.
@@ -762,13 +762,13 @@ fn build_window_tracked(
                     s.osd_hide_source.take(),
                     s.cursor_hide_source.take(),
                     s.slideshow_source.take(),
-                    s.zoom_source.take(),
                 ]
                 .into_iter()
                 .flatten()
                 {
                     source.remove();
                 }
+                zoom::cancel_pending(&mut s);
                 s.props_dialog.take();
                 s.texture.take();
                 s.pending_zoom = None;
@@ -905,12 +905,9 @@ fn build_window_tracked(
                     let pt = graphene::Point::new(wx as f32, wy as f32);
                     root.compute_point(&scroller, &pt).map(|p| (f64::from(p.x()), f64::from(p.y())))
                 });
-            if dy < -0.01 {
-                adjust_zoom(&state, ZOOM_STEP, cursor);
-                pulse_osd(&state);
-                glib::Propagation::Stop
-            } else if dy > 0.01 {
-                adjust_zoom(&state, 1.0 / ZOOM_STEP, cursor);
+            let surface = controller.unit() == gdk::ScrollUnit::Surface;
+            if let Some(factor) = zoom::scroll_factor(dy, surface) {
+                adjust_zoom(&state, factor, cursor);
                 pulse_osd(&state);
                 glib::Propagation::Stop
             } else {
@@ -965,7 +962,12 @@ fn build_window_tracked(
     {
         let scr = scroller.downgrade();
         let anchor = drag_anchor.clone();
+        let weak = Rc::downgrade(&state);
         drag.connect_drag_begin(move |_, _, _| {
+            if let Some(state) = weak.upgrade() {
+                zoom::cancel_pending(&mut state.borrow_mut());
+                refresh_title(&state);
+            }
             let Some(scr) = scr.upgrade() else {
                 return;
             };
@@ -1217,7 +1219,7 @@ fn osd_text(state: &Rc<RefCell<ViewerState>>) -> String {
         .file_name()
         .map(|n| n.to_string_lossy().into_owned())
         .unwrap_or_else(|| path.display().to_string());
-    let zoom = match s.zoom {
+    let zoom = match zoom::requested_zoom(&s) {
         ZoomState::Fit => "Ajustar".to_string(),
         ZoomState::Scale(x) => format!("{}%", (x * 100.0).round() as i32),
     };
@@ -3017,7 +3019,7 @@ fn refresh_title(state: &Rc<RefCell<ViewerState>>) {
         .unwrap_or_else(|| path.display().to_string());
     // `•` à esquerda sinaliza edições pendentes. Convenção Loupe/TextEditor.
     let name = if s.pending_ops.is_empty() { base_name } else { format!("• {base_name}") };
-    let zoom_desc = match s.zoom {
+    let zoom_desc = match zoom::requested_zoom(&s) {
         ZoomState::Fit => "Ajustar".to_string(),
         ZoomState::Scale(x) => format!("{}%", (x * 100.0).round() as i32),
     };
@@ -7441,6 +7443,8 @@ mod lifecycle_tests {
             s.ui_pinned = true;
         }
         window.present();
+        let animations_before = window.settings().is_gtk_enable_animations();
+        window.settings().set_gtk_enable_animations(true);
         let context = glib::MainContext::default();
         let wait = |condition: &dyn Fn() -> bool| {
             let deadline = std::time::Instant::now() + Duration::from_secs(5);
@@ -7515,6 +7519,33 @@ mod lifecycle_tests {
                 .to_rgba8()
                 .get_pixel(point_in_window.x().round() as u32, point_in_window.y().round() as u32)
         };
+        let frame_trace = Rc::new(RefCell::new(Vec::new()));
+        let clock = window.frame_clock().unwrap();
+        let weak = Rc::downgrade(&state);
+        let trace = frame_trace.clone();
+        let sample_signal = clock.connect_after_paint(move |clock| {
+            let Some(state) = weak.upgrade() else { return };
+            let s = state.borrow();
+            let Some(bounds) = s.picture.compute_bounds(&s.scroller) else { return };
+            let Some(paintable) = s.picture.paintable() else { return };
+            let iw = f64::from(paintable.intrinsic_width());
+            let ih = f64::from(paintable.intrinsic_height());
+            let pw = f64::from(s.picture.width());
+            let ph = f64::from(s.picture.height());
+            let mut scale = (pw / iw).min(ph / ih);
+            if s.picture.content_fit() == gtk::ContentFit::ScaleDown {
+                scale = scale.min(1.0);
+            }
+            let x = f64::from(bounds.x()) + (pw - iw * scale) / 2.0;
+            let y = f64::from(bounds.y()) + (ph - ih * scale) / 2.0;
+            trace.borrow_mut().push((
+                (point.0 - x) / (iw * scale) * 1600.0,
+                (point.1 - y) / (ih * scale) * 1200.0,
+                iw * scale,
+                ih * scale,
+                clock.frame_time(),
+            ));
+        });
         let before = image_point();
         let pixel_before = rendered_pixel();
         capture_window(&window, "zoom-fit");
@@ -7527,7 +7558,8 @@ mod lifecycle_tests {
             })
             .expect("canvas pointer controller");
         motion.emit_by_name::<()>("motion", &[&point.0, &point.1]);
-        let anchored = |expected: (f64, f64)| {
+        let reports = RefCell::new(Vec::new());
+        let anchored = |name: &str, expected: (f64, f64)| {
             wait(&|| state.borrow().pending_zoom.is_none());
             let actual = image_point();
             assert!(
@@ -7539,20 +7571,102 @@ mod lifecycle_tests {
                 pixel.0.iter().zip(pixel_before.0).all(|(a, b)| a.abs_diff(b) <= 2),
                 "rendered pixel drifted: {pixel_before:?} -> {pixel:?}"
             );
+            let frames = std::mem::take(&mut *frame_trace.borrow_mut());
+            assert!(!frames.is_empty(), "no painted frames for {name}");
+            let area = {
+                let s = state.borrow();
+                (s.scroller.hadjustment().page_size(), s.scroller.vadjustment().page_size())
+            };
+            // When a side is smaller than the viewport, GTK centers it and
+            // cannot scroll it. Compare to the constrained geometric target;
+            // once scrolling is possible the original point remains anchored.
+            let projected =
+                |natural_point: f64, natural: f64, size: f64, cursor: f64, page: f64| {
+                    let padding = ((page - size) / 2.0).max(0.0);
+                    let target = (natural_point / natural * size - cursor + padding)
+                        .clamp(0.0, (size - page).max(0.0));
+                    (cursor + target - padding) / size * natural
+                };
+            assert!(
+                frames.iter().all(|&(x, y, width, height, _)| {
+                    let px = projected(expected.0, 1600.0, width, point.0, area.0);
+                    let py = projected(expected.1, 1200.0, height, point.1, area.1);
+                    (x - px).abs() * width / 1600.0 < 1.5 && (y - py).abs() * height / 1200.0 < 1.5
+                }),
+                "zoom drift during painted frames ({name}): before={expected:?}, frames={frames:?}"
+            );
+            let first = frames.first().unwrap().2;
+            let last = frames.last().unwrap().2;
+            let increasing = last >= first;
+            assert!(
+                name == "direction-change"
+                    || frames.windows(2).all(|pair| if increasing {
+                        pair[1].2 >= pair[0].2 - 1.0
+                    } else {
+                        pair[1].2 <= pair[0].2 + 1.0
+                    }),
+                "zoom reversed during transition ({name}): {frames:?}"
+            );
+            if name == "direction-change" {
+                assert!(frames.windows(2).any(|p| p[1].2 < p[0].2 - 1.0));
+                assert!(frames.windows(2).any(|p| p[1].2 > p[0].2 + 1.0));
+            }
+            let intermediate = frames
+                .iter()
+                .filter(|frame| frame.2 > first.min(last) + 1.0 && frame.2 < first.max(last) - 1.0)
+                .count();
+            let animations = window.settings().is_gtk_enable_animations();
+            if animations && (last - first).abs() > 32.0 {
+                assert!(intermediate >= 2, "zoom skipped intermediate scales ({name}): {frames:?}");
+            }
+            reports.borrow_mut().push(serde_json::json!({"case":name,
+                "animations":animations,"anchor":expected,"cursor":point,"viewport":area,
+                "max_screen_error":1.5,"frames":frames,"intermediate_frames":intermediate}));
         };
         handle_key(&state, gdk::Key::plus, gdk::ModifierType::empty());
-        anchored(before);
+        anchored("first-in", before);
+        let rapid_anchor = image_point();
         for _ in 0..4 {
             handle_key(&state, gdk::Key::plus, gdk::ModifierType::empty());
         }
-        anchored(before);
+        anchored("rapid-in", rapid_anchor);
+        let reversal_anchor = image_point();
+        zoom_out(&state);
+        wait(&|| frame_trace.borrow().len() >= 4);
+        assert!(state.borrow().pending_zoom.is_some(), "reversal test missed the animation");
+        zoom_in(&state);
+        anchored("direction-change", reversal_anchor);
+        let toolbar_anchor = image_point();
         zoom_out(&state); // the toolbar action uses the same selected point
-        anchored(before);
+        anchored("toolbar-out", toolbar_anchor);
+        let full_anchor = image_point();
         handle_key(&state, gdk::Key::_1, gdk::ModifierType::empty());
-        anchored(before);
+        anchored("100-percent", full_anchor);
         assert_eq!(state.borrow().picture.width(), 1600);
         assert_eq!(state.borrow().picture.height(), 1200);
         capture_window(&window, "zoom-pointer-100pct");
+        let reduced_anchor = image_point();
+        window.settings().set_gtk_enable_animations(false);
+        zoom_out(&state);
+        anchored("reduced-motion", reduced_anchor);
+        window.settings().set_gtk_enable_animations(true);
+        zoom_in(&state);
+        let drag = (0..controllers.n_items())
+            .find_map(|index| controllers.item(index)?.downcast::<gtk::GestureDrag>().ok())
+            .unwrap();
+        drag.emit_by_name::<()>("drag-begin", &[&point.0, &point.1]);
+        assert!(state.borrow().pending_zoom.is_none(), "animation fought manual pan");
+        if let Some(folder) = std::env::var_os("BIGIRIS_TEST_ZOOM_REPORT_DIR") {
+            let folder = PathBuf::from(folder);
+            std::fs::create_dir_all(&folder).unwrap();
+            std::fs::write(
+                folder.join("painted-frames.json"),
+                serde_json::to_vec_pretty(&reports.into_inner()).unwrap(),
+            )
+            .unwrap();
+        }
+        clock.disconnect(sample_signal);
+        window.settings().set_gtk_enable_animations(animations_before);
         zoom_in(&state);
         handle_key(&state, gdk::Key::_0, gdk::ModifierType::empty());
         assert!(state.borrow().pending_zoom.is_none());

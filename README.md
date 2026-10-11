@@ -44,7 +44,9 @@ principal.
 ## Zoom e memória da IA
 
 Posicione o cursor sobre o detalhe da imagem e use a roda do mouse, `+`/`-`
-ou os botões de zoom. A ampliação preserva esse ponto, respeitando os limites
+ou os botões de zoom. A transição é gradual, com movimentos proporcionais no
+touchpad, e respeita a preferência de desativar animações do GTK. A ampliação
+preserva esse ponto, respeitando os limites
 de rolagem da imagem. `1` exibe 100%; `0` ajusta à janela. Sem posição conhecida
 do cursor, o ponto de referência é o centro da área visível.
 

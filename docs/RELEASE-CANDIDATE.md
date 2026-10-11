@@ -7,9 +7,10 @@ homologação da distribuição; o pacote local permite começar essa avaliaçã
 ## Entrega e reprodução
 
 - Binário completo: `target/release/bigiris`, com GTK/libadwaita e IA.
-- Pacote local: `target/quality/candidate/bigiris-0.1.0.local-2-x86_64.pkg.tar.zst`, acompanhado de SHA-256.
-- Gates: `target/quality/round3/package-fixed-gates/summary.json`.
-- Testes do release: `target/quality/round3/release-final/release-smoke.json`.
+- Pacote local: `target/quality/candidate/bigiris-0.1.0.local-3-x86_64.pkg.tar.zst`, acompanhado de SHA-256.
+- Gates: `target/quality/zoom-transition/gates/summary.json`.
+- Testes do release: `target/quality/zoom-transition/release/release-smoke.json`.
+- Quadros do zoom: `target/quality/zoom-transition/painted-frames.json`.
 - Fuzzing instrumentado: `target/quality/fuzz/summary.json`.
 - Estabilidade prolongada: `target/quality/long-soak/status.json`.
 
@@ -32,6 +33,9 @@ rede do host. Se falhar, a candidata não deve ser aprovada nessa máquina.
    desktop entry, ícone, schemas, tradução, Nautilus e resíduos da remoção.
 2. Abrir pelo Nautilus uma imagem, seleção e pasta; testar navegação,
    zoom sob o cursor com roda, botões, `+`/`-`, `1` (100%) e `0` (ajustar);
+   conferir a fluidez com roda e touchpad, inversão durante a transição e
+   arrasto manual; repetir com animações desativadas no GTK. Avaliar o conforto
+   visual pessoal antes do envio ao repositório. Exercitar
    conversão dos formatos anunciados, cancelamento, erros e arquivos em
    sincronização. Confirmar ausência de alteração dos originais em falhas.
 3. Exercitar teclado e Orca, alto contraste, temas claro/escuro, escalas
@@ -78,7 +82,8 @@ de manutenção após a homologação.
 ## Administração pelo Git
 
 Abra a pasta raiz do BigIris que contém `.git`, `Cargo.toml`, `crates/` e
-`pkgbuild/`. O checkout atual está na branch `dev-xathay`. Abrir essa pasta
+`pkgbuild/`. Confira a branch selecionada antes de integrar alterações. Abrir
+essa pasta
 em um cliente Git permite revisar diffs e arquivos novos; não publica nem
 atualiza automaticamente o repositório da distribuição. Confira os arquivos
 incluídos no commit, inclusive novos módulos e testes. Os artefatos de

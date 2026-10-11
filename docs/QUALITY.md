@@ -15,6 +15,8 @@ Somente imagens sintéticas, fixtures de regressão e diretórios de teste foram
 usados. Alterações preexistentes foram preservadas. Evidências locais ficam
 em `target/quality/` e não integram o pacote distribuído:
 
+- `zoom-transition/gates/summary.json`: verificações da correção da transição de zoom.
+- `zoom-transition/painted-frames.json`: quadros pintados e escalas intermediárias.
 - `round3/package-fixed-gates/summary.json`: verificações finais, com logs por gate.
 - `round2/acceptance/{benchmark,stress,soak}.log`: performance e estabilidade.
 - `fuzz/summary.json`, `decode.log` e `icc.log`: última campanha instrumentada.
@@ -43,9 +45,9 @@ históricos não foram reescritos para aparentar aprovação.
 
 | Área | Resultado | Alcance |
 | --- | --- | --- |
-| Rust, todos os recursos/targets | 214 testes passaram | Workspace, GUI compilada, core, IA e integrações |
-| Rust, headless | 178 testes passaram | Sobrepõe parte dos 214; não somar as contagens |
-| GTK, teste gráfico separado | Passou | 30 aberturas/fechamentos do viewer, 13 janelas de ferramentas/propriedades e seleção sintética de 10 mil arquivos; estado liberado e no máximo 41 miniaturas simultâneas; zoom ancorado validado por geometria e pixels renderizados |
+| Rust, todos os recursos/targets | 216 testes passaram | Workspace, GUI compilada, core, IA e integrações |
+| Rust, headless | 178 testes passaram | Sobrepõe parte dos 216; não somar as contagens |
+| GTK, teste gráfico separado | Passou | 30 aberturas/fechamentos do viewer, 13 janelas de ferramentas/propriedades e seleção sintética de 10 mil arquivos; estado liberado e no máximo 41 miniaturas simultâneas; seis cenários de zoom conferidos quadro a quadro, escalas intermediárias e pixels renderizados |
 | Nautilus | 6 contratos passaram; GI real criou menus | FileInfo simulado; clique em Nautilus e política da distribuição exigem homologação |
 | Rustfmt e Clippy | Passaram, warnings como erros | Headless e todos os recursos |
 | Distribuição | Desktop, AppStream offline, schemas, inglês e sintaxe passaram | Sem instalar ou alterar associações padrão no host |
@@ -167,15 +169,31 @@ O teste experimental sem arena do ORT sob limite de espaço virtual de 3 GiB
 falhou na inferência; essa configuração não foi adotada no produto.
 
 O zoom foi extraído para `gui/zoom.rs`. Roda, atalhos e botões usam o ponto do
-cursor; sem posição válida, usam o centro. Ampliações rápidas são coalescidas
-até a alocação e a translação reais do GTK acompanharem a nova escala. O zoom
-referencia a textura existente, sem redimensionar pixels na thread gráfica.
-`1` corresponde a 100% e `0` restaura o ajuste à janela. Há limites geométricos:
-quando a imagem cabe na janela ou alcança uma borda, a rolagem é limitada.
-O ensaio gráfico usa coordenadas do widget realmente alocado e compara pixels
-renderizados sob o cursor, incluindo teclado, botões, ampliações rápidas,
-100%, cancelamento na navegação e fechamento. Capturas sintéticas da rodada
-ficam em `round3/screenshots/`.
+cursor; sem posição válida, usam o centro. A regressão original conferia apenas
+a posição após o término. Um novo teste em `after-paint` reproduziu dois quadros
+com deslocamento transitório de aproximadamente 185 pixels da imagem no eixo
+horizontal. A posição e os limites de rolagem agora são configurados antes da
+nova escala; a transição usa o relógio de quadros do GTK e interpolação gradual
+em escala logarítmica. Eventos fracionários do touchpad preservam sua magnitude.
+A preferência `gtk-enable-animations=false` aplica o zoom imediatamente.
+
+Comandos rápidos atualizam o destino da mesma animação, preservando a âncora
+quando o cursor permanece no lugar. Arrastar, ajustar à janela, navegar e fechar
+cancelam a animação. O zoom referencia a textura existente, sem redimensionar
+pixels na thread gráfica. `1` corresponde a 100% e `0` restaura o ajuste à janela.
+Quando a imagem cabe na janela ou alcança uma borda, a rolagem é limitada.
+
+O teste gráfico confere cada quadro pintado contra a projeção geométrica com
+esses limites, com tolerância inferior a 1,5 pixel da tela por eixo, monotonicidade
+da escala, presença de quadros intermediários e pixels renderizados no destino.
+Inclui teclado, botões, ampliações rápidas, inversão, 100%, animações desativadas,
+arrasto manual, navegação e fechamento. Essa verificação não certifica conforto
+visual pessoal nem ausência de frames perdidos em todo hardware; a avaliação
+com mouse e touchpad reais permanece no roteiro de homologação.
+
+O SVG do ícone também recebeu correção de cabeçalho: o comentário extenso foi
+movido para dentro do elemento raiz. O desenho permaneceu igual, e o arquivo
+passou a ser reconhecido pelo carregador GdkPixbuf usado no GNOME.
 
 A validação do pacote também revelou que a extensão Nautilus já instalada no
 host fazia o gerador omiti-la do DESTDIR. O escopo agora é explícito, sem inferir

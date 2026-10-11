@@ -23,7 +23,22 @@ sudo grep -qx 'unpriv_bwrap (enforce)' /sys/kernel/security/apparmor/profiles
     test ! -e /home
     test ! -e /run
     test ! -e /etc
-    awk '\''$1 == "CapEff:" { seen = 1; if ($2 != "0000000000000000") exit 1 }
-         END { if (!seen) exit 1 }'\'' /proc/self/status
-    awk '\''NR > 2 && $1 != "lo:" { exit 1 }'\'' /proc/net/dev
+    # Ubuntu awk resolves through /etc/alternatives, which is deliberately
+    # absent. Shell builtins keep this probe independent of those links.
+    seen_cap=false
+    while read -r key value rest; do
+      if test "$key" = CapEff:; then
+        test "$value" = 0000000000000000
+        seen_cap=true
+      fi
+    done < /proc/self/status
+    test "$seen_cap" = true
+    seen_loopback=false
+    while read -r interface rest; do
+      case "$interface" in
+        lo:) seen_loopback=true ;;
+        *:) exit 1 ;;
+      esac
+    done < /proc/net/dev
+    test "$seen_loopback" = true
   '

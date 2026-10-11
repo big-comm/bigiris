@@ -14,10 +14,10 @@
 
 pkgname=bigiris
 pkgver=0.1.0.local
-pkgrel=3
+pkgrel=4
 arch=('x86_64')
 license=('GPL-3.0-or-later')
-url="https://github.com/xathay/bigiris"
+url="https://github.com/big-comm/bigiris"
 pkgdesc="Visualizador e conversor de imagens moderno (build local para testes)"
 depends=(
   'bubblewrap'
@@ -80,8 +80,8 @@ build() {
   export RUSTUP_TOOLCHAIN=stable
   export CARGO_TARGET_DIR="$srcdir/target"
   # `gui` = viewer/dialogos GTK4; `ai` = remover fundo via BiRefNet (ORT).
-  # Se o build falhar por ausencia de libonnxruntime, re-executar com apenas
-  # `--features gui` deixa tudo funcional menos remove-bg.
+  # O backend ORT é carregado dinamicamente: libonnxruntime é opcional
+  # e não precisa estar presente para compilar o visualizador completo.
   cargo build --locked --release --features "gui ai" --package bigiris
 
   # Compila .mo de cada idioma listado em data/po/LINGUAS.

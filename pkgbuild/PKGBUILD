@@ -3,10 +3,10 @@
 
 pkgname=bigiris
 pkgver=0.1.0
-pkgrel=3
+pkgrel=4
 arch=('x86_64')
 license=('GPL-3.0-or-later')
-url="https://github.com/xathay/bigiris"
+url="https://github.com/big-comm/bigiris"
 pkgdesc="Visualizador e conversor de imagens moderno, com integração ao gerenciador de arquivos"
 depends=(
   'bubblewrap'
@@ -17,10 +17,10 @@ depends=(
   'libadwaita>=1.5'
   'dav1d'            # decodificador AVIF
   'openssl'          # TLS para download de modelos IA (ureq + native-tls)
-  'onnxruntime'      # IA (remove-bg via BiRefNet); embutida no binario
   'hicolor-icon-theme'
 )
 optdepends=(
+  'onnxruntime: IA local — remover fundo (BiRefNet)'
   'nautilus-python: integração top-level no Nautilus'
   'dolphin: integração no gerenciador Dolphin (KDE)'
   'nautilus: integração no gerenciador Nautilus (GNOME)'
@@ -38,7 +38,7 @@ makedepends=('rust' 'cargo' 'git' 'pkgconf' 'gettext')
 # archlinux:latest CI image; some user setups can hit it too. We keep
 # -O3 and the mimalloc batch perf win without LTO.
 options=('!lto')
-source=("git+https://github.com/xathay/bigiris.git")
+source=("git+https://github.com/big-comm/bigiris.git")
 sha256sums=('SKIP')
 install="$pkgname.install"
 

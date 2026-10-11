@@ -30,60 +30,10 @@
       <summary>Mostrar a tira de miniaturas na parte inferior</summary>
     </key>
 
-    <key name="color-management" type="b">
-      <default>true</default>
-      <summary>Aplicar ICC do monitor ao renderizar</summary>
-    </key>
-
-    <key name="hdr-enabled" type="b">
-      <default>true</default>
-      <summary>Habilitar tone-mapping HDR quando o display suportar</summary>
-    </key>
-
-    <key name="default-output-format" type="s">
-      <default>'png'</default>
-      <choices>
-        <choice value="png"/>
-        <choice value="jpeg"/>
-        <choice value="webp"/>
-        <choice value="avif"/>
-        <choice value="heic"/>
-        <choice value="jxl"/>
-        <choice value="tiff"/>
-        <choice value="bmp"/>
-      </choices>
-      <summary>Formato de saída padrão para conversões rápidas</summary>
-    </key>
-
-    <key name="overwrite-policy" type="s">
-      <default>'suffix'</default>
-      <choices>
-        <choice value="forbid"/>
-        <choice value="suffix"/>
-        <choice value="replace"/>
-      </choices>
-      <summary>Política de sobrescrita (padrão: suffix, nunca replace silencioso)</summary>
-    </key>
-
-    <key name="strip-gps-by-default" type="b">
-      <default>false</default>
-      <summary>Remover GPS do EXIF por padrão ao exportar (LGPD)</summary>
-    </key>
-
-    <key name="ai-models-directory" type="s">
-      <default>''</default>
-      <summary>Diretório de modelos de IA (vazio = $XDG_DATA_HOME/bigiris/models)</summary>
-    </key>
-
-    <key name="ai-preferred-execution-provider" type="s">
-      <default>'auto'</default>
-      <choices>
-        <choice value="auto"/>
-        <choice value="cpu"/>
-        <choice value="cuda"/>
-        <choice value="rocm"/>
-      </choices>
-      <summary>Execution provider preferido do ONNX Runtime</summary>
+    <key name="slideshow-interval-s" type="u">
+      <default>5</default>
+      <range min="1" max="3600"/>
+      <summary>Intervalo do slideshow em segundos</summary>
     </key>
 
   </schema>

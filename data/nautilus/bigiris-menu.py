@@ -24,7 +24,7 @@ import gi
 # silenciosamente nesse caso — so tentamos fixar se o typelib existir e
 # ignoramos qualquer outro cenario. O import subsequente continua
 # funcionando porque nautilus-python injeta o modulo diretamente.
-for _nautilus_version in ("4.0", "3.0"):
+for _nautilus_version in ("4.1", "4.0", "3.0"):
     try:
         gi.require_version("Nautilus", _nautilus_version)
         break
@@ -188,6 +188,16 @@ _SUBMENUS = [
             ("Otimizar PNG (compressão máxima)", [
                 "convert", "--to", "png", "--optimize", "--overwrite", "replace",
             ], _ICON_CONVERT),
+            ("Letterbox YouTube post (1:1)", [
+                "extent", "--aspect", "1:1", "--bg", "#0d0e12",
+            ], _ICON_WEB),
+            ("Letterbox Instagram feed (4:5)", [
+                "extent", "--aspect", "4:5", "--bg", "#0d0e12",
+            ], _ICON_WEB),
+            ("Letterbox Stories / Shorts (9:16)", [
+                "extent", "--aspect", "9:16", "--bg", "#0d0e12",
+            ], _ICON_WEB),
+            ("Letterbox personalizado…", ["--dialog=extent"], _ICON_WEB),
         ],
     ),
     (
@@ -259,6 +269,9 @@ class BigIrisMenuProvider(GObject.GObject, Nautilus.MenuProvider):
         files = args[-1] if args else []
         image_paths = self._paths_of_kind(files, "image")
         doc_paths = self._paths_of_kind(files, "doc")
+        folder_paths = self._paths_of_kind(files, "folder")
+        if folder_paths:
+            return self._folder_items(folder_paths + image_paths)
         if not image_paths and not doc_paths:
             return []
 
@@ -335,6 +348,8 @@ class BigIrisMenuProvider(GObject.GObject, Nautilus.MenuProvider):
                 pass
             elif kind == "doc" and mime in _DOC_MIMES:
                 pass
+            elif kind == "folder" and mime == "inode/directory":
+                pass
             else:
                 continue
             loc = f.get_location()
@@ -342,10 +357,25 @@ class BigIrisMenuProvider(GObject.GObject, Nautilus.MenuProvider):
                 out.append(loc.get_path())
         return out
 
-    def get_background_items(self, *_args):
-        # Nao oferecemos acoes quando o clique e no fundo do diretorio —
-        # BigIris trabalha sempre sobre uma selecao concreta de arquivos.
-        return []
+    def _folder_items(self, paths):
+        if not paths:
+            return []
+        item = Nautilus.MenuItem(
+            name="BigIrisExtension::BatchFolder",
+            label="BigIris — Processar esta pasta…",
+            tip="Converter imagens da pasta com o Prisma",
+            icon=_ICON_CONVERT,
+        )
+        item.connect("activate", self._run_action, ["--dialog=batch"], list(paths))
+        return [item]
+
+    def get_background_items(self, *args):
+        try:
+            folder = args[-1] if args else None
+            return self._folder_items(self._paths_of_kind([folder], "folder"))
+        except Exception as exc:
+            sys.stderr.write(f"BigIris: erro em get_background_items: {exc!r}\n")
+            return []
 
     def _run_action(self, menu_item, args, paths):
         try:

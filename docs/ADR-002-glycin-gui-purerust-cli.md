@@ -1,33 +1,44 @@
-# ADR-002 — glycin na GUI, pure-Rust no CLI
+# ADR-002 — backend de decodificação
 
-- **Status:** Aceito
+- **Status:** Implementado com worker Bubblewrap; expansão de formatos adiada
 - **Data:** 2026-04-19
+- **Revisão:** 2026-10-11
 
 ## Contexto
 
-Decodificar imagens em Linux envolve um zoológico de libs C com histórico denso de CVEs (libjpeg, libpng, libheif, libtiff…). A GUI precisa de decodificação segura, com suporte a formatos modernos (AVIF/HEIC/JXL/RAW) e sem travar a UI. O CLI precisa rodar em CI mínimo (contêiner Arch headless, possivelmente sem bwrap) e em instalações `makepkg` enxutas.
+O visualizador e a CLI precisam entregar os mesmos pixels, orientação EXIF e
+limites contra imagens hostis. Usar backends diferentes antes de existir uma
+camada comum aumentaria a chance de divergência e anunciaria formatos que o
+produto ainda não abre.
 
-## Decisão
+## Decisão atual
 
-**Dois caminhos, um core:**
+GUI e CLI usam `bigimage_core::open_image`, baseado no crate `image`, com
+detecção por conteúdo, orientação EXIF e limites de 1 GiB/256 MP. No viewer, a
+decodificação roda em uma thread dedicada e pedidos sucessivos são coalescidos,
+evitando bloquear o loop do GTK.
 
-1. **GUI** usa [`glycin`](https://gitlab.gnome.org/sophie-h/glycin): cada loader de formato roda em processo separado em sandbox `bwrap` com syscalls restritas. Bug em libheif não compromete o app. É o backend do Loupe. Entrega AVIF/HEIC/JXL/RAW/HDR de graça.
+No executável, o core recebe um backend que delega decode, dimensões, previews
+e metadados a um worker Bubblewrap separado. Esse worker usa a mesma
+implementação `image`, lê a entrada por descritor e entrega pixels por um
+protocolo validado, com limites de processo e cancelamento supervisionado.
+O aplicativo recusa a imagem se o sandbox não iniciar. A biblioteca standalone
+continua local por padrão; encoders e inferência ONNX não foram isolados.
+Detalhes e limites em [QUALITY.md](QUALITY.md).
 
-2. **CLI** usa **pure-Rust** primeiro: `image` crate + `jxl-oxide` + `jpegxl-rs` (encode JXL) + `libheif-rs` (quando necessário) + `rawler` + `kamadak-exif`. Fallback opcional para **libvips** em batches gigantes (pipeline streaming, memória constante).
+Os formatos efetivamente suportados são apenas os expostos por
+`bigimage_core::Format`. HEIC, JPEG XL, SVG e RAW não têm feature flags vazias
+nem aparecem nos metadados do desktop.
 
-## Consequências
+## Evolução considerada
 
-**Positivas**
-- Segurança em profundidade no caminho GUI (R2).
-- CI roda mesmo em contêiner sem bwrap (caminho pure-Rust).
-- libvips opcional cobre o extremo de performance em batches enormes sem forçar toda compilação a depender dele.
+Glycin continua sendo uma opção para substituir ou ampliar os loaders atuais,
+desde que:
 
-**Negativas**
-- Dois caminhos de decode significa duas APIs a manter em sincronia. Mitigado: ambos produzem o mesmo tipo `DecodedImage` do core.
-- libheif e jpegxl-rs continuam dependendo de libs C no CLI. Aceitável porque rodam fora de sandbox apenas em contextos onde o usuário confia no input (CI, scripts próprios).
+1. exista adaptação única para o tipo interno do core;
+2. os mesmos testes de orientação, dimensão e limites cubram os dois backends;
+3. cada formato só seja anunciado depois de passar por testes reais;
+4. a dependência esteja disponível nas distribuições suportadas.
 
-## Alternativas descartadas
-
-- **Só glycin em todo lugar**: glycin é Linux-only e depende de bwrap. Não roda em CI mínimo nem em Alpine. Quebra requisito de CI headless.
-- **Só pure-Rust em todo lugar**: perde cobertura de HEIC/RAW/HDR avançado que glycin já entrega.
-- **ImageMagick/GraphicsMagick via CLI**: overhead de processo, superfície CVE grande, resultado menos controlável.
+Até esses critérios serem atendidos, o backend atual é a implementação oficial,
+não um fallback temporário.

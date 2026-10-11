@@ -83,9 +83,7 @@ pub fn crop_file(
     tracing::debug!(?input, ?output, ?target, ?rect, "crop: computing");
     let cropped = apply_to(&src, rect)?;
 
-    let output =
-        pipeline::encode_and_cleanup(cropped, output, target, &crate::EncodeOptions::default())?;
-    Ok(ConvertOutcome::Written { output })
+    pipeline::encode_and_cleanup(cropped, output, target, &crate::EncodeOptions::default(), policy)
 }
 
 /// Pure in-memory crop — validates `rect` against the image then returns a

@@ -14,23 +14,11 @@ tracing.workspace = true
 image.workspace = true
 fast_image_resize.workspace = true
 kamadak-exif.workspace = true
-serde = { workspace = true, optional = true }
-
-[dev-dependencies]
 tempfile = "3"
+moxcms = { version = "0.8", features = ["in_place"] }
+rustix = { version = "1", features = ["fs"] }
+serde = { workspace = true, optional = true }
 
 [features]
 default = []
 serde = ["dep:serde"]
-
-# Tier-2 format gates. Reserved now so downstream Cargo.toml and CLI can
-# opt in without churn; decoder/encoder wiring lands in a follow-up
-# iteration (each brings in a system C lib).
-#
-# heic: libheif-rs — HEIC/HEIF (iPhone, Apple ecosystem).
-# jxl : jpegxl-rs (encode) + jxl-oxide (decode, pure-Rust) — next-gen JPEG.
-# raw : rawler — Canon CR2/CR3, Nikon NEF, Sony ARW, Fuji RAF, Olympus ORF,
-#                Adobe DNG, Pentax PEF, Panasonic RW2 (decode only).
-heic = []
-jxl = []
-raw = []

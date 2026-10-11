@@ -34,7 +34,7 @@ jobs:
       - name: install libdav1d-dev
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends libdav1d-dev pkg-config
+          sudo apt-get install -y --no-install-recommends libdav1d-dev pkg-config bubblewrap util-linux
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy
@@ -50,52 +50,78 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            libgtk-4-dev libadwaita-1-dev libdav1d-dev pkg-config
+            libgtk-4-dev libadwaita-1-dev libdav1d-dev pkg-config bubblewrap util-linux
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy
       - uses: Swatinem/rust-cache@v2
-      - run: cargo clippy -p bigiris --features "gui ai" --all-targets --locked -- -D warnings
+      - run: cargo clippy --workspace --all-features --all-targets --locked -- -D warnings
 
   test:
     name: test (headless)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - name: install libdav1d-dev
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends libdav1d-dev pkg-config
+          sudo apt-get install -y --no-install-recommends libdav1d-dev pkg-config bubblewrap util-linux
+      - name: prepare distro Bubblewrap policy and verify isolation
+        run: bash .github/scripts/prepare-sandbox.sh
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
+      # Sandbox tests exercise the distro bubblewrap policy and fail closed.
+      # Do not disable AppArmor or add broad container capabilities to pass.
       - run: cargo test --workspace --all-targets --locked
 
   test-gui:
     name: test (gui + ai)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - name: install GTK4/libadwaita/dav1d dev
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            libgtk-4-dev libadwaita-1-dev libdav1d-dev pkg-config
+            libgtk-4-dev libadwaita-1-dev libdav1d-dev pkg-config bubblewrap util-linux xvfb dbus-x11
+      - name: prepare distro Bubblewrap policy and verify isolation
+        run: bash .github/scripts/prepare-sandbox.sh
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       # Tests in `crates/bigiris/src/gui.rs` (the 20 anchor/zoom tests)
       # only compile with `--features gui`, so they need their own job.
-      - run: cargo test -p bigiris --features "gui ai" --all-targets --locked
+      # Sandbox tests exercise the distro bubblewrap policy and fail closed.
+      # Do not disable AppArmor or add broad container capabilities to pass.
+      - run: cargo test --workspace --all-features --all-targets --locked
+
+      - name: viewer lifecycle and painted zoom frames (isolated display)
+        env:
+          GSETTINGS_BACKEND: memory
+          GDK_BACKEND: x11
+          GSK_RENDERER: cairo
+          BIGIRIS_TEST_ZOOM_REPORT_DIR: ${{ github.workspace }}/target/quality/ci-zoom
+        run: |
+          xvfb-run -a dbus-run-session -- cargo test -p bigiris --features "gui ai" \
+            --locked viewer_lifecycle_releases_state_and_workers -- \
+            --ignored --test-threads=1
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: painted-zoom-frames
+          path: target/quality/ci-zoom
 
   build:
     name: build (release, gui + ai)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - name: install GTK4/libadwaita/dav1d dev
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            libgtk-4-dev libadwaita-1-dev libdav1d-dev pkg-config
+            libgtk-4-dev libadwaita-1-dev libdav1d-dev pkg-config bubblewrap util-linux
+      - name: prepare distro Bubblewrap policy and verify isolation
+        run: bash .github/scripts/prepare-sandbox.sh
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       # `ai` usa load-dynamic do ort: compila sem libonnxruntime presente,
@@ -144,6 +170,8 @@ jobs:
       # Usa PKGBUILD.local (build do checkout local, sem clone remoto).
       # O PKGBUILD principal usa `source=git+https://github.com/xathay/bigiris`,
       # que makepkg nao consegue clonar em repo privado sem credenciais.
+      # Docker blocks nested namespaces by default. Run functional sandbox
+      # tests in the host test/build jobs; this job checks build + packaging.
       - name: makepkg
         working-directory: pkgbuild
         run: |
@@ -155,3 +183,75 @@ jobs:
             --skipinteg \
             --nocheck \
             --clean
+
+  nautilus:
+    name: Nautilus extension contracts
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -v
+      - run: glib-compile-schemas --strict --dry-run data
+
+  security:
+    name: RustSec dependency audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo install cargo-audit --locked
+      - run: cargo audit --deny unsound
+
+  stability:
+    name: Synthetic core stress and stability
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: install codec dev files
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libdav1d-dev pkg-config bubblewrap util-linux
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo build --release --locked -p bigimage-core --example quality_probe
+      - run: ./target/release/examples/quality_probe stress 32
+      - run: ./target/release/examples/quality_probe soak 30
+
+  memcheck:
+    name: Core memory errors and leaks (Valgrind)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: install codec and debugger files
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libdav1d-dev pkg-config bubblewrap util-linux valgrind libc6-dbg
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo build --release --locked -p bigimage-core --example quality_probe
+      - name: instrument synthetic decode/resize/preview/encode cycles
+        run: |
+          valgrind --leak-check=full --show-leak-kinds=definite,indirect \
+            --errors-for-leak-kinds=definite,indirect --error-exitcode=1 \
+            ./target/release/examples/quality_probe soak 1 320x240
+
+  fuzz:
+    name: Codec and ICC fuzzing (ASan + LSan)
+    runs-on: ubuntu-latest
+    # The repository selects stable in rust-toolchain.toml. Installing
+    # nightly alone does not override that choice for the Python runner.
+    env:
+      RUSTUP_TOOLCHAIN: nightly
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update && sudo apt-get install -y libdav1d-dev pkg-config
+      - uses: dtolnay/rust-toolchain@nightly
+      - uses: Swatinem/rust-cache@v2
+      - run: python3 scripts/fuzz.py --seconds 30
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: fuzz-evidence
+          path: |
+            target/quality/fuzz
+            target/quality/fuzz-artifacts

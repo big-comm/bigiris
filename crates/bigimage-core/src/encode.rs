@@ -14,7 +14,7 @@
 /// new fields don't silently regress.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct EncodeOptions {
-    /// Quality `1..=100` for lossy formats (JPEG/WebP lossy). `None`
+    /// Quality `1..=100` for JPEG/AVIF. WebP is always lossless. `None`
     /// falls back to the encoder's default (JPEG uses 75).
     pub quality: Option<u8>,
     /// Emit progressive JPEG (multi-pass). Accepted for now but the pure-
@@ -34,12 +34,10 @@ pub struct EncodeOptions {
     /// to fail if the default ever silently flips to `false`.
     pub strip_metadata: bool,
     /// AVIF encoder speed `1..=10` (1 = slowest / smallest file, 10 =
-    /// fastest / larger file). The `image` crate defaults to 4
-    /// (balanced — sits ~5–10× slower than 8 on PNG/JPG screenshots).
-    /// We default to **8** so a hundred-file batch finishes in seconds
-    /// instead of half an hour. The `optimize` flag clamps the
-    /// effective speed at 4 to recover the better compression when the
-    /// user opts in.
+    /// fastest / larger file). We default to 8, favoring throughput.
+    /// Actual time depends on image content, dimensions and hardware.
+    /// The `optimize` flag clamps the effective speed at 4 to favor
+    /// stronger compression when the user opts in.
     pub avif_speed: u8,
 }
 
@@ -70,8 +68,8 @@ impl EncodeOptions {
 
 impl EncodeOptions {
     /// Convenience: a preset tailored for web uploads (WhatsApp, general
-    /// email). JPEG quality 85 with progressive + optimize. Metadata
-    /// stripped (default).
+    /// email). JPEG quality 85. Progressive/optimize are compatibility
+    /// flags with no JPEG effect in the current encoder. Metadata stripped.
     pub fn web_preset() -> Self {
         Self { quality: Some(85), progressive: true, optimize: true, ..Self::default() }
     }

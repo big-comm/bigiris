@@ -1,12 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //! Build animated GIFs (and, later, WebP/APNG) from a stack of still frames.
 //!
-//! Frames come in as file paths, so this module owns both the decode and
-//! the encode passes — no middle hop through our standard pipeline since
-//! every frame has to live in memory as RGBA before `GifEncoder` can
-//! emit it. For the typical "10 photos → looping GIF" workflow that's
-//! fine; proper memory-constant streaming is the job of `libvips` in a
-//! future iteration.
+//! Frames are decoded and encoded one at a time. A unique temporary sibling
+//! protects both existing outputs and input frames when encoding fails.
 
 use std::path::{Path, PathBuf};
 
@@ -67,14 +63,9 @@ pub fn make_gif(frames: &[PathBuf], output: &Path, opts: AnimateOptions) -> Resu
         return Err(BigImageError::InvalidInput("nenhum quadro informado".to_string()));
     }
 
-    // Prepare output file + encoder.
-    if let Some(parent) = output.parent() {
-        if !parent.as_os_str().is_empty() {
-            std::fs::create_dir_all(parent).map_err(BigImageError::Io)?;
-        }
-    }
-    let file = std::fs::File::create(output).map_err(BigImageError::Io)?;
-    let mut encoder = GifEncoder::new_with_speed(file, opts.speed.clamp(1, 30));
+    let mut temp = pipeline::output_temp(output)?;
+    let mut writer = std::io::BufWriter::new(temp.as_file_mut());
+    let mut encoder = GifEncoder::new_with_speed(&mut writer, opts.speed.clamp(1, 30));
     encoder
         .set_repeat(opts.loop_mode.to_gif_repeat())
         .map_err(|e| BigImageError::Encode { path: output.to_path_buf(), source: e })?;
@@ -98,7 +89,12 @@ pub fn make_gif(frames: &[PathBuf], output: &Path, opts: AnimateOptions) -> Resu
         push_frame(img)?;
     }
 
-    Ok(output.to_path_buf())
+    drop(encoder);
+    std::io::Write::flush(&mut writer).map_err(BigImageError::Io)?;
+    drop(writer);
+    let outcome =
+        pipeline::publish_temp(temp, output.to_path_buf(), crate::OverwritePolicy::Replace)?;
+    Ok(outcome.path().to_path_buf())
 }
 
 /// Bring an arbitrarily-sized `img` to the canonical `w × h` canvas used

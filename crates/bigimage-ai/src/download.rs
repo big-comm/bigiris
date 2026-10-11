@@ -2,7 +2,7 @@
 //! Download manager for IA model files.
 //!
 //! Every model we ship has a pinned `url` + `sha256`. Downloads are
-//! atomic: we write to `<dest>.part`, verify the hash, and only rename
+//! atomic: we write to a unique temporary sibling, verify the hash, and only rename
 //! into place when everything matches. Re-running over an already-valid
 //! file is a no-op — the hash short-circuits the copy.
 //!
@@ -101,19 +101,18 @@ pub fn ensure(
         return Ok(dest);
     }
 
-    // Stream into a `.part` sibling. Any mid-download crash leaves a
-    // partial we can re-run over without polluting `dest`.
-    let partial = dest.with_extension("onnx.part");
-    download_stream(model.url, &partial, model.size_bytes, &mut progress)?;
-
-    // Verify before renaming — callers trust "this path has that hash".
-    let actual = file_sha256(&partial).map_err(DownloadError::Io)?;
+    let mut partial = tempfile::Builder::new()
+        .prefix(".bigiris-model-")
+        .suffix(".part")
+        .tempfile_in(dest.parent().ok_or(DownloadError::NoCacheDir)?)
+        .map_err(DownloadError::Io)?;
+    download_stream(model.url, partial.as_file_mut(), model.size_bytes, &mut progress)?;
+    let actual = file_sha256(partial.path()).map_err(DownloadError::Io)?;
     if !actual.eq_ignore_ascii_case(model.sha256) {
-        let _ = std::fs::remove_file(&partial);
         return Err(DownloadError::HashMismatch { expected: model.sha256.to_string(), actual });
     }
-
-    std::fs::rename(&partial, &dest).map_err(DownloadError::Io)?;
+    partial.as_file().sync_all().map_err(DownloadError::Io)?;
+    partial.persist(&dest).map_err(|e| DownloadError::Io(e.error))?;
     Ok(dest)
 }
 
@@ -123,17 +122,62 @@ pub fn ensure(
 /// hostile mirror can't fill the disk before SHA-256 verification.
 const MAX_OVER_BYTES: u64 = 16 * 1024 * 1024;
 
-/// Stream `url` into `dest`, calling `progress(current, total)` every
-/// chunk. Uses a 64 KiB buffer — enough to amortise syscalls without
-/// blowing cache locality.
+fn https_url(url: &str) -> Result<url::Url, DownloadError> {
+    let parsed = url::Url::parse(url).map_err(|e| DownloadError::Http(e.to_string()))?;
+    if parsed.scheme() != "https"
+        || parsed.host_str().is_none()
+        || !parsed.username().is_empty()
+        || parsed.password().is_some()
+    {
+        return Err(DownloadError::Http("download exige HTTPS sem credenciais na URL".to_string()));
+    }
+    Ok(parsed)
+}
+
+fn redirect_url(current: &url::Url, location: &str) -> Result<url::Url, DownloadError> {
+    let joined = current.join(location).map_err(|e| DownloadError::Http(e.to_string()))?;
+    https_url(joined.as_str())
+}
+
+fn download_response(url: &str) -> Result<ureq::Response, DownloadError> {
+    let connector =
+        ureq::native_tls::TlsConnector::new().map_err(|e| DownloadError::Http(e.to_string()))?;
+    let agent = ureq::AgentBuilder::new()
+        .tls_connector(std::sync::Arc::new(connector))
+        .redirects(0)
+        .timeout_connect(std::time::Duration::from_secs(15))
+        .timeout_read(std::time::Duration::from_secs(60))
+        .timeout_write(std::time::Duration::from_secs(60))
+        .build();
+    let mut current = https_url(url)?;
+    for _ in 0..=10 {
+        let response =
+            agent.get(current.as_str()).call().map_err(|e| DownloadError::Http(e.to_string()))?;
+        match response.status() {
+            301 | 302 | 303 | 307 | 308 => {
+                let location = response.header("Location").ok_or_else(|| {
+                    DownloadError::Http("redirecionamento sem Location".to_string())
+                })?;
+                // Validate every hop before any request to its destination.
+                current = redirect_url(&current, location)?;
+            }
+            200..=299 => return Ok(response),
+            status => return Err(DownloadError::Http(format!("status HTTP inesperado: {status}"))),
+        }
+    }
+    Err(DownloadError::Http("muitos redirecionamentos".to_string()))
+}
+
+/// Stream into an exclusively created temporary file; callers own cleanup.
 fn download_stream(
     url: &str,
-    dest: &Path,
+    file: &mut std::fs::File,
     expected_total: u64,
     progress: &mut impl FnMut(u64, u64),
 ) -> Result<(), DownloadError> {
-    tracing::info!(%url, ?dest, "baixando modelo");
-    let resp = ureq::get(url).call().map_err(|e| DownloadError::Http(e.to_string()))?;
+    tracing::info!(%url, "baixando modelo");
+    let resp = download_response(url)?;
+
     let total: u64 =
         resp.header("Content-Length").and_then(|v| v.parse().ok()).unwrap_or(expected_total);
 
@@ -143,7 +187,6 @@ fn download_stream(
     let budget = expected_total.saturating_add(MAX_OVER_BYTES);
 
     let mut reader = resp.into_reader();
-    let mut file = std::fs::File::create(dest).map_err(DownloadError::Io)?;
 
     let mut buf = vec![0u8; 64 * 1024];
     let mut done = 0u64;
@@ -152,19 +195,15 @@ fn download_stream(
         if n == 0 {
             break;
         }
-        file.write_all(&buf[..n]).map_err(DownloadError::Io)?;
         done = done.saturating_add(n as u64);
         if done > budget {
-            // Drop the partial; the caller's `ensure` flow already swallows
-            // any remove error so we don't leak filesystem state to it.
-            drop(file);
-            let _ = std::fs::remove_file(dest);
             return Err(DownloadError::Http(format!(
                 "servidor enviou mais que o esperado ({} MB > limite de {} MB)",
                 done / (1024 * 1024),
                 budget / (1024 * 1024),
             )));
         }
+        file.write_all(&buf[..n]).map_err(DownloadError::Io)?;
         progress(done, total);
     }
     file.flush().map_err(DownloadError::Io)?;
@@ -198,13 +237,22 @@ mod tests {
     use tempfile::TempDir;
 
     #[test]
+    fn urls_refuse_plaintext_and_credentials_before_network_access() {
+        assert!(https_url("http://example.org/model.onnx").is_err());
+        assert!(https_url("https://user:password@example.org/model.onnx").is_err());
+        let base = https_url("https://example.org/models/a").unwrap();
+        assert!(redirect_url(&base, "http://example.org/model").is_err());
+        assert_eq!(redirect_url(&base, "../model").unwrap().as_str(), "https://example.org/model");
+        assert!(redirect_url(&base, "//user:password@example.org/model").is_err());
+    }
+
+    #[test]
     fn file_sha256_matches_known_sample() {
         let dir = TempDir::new().unwrap();
         let path = dir.path().join("a.bin");
         std::fs::write(&path, b"hello, bigiris\n").unwrap();
-        // Precomputed: sha256("hello, bigiris\n") = 7f2f9b9a…f9d
         let digest = file_sha256(&path).unwrap();
-        assert_eq!(digest.len(), 64, "sha256 hex must be 64 chars");
+        assert_eq!(digest, "4a30443c709da4a8901dcba8bd388efda3da7d23772b5d5d6c7c0e0c2c368744");
     }
 
     #[test]

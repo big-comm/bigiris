@@ -125,9 +125,7 @@ pub fn adjust_file(
     tracing::debug!(?input, ?output, ?ops, "adjust: applying");
     let tweaked = if ops.is_identity() { src } else { apply_to(src, ops) };
 
-    let output =
-        pipeline::encode_and_cleanup(tweaked, output, target, &crate::EncodeOptions::default())?;
-    Ok(ConvertOutcome::Written { output })
+    pipeline::encode_and_cleanup(tweaked, output, target, &crate::EncodeOptions::default(), policy)
 }
 
 /// Pure in-memory variant of [`adjust_file`] — applies `ops` to an already-

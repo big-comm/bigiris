@@ -5,332 +5,226 @@
 <h1 align="center">BigIris</h1>
 
 <p align="center">
-  <strong>Visualizador e conversor de imagens moderno para Linux.</strong><br>
-  Rust + GTK4/libadwaita · IA local que nunca sai do seu computador · single-binary com CLI e GUI.
+  <strong>Um visualizador rápido e um estúdio de imagens sob demanda.</strong><br>
+  Rust · GTK4/libadwaita · CLI · processamento local · GNOME/Nautilus e outros desktops
 </p>
 
----
+BigIris segue uma ideia simples: abrir uma foto deve ser imediato e silencioso;
+trabalhar em muitas fotos deve oferecer uma interface completa. Por isso o
+projeto tem duas experiências no mesmo binário:
 
-Substitui o ServiceMenu *ReImage* (KDE) e atualiza o estado da arte de viewers como Loupe e Gwenview num único app, com dois módulos:
+- **Íris** é o visualizador minimalista: abre no arquivo escolhido, descobre as
+  imagens irmãs da pasta, navega em ordem natural e mantém a foto no centro.
+- **Prisma** aparece quando é necessário converter, redimensionar, recortar,
+  ajustar, comparar, animar ou processar uma pasta inteira.
 
-- **Íris** — visualizar (zoom cursor-anchored, drag pan em qualquer botão, navegação, fullscreen, slideshow, film strip, histograma, modo teatro).
-- **Prisma** — transformar (converter, redimensionar, girar, espelhar, cortar, ajustar cores, comparar, metadados, animar, lote, IA).
+O fluxo compacto e os atalhos têm o IrfanView como referência funcional. A
+interface usa GTK4/libadwaita, com prioridade para o BigCommunity GNOME
+e integração também com outros desktops. O resultado respeita o tema,
+usa ícones simbólicos do sistema e mantém as operações avançadas fora do caminho
+principal.
 
-## O que faz diferente
+## Destaques
 
-### Performance
+- Decodificação da imagem e das miniaturas fora da thread gráfica.
+- Navegação rápida por pasta com coalescência: resultados antigos são descartados
+  quando o usuário percorre várias imagens rapidamente.
+- Zoom centrado no cursor, pan por arrasto, 1:1, ajustar à janela, tela cheia,
+  slideshow, fita de miniaturas e histograma RGB.
+- Giro e espelhamento não destrutivos, com desfazer/refazer; `Ctrl+S` confirma e
+  grava por substituição atômica, preservando o original se o encoder falhar.
+- Processamento em lote paralelo, cancelável, com progresso, tempo e tamanho
+  antes/depois.
+- Integração com Dolphin, Nautilus, Nemo, Thunar, PCManFM-Qt e elementary Files.
+- Ação de pasta no Nautilus e no Dolphin: **BigIris → Processar esta pasta…**.
+- Remoção de fundo local com BiRefNet-lite, modelo verificado por SHA-256 e sem
+  upload das imagens.
+- Limites preventivos de 1 GiB por arquivo, 256 MP e 512 MiB por buffer de imagem.
 
-**Batch paralelo no nível do IrfanView.** Cada diálogo Prisma fan-outa o trabalho num pool de worker threads (= `num_cpus − 1`, deixa um core pra GUI) coordenado por `AtomicUsize` sem Mutex no caminho quente. Numa CPU 16-thread, 100 AVIFs → JPEG terminam em segundos; janela arrastável, progresso ao vivo, cancelável mid-batch sem GTK marcar "Não respondendo". Implementação em [`crates/bigiris/src/gui/batch_runner.rs`](crates/bigiris/src/gui/batch_runner.rs).
+## Zoom e memória da IA
 
-**Encoder rápido por padrão.** AVIF emitido com ravif `speed=8` (vs. default=4 do crate `image`) — ~3× mais rápido sem perda visual perceptível. PNG default usa compressão padrão; JPEG quality controlável pelo spinner. O toggle **"Otimizar tamanho"** no diálogo Avançado força speed=4 + PNG `Best` quando o usuário troca tempo por tamanho.
+Posicione o cursor sobre o detalhe da imagem e use a roda do mouse, `+`/`-`
+ou os botões de zoom. A transição é gradual, com movimentos proporcionais no
+touchpad, e respeita a preferência de desativar animações do GTK. A ampliação
+preserva esse ponto, respeitando os limites
+de rolagem da imagem. `1` exibe 100%; `0` ajusta à janela. Sem posição conhecida
+do cursor, o ponto de referência é o centro da área visível.
 
-**Allocator multi-thread.** `mimalloc` como `#[global_allocator]` — heap por thread sem lock contention nas alocações que o batch faz por arquivo (decode → RGBA buffer → encode). 5-15% extra de wall-clock em CPUs ≥ 8 cores.
+A remoção de fundo é opcional. O modelo atual, BiRefNet-lite FP32, atingiu
+aproximadamente 6,53 GiB de RAM no ensaio local. O aplicativo exige um orçamento
+inicial de **8 GiB de RAM livre** antes de baixar/carregar esse modelo e volta
+a conferir o orçamento antes da inferência. Considera a memória disponível do
+Linux, limites cgroup v2 e de espaço virtual; swap não substitui essa margem.
+Isso é uma proteção preventiva, não uma quota rígida de memória.
 
-**Stats pós-batch.** Quando o lote termina, o status row mostra tempo total + bytes antes/depois + médias por arquivo:
+Em uma máquina com 4 GB, a remoção de fundo por esse modelo é recusada com
+explicação. O visualizador e as conversões continuam disponíveis, sujeitos ao
+tamanho das imagens e aos limites do pipeline. Ainda é necessária homologação
+em hardware físico de pouca RAM; não há promessa de suporte a qualquer acervo.
 
-```
-Concluído em 8.2 s · 23 gravado(s), 0 ignorado(s), 0 falha(s)
-8.5 MB → 1.2 MB (−86%) · média por arquivo 378 KB → 53 KB
-```
+## Formatos
 
-**Memória constante em batches grandes.** Um arquivo decodificado por vez por worker; encoder fecha o anterior antes do próximo abrir. SIMD para resize via [`fast_image_resize`](https://docs.rs/fast_image_resize). Decode caps preventivos (1 GiB / 256 MP) refusam pixel bombs antes da descompressão.
+O build padrão completo lê e grava os formatos fornecidos pelo pipeline atual:
+PNG, JPEG, WebP, AVIF, TIFF, BMP, GIF, ICO, PNM, TGA, QOI, Radiance HDR e
+OpenEXR. HEIC/HEIF, JPEG XL, SVG e RAW de câmeras ainda não são anunciados como
+suportados.
 
-### Privacidade & segurança
+As conversões estáticas reencodam os pixels e removem metadados pessoais.
+Perfis ICC RGB são normalizados para sRGB; PNG/JPEG recebem um perfil sRGB
+gerado sem dados da imagem original. Edição estática de animações e TIFF
+multipágina é recusada para impedir perda de conteúdo. O viewer exibe o
+primeiro quadro/página; reprodução animada e navegação multipágina permanecem pendentes. WebP é gravado
+sem perdas; ICO é limitado a 256 × 256. Consulte as limitações em
+[docs/QUALITY.md](docs/QUALITY.md) antes de converter um acervo.
 
-**IA local de verdade.** Remover fundo com **BiRefNet-lite** (MIT) roda 100% offline. A imagem nunca sai do disco — sem upload, sem conta, sem API, sem créditos. Modelo (~224 MB) baixado uma única vez do mirror oficial da comunidade ONNX, **verificado por SHA-256** contra o hash gravado no binário. Allowlist FOSS rígida (MIT/Apache-2.0/BSD/MPL-2.0/CC0); pesos com cláusula *non-commercial* recusados antes do download. Sessão ONNX cacheada entre arquivos do mesmo lote — modelo carrega 1× pra batch de N arquivos. Detalhes em [docs/IA-LOCAL.md](docs/IA-LOCAL.md).
+## Instalação no BigCommunity GNOME
 
-**EXIF/GPS strip-by-default.** `EncodeOptions::strip_metadata = true` é o contrato do encode. O pipeline já dropa EXIF/IPTC/XMP/GPS implicitamente (decode → `DynamicImage` → encode), e o flag explícito existe pra que um futuro toggle "preservar" nunca regrida silenciosamente.
+O runtime exige `bubblewrap` e `util-linux`, com namespaces não privilegiados
+disponíveis. O aplicativo recusa decodificação se o isolamento não puder iniciar.
 
-**Endurecido contra entrada hostil.**
-
-- **Decode caps** — arquivos > 1 GiB e imagens > 256 MP rejeitados antes de descomprimir.
-- **Download cap** — mirror enviando > 16 MiB acima do esperado aborta com cleanup do `.part`.
-- **`O_NOFOLLOW`** em todas as escritas dos service menus — `sudo install-integrations --system` não segue symlinks plantados.
-- **Thunar UCA** empacotado em `sh -c '… "$@"' progname %F` — filenames jamais reinterpretados pelo shell.
-- **TLS** via `native-tls` (OpenSSL do sistema), sem `ring` no caminho de build, sem `danger_*` desativando validação.
-- **`#![forbid(unsafe_code)]`** em todos os crates.
-
-Política de reporte em [SECURITY.md](SECURITY.md).
-
-### UX & integração
-
-**Single-binary, módulos por feature flag.** Um executável carrega CLI, viewer GTK4 e diálogos Prisma. IA atrás do feature `ai`; integrações de file manager geradas pelo próprio binário (`bigiris install-integrations --system|--user`).
-
-**CLI espelhada da GUI.** `bigiris convert ...`, `bigiris resize ...`, `bigiris remove-bg ...`, `bigiris adjust ...`. CI/CD testa exatamente o que o usuário usa.
-
-**6 gerenciadores integrados.** Dolphin, Nautilus (extensão Python top-level), Nemo, Thunar (merge `uca.xml`), PCManFM-Qt, elementary Files. Clique direito em qualquer imagem:
-
-```
-BigIris ▸  Visualizar em BigIris                  ← top: 1-clique pra abrir
-           Converter      ▸ PNG · JPG · WebP · AVIF · TIFF · Mais opções…
-           Redimensionar  ▸ 25% · 50% · 200% · HD · 4K · Mais opções…
-           Girar          ▸ 90° · 180° · 270° · Auto (EXIF) · Mais opções…
-           Espelhar       ▸ Horizontal · Vertical · Mais opções…
-           Ajustar cores  ▸ Brilho ± · Contraste + · P&B · Vivas · Mais opções…
-           Para web       ▸ WhatsApp · Instagram · Facebook · Twitter · Telegram · Discord · PNG otim.
-           Metadados      ▸ Ver · Remover tudo (re-encode limpo)
-           Utilidades     ▸ Lote · GIF animado · Comparar
-           IA             ▸ Remover fundo (BiRefNet)
-           PDF            ▸ Converter (LibreOffice headless)  ← em documentos
-```
-
-**Diálogos Prisma seguem GNOME HIG.** `PreferencesGroup` por seção, `ExpanderRow` "Avançado" para opções de nicho (JPEG progressivo, otimização do encoder), picker de pasta de saída opcional. Tela primária fica em **Formato → Qualidade → Destino**.
-
-**13 formatos Tier-1 nativos** — PNG, JPG, WebP, **AVIF (default)**, TIFF, BMP, GIF, ICO, PNM, TGA, QOI, HDR, OpenEXR. HEIC, JPEG XL e RAW por trás de feature flags.
-
-**i18n com gettext.** Source pt-BR, catálogos `data/po/<lang>.po`. `data/po/en.po` cobre 90 msgids de UI; helper `data/po/regen-pot.sh` regenera o template via `xgettext` e propaga via `msgmerge`.
-
-## Status
-
-#### Funcionalidade
-
-| Bloco | Estado |
-|---|---|
-| CLI completo: `convert` · `resize` · `rotate` · `flip` · `crop` · `adjust` · `remove-bg` · `upscale` · `animate` · `to-pdf` · `install-integrations` | ✓ |
-| Viewer GTK4: zoom cursor-anchored · drag pan · navegação · fullscreen · slideshow · film strip · histograma · modo teatro | ✓ |
-| 12 diálogos Prisma: convert · resize · rotate · flip · crop · adjust · upscale · animate · batch · compare · metadata · remove-bg | ✓ |
-| 13 formatos Tier-1 (PNG · JPG · WebP · AVIF · TIFF · BMP · GIF · ICO · PNM · TGA · QOI · HDR · EXR) | ✓ |
-
-#### Performance
-
-| Bloco | Estado |
-|---|---|
-| Worker pool paralelo (cores − 1) em todos os batches Prisma + Animate; UI nunca freezea | ✓ |
-| `mimalloc` global allocator + AVIF speed=8 default (clamp pra 4 quando "Otimizar") | ✓ |
-| Stats pós-batch: tempo · bytes in/out · % delta · média por arquivo | ✓ |
-| Sessão ORT cacheada entre arquivos do mesmo lote; intra-threads capadas | ✓ |
-| SIMD para resize via `fast_image_resize`; decode caps (1 GiB / 256 MP) | ✓ |
-
-#### Segurança
-
-| Bloco | Estado |
-|---|---|
-| `#![forbid(unsafe_code)]` em todos os crates · SPDX em todo source | ✓ |
-| Decode caps · download cap (16 MiB margem) · `O_NOFOLLOW` no install · Thunar shell quoting | ✓ |
-| EXIF/GPS strip-by-default · TLS via `native-tls` (sem ring) | ✓ |
-| FOSS license allowlist + SHA-256 nos modelos IA | ✓ |
-| `SECURITY.md` · `CONTRIBUTING.md` · GitHub Security Advisories habilitado | ✓ |
-
-#### Empacotamento
-
-| Bloco | Estado |
-|---|---|
-| 6 gerenciadores de arquivos integrados · Nautilus detecta system-wide e evita menu duplicado | ✓ |
-| AppStream metainfo · `.desktop` validado · ícone hicolor SVG · `<screenshots>` + `<releases>` | ✓ |
-| i18n: 90 msgids em pt-BR (source) + `en.po` completo | ✓ |
-| PKGBUILD principal (`xathay/bigiris`) + `.local` (build do checkout) | ✓ |
-| CI: 9 jobs (fmt · 2× clippy · 2× test · build release · AppStream · desktop · makepkg) · 141 testes | ✓ |
-
-#### Roadmap (M2)
-
-| Bloco | Estado |
-|---|---|
-| Glycin sandboxed decode · MDI · EXIF sidebar · preview ao vivo | em planejamento |
-
-## Remover fundo com IA — local, privado, sem conta
-
-```bash
-bigiris remove-bg foto.jpg              # CLI → foto_nobg.png (RGBA)
-bigiris --dialog=remove-bg foto.jpg     # diálogo GUI com progress + compare
-bigiris remove-bg *.jpg                 # lote (sessão ORT cacheada entre arquivos)
-```
-
-Na primeira execução, o modelo (~224 MB) é baixado uma única vez do [mirror oficial da comunidade ONNX](https://huggingface.co/onnx-community/BiRefNet_lite-ONNX) para `~/.local/share/iris/models/` e **verificado por SHA-256** contra o hash fixado no binário. Qualquer divergência aborta — um mirror comprometido não consegue injetar pesos alterados. Tamanho > expected + 16 MiB também aborta, pra não encher o disco. Chamadas seguintes usam o cache local.
-
-Documentação completa: [docs/IA-LOCAL.md](docs/IA-LOCAL.md).
-
-## Como instalar
-
-### Opção A — `makepkg` (Arch / BigLinux / Manjaro)
-
-A partir do diretório `pkgbuild/`:
+Para compilar e empacotar o checkout local na base Arch:
 
 ```bash
 cd pkgbuild
-makepkg -si                        # builda do remoto (git+https://github.com/xathay/bigiris)
-makepkg -si -p PKGBUILD.local      # ou builda do checkout local, pula o clone
+makepkg -si -p PKGBUILD.local
 ```
 
-O hook `.install` informa que as integrações **já estão ativas system-wide** após a instalação — clique direito em qualquer imagem e o submenu "BigIris ▸" aparece nos seis gerenciadores.
+A integração com o Nautilus depende de `nautilus-python`. A campanha de testes
+prioriza GNOME/Wayland; veja os resultados, limites e critérios para adoção
+oficial em [docs/QUALITY.md](docs/QUALITY.md), e os comandos reproduzíveis em
+[CONTRIBUTING.md](CONTRIBUTING.md#campanha-de-qualidade-no-gnome).
 
-Para desinstalar: `sudo pacman -R bigiris`.
+## Instalação no OpenMandriva
 
-### Opção B — `cargo install` (qualquer distro)
+Para instalar o checkout apenas no seu usuário:
 
 ```bash
-# Dependências de sistema (Manjaro/BigLinux):
-sudo pacman -S --needed gtk4 libadwaita dav1d openssl gettext hicolor-icon-theme rust pkgconf
-
-# Da raiz do repo:
-cargo install --path crates/bigiris --features "gui ai" --locked
-
-# Garante PATH:
-export PATH="$HOME/.cargo/bin:$PATH"
-
-# Instala integrações de clique direito no seu usuário:
-bigiris install-integrations --user
+sudo dnf install rust cargo lib64gtk4.0-devel lib64adwaita-devel \
+  onnxruntime-devel gettext bubblewrap util-linux
+./install.sh
 ```
 
-Para desinstalar: `bigiris uninstall-integrations && cargo uninstall bigiris` (rode o `uninstall-integrations` **antes** do `cargo uninstall`, senão o binário some).
+O instalador compila a versão release, coloca o aplicativo em `~/.local`,
+registra somente os gerenciadores de arquivos detectados e atualiza o cache do
+Plasma (`kbuildsycoca6`). Se o menu não aparecer em uma janela antiga do Dolphin,
+feche essa janela e abra outra.
 
-### Opção C — `cargo run` (dev rápido, sem instalar)
+Para o ABF/Cooker, use a receita e as instruções em
+[`packaging/openmandriva/`](packaging/openmandriva/README.md). Ela usa um
+tarball vendorizado para que o build seja offline e reproduzível.
+
+## Outras instalações
+
+No Arch, BigLinux ou Manjaro:
 
 ```bash
-cargo build --release --locked --features "gui ai" -p bigiris
-./target/release/bigiris foto.jpg                   # viewer
-./target/release/bigiris --dialog=convert foto.jpg  # diálogo Prisma
+cd pkgbuild
+makepkg -si
 ```
 
-## Roteiro de teste em 5 minutos
+Em outras distribuições, após instalar Rust, GTK4, libadwaita, dav1d, OpenSSL,
+gettext e ONNX Runtime:
 
 ```bash
-# (a) Self-test — valida o binário
-bigiris --self-test
-
-# (b) CLI puro
-bigiris convert --to avif minha-foto.jpg
-bigiris resize --max-edge 1080 minha-foto.jpg
-bigiris rotate --degrees 90 minha-foto.jpg
-bigiris flip --axis horizontal minha-foto.jpg
-bigiris crop --rect 800x600+100+50 minha-foto.jpg
-bigiris adjust --brightness 15 --contrast 10 minha-foto.jpg
-
-# (c) Viewer
-bigiris foto.jpg *.png
-#   Teclado: +/- (zoom), 0 (ajustar), 1 (1:1), ←/→ (prev/next),
-#            Home/End, Space/Backspace, F11 (fullscreen), Esc
-#   Mouse:   scroll = zoom centrado no cursor
-#            drag (qualquer botão) = pan quando zoomed in
-
-# (d) Diálogos modais Prisma
-bigiris --dialog=convert foto.jpg
-bigiris --dialog=resize foto.jpg
-
-# (e) Integração com file manager
-#     Clique direito numa imagem → submenu BigIris ▸
-
-# (f) Batch IrfanView-style — selecione 100 fotos no file manager
-#     → BigIris ▸ Converter ▸ JPG → "Convertendo 12/100 — foto.jpg"
-#     → janela arrastável, cancelável, sem freeze
+cargo build --locked --release --features "gui ai" -p bigiris
+./install.sh --no-build
 ```
 
-## CLI completa
+Para remover as integrações pessoais antes de apagar o binário:
 
 ```bash
-# Transformações headless (todas com cap de 1 GiB / 256 MP no decode)
-bigiris convert --to png foto.jpg
-bigiris convert --to avif --overwrite replace *.jpg
-bigiris resize --max-edge 1080 foto.png
-bigiris resize --percent 50 --filter lanczos3 foto.png
-bigiris resize --exact 800x600 --to webp foto.png
-bigiris resize --fit 3840x3840 foto.png          # upscale+downscale preservando aspecto
+bigiris uninstall-integrations
+```
+
+## Uso
+
+```bash
+# Visualizador / pasta
+bigiris foto.jpg
+bigiris *.png
+bigiris
+
+# Prisma
+bigiris --dialog=batch pasta-com-fotos
+bigiris --dialog=convert *.jpg
+bigiris --dialog=resize *.png
+bigiris --dialog=crop foto.jpg
+bigiris --dialog=adjust *.jpg
+bigiris --dialog=compare antes.png depois.png
+bigiris --dialog=remove-bg foto.jpg
+
+# CLI
+bigiris convert --to avif --overwrite increment *.jpg
+bigiris resize --max-edge 1080 *.png
 bigiris rotate --degrees 90 foto.jpg
-bigiris rotate --auto --overwrite increment foto.jpg  # EXIF Orientation
 bigiris flip --axis horizontal foto.jpg
 bigiris crop --rect 800x600+100+50 foto.jpg
 bigiris adjust --brightness 15 --contrast 10 foto.jpg
-bigiris adjust --saturation -100 foto.jpg        # preto e branco
-bigiris adjust --gamma 0.7 foto.jpg              # clareia midtones
-
-# IA local (BiRefNet-lite MIT, offline, sessão cacheada entre arquivos)
-bigiris remove-bg foto.jpg                       # → foto_nobg.png (RGBA)
-bigiris remove-bg *.jpg                          # lote
-
-# Upscale (Lanczos3 CPU hoje; Real-ESRGAN planejado)
-bigiris upscale --factor 2 foto.jpg              # 2x, 3x ou 4x
-
-# GIF animado
 bigiris animate -o saida.gif --delay 100 frame_*.png
+bigiris remove-bg foto.jpg
+bigiris to-pdf documento.docx
+bigiris batch --profile docs/batch-profile.example.toml pasta-com-fotos
 
-# Documentos → PDF (via LibreOffice headless)
-bigiris to-pdf documento.docx planilha.xlsx apresentacao.pptx
-
-# Diálogos modais Prisma (usados pelo "Mais opções…" dos menus)
-bigiris --dialog=convert *.jpg
-bigiris --dialog=resize *.png
-bigiris --dialog=rotate foto.jpg
-bigiris --dialog=flip foto.jpg
-bigiris --dialog=adjust foto.jpg
-bigiris --dialog=remove-bg foto.jpg
-bigiris --dialog=batch *.jpg
-bigiris --dialog=animate frame_*.png
-
-# Viewer
-bigiris foto.jpg                  # janela com imagem
-bigiris                           # janela vazia
-bigiris *.png                     # galeria (← → para navegar)
-
-# Integrações
+# Integrações e diagnóstico
 bigiris install-integrations --user
-bigiris install-integrations --system --destdir=/tmp/stage  # para packaging
 bigiris uninstall-integrations
-
-# Debug
 bigiris --self-test
-bigiris --version
 ```
+
+### Atalhos do visualizador
+
+| Atalho | Ação |
+|---|---|
+| `←` / `→`, `Home` / `End` | Navegar pela pasta |
+| roda do mouse, `+` / `-` | Zoom |
+| `0` / `1` | Ajustar / tamanho real |
+| arrastar | Pan |
+| `R` / `Shift+R` | Girar à direita / esquerda |
+| `Ctrl+Z` / `Ctrl+Shift+Z` | Desfazer / refazer |
+| `Ctrl+S` | Salvar edições com segurança |
+| `Space` | Slideshow |
+| `F` / `G` / `T` | Miniaturas / histograma / modo teatro |
+| `H` | Fixar controles visíveis |
+| `F11` / `Esc` | Tela cheia / fechar |
 
 ## Arquitetura
 
-```
+```text
 bigiris/
 ├── crates/
-│   ├── bigimage-core/             # Decode/encode/transforms — pure Rust, headless
-│   │   └── pipeline.rs            # decode caps (1 GiB / 256 MP), strip-metadata default
-│   ├── bigimage-ai/               # ORT + modelos (feature `onnx`)
-│   │   ├── background.rs          # BgSession cacheada + vectorized pre/post-process
-│   │   └── download.rs            # SHA-256 + FOSS allowlist + size cap (16 MiB margin)
-│   ├── bigimage-integrations/     # Service menus para 6 file managers
-│   │   ├── safe_fs.rs             # O_NOFOLLOW write helper (anti-symlink-follow)
-│   │   └── thunar.rs              # UCA com sh -c '... "$@"' (anti-shell-injection)
-│   └── bigiris/                   # Binário único (CLI + GUI via feature `gui`)
-│       └── src/gui/
-│           └── batch_runner.rs    # run_batch_async + AsyncBatchEvent (worker threads)
-├── data/
-│   ├── com.biglinux.Iris.{desktop,metainfo.xml,gschema.xml}
-│   ├── icons/hicolor/scalable/apps/com.biglinux.Iris.svg
-│   ├── nautilus/bigiris-menu.py   # nautilus-python extension
-│   └── po/                        # i18n: bigiris.pot, en.po, LINGUAS, regen-pot.sh
-├── pkgbuild/
-│   ├── PKGBUILD                   # build do git remoto
-│   ├── PKGBUILD.local             # build do checkout (usado pela CI)
-│   └── bigiris.install            # _refresh_caches: gtk-update-icon-cache, kbuildsycoca, etc.
-└── docs/
-    ├── ADR-00{1,2,3}-*.md         # decisões arquiteturais
-    ├── IA-LOCAL.md                # detalhes da IA local
-    └── screenshots/               # PNGs referenciados pelo AppStream metainfo
+│   ├── bigimage-core/          pipeline headless e transformações
+│   ├── bigimage-ai/            modelos locais e download verificado
+│   ├── bigimage-integrations/  ServiceMenus e ações de gerenciadores
+│   └── bigiris/                CLI, viewer Íris e diálogos Prisma
+├── data/                       desktop, AppStream, GSettings, ícone e i18n
+├── packaging/openmandriva/     spec ABF e criação do vendor tarball
+└── pkgbuild/                   pacotes Arch/BigLinux
 ```
 
-ADRs explicam *por que* a estrutura está assim — `ADR-001` separa core de GUI/CLI, `ADR-002` define glycin para GUI + pure-rust para CLI, `ADR-003` justifica single-binary multi-module.
+Os lotes compartilham um único pool em
+[`batch_runner.rs`](crates/bigiris/src/gui/batch_runner.rs). A alocação global
+usa mimalloc, o resize usa SIMD por `fast_image_resize`, e o pool limita a concorrência
+conforme CPU, dimensões das imagens e memória disponível (até quatro jobs).
 
-## Desenvolvimento
+## Desenvolvimento e qualidade
 
-Requer Rust stable ≥ 1.83 e libs de sistema (`gtk4`, `libadwaita`, `dav1d`, `openssl`, `pkgconf`, `gettext`).
+Rust stable 1.92 ou posterior:
 
 ```bash
-# Build sem GUI (CI headless, compila rápido)
-cargo build
+cargo fmt --all --check
+cargo clippy --workspace --all-targets --all-features -- -D warnings
+cargo test --workspace --all-features --locked
+cargo build --release --features "gui ai" -p bigiris
+./target/release/bigiris --self-test
 
-# Build com viewer GTK4 + IA
-cargo build --features "gui ai" -p bigiris
-
-# Qualidade — gates obrigatórios no CI
-cargo fmt --all
-cargo clippy --workspace --all-targets -- -D warnings
-cargo clippy -p bigiris --features "gui ai" --all-targets -- -D warnings
-cargo test --workspace
-cargo test -p bigiris --features "gui ai"
-
-# i18n: regen .pot + msgmerge nos catálogos depois de adicionar gettext("…")
-data/po/regen-pot.sh
+desktop-file-validate data/com.biglinux.Iris.desktop
+appstreamcli validate --no-net data/com.biglinux.Iris.metainfo.xml
+glib-compile-schemas --strict --dry-run data
 ```
 
-CI executa em GitHub Actions: `fmt`, `clippy (headless)`, `clippy (gui+ai)`, `test (headless)`, `test (gui+ai)`, `build (release, gui+ai)` com `--self-test`, `appstreamcli validate`, `desktop-file-validate`, `makepkg` em container Arch. Veja [`.github/workflows/ci.yml`](.github/workflows/ci.yml).
-
-Para contribuir: leia [CONTRIBUTING.md](CONTRIBUTING.md). Para reportar vulnerabilidades: **não abra issue pública**, veja [SECURITY.md](SECURITY.md).
+Relatos e patches são bem-vindos: leia [CONTRIBUTING.md](CONTRIBUTING.md).
+Vulnerabilidades devem seguir [SECURITY.md](SECURITY.md), sem issue pública.
 
 ## Licença
 
-GPL-3.0-or-later. Ver [LICENSE](LICENSE). Cada arquivo `.rs` / `.py` começa com `// SPDX-License-Identifier: GPL-3.0-or-later` para auditoria distro (Debian, Fedora).
-
-Parte da família **BigLinux**. Mantido por Leonardo Athayde.
+GPL-3.0-or-later. Consulte [LICENSE](LICENSE).

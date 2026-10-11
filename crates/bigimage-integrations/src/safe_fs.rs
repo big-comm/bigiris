@@ -19,27 +19,46 @@ use std::path::Path;
 #[cfg(target_os = "linux")]
 const O_NOFOLLOW: i32 = 0o400000;
 
-/// Write `content` to `path`, creating or truncating, but refusing to
-/// follow a symlink at the target. On non-Linux falls back to plain
-/// `std::fs::write` (the project is Linux-only; this shim just keeps
-/// `cargo check` happy on macOS dev boxes).
-#[cfg(target_os = "linux")]
 pub(crate) fn safe_write(path: &Path, content: impl AsRef<[u8]>) -> io::Result<()> {
-    use std::os::unix::fs::OpenOptionsExt;
+    safe_write_with_mode(path, content, 0o644)
+}
+
+/// Write `content` with an explicit Unix permission mode, creating or
+/// truncating the target without following a symlink at the final path.
+///
+/// Most integration metadata uses `0644`. User-owned KDE ServiceMenus are
+/// the exception: Dolphin deliberately ignores them unless they carry an
+/// executable bit, so their installer requests `0755`.
+#[cfg(target_os = "linux")]
+pub(crate) fn safe_write_with_mode(
+    path: &Path,
+    content: impl AsRef<[u8]>,
+    mode: u32,
+) -> io::Result<()> {
+    use std::os::unix::fs::{OpenOptionsExt, PermissionsExt};
 
     let mut f = std::fs::OpenOptions::new()
         .write(true)
         .create(true)
         .truncate(true)
+        .mode(mode)
         .custom_flags(O_NOFOLLOW)
         .open(path)?;
     f.write_all(content.as_ref())?;
     f.flush()?;
+    // Creation mode is still filtered by the caller's umask, and an existing
+    // file keeps its old mode. Normalize both cases through the already-open
+    // descriptor so integration metadata is never group/world writable.
+    f.set_permissions(std::fs::Permissions::from_mode(mode))?;
     Ok(())
 }
 
 #[cfg(not(target_os = "linux"))]
-pub(crate) fn safe_write(path: &Path, content: impl AsRef<[u8]>) -> io::Result<()> {
+pub(crate) fn safe_write_with_mode(
+    path: &Path,
+    content: impl AsRef<[u8]>,
+    _mode: u32,
+) -> io::Result<()> {
     std::fs::write(path, content)
 }
 
@@ -50,10 +69,12 @@ mod tests {
 
     #[test]
     fn writes_to_fresh_path() {
+        use std::os::unix::fs::PermissionsExt;
         let tmp = TempDir::new().unwrap();
         let p = tmp.path().join("a.txt");
         safe_write(&p, "hello").unwrap();
         assert_eq!(std::fs::read_to_string(&p).unwrap(), "hello");
+        assert_eq!(std::fs::metadata(&p).unwrap().permissions().mode() & 0o777, 0o644);
     }
 
     #[test]
@@ -63,6 +84,20 @@ mod tests {
         std::fs::write(&p, "first content here").unwrap();
         safe_write(&p, "shorter").unwrap();
         assert_eq!(std::fs::read_to_string(&p).unwrap(), "shorter");
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn explicit_mode_normalizes_existing_file() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let tmp = TempDir::new().unwrap();
+        let p = tmp.path().join("action.desktop");
+        std::fs::write(&p, "old").unwrap();
+        safe_write_with_mode(&p, "new", 0o755).unwrap();
+
+        assert_eq!(std::fs::read_to_string(&p).unwrap(), "new");
+        assert_eq!(std::fs::metadata(&p).unwrap().permissions().mode() & 0o777, 0o755);
     }
 
     #[cfg(target_os = "linux")]

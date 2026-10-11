@@ -25,16 +25,19 @@ use thiserror::Error;
 use crate::download;
 use crate::download::{DownloadError, ModelSource};
 
+#[cfg(any(feature = "onnx", test))]
+mod memory;
+
 /// BiRefNet-lite ONNX — mirror oficial da comunidade ONNX, exportado a
 /// partir do repositório canônico [`ZhengPeng7/BiRefNet_lite`] (MIT)
-/// pela equipe Xenova / onnx-community. Revisão fixa via `resolve/main`;
+/// pela equipe Xenova / onnx-community. Revisão fixada por commit do repositório;
 /// o hash abaixo cobre o `.onnx` FP32 (~214 MB) tal como publicado em
 /// 2024-09. Se o mirror re-envelopar os pesos, a verificação em
 /// [`super::download::ensure`] rejeita o arquivo antes de gravá-lo na
 /// cache do usuário.
 pub const BIREFNET_LITE: ModelSource = ModelSource {
     id: "birefnet-lite",
-    url: "https://huggingface.co/onnx-community/BiRefNet_lite-ONNX/resolve/main/onnx/model.onnx",
+    url: "https://huggingface.co/onnx-community/BiRefNet_lite-ONNX/resolve/de15b22ba131738a16dff04aab8bdf8dc32e3ac1/onnx/model.onnx",
     license_spdx: "MIT",
     sha256: "5600024376f572a557870a5eb0afb1e5961636bef4e1e22132025467d0f03333",
     size_bytes: 224_005_088,
@@ -89,6 +92,22 @@ pub enum BgError {
     /// Preprocessing / postprocessing error.
     #[error("processamento: {0}")]
     Processing(String),
+    /// Insufficient or unknown memory budget; model loading is refused.
+    #[error("memória para IA: {0}")]
+    Memory(String),
+}
+
+/// Check the conservative RAM/cgroup/address-space budget before downloading.
+/// This is an admission check, not a hard quota or a guarantee against OOM.
+pub fn check_resources() -> Result<(), BgError> {
+    #[cfg(feature = "onnx")]
+    {
+        memory::MemoryGuard::new().map(|_| ())
+    }
+    #[cfg(not(feature = "onnx"))]
+    {
+        Err(BgError::OnnxDisabled)
+    }
 }
 
 /// One-shot wrapper: ensure the model is on disk + load a session +
@@ -115,8 +134,8 @@ pub fn remove_background_with_progress(
 ///
 /// Constructing a [`BgSession`] downloads (if needed) and loads the
 /// BiRefNet weights into an `ort` session. Each call to [`process`]
-/// reuses that session — running inference takes a few hundred ms on a
-/// modern CPU, while loading the session takes seconds. Batch flows
+/// reuses that session. Inference time and RAM vary with the runtime and
+/// hardware; consult the measured release report. Batch flows
 /// (dialog with N files, CLI passing many paths) should construct one
 /// session and call `process` per file.
 ///
@@ -126,6 +145,8 @@ pub struct BgSession {
     /// don't pay the dep cost.
     #[cfg(feature = "onnx")]
     session: ort::session::Session,
+    #[cfg(feature = "onnx")]
+    memory: memory::MemoryGuard,
 }
 
 impl BgSession {
@@ -142,13 +163,16 @@ impl BgSession {
 
         #[cfg(feature = "onnx")]
         {
+            let mut memory = memory::MemoryGuard::new()?;
             let model_path = download::ensure(&BIREFNET_LITE, |done, total| {
                 progress(BgStage::Download { done, total });
             })?;
             progress(BgStage::Infer);
-
+            memory.check(0)?;
+            let before = memory::resident_bytes()?;
             let session = build_session(&model_path)?;
-            Ok(Self { session })
+            memory.account_native_growth(before)?;
+            Ok(Self { session, memory })
         }
     }
 
@@ -167,6 +191,14 @@ impl BgSession {
             use image::imageops::FilterType;
 
             let (orig_w, orig_h) = input.dimensions();
+            if u64::from(orig_w) * u64::from(orig_h) * 4 > 512 * 1024 * 1024 {
+                return Err(BgError::Processing(
+                    "imagem excede o limite de saída RGBA de 512 MiB".into(),
+                ));
+            }
+            // RGBA source/output plus the full-size mask, beyond the model's
+            // fixed tensor budget. Memory is rechecked for every input.
+            self.memory.check(u64::from(orig_w) * u64::from(orig_h) * 9)?;
             let resized = input
                 .resize_exact(INPUT_SIDE as u32, INPUT_SIDE as u32, FilterType::Lanczos3)
                 .to_rgb8();
@@ -193,13 +225,15 @@ impl BgSession {
                 }
             }
 
+            let before = memory::resident_bytes()?;
             let mask = run_session(&mut self.session, tensor)?;
+            self.memory.account_native_growth(before)?;
 
             // Mask back to 1024² u8, then resize to original dims.
             let mask_data: &[f32] = mask.as_slice().expect("CHW mask must be contiguous");
             let mut mask_u8: Vec<u8> = Vec::with_capacity(INPUT_PIXELS);
             for &v in &mask_data[..INPUT_PIXELS] {
-                mask_u8.push((v.clamp(0.0, 1.0) * 255.0) as u8);
+                mask_u8.push(logit_alpha(v));
             }
             let mask_img = image::ImageBuffer::<image::Luma<u8>, Vec<u8>>::from_vec(
                 INPUT_SIDE as u32,
@@ -225,7 +259,8 @@ impl BgSession {
                 out_buf.push(src[i * 4]);
                 out_buf.push(src[i * 4 + 1]);
                 out_buf.push(src[i * 4 + 2]);
-                out_buf.push(mask_raw[i]);
+                out_buf
+                    .push(((u16::from(src[i * 4 + 3]) * u16::from(mask_raw[i]) + 127) / 255) as u8);
             }
             let out =
                 image::ImageBuffer::<image::Rgba<u8>, Vec<u8>>::from_vec(orig_w, orig_h, out_buf)
@@ -235,6 +270,17 @@ impl BgSession {
     }
 }
 
+#[cfg(any(feature = "onnx", test))]
+fn logit_alpha(value: f32) -> u8 {
+    let probability = if value >= 0.0 {
+        1.0 / (1.0 + (-value).exp())
+    } else {
+        let e = value.exp();
+        e / (1.0 + e)
+    };
+    (probability * 255.0).round() as u8
+}
+
 /// Build an ORT session for `path`, capping intra-op threads so the
 /// inference doesn't starve the GUI / file-manager processes of CPU.
 /// Default ORT behavior is "use every core for one op" — fine for
@@ -242,11 +288,20 @@ impl BgSession {
 #[cfg(feature = "onnx")]
 fn build_session(path: &std::path::Path) -> Result<ort::session::Session, BgError> {
     let cores = std::thread::available_parallelism().map(|n| n.get()).unwrap_or(2);
-    let intra = cores.saturating_sub(1).max(1);
-    ort::session::Session::builder()
-        .and_then(|b| b.with_intra_threads(intra))
-        .and_then(|b| b.commit_from_file(path))
-        .map_err(|e| BgError::Inference(format!("load session: {e}")))
+    let intra = cores.saturating_sub(1).clamp(1, 4);
+    // ort's dynamic loader panics on a missing/incompatible optional library.
+    // Translate that into a completed GUI/CLI error instead of a dead worker.
+    std::panic::catch_unwind(|| {
+        ort::session::Session::builder()
+            .and_then(|b| b.with_intra_threads(intra))
+            .and_then(|b| b.commit_from_file(path))
+            .map_err(|e| BgError::Inference(format!("load session: {e}")))
+    })
+    .unwrap_or_else(|_| {
+        Err(BgError::Inference(
+            "ONNX Runtime indisponível ou incompatível; instale onnxruntime para usar a IA".into(),
+        ))
+    })
 }
 
 #[cfg(feature = "onnx")]
@@ -271,7 +326,7 @@ fn run_session(
         .map_err(|e| BgError::Inference(format!("extract: {e}")))?;
     let shape_slice: &[i64] = shape;
     let dims: Vec<usize> = shape_slice.iter().map(|&d| d as usize).collect();
-    if dims.len() != 4 {
+    if dims != [1, 1, INPUT_SIDE, INPUT_SIDE] || data.len() != INPUT_PIXELS {
         return Err(BgError::Processing(format!("saída não 4D: dims = {dims:?}")));
     }
     ndarray::Array4::<f32>::from_shape_vec((dims[0], dims[1], dims[2], dims[3]), data.to_vec())
@@ -281,6 +336,16 @@ fn run_session(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn mask_logits_use_sigmoid_without_overflow() {
+        assert_eq!(logit_alpha(0.0), 128);
+        assert_eq!(logit_alpha(-1000.0), 0);
+        assert_eq!(logit_alpha(1000.0), 255);
+        assert_eq!(logit_alpha(f32::NEG_INFINITY), 0);
+        assert_eq!(logit_alpha(f32::INFINITY), 255);
+        assert!(logit_alpha(-1.0) > 0 && logit_alpha(1.0) < 255);
+    }
 
     #[test]
     fn birefnet_lite_is_on_license_allowlist() {

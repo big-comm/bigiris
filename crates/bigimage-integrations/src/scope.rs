@@ -32,7 +32,9 @@ pub enum Scope {
 /// XDG dirs (which can vary between tests, CI, and a real desktop session).
 #[derive(Debug, Clone)]
 pub struct ScopePaths {
-    /// Base `$HOME` (or pseudo-home in tests). Only populated for `Scope::User`.
+    /// Explicit scope; DESTDIR retains System even when paths share a prefix.
+    pub scope: Scope,
+    /// Base `$HOME` (or pseudo-home in tests). System installations use `/` or the staging root.
     pub home: PathBuf,
     /// `~/.local/share` / `/usr/share`.
     pub data: PathBuf,
@@ -47,12 +49,14 @@ impl ScopePaths {
             Scope::User => {
                 let base = BaseDirs::new().ok_or(ScopeError::NoHome)?;
                 Ok(Self {
+                    scope,
                     home: base.home_dir().to_path_buf(),
                     data: base.data_dir().to_path_buf(),
                     config: base.config_dir().to_path_buf(),
                 })
             }
             Scope::System => Ok(Self {
+                scope,
                 home: PathBuf::from("/"),
                 data: PathBuf::from("/usr/share"),
                 config: PathBuf::from("/etc/xdg"),
@@ -66,7 +70,7 @@ impl ScopePaths {
         let home: PathBuf = home.into();
         let data = home.join(".local/share");
         let config = home.join(".config");
-        Self { home, data, config }
+        Self { scope: Scope::User, home, data, config }
     }
 
     /// System-wide scope prefixed with a `DESTDIR` for packaging. Ensures
@@ -75,6 +79,7 @@ impl ScopePaths {
     pub fn system_with_destdir(destdir: impl Into<PathBuf>) -> Self {
         let destdir: PathBuf = destdir.into();
         Self {
+            scope: Scope::System,
             home: destdir.clone(),
             data: destdir.join("usr/share"),
             config: destdir.join("etc/xdg"),

@@ -1,0 +1,9 @@
+# BigIris headless batch profile
+format = "webp"
+quality = 85
+progressive = false
+optimize = false
+overwrite = "increment" # skip | replace | increment
+
+# Optional. Without it, outputs are written beside each source image.
+# output_dir = "/home/user/Pictures/export"

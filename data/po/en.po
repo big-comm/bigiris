@@ -157,8 +157,8 @@ msgid "Se o arquivo de saída existir"
 msgstr "If the output file exists"
 
 #: crates/bigiris/src/gui.rs:2412 crates/bigiris/src/gui.rs:4625
-msgid "Qualidade (JPEG/lossy)"
-msgstr "Quality (JPEG/lossy)"
+msgid "Qualidade (JPEG/AVIF)"
+msgstr "Quality (JPEG/AVIF)"
 
 #: crates/bigiris/src/gui.rs:2417 crates/bigiris/src/gui.rs:4631
 msgid "JPEG progressivo"
@@ -387,3 +387,10 @@ msgstr "Done"
 #: crates/bigiris/src/gui.rs:5629
 msgid "Com erros"
 msgstr "With errors"
+
+msgid "Otimização do encoder"
+msgstr "Encoder optimization"
+
+#: crates/bigiris/src/gui.rs
+msgid "Remoção de fundo: requer 8 GiB de RAM livre para iniciar. Este recurso é opcional."
+msgstr "Background removal requires 8 GiB of available RAM to start. This feature is optional."

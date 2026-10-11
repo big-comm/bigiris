@@ -3,25 +3,24 @@
 
 pkgname=bigiris
 pkgver=0.1.0
-pkgrel=1
+pkgrel=3
 arch=('x86_64')
 license=('GPL-3.0-or-later')
 url="https://github.com/xathay/bigiris"
 pkgdesc="Visualizador e conversor de imagens moderno, com integração ao gerenciador de arquivos"
 depends=(
+  'bubblewrap'
+  'util-linux'
   'gcc-libs'
   'glibc'
-  'gtk4'
-  'libadwaita'
+  'gtk4>=4.12'
+  'libadwaita>=1.5'
   'dav1d'            # decodificador AVIF
   'openssl'          # TLS para download de modelos IA (ureq + native-tls)
   'onnxruntime'      # IA (remove-bg via BiRefNet); embutida no binario
   'hicolor-icon-theme'
 )
 optdepends=(
-  'libvips: backend de batch para milhares de arquivos'
-  'libheif: suporte a HEIC/HEIF (Tier 2, quando habilitado)'
-  'libjxl: suporte a JPEG XL (Tier 2, quando habilitado)'
   'nautilus-python: integração top-level no Nautilus'
   'dolphin: integração no gerenciador Dolphin (KDE)'
   'nautilus: integração no gerenciador Nautilus (GNOME)'
@@ -70,7 +69,7 @@ check() {
   cd "$pkgname"
   export RUSTUP_TOOLCHAIN=stable
   export CARGO_TARGET_DIR="$srcdir/target"
-  cargo test --locked --release --workspace
+  cargo test --locked --release --workspace --all-features --all-targets
   "$CARGO_TARGET_DIR/release/bigiris" --self-test
 }
 

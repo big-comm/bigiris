@@ -63,7 +63,11 @@ pub enum InstallError {
 /// PKGBUILD is expected to own those files, so we don't touch them.
 pub fn install(scope: Scope) -> Result<Report, InstallError> {
     let paths = ScopePaths::resolve(scope)?;
-    let mut report = run_all(&paths, InstallOp::Install);
+    // A per-user install only writes integration files for file managers
+    // actually present. Distribution packages still stage every supported
+    // integration so users can install a manager later without reinstalling.
+    let detected_only = matches!(scope, Scope::User);
+    let mut report = run_all(&paths, InstallOp::Install, detected_only);
     if matches!(scope, Scope::User) {
         report.app_files = install_app_files(&paths);
         refresh_xdg_caches(&paths);
@@ -74,7 +78,7 @@ pub fn install(scope: Scope) -> Result<Report, InstallError> {
 /// Remove every BigIris service-menu file across every supported manager.
 pub fn uninstall(scope: Scope) -> Result<Report, InstallError> {
     let paths = ScopePaths::resolve(scope)?;
-    let mut report = run_all(&paths, InstallOp::Uninstall);
+    let mut report = run_all(&paths, InstallOp::Uninstall, false);
     if matches!(scope, Scope::User) {
         report.app_files = uninstall_app_files(&paths);
     }
@@ -86,18 +90,18 @@ pub fn uninstall(scope: Scope) -> Result<Report, InstallError> {
 /// touching the live `/usr/share` tree.
 pub fn install_to_destdir(destdir: &std::path::Path) -> Report {
     let paths = ScopePaths::system_with_destdir(destdir);
-    run_all(&paths, InstallOp::Install)
+    run_all(&paths, InstallOp::Install, false)
 }
 
 /// Same as [`install`] / [`uninstall`] but with pre-resolved paths —
 /// used by tests to target a tempdir.
 pub fn install_with_paths(paths: &ScopePaths) -> Report {
-    run_all(paths, InstallOp::Install)
+    run_all(paths, InstallOp::Install, false)
 }
 
 /// Same as [`install_with_paths`] but for the uninstall flow.
 pub fn uninstall_with_paths(paths: &ScopePaths) -> Report {
-    run_all(paths, InstallOp::Uninstall)
+    run_all(paths, InstallOp::Uninstall, false)
 }
 
 #[derive(Clone, Copy)]
@@ -106,13 +110,14 @@ enum InstallOp {
     Uninstall,
 }
 
-fn run_all(paths: &ScopePaths, op: InstallOp) -> Report {
+fn run_all(paths: &ScopePaths, op: InstallOp, detected_only: bool) -> Report {
     let mut report = Report::default();
     report.outcomes.push(run_one(
         FileManager::Dolphin,
         "dolphin",
         paths,
         op,
+        detected_only,
         dolphin::install,
         dolphin::uninstall,
     ));
@@ -121,6 +126,7 @@ fn run_all(paths: &ScopePaths, op: InstallOp) -> Report {
         "nautilus",
         paths,
         op,
+        detected_only,
         nautilus::install,
         nautilus::uninstall,
     ));
@@ -129,6 +135,7 @@ fn run_all(paths: &ScopePaths, op: InstallOp) -> Report {
         "nemo",
         paths,
         op,
+        detected_only,
         nemo::install,
         nemo::uninstall,
     ));
@@ -137,6 +144,7 @@ fn run_all(paths: &ScopePaths, op: InstallOp) -> Report {
         "thunar",
         paths,
         op,
+        detected_only,
         thunar::install,
         thunar::uninstall,
     ));
@@ -145,6 +153,7 @@ fn run_all(paths: &ScopePaths, op: InstallOp) -> Report {
         "pcmanfm-qt",
         paths,
         op,
+        detected_only,
         pcmanfm_qt::install,
         pcmanfm_qt::uninstall,
     ));
@@ -153,6 +162,7 @@ fn run_all(paths: &ScopePaths, op: InstallOp) -> Report {
         "io.elementary.files",
         paths,
         op,
+        detected_only,
         pantheon::install,
         pantheon::uninstall,
     ));
@@ -164,10 +174,14 @@ fn run_one(
     detection_bin: &str,
     paths: &ScopePaths,
     op: InstallOp,
+    detected_only: bool,
     install_fn: fn(&ScopePaths) -> io::Result<Vec<PathBuf>>,
     uninstall_fn: fn(&ScopePaths) -> io::Result<Vec<PathBuf>>,
 ) -> FmOutcome {
     let detected = is_on_path(detection_bin);
+    if matches!(op, InstallOp::Install) && detected_only && !detected {
+        return FmOutcome { fm, detected, files: Vec::new(), error: None };
+    }
     let result = match op {
         InstallOp::Install => install_fn(paths),
         InstallOp::Uninstall => uninstall_fn(paths),
@@ -229,15 +243,29 @@ fn refresh_xdg_caches(paths: &ScopePaths) {
         .status();
     if let Some(hicolor) = hicolor {
         for bin in ["gtk4-update-icon-cache", "gtk-update-icon-cache"] {
+            // `--ignore-theme-index` é obrigatório no escopo user: esta
+            // função só roda para `Scope::User` (ver `install`), e
+            // `~/.local/share/icons/hicolor` não tem `index.theme` próprio
+            // (só o tema system em `/usr/share` tem). Sem essa flag o
+            // comando recusa com "No theme index file" e — como o stderr é
+            // descartado — o cache nunca é gerado, deixando o ícone fora da
+            // busca do GNOME até um logout/login.
             let _ = Command::new(bin)
                 .arg("-q")
                 .arg("-f")
+                .arg("--ignore-theme-index")
                 .arg(hicolor)
                 .stdout(Stdio::null())
                 .stderr(Stdio::null())
                 .status();
         }
     }
+    // Plasma/Dolphin discovers ServiceMenus through the KService cache.
+    let _ = Command::new("kbuildsycoca6")
+        .arg("--noincremental")
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status();
 }
 
 /// Remove os arquivos instalados por [`install_app_files`]. Não remove
@@ -322,5 +350,6 @@ mod tests {
         assert!(tmp.path().join("usr/share/kio/servicemenus/bigiris-convert-png.desktop").exists());
         // Thunar's uca.xml goes under DESTDIR/etc/xdg/Thunar/.
         assert!(tmp.path().join("etc/xdg/Thunar/uca.xml").exists());
+        assert!(tmp.path().join("usr/share/nautilus-python/extensions/bigiris-menu.py").exists());
     }
 }

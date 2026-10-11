@@ -11,24 +11,23 @@
 
   <description>
     <p>
-      BigIris is a modern image viewer and converter for Linux, part of the
-      BigLinux family. It combines a Loupe-grade viewer with a full
-      converter module (Prisma) accessible via right-click in the file
-      manager.
+      BigIris is a fast, compact image viewer and converter for Linux. Its
+      quiet viewer keeps common navigation immediately available, while the
+      Prisma workspace handles folders and advanced operations on demand.
     </p>
     <p xml:lang="pt-BR">
-      BigIris é um visualizador e conversor de imagens moderno para Linux,
-      parte da família BigLinux. Unifica um visualizador no nível do Loupe
-      com um conversor completo (módulo Prisma) acessível por clique direito
-      no gerenciador de arquivos.
+      BigIris é um visualizador e conversor de imagens rápido e compacto para
+      Linux. O visualizador mantém a navegação comum imediatamente acessível,
+      enquanto o ambiente Prisma processa pastas e operações avançadas sob
+      demanda.
     </p>
     <p>Features:</p>
     <p xml:lang="pt-BR">Recursos:</p>
     <ul>
-      <li>Fast viewing with GPU acceleration, color management (ICC) and HDR</li>
-      <li xml:lang="pt-BR">Visualização rápida com aceleração GPU, color management (ICC) e HDR</li>
-      <li>Batch conversion: PNG, JPEG, WebP, AVIF, HEIC, JPEG XL, TIFF, BMP</li>
-      <li xml:lang="pt-BR">Conversão em lote: PNG, JPEG, WebP, AVIF, HEIC, JPEG XL, TIFF, BMP</li>
+      <li>Responsive viewing with background decoding, folder navigation, thumbnails and histogram</li>
+      <li xml:lang="pt-BR">Visualização responsiva com decodificação em segundo plano, navegação por pasta, miniaturas e histograma</li>
+      <li>Parallel batch conversion: PNG, JPEG, WebP, AVIF, TIFF and BMP</li>
+      <li xml:lang="pt-BR">Conversão paralela em lote: PNG, JPEG, WebP, AVIF, TIFF e BMP</li>
       <li>Resize, rotate, crop and adjust in batch or per image</li>
       <li xml:lang="pt-BR">Redimensionar, girar, cortar e ajustar em lote ou em uma imagem</li>
       <li>Remove background and upscale with open AI models, downloaded on demand</li>
@@ -44,10 +43,8 @@
 
   <url type="homepage">https://github.com/xathay/bigiris</url>
   <url type="bugtracker">https://github.com/xathay/bigiris/issues</url>
-  <url type="donation">https://biglinux.com.br/apoie</url>
-
-  <developer id="com.biglinux">
-    <name>BigLinux</name>
+  <developer id="io.github.xathay">
+    <name>Leonardo Athayde</name>
   </developer>
 
   <provides>
@@ -63,19 +60,11 @@
 
   <content_rating type="oars-1.1" />
 
-  <screenshots>
-    <screenshot type="default">
-      <caption>Viewer Íris with a loaded photo</caption>
-      <caption xml:lang="pt-BR">Visualizador Íris com uma foto carregada</caption>
-      <image type="source" width="1280" height="720">https://raw.githubusercontent.com/xathay/bigiris/main/docs/screenshots/01-viewer.png</image>
-    </screenshot>
-  </screenshots>
-
   <releases>
-    <release version="0.1.0" date="2026-04-25">
+    <release version="0.1.0" date="2026-09-12">
       <description>
-        <p>Pre-release focused on safety and packaging readiness for the BigLinux testing repository.</p>
-        <p xml:lang="pt-BR">Pré-release com foco em segurança e prontidão de empacotamento para o repositório `testing` do BigLinux.</p>
+        <p>First release focused on safety, responsive folder navigation and distribution packaging.</p>
+        <p xml:lang="pt-BR">Primeira versão com foco em segurança, navegação responsiva por pastas e empacotamento para distribuições.</p>
         <ul>
           <li>Viewer Íris (GTK4 + libadwaita): zoom cursor-anchored, drag pan, slideshow, film strip, histogram, theater mode</li>
           <li xml:lang="pt-BR">Visualizador Íris (GTK4 + libadwaita): zoom centrado no cursor, pan por arrasto, slideshow, film strip, histograma, modo teatro</li>
@@ -95,7 +84,6 @@
   <supports>
     <control>keyboard</control>
     <control>pointing</control>
-    <control>touch</control>
   </supports>
 
   <requires>
@@ -103,6 +91,6 @@
   </requires>
 
   <recommends>
-    <memory>512</memory>
+    <memory>1024</memory>
   </recommends>
 </component>

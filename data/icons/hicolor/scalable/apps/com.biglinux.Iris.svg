@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg"
+     viewBox="0 0 128 128" width="128" height="128">
 <!--
   BigIris — ícone v7 (photo-centric + wordmark "big" oficial BigLinux).
   Base igual à v6: violeta sólido + paisagem dentro de moldura. Troca o
@@ -8,8 +10,6 @@
   no canto superior esquerdo, em branco — combina com o violeta e a
   convenção do Big OCR PDF.
 -->
-<svg xmlns="http://www.w3.org/2000/svg"
-     viewBox="0 0 128 128" width="128" height="128">
   <defs>
     <filter id="drop" x="-10%" y="-10%" width="120%" height="120%">
       <feGaussianBlur in="SourceAlpha" stdDeviation="1.5"/>

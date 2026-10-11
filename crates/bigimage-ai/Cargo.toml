@@ -20,15 +20,19 @@ ureq.workspace = true
 sha2.workspace = true
 directories.workspace = true
 image.workspace = true
+tempfile = "3"
+url = "2"
+rustix = { version = "1", features = ["process"] }
 
 ort = { workspace = true, optional = true }
 ndarray = { workspace = true, optional = true }
-
-[dev-dependencies]
-tempfile = "3"
 
 [features]
 default = []
 # Enable ONNX Runtime-based inference (remove-bg, upscale, denoise).
 # Requires `libonnxruntime` at runtime (Arch: `pacman -S onnxruntime`).
 onnx = ["dep:ort", "dep:ndarray"]
+
+[[example]]
+name = "onnx_memory"
+required-features = ["onnx"]

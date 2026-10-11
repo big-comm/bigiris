@@ -43,6 +43,7 @@ pub const TOP_LEVEL_LABEL: &str = "BigIris";
 
 /// Mime filter reused for every action (all image formats).
 const IMAGE_MIME: &[&str] = &["image/*"];
+const DIRECTORY_MIME: &[&str] = &["inode/directory"];
 
 /// Mime filter para documentos que o LibreOffice converte em PDF. Escolha
 /// dos formatos segue a matriz que `soffice --convert-to pdf` atende bem
@@ -130,6 +131,14 @@ pub const ACTIONS: &[Action] = &[
         command: "bigiris %F",
         icon: "com.biglinux.Iris",
         mime_types: IMAGE_MIME,
+    },
+    Action {
+        id: "batch-folder",
+        submenu: None,
+        label: "Processar esta pasta…",
+        command: "bigiris --dialog=batch %F",
+        icon: "folder-pictures-symbolic",
+        mime_types: DIRECTORY_MIME,
     },
     // Convert ▸
     Action {
@@ -404,6 +413,42 @@ pub const ACTIONS: &[Action] = &[
         submenu: Some(SUB_WEB),
         label: "Otimizar PNG (compressão máxima)",
         command: "bigiris convert --to png --optimize --overwrite replace %F",
+        icon: "applications-internet-symbolic",
+        mime_types: IMAGE_MIME,
+    },
+    // Letterbox presets — "Para web ▸" também cobre quando a rede social
+    // força razão fixa e cortaria conteúdo importante da imagem. Estende a
+    // tela em volta da imagem em vez de cortar; 0d0e12 (preto suave) é o
+    // default que casa com o tema escuro do YouTube/Instagram.
+    Action {
+        id: "web-letterbox-yt",
+        submenu: Some(SUB_WEB),
+        label: "Letterbox YouTube post (1:1)",
+        command: "bigiris extent --aspect 1:1 --bg 0d0e12 %F",
+        icon: "applications-internet-symbolic",
+        mime_types: IMAGE_MIME,
+    },
+    Action {
+        id: "web-letterbox-ig",
+        submenu: Some(SUB_WEB),
+        label: "Letterbox Instagram feed (4:5)",
+        command: "bigiris extent --aspect 4:5 --bg 0d0e12 %F",
+        icon: "applications-internet-symbolic",
+        mime_types: IMAGE_MIME,
+    },
+    Action {
+        id: "web-letterbox-stories",
+        submenu: Some(SUB_WEB),
+        label: "Letterbox Stories / Shorts (9:16)",
+        command: "bigiris extent --aspect 9:16 --bg 0d0e12 %F",
+        icon: "applications-internet-symbolic",
+        mime_types: IMAGE_MIME,
+    },
+    Action {
+        id: "web-letterbox-custom",
+        submenu: Some(SUB_WEB),
+        label: "Letterbox personalizado…",
+        command: "bigiris --dialog=extent %F",
         icon: "applications-internet-symbolic",
         mime_types: IMAGE_MIME,
     },

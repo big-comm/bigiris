@@ -47,9 +47,7 @@ pub fn flip_file(
 
     tracing::debug!(?input, ?output, ?target, ?axis, "flip: computing");
     let flipped = apply_to(&src, axis);
-    let output =
-        pipeline::encode_and_cleanup(flipped, output, target, &crate::EncodeOptions::default())?;
-    Ok(ConvertOutcome::Written { output })
+    pipeline::encode_and_cleanup(flipped, output, target, &crate::EncodeOptions::default(), policy)
 }
 
 /// Pure in-memory flip — shared with preview pipeline.

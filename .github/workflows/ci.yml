@@ -3,7 +3,7 @@ name: CI
 on:
   pull_request:
   push:
-    branches: [main]
+    branches: [main, 'dev-*']
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -168,10 +168,10 @@ jobs:
       - name: chown for builder
         run: chown -R builder:builder .
       # Usa PKGBUILD.local (build do checkout local, sem clone remoto).
-      # O PKGBUILD principal usa `source=git+https://github.com/xathay/bigiris`,
-      # que makepkg nao consegue clonar em repo privado sem credenciais.
-      # Docker blocks nested namespaces by default. Run functional sandbox
-      # tests in the host test/build jobs; this job checks build + packaging.
+      # A receita principal clona o repo oficial; esta usa o checkout exato.
+      # check() probes nested sandbox support, runs all available tests and
+      # reports the three functional tests filtered in restricted containers.
+      # Host test/build jobs still require full sandbox functionality.
       - name: makepkg
         working-directory: pkgbuild
         run: |
@@ -181,7 +181,6 @@ jobs:
             --syncdeps \
             --skipchecksums \
             --skipinteg \
-            --nocheck \
             --clean
 
   nautilus:

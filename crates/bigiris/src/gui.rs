@@ -23,6 +23,7 @@ use gtk4 as gtk;
 use libadwaita as adw;
 
 mod previews;
+mod transfers;
 mod zoom;
 use previews::{
     build_preview_column, dynamic_image_to_texture, prepare_dialog, refresh_preview,
@@ -91,6 +92,10 @@ pub fn run_viewer(files: Vec<PathBuf>) -> i32 {
     let files = Rc::new(files);
     app.connect_activate(move |app| {
         install_theater_css();
+        if files.is_empty() {
+            build_window(app, Rc::new(Vec::new()), 0).present();
+            return;
+        }
         let waiting = adw::ApplicationWindow::builder()
             .application(app)
             .title("BigIris — abrindo imagens")
@@ -506,10 +511,20 @@ fn build_window_tracked(
     start_idx: usize,
 ) -> (adw::ApplicationWindow, std::rc::Weak<RefCell<ViewerState>>) {
     let settings = app_settings();
-    let window_width = settings.as_ref().map_or(1280, |s| s.int("window-width")).max(480);
-    let window_height = settings.as_ref().map_or(800, |s| s.int("window-height")).max(360);
-    let start_maximized = settings.as_ref().is_some_and(|s| s.boolean("window-maximized"));
-    let autohide_ui = settings.as_ref().is_none_or(|s| s.boolean("autohide-ui"));
+    let has_images = !files.is_empty();
+    let window_width = if has_images {
+        settings.as_ref().map_or(1280, |s| s.int("window-width")).max(480)
+    } else {
+        420
+    };
+    let window_height = if has_images {
+        settings.as_ref().map_or(800, |s| s.int("window-height")).max(360)
+    } else {
+        360
+    };
+    let start_maximized =
+        has_images && settings.as_ref().is_some_and(|s| s.boolean("window-maximized"));
+    let autohide_ui = has_images && settings.as_ref().is_none_or(|s| s.boolean("autohide-ui"));
     let autohide_delay_ms =
         settings.as_ref().map_or(DEFAULT_EDGE_HIDE_MS, |s| u64::from(s.uint("autohide-delay-ms")));
     let filmstrip_visible = settings.as_ref().is_none_or(|s| s.boolean("filmstrip-visible"));
@@ -548,6 +563,7 @@ fn build_window_tracked(
         .build();
 
     let status = build_dashboard(&window);
+    transfers::install(&window, &status, !has_images);
 
     // Stack between empty-state and the viewport so we don't flash a blank
     // area when the app is launched without files.
@@ -647,9 +663,10 @@ fn build_window_tracked(
     toolbar_view.set_reveal_top_bars(true);
     window.set_content(Some(&toolbar_view));
 
-    // Theater mode on by default: photos look best on black, and it's what
-    // Apple Photos / Lightroom / mpv converge on for viewing surfaces.
-    window.add_css_class("theater");
+    // Images use a quiet canvas; the start page keeps normal desktop chrome.
+    if has_images {
+        window.add_css_class("theater");
+    }
     let desktop = std::env::var("XDG_CURRENT_DESKTOP").unwrap_or_default().to_ascii_lowercase();
     if desktop.contains("kde") || std::env::var_os("KDE_FULL_SESSION").is_some() {
         window.add_css_class("plasma");
@@ -681,7 +698,7 @@ fn build_window_tracked(
         autohide_ui,
         autohide_delay_ms,
         slideshow_interval_s,
-        theater_enabled: true,
+        theater_enabled: has_images,
         top_hide_source: None,
         bottom_hide_source: None,
         osd_hide_source: None,
@@ -698,7 +715,7 @@ fn build_window_tracked(
         saving: false,
     }));
 
-    if let Some(settings) = settings {
+    if let Some(settings) = settings.filter(|_| has_images) {
         let window = window.clone();
         window.connect_close_request(move |window| {
             let maximized = window.is_maximized();
@@ -2037,48 +2054,43 @@ fn apply_decoded_frame(state: &Rc<RefCell<ViewerState>>, frame: DecodedFrame) {
 /// Ações ficam em `win.<nome>` (registradas em [`install_viewer_actions`]).
 fn build_header_menu_button(state: &Rc<RefCell<ViewerState>>) -> gtk::MenuButton {
     let menu = gio::Menu::new();
-
-    let s_file = gio::Menu::new();
-    s_file.append(Some(&gettext("Abrir imagens…")), Some("win.open"));
-    s_file.append(Some(&gettext("Copiar imagem")), Some("win.copy"));
-    menu.append_section(None, &s_file);
-
-    let s_actions = gio::Menu::new();
-    s_actions.append(Some(&gettext("Imprimir…")), Some("win.print"));
-    menu.append_section(None, &s_actions);
-
-    // Edição in-memory: giros/espelhos aplicados na hora;
-    // só vão pra disco quando o user pedir Salvar (Ctrl+S).
-    let s_edit = gio::Menu::new();
-    s_edit.append(Some(&gettext("Desfazer")), Some("win.undo"));
-    s_edit.append(Some(&gettext("Refazer")), Some("win.redo"));
-    s_edit.append(Some(&gettext("Girar à direita")), Some("win.rotate-cw"));
-    s_edit.append(Some(&gettext("Girar à esquerda")), Some("win.rotate-ccw"));
-    s_edit.append(Some(&gettext("Girar 180°")), Some("win.rotate-180"));
-    s_edit.append(Some(&gettext("Espelhar horizontal")), Some("win.flip-h"));
-    s_edit.append(Some(&gettext("Espelhar vertical")), Some("win.flip-v"));
-    s_edit.append(Some(&gettext("Recortar…")), Some("win.crop"));
-    menu.append_section(None, &s_edit);
-
-    // IA: cada item dispara um subprocesso `bigiris --dialog=…` (mesmo
-    // motivo do crop: cada diálogo monta sua própria adw::Application).
-    let s_ai = gio::Menu::new();
-    s_ai.append(Some(&gettext("Remover fundo (IA)…")), Some("win.remove-bg"));
-    s_ai.append(Some(&gettext("Aumentar resolução…")), Some("win.upscale"));
-    menu.append_section(None, &s_ai);
-
-    let s_save = gio::Menu::new();
-    s_save.append(Some(&gettext("Salvar alterações")), Some("win.save-edits"));
-    menu.append_section(None, &s_save);
-
-    let s_delete = gio::Menu::new();
-    s_delete.append(Some(&gettext("Mover para a lixeira")), Some("win.trash"));
-    menu.append_section(None, &s_delete);
-
-    let s_help = gio::Menu::new();
-    s_help.append(Some(&gettext("Atalhos do teclado")), Some("win.shortcuts"));
-    s_help.append(Some(&gettext("Sobre o BigIris")), Some("app.about"));
-    menu.append_section(None, &s_help);
+    let has_images = !state.borrow().files.is_empty();
+    let files = gio::Menu::new();
+    files.append(Some(&gettext("Abrir imagens…")), Some("win.open"));
+    files.append(Some(&gettext("Colar arquivos de imagem")), Some("win.paste"));
+    if has_images {
+        files.append(Some(&gettext("Copiar imagem")), Some("win.copy"));
+        files.append(Some(&gettext("Imprimir…")), Some("win.print"));
+    } else {
+        files.append(Some(&gettext("Processar uma pasta…")), Some("win.batch-folder"));
+    }
+    menu.append_section(None, &files);
+    if has_images {
+        let edit = gio::Menu::new();
+        edit.append(Some(&gettext("Desfazer")), Some("win.undo"));
+        edit.append(Some(&gettext("Refazer")), Some("win.redo"));
+        let transforms = gio::Menu::new();
+        transforms.append(Some(&gettext("Girar à direita")), Some("win.rotate-cw"));
+        transforms.append(Some(&gettext("Girar à esquerda")), Some("win.rotate-ccw"));
+        transforms.append(Some(&gettext("Girar 180°")), Some("win.rotate-180"));
+        transforms.append(Some(&gettext("Espelhar horizontal")), Some("win.flip-h"));
+        transforms.append(Some(&gettext("Espelhar vertical")), Some("win.flip-v"));
+        transforms.append(Some(&gettext("Recortar…")), Some("win.crop"));
+        edit.append_section(None, &transforms);
+        menu.append_submenu(Some(&gettext("Editar imagem")), &edit);
+        let tools = gio::Menu::new();
+        tools.append(Some(&gettext("Remover fundo (IA)…")), Some("win.remove-bg"));
+        tools.append(Some(&gettext("Aumentar resolução…")), Some("win.upscale"));
+        menu.append_submenu(Some(&gettext("Ferramentas")), &tools);
+        let changes = gio::Menu::new();
+        changes.append(Some(&gettext("Salvar alterações")), Some("win.save-edits"));
+        changes.append(Some(&gettext("Mover para a lixeira")), Some("win.trash"));
+        menu.append_section(None, &changes);
+    }
+    let help = gio::Menu::new();
+    help.append(Some(&gettext("Atalhos do teclado")), Some("win.shortcuts"));
+    help.append(Some(&gettext("Sobre o BigIris")), Some("app.about"));
+    menu.append_section(None, &help);
 
     let btn = gtk::MenuButton::new();
     btn.set_icon_name("open-menu-symbolic");
@@ -2149,6 +2161,17 @@ fn install_viewer_actions(
         });
     }
     window.add_action(&open);
+
+    let batch_folder = gio::SimpleAction::new("batch-folder", None);
+    {
+        let window = window.downgrade();
+        batch_folder.connect_activate(move |_, _| {
+            if let Some(window) = window.upgrade() {
+                open_batch_folder_dialog(&window);
+            }
+        });
+    }
+    window.add_action(&batch_folder);
 
     // Actions dependentes de imagem carregada ficam grey na dashboard —
     // senão o menu mostra opção clicável que não faz nada, e itens de
@@ -2389,8 +2412,7 @@ fn install_viewer_actions(
         action.set_enabled(has_files);
     }
 
-    // win.shortcuts — AdwAlertDialog com cheatsheet. Mais leve e
-    // legível que gtk::ShortcutsWindow, e combina com o resto do visual.
+    // Keyboard help uses a bounded, scrollable in-window dialog.
     let shortcuts = gio::SimpleAction::new("shortcuts", None);
     {
         let window = window.downgrade();
@@ -2654,163 +2676,207 @@ fn trash_current(state: &Rc<RefCell<ViewerState>>) {
     alert.present(Some(&window));
 }
 
-/// Cheatsheet dos atalhos de teclado do viewer. AdwAlertDialog em vez de
-/// gtk::ShortcutsWindow pra ficar consistente com o resto dos dialogs
-/// do app (mesma estética, modal-in-window).
+/// Compact keyboard reference using widgets supported by GTK 4.12 / Adwaita 1.5.
 fn present_shortcuts_dialog(parent: &adw::ApplicationWindow) {
     parent.set_cursor(None);
-    // Usa o widget nativo `gtk::ShortcutsWindow` — layout denso estilo
-    // Layout compacto com colunas, seções e chips de tecla renderizados pelo
-    // próprio tema. Bem mais limpo do que texto em AlertDialog.
-    let shortcuts: [(&str, &[(&str, &str)]); 6] = [
+    let shortcuts: [(String, Vec<(&str, String)>); 6] = [
         (
-            "Navegação",
-            &[
-                ("Left Right", "Anterior / próximo"),
-                ("Home End", "Primeiro / último"),
-                ("space", "Slideshow (auto-avanço)"),
+            gettext("Navegação"),
+            vec![
+                ("Left Right", gettext("Anterior / próximo")),
+                ("Home End", gettext("Primeiro / último")),
+                ("space", gettext("Slideshow (auto-avanço)")),
             ],
         ),
         (
-            "Zoom",
-            &[
-                ("plus minus", "Aproximar / afastar"),
-                ("0", "Ajustar à janela"),
-                ("1", "Tamanho real (100%)"),
-                ("scroll_wheel", "Zoom contínuo"),
+            gettext("Zoom"),
+            vec![
+                ("plus minus", gettext("Aproximar / afastar")),
+                ("0", gettext("Ajustar à janela")),
+                ("1", gettext("Tamanho real (100%)")),
+                ("scroll_wheel", gettext("Zoom contínuo")),
             ],
         ),
         (
-            "Janela",
-            &[
-                ("F11", "Tela cheia"),
-                ("T", "Modo teatro"),
-                ("F", "Fita de miniaturas"),
-                ("G", "Histograma RGB"),
-                ("H", "Fixar barras visíveis"),
-                ("Escape", "Fechar"),
+            gettext("Janela"),
+            vec![
+                ("F11", gettext("Tela cheia")),
+                ("T", gettext("Modo teatro")),
+                ("F", gettext("Fita de miniaturas")),
+                ("G", gettext("Histograma RGB")),
+                ("H", gettext("Fixar barras visíveis")),
+                ("Escape", gettext("Fechar")),
             ],
         ),
         (
-            "Edição",
-            &[
-                ("<ctrl>Z", "Desfazer"),
-                ("<ctrl><shift>Z", "Refazer"),
-                ("R", "Girar à direita"),
-                ("<Shift>R", "Girar à esquerda"),
-                ("<ctrl>R", "Recortar…"),
-                ("<ctrl>B", "Remover fundo (IA)…"),
-                ("<ctrl>U", "Aumentar resolução…"),
-                ("<ctrl>S", "Salvar alterações"),
+            gettext("Edição"),
+            vec![
+                ("<ctrl>Z", gettext("Desfazer")),
+                ("<ctrl><shift>Z", gettext("Refazer")),
+                ("R", gettext("Girar à direita")),
+                ("<Shift>R", gettext("Girar à esquerda")),
+                ("<ctrl>R", gettext("Recortar…")),
+                ("<ctrl>B", gettext("Remover fundo (IA)…")),
+                ("<ctrl>U", gettext("Aumentar resolução…")),
+                ("<ctrl>S", gettext("Salvar alterações")),
             ],
         ),
         (
-            "Arquivo",
-            &[
-                ("<ctrl>O", "Abrir imagens"),
-                ("<ctrl>C", "Copiar imagem"),
-                ("<ctrl>P", "Imprimir"),
-                ("<ctrl>I", "Propriedades"),
-                ("Delete", "Mover para a lixeira"),
+            gettext("Arquivo"),
+            vec![
+                ("<ctrl>O", gettext("Abrir imagens")),
+                ("<ctrl>C", gettext("Copiar imagem")),
+                ("<ctrl>V", gettext("Colar arquivos de imagem")),
+                ("<ctrl>P", gettext("Imprimir")),
+                ("<ctrl>I", gettext("Propriedades")),
+                ("Delete", gettext("Mover para a lixeira")),
             ],
         ),
-        ("Ajuda", &[("<ctrl>question", "Este diálogo"), ("F1", "Sobre")]),
+        (
+            gettext("Ajuda"),
+            vec![("<ctrl>question", gettext("Este diálogo")), ("F1", gettext("Sobre"))],
+        ),
     ];
-    let section = gtk::ShortcutsSection::builder().section_name("viewer").build();
-    for (group_title, entries) in shortcuts {
-        let group = gtk::ShortcutsGroup::builder().title(group_title).build();
+    let names: Vec<_> = shortcuts.iter().map(|(name, _)| name.as_str()).collect();
+    let categories = gtk::StringList::new(&names);
+    let selector = gtk::DropDown::builder()
+        .model(&categories)
+        .tooltip_text(gettext("Categoria dos atalhos"))
+        .hexpand(true)
+        .build();
+    let pages = gtk::Stack::builder().vhomogeneous(false).hhomogeneous(false).build();
+    for (index, (_, entries)) in shortcuts.into_iter().enumerate() {
+        let list = gtk::ListBox::builder().selection_mode(gtk::SelectionMode::None).build();
+        list.add_css_class("boxed-list");
+        list.set_valign(gtk::Align::Start);
         for (accel, desc) in entries {
-            let sc = gtk::ShortcutsShortcut::builder().accelerator(*accel).title(*desc).build();
-            group.append(&sc);
+            let row = gtk::Box::new(gtk::Orientation::Horizontal, 12);
+            row.set_margin_start(12);
+            row.set_margin_end(12);
+            row.set_margin_top(8);
+            row.set_margin_bottom(8);
+            let title =
+                gtk::Label::builder().label(desc).xalign(0.0).hexpand(true).wrap(true).build();
+            let key_text = if accel == "scroll_wheel" {
+                gettext("Roda do mouse")
+            } else {
+                accel
+                    .split_whitespace()
+                    .map(|key| {
+                        gtk::accelerator_parse(key).map_or_else(
+                            || key.to_owned(),
+                            |(key, modifiers)| {
+                                gtk::accelerator_get_label(key, modifiers).to_string()
+                            },
+                        )
+                    })
+                    .collect::<Vec<_>>()
+                    .join(" / ")
+            };
+            let keys = gtk::Label::builder().label(key_text).build();
+            keys.add_css_class("dim-label");
+            row.append(&title);
+            row.append(&keys);
+            let list_row =
+                gtk::ListBoxRow::builder().activatable(false).selectable(false).child(&row).build();
+            list.append(&list_row);
         }
-        section.append(&group);
+        pages.add_named(&list, Some(&index.to_string()));
     }
-    let window =
-        gtk::ShortcutsWindow::builder().modal(true).transient_for(parent).child(&section).build();
-    window.present();
+    pages.set_visible_child_name("0");
+    {
+        let pages = pages.downgrade();
+        selector.connect_selected_notify(move |selector| {
+            if let Some(pages) = pages.upgrade() {
+                pages.set_visible_child_name(&selector.selected().to_string());
+            }
+        });
+    }
+    let scroller = gtk::ScrolledWindow::builder()
+        .hscrollbar_policy(gtk::PolicyType::Never)
+        .vscrollbar_policy(gtk::PolicyType::Automatic)
+        .vexpand(true)
+        .child(&pages)
+        .build();
+    let content = gtk::Box::new(gtk::Orientation::Vertical, 12);
+    content.set_margin_start(16);
+    content.set_margin_end(16);
+    content.set_margin_top(12);
+    content.set_margin_bottom(16);
+    content.append(&selector);
+    content.append(&scroller);
+    let layout = adw::ToolbarView::new();
+    layout.add_top_bar(&adw::HeaderBar::new());
+    layout.set_content(Some(&content));
+    let dialog = adw::Dialog::builder()
+        .title(gettext("Atalhos de teclado"))
+        .content_width(420)
+        .content_height(320)
+        .child(&layout)
+        .build();
+    dialog.present(Some(parent));
 }
 
 /// About dialog with project, license and support links.
-fn present_about_dialog(parent: &adw::ApplicationWindow) {
+fn present_about_dialog(parent: &adw::ApplicationWindow) -> adw::AboutDialog {
     // Restaura o cursor antes de apresentar — o viewer pode tê-lo
-    // escondido por idle; dentro do AdwAboutDialog (modal in-window)
-    // precisamos que esteja visível pra user navegar nos Detalhes etc.
+    // escondido por idle; o diálogo precisa dele para navegar nas páginas.
     parent.set_cursor(None);
 
     let about = adw::AboutDialog::builder()
         .application_name("BigIris")
         .application_icon(APP_ID)
-        .version(env!("CARGO_PKG_VERSION"))
-        .developer_name("Leonardo Athayde")
-        .copyright("© 2026 Leonardo Athayde e contribuidores")
+        .developer_name("BigCommunity Team")
+        .copyright("© 2026 BigCommunity Team")
         .license_type(gtk::License::Gpl30)
-        .website("https://github.com/xathay/bigiris")
-        .issue_url("https://github.com/xathay/bigiris/issues")
-        .developers(vec!["Leonardo Athayde".to_string()])
-        .designers(vec!["Leonardo Athayde".to_string(), "Comunidade BigLinux".to_string()])
-        .translator_credits("Leonardo Athayde <leoathayde@gmail.com>")
+        .website("https://github.com/big-comm/bigiris")
+        .issue_url("https://github.com/big-comm/bigiris/issues")
+        .developers(vec!["BigCommunity Team".to_string()])
+        .designers(vec!["BigCommunity Team".to_string()])
+        .translator_credits("BigCommunity Team")
         .comments(
             "Visualizador e conversor de imagens para Linux. Rápido, \
              acessível por teclado e integrado ao gerenciador de arquivos.",
         )
         .build();
-    about.present(Some(parent));
+    // About has navigable pages; its own native window keeps credits usable
+    // even when the compact start page is shorter than those pages.
+    about.set_content_width(360);
+    about.set_content_height(540);
+    about.present(None::<&gtk::Widget>);
+    if let Some(window) = about.root().and_downcast::<gtk::Window>() {
+        window.set_transient_for(Some(parent));
+        window.set_modal(true);
+        window.set_destroy_with_parent(true);
+    }
+    about
 }
 
-/// Welcome dashboard shown when `bigiris` is launched without files. Sets
-/// the tone for the app: explains what it does, lists the headline
-/// capabilities, and gives a single obvious next step ("Abrir imagens").
-/// Inspired by the Big OCR PDF welcome — makes the first-contact moment
-/// feel intentional instead of the usual empty-state-with-icon.
+/// Compact start page with two actions and file-manager drop/paste support.
 fn build_dashboard(window: &adw::ApplicationWindow) -> gtk::Widget {
-    let status = adw::StatusPage::builder()
-        .icon_name("com.biglinux.Iris")
-        .title(gettext("Bem-vindo ao BigIris"))
-        .description(
-            "Abra uma imagem para visualizar sem distrações ou processe\n\
-             uma pasta inteira com as ferramentas Prisma.",
-        )
-        .build();
-    status.add_css_class("compact");
-
-    // Feature cards — cada um abre um picker de imagens e relança o
-    // próprio binário no modo certo (viewer, --dialog=batch, etc.).
-    // Vai-e-volta evita reimplementar o pipeline em cima do dashboard.
-    let features =
-        adw::PreferencesGroup::builder().title(gettext("Ferramentas")).margin_top(16).build();
-    for (title, subtitle, icon, action) in FEATURE_HIGHLIGHTS {
-        let row = adw::ActionRow::builder()
-            .use_markup(false)
-            .title(*title)
-            .subtitle(*subtitle)
-            .activatable(action.is_some())
-            .build();
-        let icon_widget = gtk::Image::from_icon_name(icon);
-        icon_widget.add_css_class("dim-label");
-        row.add_prefix(&icon_widget);
-        if let Some(cmd) = action {
-            let arrow = gtk::Image::from_icon_name("go-next-symbolic");
-            arrow.add_css_class("dim-label");
-            row.add_suffix(&arrow);
-            let window = window.downgrade();
-            let cmd = *cmd;
-            row.connect_activated(move |_| {
-                if let Some(window) = window.upgrade() {
-                    dispatch_feature(&window, cmd);
-                }
-            });
-        }
-        features.add(&row);
-    }
-
-    // Bloco de ações: botão primário "Abrir imagens" + dica sobre o
-    // clique-direito (principal caminho de uso).
-    let actions = gtk::Box::new(gtk::Orientation::Vertical, 12);
-    actions.set_halign(gtk::Align::Center);
-    actions.set_margin_top(20);
-
+    let content = gtk::Box::new(gtk::Orientation::Vertical, 12);
+    content.set_valign(gtk::Align::Center);
+    content.set_margin_top(16);
+    content.set_margin_bottom(16);
+    content.set_margin_start(20);
+    content.set_margin_end(20);
+    let icon = gtk::Image::from_icon_name(APP_ID);
+    icon.set_pixel_size(56);
+    content.append(&icon);
+    let title = gtk::Label::new(Some(&gettext("Abra suas imagens")));
+    title.add_css_class("title-2");
+    title.set_wrap(true);
+    content.append(&title);
+    let hint =
+        gtk::Label::new(Some(&gettext("Arraste imagens para cá ou cole arquivos com Ctrl+V.")));
+    hint.add_css_class("dim-label");
+    hint.set_wrap(true);
+    hint.set_justify(gtk::Justification::Center);
+    hint.set_max_width_chars(38);
+    content.append(&hint);
+    let actions = gtk::Box::new(gtk::Orientation::Vertical, 8);
     let open_btn = gtk::Button::builder()
-        .label("Abrir imagens…")
+        .label(gettext("Abrir imagens…"))
         .css_classes(["pill", "suggested-action"])
         .build();
     {
@@ -2822,8 +2888,7 @@ fn build_dashboard(window: &adw::ApplicationWindow) -> gtk::Widget {
         });
     }
     actions.append(&open_btn);
-
-    let folder_btn = gtk::Button::builder().label("Processar uma pasta…").build();
+    let folder_btn = gtk::Button::builder().label(gettext("Processar uma pasta…")).build();
     {
         let window = window.downgrade();
         folder_btn.connect_clicked(move |_| {
@@ -2833,52 +2898,15 @@ fn build_dashboard(window: &adw::ApplicationWindow) -> gtk::Widget {
         });
     }
     actions.append(&folder_btn);
-
-    let tip = gtk::Label::builder()
-        .label(
-            "No gerenciador de arquivos, clique com o botão direito em imagens\n\
-             para acessar as operações rápidas do BigIris.",
-        )
-        .justify(gtk::Justification::Center)
-        .wrap(true)
-        .max_width_chars(52)
-        .css_classes(["dim-label"])
-        .build();
-    actions.append(&tip);
-
-    // Empilha features + ações no slot de child do StatusPage
-    let child = gtk::Box::new(gtk::Orientation::Vertical, 0);
-    child.set_halign(gtk::Align::Center);
-    child.append(&features);
-    child.append(&actions);
-    status.set_child(Some(&child));
-
-    status.upcast()
+    content.append(&actions);
+    let clamp = adw::Clamp::builder().maximum_size(320).child(&content).build();
+    gtk::ScrolledWindow::builder()
+        .hscrollbar_policy(gtk::PolicyType::Never)
+        .vscrollbar_policy(gtk::PolicyType::Automatic)
+        .child(&clamp)
+        .build()
+        .upcast()
 }
-
-/// Ações dos cards do dashboard. `None` = card puramente informativo
-/// (ex.: "Clique direito no gerenciador" — não tem como disparar do
-/// dashboard). Caso contrário é a string passada a [`dispatch_feature`].
-const FEATURE_HIGHLIGHTS: &[(&str, &str, &str, Option<&str>)] = &[
-    (
-        "Visualizar imagens",
-        "JPEG, PNG, WebP, AVIF, GIF, TIFF, BMP, QOI, HDR e OpenEXR",
-        "image-x-generic-symbolic",
-        Some("viewer"),
-    ),
-    (
-        "Converter em lote",
-        "Formato, qualidade e presets prontos para WhatsApp, Instagram, Facebook e Discord",
-        "document-save-as-symbolic",
-        Some("batch"),
-    ),
-    (
-        "Clique direito no gerenciador",
-        "Ações rápidas integradas ao Dolphin e a outros gerenciadores",
-        "view-list-symbolic",
-        None,
-    ),
-];
 
 fn open_batch_folder_dialog(window: &adw::ApplicationWindow) {
     let dialog = gtk::FileDialog::builder()
@@ -2894,69 +2922,6 @@ fn open_batch_folder_dialog(window: &adw::ApplicationWindow) {
         if std::process::Command::new(exe).arg("--dialog=batch").arg(path).spawn().is_ok() {
             window.close();
         }
-    });
-}
-
-/// Pega os arquivos escolhidos e relança o próprio binário no modo
-/// apropriado. Tratamos "viewer" como caso-especial (executável sem
-/// subcomando); o resto vira `--dialog=<nome>`, exceto `remove-bg` que
-/// é um subcomando CLI dedicado.
-fn dispatch_feature(window: &adw::ApplicationWindow, action: &'static str) {
-    let dialog = gtk::FileDialog::builder()
-        .title(match action {
-            "viewer" => "Selecionar imagens para visualizar",
-            "batch" => "Selecionar imagens para conversão em lote",
-            "adjust" => "Selecionar imagens para ajustar cores",
-            "remove-bg" => "Selecionar imagens para remover fundo",
-            "animate" => "Selecionar frames na ordem do GIF",
-            _ => "Selecionar imagens",
-        })
-        .modal(true)
-        .build();
-    let filter = gtk::FileFilter::new();
-    filter.set_name(Some("Imagens"));
-    for mime in [
-        "image/jpeg",
-        "image/png",
-        "image/webp",
-        "image/avif",
-        "image/gif",
-        "image/tiff",
-        "image/bmp",
-    ] {
-        filter.add_mime_type(mime);
-    }
-    let filters = gio::ListStore::new::<gtk::FileFilter>();
-    filters.append(&filter);
-    dialog.set_filters(Some(&filters));
-
-    let parent = window.clone();
-    let window = window.clone();
-    dialog.open_multiple(Some(&parent), None::<&gio::Cancellable>, move |result| {
-        let Ok(files) = result else { return };
-        let paths: Vec<PathBuf> = (0..files.n_items())
-            .filter_map(|i| files.item(i))
-            .filter_map(|o| o.downcast::<gio::File>().ok())
-            .filter_map(|f| f.path())
-            .collect();
-        if paths.is_empty() {
-            return;
-        }
-
-        let Ok(exe) = std::env::current_exe() else { return };
-        let mut cmd = std::process::Command::new(exe);
-        match action {
-            "viewer" => {} // sem args: abre direto no visualizador
-            "remove-bg" => {
-                cmd.arg("remove-bg");
-            }
-            other => {
-                cmd.arg(format!("--dialog={other}"));
-            }
-        }
-        cmd.args(paths.iter().map(|p| p.as_os_str()));
-        let _ = cmd.spawn();
-        window.close();
     });
 }
 
@@ -2996,14 +2961,7 @@ fn open_files_dialog(window: &adw::ApplicationWindow) {
         if paths.is_empty() {
             return;
         }
-        // Reaproveita o binário atual: relança com os caminhos, o que
-        // dispara o fluxo normal de viewer com lista de arquivos.
-        let args: Vec<std::ffi::OsString> =
-            paths.iter().map(|p| p.as_os_str().to_os_string()).collect();
-        if let Ok(exe) = std::env::current_exe() {
-            let _ = std::process::Command::new(exe).args(&args).spawn();
-            window.close();
-        }
+        transfers::open_files(&window, paths, true);
     });
 }
 
@@ -7407,7 +7365,8 @@ mod lifecycle_tests {
     }
 
     // Capture only our synthetic windows, never the user's desktop.
-    fn capture_window(window: &adw::ApplicationWindow, name: &str) {
+    fn capture_window(window: &impl IsA<gtk::Widget>, name: &str) {
+        let window = window.as_ref();
         let Some(directory) = std::env::var_os("BIGIRIS_TEST_SCREENSHOTS_DIR") else { return };
         let directory = PathBuf::from(directory);
         std::fs::create_dir_all(&directory).unwrap();
@@ -7423,7 +7382,11 @@ mod lifecycle_tests {
         let snapshot = gtk::Snapshot::new();
         paintable.snapshot(&snapshot, window.width() as f64, window.height() as f64);
         let node = snapshot.to_node().expect("window must have rendered content");
-        let texture = window.renderer().expect("window renderer").render_texture(&node, None);
+        let texture = window
+            .native()
+            .and_then(|native| native.renderer())
+            .expect("window renderer")
+            .render_texture(&node, None);
         texture.save_to_png(directory.join(format!("{name}.png"))).unwrap();
     }
 
@@ -7681,6 +7644,173 @@ mod lifecycle_tests {
         wait(&|| witness.upgrade().is_none());
     }
 
+    fn find_widget(
+        widget: &impl IsA<gtk::Widget>,
+        predicate: &mut impl FnMut(&gtk::Widget) -> bool,
+    ) -> Option<gtk::Widget> {
+        let widget = widget.as_ref();
+        if predicate(widget) {
+            return Some(widget.clone());
+        }
+        let mut child = widget.first_child();
+        while let Some(current) = child {
+            if let Some(found) = find_widget(&current, predicate) {
+                return Some(found);
+            }
+            child = current.next_sibling();
+        }
+        None
+    }
+
+    fn exercise_start_dialogs(app: &adw::Application) {
+        let context = glib::MainContext::default();
+        let settle = || {
+            let until = std::time::Instant::now() + Duration::from_millis(300);
+            while std::time::Instant::now() < until {
+                while context.pending() {
+                    context.iteration(false);
+                }
+                std::thread::sleep(Duration::from_millis(5));
+            }
+        };
+        if let Some(settings) = app_settings() {
+            settings.set_int("window-width", 1280).unwrap();
+            settings.set_int("window-height", 800).unwrap();
+            settings.set_boolean("window-maximized", true).unwrap();
+        }
+        let (window, state) = build_window_tracked(app, Rc::new(Vec::new()), 0);
+        window.present();
+        settle();
+        assert!(!window.is_maximized(), "start page inherited viewer maximization");
+        assert!(
+            window.width() <= 440 && window.height() <= 380,
+            "start page grew to {}x{}",
+            window.width(),
+            window.height()
+        );
+        for text in [gettext("Abrir imagens…"), gettext("Processar uma pasta…")] {
+            let button = find_widget(&window, &mut |widget| {
+                widget
+                    .clone()
+                    .downcast::<gtk::Button>()
+                    .is_ok_and(|button| button.label().as_deref() == Some(text.as_str()))
+            })
+            .expect("start page action");
+            let bounds = button.compute_bounds(&window).unwrap();
+            assert!(
+                button.is_mapped()
+                    && bounds.y() >= 0.0
+                    && bounds.y() + bounds.height() <= window.height() as f32,
+                "start page action is clipped: {text}, {bounds:?}"
+            );
+        }
+        capture_window(&window, "welcome");
+        let menu = find_widget(&window, &mut |widget| {
+            widget
+                .clone()
+                .downcast::<gtk::MenuButton>()
+                .is_ok_and(|button| button.icon_name().as_deref() == Some("open-menu-symbolic"))
+        })
+        .unwrap()
+        .downcast::<gtk::MenuButton>()
+        .unwrap();
+        menu.popup();
+        settle();
+        let popover = menu.popover().unwrap();
+        assert!(popover.height() <= 280, "start menu grew to {}px", popover.height());
+        capture_window(&popover, "welcome-menu");
+        menu.popdown();
+        settle();
+
+        // Credits must fit independently of the small main window.
+        let about = present_about_dialog(&window);
+        settle();
+        let about_window = about.root().and_downcast::<gtk::Window>().unwrap();
+        capture_window(&about_window, "about");
+        let credits_label = find_widget(&about, &mut |widget| {
+            widget.clone().downcast::<gtk::Label>().is_ok_and(|label| {
+                matches!(label.text().as_str(), "Credits" | "Créditos")
+                    && label.ancestor(adw::ActionRow::static_type()).is_some()
+            })
+        })
+        .expect("credits navigation label");
+        let credits = credits_label
+            .ancestor(adw::ActionRow::static_type())
+            .unwrap()
+            .downcast::<adw::ActionRow>()
+            .unwrap();
+        gtk::prelude::WidgetExt::activate(&credits);
+        settle();
+        settle();
+        let mut team_labels = Vec::new();
+        find_widget(&about, &mut |widget| {
+            if let Some(label) = widget
+                .clone()
+                .downcast::<gtk::Label>()
+                .ok()
+                .filter(|label| widget.is_mapped() && label.text() == "BigCommunity Team")
+            {
+                team_labels.push(label);
+            }
+            false
+        });
+        assert_eq!(team_labels.len(), 3, "credits did not display all three roles");
+        for label in team_labels {
+            let bounds = label.compute_bounds(&about_window).unwrap();
+            assert!(
+                bounds.y() >= 0.0 && bounds.y() + bounds.height() <= about_window.height() as f32,
+                "credit label extends beyond the window: {bounds:?}"
+            );
+        }
+        capture_window(&about_window, "credits");
+        about.close();
+        settle();
+
+        present_shortcuts_dialog(&window);
+        settle();
+        let dialog = window.visible_dialog().unwrap();
+        assert!(dialog.child().unwrap().height() <= 340, "shortcuts exceeded compact height");
+        capture_window(&window, "shortcuts");
+        let selector = find_widget(&dialog, &mut |widget| widget.is::<gtk::DropDown>())
+            .unwrap()
+            .downcast::<gtk::DropDown>()
+            .unwrap();
+        selector.set_selected(3);
+        settle();
+        capture_window(&window, "shortcuts-editing");
+        dialog.close();
+        settle();
+        window.set_default_size(360, 420);
+        settle();
+        capture_window(&window, "welcome-narrow");
+        assert!(
+            state.upgrade().unwrap().borrow().toolbar_view.reveals_top_bars(),
+            "start page hid its window controls while idle"
+        );
+        present_shortcuts_dialog(&window);
+        settle();
+        capture_window(&window, "shortcuts-narrow");
+        window.visible_dialog().unwrap().close();
+        settle();
+        drop(selector);
+        drop(dialog);
+        drop(about_window);
+        drop(about);
+        drop(credits);
+        drop(credits_label);
+        drop(menu);
+        drop(popover);
+        window.destroy();
+        drop(window);
+        settle();
+        assert!(state.upgrade().is_none(), "start page retained its state after closing");
+        if let Some(settings) = app_settings() {
+            assert_eq!(settings.int("window-width"), 1280);
+            assert_eq!(settings.int("window-height"), 800);
+            settings.set_boolean("window-maximized", false).unwrap();
+        }
+    }
+
     #[test]
     #[ignore = "requires a graphical display; run alone with GSETTINGS_BACKEND=memory"]
     fn viewer_lifecycle_releases_state_and_workers() {
@@ -7703,6 +7833,7 @@ mod lifecycle_tests {
             .flags(gio::ApplicationFlags::NON_UNIQUE)
             .build();
         app.register(None::<&gio::Cancellable>).unwrap();
+        exercise_start_dialogs(&app);
         let dir = tempfile::tempdir().unwrap();
         let source = dir.path().join("fixture <&>.png");
         image::RgbImage::from_pixel(320, 240, image::Rgb([10, 20, 30])).save(&source).unwrap();

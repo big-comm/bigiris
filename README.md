@@ -24,6 +24,10 @@ e integração também com outros desktops. O resultado respeita o tema,
 usa ícones simbólicos do sistema e mantém as operações avançadas fora do caminho
 principal.
 
+A tela inicial abre em uma janela compacta. Use **Abrir imagens**, arraste uma
+seleção de arquivos locais ou cole arquivos copiados no gerenciador com
+`Ctrl+V`. **Processar uma pasta** abre as ferramentas de lote.
+
 ## Destaques
 
 - Decodificação da imagem e das miniaturas fora da thread gráfica.

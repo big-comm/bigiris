@@ -2,11 +2,6 @@
 # Contributor: Bruno Goncalves <bigbruno@gmail.com>
 
 pkgname=bigiris
-pkgver=0.1.0
-pkgrel=3
-arch=('x86_64')
-license=('GPL-3.0-or-later')
-url="https://github.com/xathay/bigiris"
 pkgdesc="Visualizador e conversor de imagens moderno, com integração ao gerenciador de arquivos"
 depends=(
   'bubblewrap'
@@ -17,7 +12,7 @@ depends=(
   'libadwaita>=1.5'
   'dav1d'            # decodificador AVIF
   'openssl'          # TLS para download de modelos IA (ureq + native-tls)
-  'onnxruntime'      # IA (remove-bg via BiRefNet); embutida no binario
+  'onnxruntime'      # backend de IA (BiRefNet), carregado dinamicamente
   'hicolor-icon-theme'
 )
 optdepends=(
@@ -38,18 +33,29 @@ makedepends=('rust' 'cargo' 'git' 'pkgconf' 'gettext')
 # archlinux:latest CI image; some user setups can hit it too. We keep
 # -O3 and the mimalloc batch perf win without LTO.
 options=('!lto')
-source=("git+https://github.com/xathay/bigiris.git")
+pkgver=$(date +%y.%m.%d)
+pkgrel=$(date +%H%M)
+arch=('x86_64')
+license=('GPL-3.0-or-later')
+url="https://github.com/big-comm/${pkgname}"
+source=("git+${url}.git")
 sha256sums=('SKIP')
-install="$pkgname.install"
+
+# Automatically detect and use the correct install file.
+if [ -f "${pkgname}.install" ]; then
+  install="${pkgname}.install"
+elif [ -f "pkgbuild.install" ]; then
+  install="pkgbuild.install"
+fi
 
 prepare() {
-  cd "$pkgname"
+  cd "${srcdir}/${pkgname}"
   # blueprint-compiler entra quando a GUI ganhar arquivos .blp.
   true
 }
 
 build() {
-  cd "$pkgname"
+  cd "${srcdir}/${pkgname}"
   export RUSTUP_TOOLCHAIN=stable
   export CARGO_TARGET_DIR="$srcdir/target"
   # `--features "gui ai"` compila o visualizador GTK4 / libadwaita e os
@@ -66,15 +72,14 @@ build() {
 }
 
 check() {
-  cd "$pkgname"
+  cd "${srcdir}/${pkgname}"
   export RUSTUP_TOOLCHAIN=stable
   export CARGO_TARGET_DIR="$srcdir/target"
-  cargo test --locked --release --workspace --all-features --all-targets
-  "$CARGO_TARGET_DIR/release/bigiris" --self-test
+  bash scripts/package-check.sh "$CARGO_TARGET_DIR"
 }
 
 package() {
-  cd "$pkgname"
+  cd "${srcdir}/${pkgname}"
 
   # Binario
   install -Dm755 "$srcdir/target/release/bigiris" \

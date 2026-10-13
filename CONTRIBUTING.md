@@ -5,6 +5,10 @@ BigIris é Rust + GTK4/libadwaita, single-binary com módulos `Íris`
 necessário pra você compilar, testar, traduzir e enviar mudanças
 sem fricção.
 
+O diálogo Sobre e os metadados AppStream usam `BigCommunity Team` como equipe
+responsável e apontam para `big-comm/bigiris`. A autoria individual permanece
+no histórico Git.
+
 ## Pré-requisitos
 
 Distros baseadas em Arch/BigLinux:

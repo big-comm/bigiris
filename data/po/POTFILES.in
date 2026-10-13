@@ -3,4 +3,5 @@
 # Convention: msgid is the source string in pt-BR (the project's primary
 # language); .po catalogs translate FROM pt-BR into other locales.
 crates/bigiris/src/gui.rs
+crates/bigiris/src/gui/transfers.rs
 crates/bigiris/src/main.rs

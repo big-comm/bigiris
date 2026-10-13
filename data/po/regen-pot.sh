@@ -24,8 +24,8 @@ xgettext \
   --from-code=UTF-8 \
   --package-name=bigiris \
   --package-version=0.1.0 \
-  --msgid-bugs-address=https://github.com/xathay/bigiris/issues \
-  --copyright-holder="Leonardo Athayde" \
+  --msgid-bugs-address=https://github.com/big-comm/bigiris/issues \
+  --copyright-holder="BigCommunity Team" \
   -o "$POT" \
   $(grep -v '^\s*#' "$POTFILES" | grep -v '^\s*$')
 

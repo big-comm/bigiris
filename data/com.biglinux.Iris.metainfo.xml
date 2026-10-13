@@ -41,10 +41,10 @@
 
   <launchable type="desktop-id">com.biglinux.Iris.desktop</launchable>
 
-  <url type="homepage">https://github.com/xathay/bigiris</url>
-  <url type="bugtracker">https://github.com/xathay/bigiris/issues</url>
-  <developer id="io.github.xathay">
-    <name>Leonardo Athayde</name>
+  <url type="homepage">https://github.com/big-comm/bigiris</url>
+  <url type="bugtracker">https://github.com/big-comm/bigiris/issues</url>
+  <developer id="org.communitybig">
+    <name>BigCommunity Team</name>
   </developer>
 
   <provides>

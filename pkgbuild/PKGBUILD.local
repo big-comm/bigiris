@@ -18,7 +18,7 @@ pkgrel=4
 arch=('x86_64')
 license=('GPL-3.0-or-later')
 url="https://github.com/big-comm/bigiris"
-pkgdesc="Visualizador e conversor de imagens moderno (build local para testes)"
+pkgdesc="Modern image viewer and converter (local test build)"
 depends=(
   'bubblewrap'
   'util-linux'
@@ -32,13 +32,13 @@ depends=(
   'hicolor-icon-theme'
 )
 optdepends=(
-  'nautilus-python: integração top-level no Nautilus'
-  'dolphin: integração no gerenciador Dolphin (KDE)'
-  'nautilus: integração no gerenciador Nautilus (GNOME)'
-  'nemo: integração no gerenciador Nemo (Cinnamon)'
-  'thunar: integração no gerenciador Thunar (XFCE)'
-  'pcmanfm-qt: integração no gerenciador PCManFM-Qt (LXQt)'
-  'io.elementary.files: integração no gerenciador Files (elementary)'
+  'nautilus-python: Nautilus context menu integration'
+  'dolphin: Dolphin file manager integration (KDE)'
+  'nautilus: Nautilus file manager integration (GNOME)'
+  'nemo: Nemo file manager integration (Cinnamon)'
+  'thunar: Thunar file manager integration (XFCE)'
+  'pcmanfm-qt: PCManFM-Qt file manager integration (LXQt)'
+  'io.elementary.files: Files file manager integration (elementary)'
 )
 makedepends=('rust' 'cargo' 'pkgconf' 'gettext')
 # Disable LTO. Arch's default makepkg env appends `-flto=auto` to CFLAGS

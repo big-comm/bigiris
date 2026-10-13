@@ -13,29 +13,6 @@ _refresh_caches() {
 
 post_install() {
   _refresh_caches
-
-  cat <<'EOF'
-
- BigIris instalado.
-
- Integracoes system-wide ativas para Dolphin (KDE), Nemo (Cinnamon),
- Thunar (XFCE), PCManFM-Qt (LXQt) e Files (elementary) — clique direito
- numa imagem mostra o submenu "Iris >".
-
- Nautilus (GNOME) precisa da extensao python sendo registrada no usuario
- antes de aparecer no top-level do clique direito. Se voce usa Nautilus:
-
-     bigiris install-integrations --user
-     nautilus -q   # reinicia o daemon para carregar a extensao
-
- Obs: `nautilus-python` precisa estar instalado (ja esta em
- optdepends). Sem ele, as acoes caem no submenu "Scripts > BigIris >".
-
- Para remover as integracoes pessoais:
-
-     bigiris uninstall-integrations
-
-EOF
 }
 
 post_upgrade() {

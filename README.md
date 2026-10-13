@@ -93,9 +93,14 @@ cd pkgbuild
 makepkg -si -p PKGBUILD.local
 ```
 
-A integração com o Nautilus depende de `nautilus-python`. A campanha de testes
-prioriza GNOME/Wayland; veja os resultados, limites e critérios para adoção
-oficial em [docs/QUALITY.md](docs/QUALITY.md), e os comandos reproduzíveis em
+A integração com o Nautilus depende de `nautilus-python`. O pacote instala a
+extensão no sistema; não é necessário executar `install-integrations --user`.
+Para carregar a extensão após instalar ou atualizar, feche o Nautilus com
+`nautilus -q` e abra-o novamente.
+
+A campanha de testes prioriza GNOME/Wayland; veja os resultados, limites e
+critérios para adoção oficial em [docs/QUALITY.md](docs/QUALITY.md), e os
+comandos reproduzíveis em
 [CONTRIBUTING.md](CONTRIBUTING.md#campanha-de-qualidade-no-gnome).
 
 ## Instalação no OpenMandriva

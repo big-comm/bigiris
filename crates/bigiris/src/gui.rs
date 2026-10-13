@@ -515,12 +515,12 @@ fn build_window_tracked(
     let window_width = if has_images {
         settings.as_ref().map_or(1280, |s| s.int("window-width")).max(480)
     } else {
-        480
+        420
     };
     let window_height = if has_images {
         settings.as_ref().map_or(800, |s| s.int("window-height")).max(360)
     } else {
-        400
+        360
     };
     let start_maximized =
         has_images && settings.as_ref().is_some_and(|s| s.boolean("window-maximized"));
@@ -2054,48 +2054,43 @@ fn apply_decoded_frame(state: &Rc<RefCell<ViewerState>>, frame: DecodedFrame) {
 /// Ações ficam em `win.<nome>` (registradas em [`install_viewer_actions`]).
 fn build_header_menu_button(state: &Rc<RefCell<ViewerState>>) -> gtk::MenuButton {
     let menu = gio::Menu::new();
-
-    let s_file = gio::Menu::new();
-    s_file.append(Some(&gettext("Abrir imagens…")), Some("win.open"));
-    s_file.append(Some(&gettext("Copiar imagem")), Some("win.copy"));
-    menu.append_section(None, &s_file);
-
-    let s_actions = gio::Menu::new();
-    s_actions.append(Some(&gettext("Imprimir…")), Some("win.print"));
-    menu.append_section(None, &s_actions);
-
-    // Edição in-memory: giros/espelhos aplicados na hora;
-    // só vão pra disco quando o user pedir Salvar (Ctrl+S).
-    let s_edit = gio::Menu::new();
-    s_edit.append(Some(&gettext("Desfazer")), Some("win.undo"));
-    s_edit.append(Some(&gettext("Refazer")), Some("win.redo"));
-    s_edit.append(Some(&gettext("Girar à direita")), Some("win.rotate-cw"));
-    s_edit.append(Some(&gettext("Girar à esquerda")), Some("win.rotate-ccw"));
-    s_edit.append(Some(&gettext("Girar 180°")), Some("win.rotate-180"));
-    s_edit.append(Some(&gettext("Espelhar horizontal")), Some("win.flip-h"));
-    s_edit.append(Some(&gettext("Espelhar vertical")), Some("win.flip-v"));
-    s_edit.append(Some(&gettext("Recortar…")), Some("win.crop"));
-    menu.append_section(None, &s_edit);
-
-    // IA: cada item dispara um subprocesso `bigiris --dialog=…` (mesmo
-    // motivo do crop: cada diálogo monta sua própria adw::Application).
-    let s_ai = gio::Menu::new();
-    s_ai.append(Some(&gettext("Remover fundo (IA)…")), Some("win.remove-bg"));
-    s_ai.append(Some(&gettext("Aumentar resolução…")), Some("win.upscale"));
-    menu.append_section(None, &s_ai);
-
-    let s_save = gio::Menu::new();
-    s_save.append(Some(&gettext("Salvar alterações")), Some("win.save-edits"));
-    menu.append_section(None, &s_save);
-
-    let s_delete = gio::Menu::new();
-    s_delete.append(Some(&gettext("Mover para a lixeira")), Some("win.trash"));
-    menu.append_section(None, &s_delete);
-
-    let s_help = gio::Menu::new();
-    s_help.append(Some(&gettext("Atalhos do teclado")), Some("win.shortcuts"));
-    s_help.append(Some(&gettext("Sobre o BigIris")), Some("app.about"));
-    menu.append_section(None, &s_help);
+    let has_images = !state.borrow().files.is_empty();
+    let files = gio::Menu::new();
+    files.append(Some(&gettext("Abrir imagens…")), Some("win.open"));
+    files.append(Some(&gettext("Colar arquivos de imagem")), Some("win.paste"));
+    if has_images {
+        files.append(Some(&gettext("Copiar imagem")), Some("win.copy"));
+        files.append(Some(&gettext("Imprimir…")), Some("win.print"));
+    } else {
+        files.append(Some(&gettext("Processar uma pasta…")), Some("win.batch-folder"));
+    }
+    menu.append_section(None, &files);
+    if has_images {
+        let edit = gio::Menu::new();
+        edit.append(Some(&gettext("Desfazer")), Some("win.undo"));
+        edit.append(Some(&gettext("Refazer")), Some("win.redo"));
+        let transforms = gio::Menu::new();
+        transforms.append(Some(&gettext("Girar à direita")), Some("win.rotate-cw"));
+        transforms.append(Some(&gettext("Girar à esquerda")), Some("win.rotate-ccw"));
+        transforms.append(Some(&gettext("Girar 180°")), Some("win.rotate-180"));
+        transforms.append(Some(&gettext("Espelhar horizontal")), Some("win.flip-h"));
+        transforms.append(Some(&gettext("Espelhar vertical")), Some("win.flip-v"));
+        transforms.append(Some(&gettext("Recortar…")), Some("win.crop"));
+        edit.append_section(None, &transforms);
+        menu.append_submenu(Some(&gettext("Editar imagem")), &edit);
+        let tools = gio::Menu::new();
+        tools.append(Some(&gettext("Remover fundo (IA)…")), Some("win.remove-bg"));
+        tools.append(Some(&gettext("Aumentar resolução…")), Some("win.upscale"));
+        menu.append_submenu(Some(&gettext("Ferramentas")), &tools);
+        let changes = gio::Menu::new();
+        changes.append(Some(&gettext("Salvar alterações")), Some("win.save-edits"));
+        changes.append(Some(&gettext("Mover para a lixeira")), Some("win.trash"));
+        menu.append_section(None, &changes);
+    }
+    let help = gio::Menu::new();
+    help.append(Some(&gettext("Atalhos do teclado")), Some("win.shortcuts"));
+    help.append(Some(&gettext("Sobre o BigIris")), Some("app.about"));
+    menu.append_section(None, &help);
 
     let btn = gtk::MenuButton::new();
     btn.set_icon_name("open-menu-symbolic");
@@ -2166,6 +2161,17 @@ fn install_viewer_actions(
         });
     }
     window.add_action(&open);
+
+    let batch_folder = gio::SimpleAction::new("batch-folder", None);
+    {
+        let window = window.downgrade();
+        batch_folder.connect_activate(move |_, _| {
+            if let Some(window) = window.upgrade() {
+                open_batch_folder_dialog(&window);
+            }
+        });
+    }
+    window.add_action(&batch_folder);
 
     // Actions dependentes de imagem carregada ficam grey na dashboard —
     // senão o menu mostra opção clicável que não faz nada, e itens de
@@ -2731,15 +2737,18 @@ fn present_shortcuts_dialog(parent: &adw::ApplicationWindow) {
             vec![("<ctrl>question", gettext("Este diálogo")), ("F1", gettext("Sobre"))],
         ),
     ];
-    let content = gtk::Box::new(gtk::Orientation::Vertical, 18);
-    content.set_margin_start(20);
-    content.set_margin_end(20);
-    content.set_margin_top(12);
-    content.set_margin_bottom(20);
-    for (group_title, entries) in shortcuts {
-        let group = adw::PreferencesGroup::builder().title(group_title).build();
+    let names: Vec<_> = shortcuts.iter().map(|(name, _)| name.as_str()).collect();
+    let categories = gtk::StringList::new(&names);
+    let selector = gtk::DropDown::builder()
+        .model(&categories)
+        .tooltip_text(gettext("Categoria dos atalhos"))
+        .hexpand(true)
+        .build();
+    let pages = gtk::Stack::builder().vhomogeneous(false).hhomogeneous(false).build();
+    for (index, (_, entries)) in shortcuts.into_iter().enumerate() {
         let list = gtk::ListBox::builder().selection_mode(gtk::SelectionMode::None).build();
         list.add_css_class("boxed-list");
+        list.set_valign(gtk::Align::Start);
         for (accel, desc) in entries {
             let row = gtk::Box::new(gtk::Orientation::Horizontal, 12);
             row.set_margin_start(12);
@@ -2772,32 +2781,46 @@ fn present_shortcuts_dialog(parent: &adw::ApplicationWindow) {
                 gtk::ListBoxRow::builder().activatable(false).selectable(false).child(&row).build();
             list.append(&list_row);
         }
-        group.add(&list);
-        content.append(&group);
+        pages.add_named(&list, Some(&index.to_string()));
+    }
+    pages.set_visible_child_name("0");
+    {
+        let pages = pages.downgrade();
+        selector.connect_selected_notify(move |selector| {
+            if let Some(pages) = pages.upgrade() {
+                pages.set_visible_child_name(&selector.selected().to_string());
+            }
+        });
     }
     let scroller = gtk::ScrolledWindow::builder()
         .hscrollbar_policy(gtk::PolicyType::Never)
         .vscrollbar_policy(gtk::PolicyType::Automatic)
         .vexpand(true)
-        .child(&content)
+        .child(&pages)
         .build();
+    let content = gtk::Box::new(gtk::Orientation::Vertical, 12);
+    content.set_margin_start(16);
+    content.set_margin_end(16);
+    content.set_margin_top(12);
+    content.set_margin_bottom(16);
+    content.append(&selector);
+    content.append(&scroller);
     let layout = adw::ToolbarView::new();
     layout.add_top_bar(&adw::HeaderBar::new());
-    layout.set_content(Some(&scroller));
+    layout.set_content(Some(&content));
     let dialog = adw::Dialog::builder()
         .title(gettext("Atalhos de teclado"))
-        .content_width(480)
-        .content_height(520)
+        .content_width(420)
+        .content_height(320)
         .child(&layout)
         .build();
     dialog.present(Some(parent));
 }
 
 /// About dialog with project, license and support links.
-fn present_about_dialog(parent: &adw::ApplicationWindow) {
+fn present_about_dialog(parent: &adw::ApplicationWindow) -> adw::AboutDialog {
     // Restaura o cursor antes de apresentar — o viewer pode tê-lo
-    // escondido por idle; dentro do AdwAboutDialog (modal in-window)
-    // precisamos que esteja visível pra user navegar nos Detalhes etc.
+    // escondido por idle; o diálogo precisa dele para navegar nas páginas.
     parent.set_cursor(None);
 
     let about = adw::AboutDialog::builder()
@@ -2816,20 +2839,42 @@ fn present_about_dialog(parent: &adw::ApplicationWindow) {
              acessível por teclado e integrado ao gerenciador de arquivos.",
         )
         .build();
-    about.present(Some(parent));
+    // About has navigable pages; its own native window keeps credits usable
+    // even when the compact start page is shorter than those pages.
+    about.set_content_width(360);
+    about.set_content_height(540);
+    about.present(None::<&gtk::Widget>);
+    if let Some(window) = about.root().and_downcast::<gtk::Window>() {
+        window.set_transient_for(Some(parent));
+        window.set_modal(true);
+        window.set_destroy_with_parent(true);
+    }
+    about
 }
 
 /// Compact start page with two actions and file-manager drop/paste support.
 fn build_dashboard(window: &adw::ApplicationWindow) -> gtk::Widget {
-    let status = adw::StatusPage::builder()
-        .icon_name(APP_ID)
-        .title(gettext("Abra suas imagens"))
-        .description(gettext("Arraste imagens para cá ou cole arquivos com Ctrl+V."))
-        .build();
-    status.add_css_class("compact");
+    let content = gtk::Box::new(gtk::Orientation::Vertical, 12);
+    content.set_valign(gtk::Align::Center);
+    content.set_margin_top(16);
+    content.set_margin_bottom(16);
+    content.set_margin_start(20);
+    content.set_margin_end(20);
+    let icon = gtk::Image::from_icon_name(APP_ID);
+    icon.set_pixel_size(56);
+    content.append(&icon);
+    let title = gtk::Label::new(Some(&gettext("Abra suas imagens")));
+    title.add_css_class("title-2");
+    title.set_wrap(true);
+    content.append(&title);
+    let hint =
+        gtk::Label::new(Some(&gettext("Arraste imagens para cá ou cole arquivos com Ctrl+V.")));
+    hint.add_css_class("dim-label");
+    hint.set_wrap(true);
+    hint.set_justify(gtk::Justification::Center);
+    hint.set_max_width_chars(38);
+    content.append(&hint);
     let actions = gtk::Box::new(gtk::Orientation::Vertical, 8);
-    actions.set_halign(gtk::Align::Center);
-    actions.set_margin_top(12);
     let open_btn = gtk::Button::builder()
         .label(gettext("Abrir imagens…"))
         .css_classes(["pill", "suggested-action"])
@@ -2853,8 +2898,14 @@ fn build_dashboard(window: &adw::ApplicationWindow) -> gtk::Widget {
         });
     }
     actions.append(&folder_btn);
-    status.set_child(Some(&actions));
-    status.upcast()
+    content.append(&actions);
+    let clamp = adw::Clamp::builder().maximum_size(320).child(&content).build();
+    gtk::ScrolledWindow::builder()
+        .hscrollbar_policy(gtk::PolicyType::Never)
+        .vscrollbar_policy(gtk::PolicyType::Automatic)
+        .child(&clamp)
+        .build()
+        .upcast()
 }
 
 fn open_batch_folder_dialog(window: &adw::ApplicationWindow) {
@@ -7314,7 +7365,8 @@ mod lifecycle_tests {
     }
 
     // Capture only our synthetic windows, never the user's desktop.
-    fn capture_window(window: &adw::ApplicationWindow, name: &str) {
+    fn capture_window(window: &impl IsA<gtk::Widget>, name: &str) {
+        let window = window.as_ref();
         let Some(directory) = std::env::var_os("BIGIRIS_TEST_SCREENSHOTS_DIR") else { return };
         let directory = PathBuf::from(directory);
         std::fs::create_dir_all(&directory).unwrap();
@@ -7330,7 +7382,11 @@ mod lifecycle_tests {
         let snapshot = gtk::Snapshot::new();
         paintable.snapshot(&snapshot, window.width() as f64, window.height() as f64);
         let node = snapshot.to_node().expect("window must have rendered content");
-        let texture = window.renderer().expect("window renderer").render_texture(&node, None);
+        let texture = window
+            .native()
+            .and_then(|native| native.renderer())
+            .expect("window renderer")
+            .render_texture(&node, None);
         texture.save_to_png(directory.join(format!("{name}.png"))).unwrap();
     }
 
@@ -7588,10 +7644,28 @@ mod lifecycle_tests {
         wait(&|| witness.upgrade().is_none());
     }
 
+    fn find_widget(
+        widget: &impl IsA<gtk::Widget>,
+        predicate: &mut impl FnMut(&gtk::Widget) -> bool,
+    ) -> Option<gtk::Widget> {
+        let widget = widget.as_ref();
+        if predicate(widget) {
+            return Some(widget.clone());
+        }
+        let mut child = widget.first_child();
+        while let Some(current) = child {
+            if let Some(found) = find_widget(&current, predicate) {
+                return Some(found);
+            }
+            child = current.next_sibling();
+        }
+        None
+    }
+
     fn exercise_start_dialogs(app: &adw::Application) {
         let context = glib::MainContext::default();
         let settle = || {
-            let until = std::time::Instant::now() + Duration::from_millis(250);
+            let until = std::time::Instant::now() + Duration::from_millis(300);
             while std::time::Instant::now() < until {
                 while context.pending() {
                     context.iteration(false);
@@ -7599,7 +7673,6 @@ mod lifecycle_tests {
                 std::thread::sleep(Duration::from_millis(5));
             }
         };
-        // A large saved viewer must not inflate or maximize the start page.
         if let Some(settings) = app_settings() {
             settings.set_int("window-width", 1280).unwrap();
             settings.set_int("window-height", 800).unwrap();
@@ -7610,28 +7683,104 @@ mod lifecycle_tests {
         settle();
         assert!(!window.is_maximized(), "start page inherited viewer maximization");
         assert!(
-            window.width() <= 500 && window.height() <= 460,
+            window.width() <= 440 && window.height() <= 380,
             "start page grew to {}x{}",
             window.width(),
             window.height()
         );
+        for text in [gettext("Abrir imagens…"), gettext("Processar uma pasta…")] {
+            let button = find_widget(&window, &mut |widget| {
+                widget
+                    .clone()
+                    .downcast::<gtk::Button>()
+                    .is_ok_and(|button| button.label().as_deref() == Some(text.as_str()))
+            })
+            .expect("start page action");
+            let bounds = button.compute_bounds(&window).unwrap();
+            assert!(
+                button.is_mapped()
+                    && bounds.y() >= 0.0
+                    && bounds.y() + bounds.height() <= window.height() as f32,
+                "start page action is clipped: {text}, {bounds:?}"
+            );
+        }
         capture_window(&window, "welcome");
-        window.set_default_size(720, 640);
+        let menu = find_widget(&window, &mut |widget| {
+            widget
+                .clone()
+                .downcast::<gtk::MenuButton>()
+                .is_ok_and(|button| button.icon_name().as_deref() == Some("open-menu-symbolic"))
+        })
+        .unwrap()
+        .downcast::<gtk::MenuButton>()
+        .unwrap();
+        menu.popup();
         settle();
+        let popover = menu.popover().unwrap();
+        assert!(popover.height() <= 280, "start menu grew to {}px", popover.height());
+        capture_window(&popover, "welcome-menu");
+        menu.popdown();
+        settle();
+
+        // Credits must fit independently of the small main window.
+        let about = present_about_dialog(&window);
+        settle();
+        let about_window = about.root().and_downcast::<gtk::Window>().unwrap();
+        capture_window(&about_window, "about");
+        let credits_label = find_widget(&about, &mut |widget| {
+            widget.clone().downcast::<gtk::Label>().is_ok_and(|label| {
+                matches!(label.text().as_str(), "Credits" | "Créditos")
+                    && label.ancestor(adw::ActionRow::static_type()).is_some()
+            })
+        })
+        .expect("credits navigation label");
+        let credits = credits_label
+            .ancestor(adw::ActionRow::static_type())
+            .unwrap()
+            .downcast::<adw::ActionRow>()
+            .unwrap();
+        gtk::prelude::WidgetExt::activate(&credits);
+        settle();
+        settle();
+        let mut team_labels = Vec::new();
+        find_widget(&about, &mut |widget| {
+            if let Some(label) = widget
+                .clone()
+                .downcast::<gtk::Label>()
+                .ok()
+                .filter(|label| widget.is_mapped() && label.text() == "BigCommunity Team")
+            {
+                team_labels.push(label);
+            }
+            false
+        });
+        assert_eq!(team_labels.len(), 3, "credits did not display all three roles");
+        for label in team_labels {
+            let bounds = label.compute_bounds(&about_window).unwrap();
+            assert!(
+                bounds.y() >= 0.0 && bounds.y() + bounds.height() <= about_window.height() as f32,
+                "credit label extends beyond the window: {bounds:?}"
+            );
+        }
+        capture_window(&about_window, "credits");
+        about.close();
+        settle();
+
         present_shortcuts_dialog(&window);
         settle();
-        let dialog = window.visible_dialog().expect("shortcuts must be visible");
-        let height = dialog.child().expect("shortcut content").height();
-        assert!(height <= 540, "shortcuts expanded to {height}px");
+        let dialog = window.visible_dialog().unwrap();
+        assert!(dialog.child().unwrap().height() <= 340, "shortcuts exceeded compact height");
         capture_window(&window, "shortcuts");
+        let selector = find_widget(&dialog, &mut |widget| widget.is::<gtk::DropDown>())
+            .unwrap()
+            .downcast::<gtk::DropDown>()
+            .unwrap();
+        selector.set_selected(3);
+        settle();
+        capture_window(&window, "shortcuts-editing");
         dialog.close();
         settle();
-        present_about_dialog(&window);
-        settle();
-        capture_window(&window, "about");
-        window.visible_dialog().unwrap().close();
-        settle();
-        window.set_default_size(360, 480);
+        window.set_default_size(360, 420);
         settle();
         capture_window(&window, "welcome-narrow");
         assert!(
@@ -7643,9 +7792,16 @@ mod lifecycle_tests {
         capture_window(&window, "shortcuts-narrow");
         window.visible_dialog().unwrap().close();
         settle();
+        drop(selector);
+        drop(dialog);
+        drop(about_window);
+        drop(about);
+        drop(credits);
+        drop(credits_label);
+        drop(menu);
+        drop(popover);
         window.destroy();
         drop(window);
-        drop(dialog);
         settle();
         assert!(state.upgrade().is_none(), "start page retained its state after closing");
         if let Some(settings) = app_settings() {

@@ -1382,7 +1382,7 @@ msgid "Operações BigIris"
 msgstr ""
 
 #: data/nautilus/bigiris-menu.py:372
-msgid "BigIris — Processar esta pasta…"
+msgid "BigIris: Processar esta pasta…"
 msgstr ""
 
 #: data/nautilus/bigiris-menu.py:373

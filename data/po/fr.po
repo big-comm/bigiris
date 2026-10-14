@@ -1403,8 +1403,8 @@ msgid "Operações BigIris"
 msgstr "Les actions de BigIris"
 
 #: data/nautilus/bigiris-menu.py:372
-msgid "BigIris — Processar esta pasta…"
-msgstr "BigIris — Traiter ce dossier…"
+msgid "BigIris: Processar esta pasta…"
+msgstr "BigIris: Traiter ce dossier…"
 
 #: data/nautilus/bigiris-menu.py:373
 msgid "Converter imagens da pasta com o Prisma"

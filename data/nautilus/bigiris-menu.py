@@ -369,7 +369,7 @@ class BigIrisMenuProvider(GObject.GObject, Nautilus.MenuProvider):
             return []
         item = Nautilus.MenuItem(
             name="BigIrisExtension::BatchFolder",
-            label=_("BigIris — Processar esta pasta…"),
+            label=_("BigIris: Processar esta pasta…"),
             tip=_("Converter imagens da pasta com o Prisma"),
             icon=_ICON_CONVERT,
         )

@@ -34,8 +34,8 @@ fn render(action: &Action) -> String {
     format!(
         "[Nemo Action]\n\
          Active=true\n\
-         Name={label}\n\
-         Comment=BigIris — {comment}\n\
+         Name={label}\n{localized_name}\
+         Comment=BigIris — {comment}\n{localized_comment}\
          Exec={exec}\n\
          Icon-Name={icon}\n\
          Selection=any\n\
@@ -43,7 +43,13 @@ fn render(action: &Action) -> String {
          Mimetypes={mime_line}\n",
         label = label,
         comment = action.label,
+        localized_comment = crate::i18n::localized("Comment", |lang| format!(
+            "BigIris — {}",
+            crate::i18n::lookup(lang, action.label)
+        )),
         exec = action.command,
+        localized_name =
+            crate::i18n::localized("Name", |lang| crate::i18n::flat_label(lang, action)),
         icon = action.icon,
     )
 }

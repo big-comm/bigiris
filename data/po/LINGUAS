@@ -1,5 +1,30 @@
-# Languages for which a .po catalog exists in this directory.
-# Add one ISO code per line (e.g. en, es, fr, de). PKGBUILD reads
-# this list, runs msgfmt to compile each .po into .mo, and installs
-# them under /usr/share/locale/<lang>/LC_MESSAGES/bigiris.mo.
+# BigCommunity locales, matching Ashy Pass. See CONTRIBUTING.md for provenance.
+bg
+cs
+da
+de
+el
 en
+es
+et
+fi
+fr
+he
+hr
+hu
+is
+it
+ja
+ko
+nl
+no
+pl
+pt
+pt_BR
+ro
+ru
+sk
+sv
+tr
+uk
+zh

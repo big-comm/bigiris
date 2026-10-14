@@ -136,7 +136,7 @@ if [ "$BIN_ONLY" -eq 0 ]; then
             [ -z "$lang" ] && continue
             case "$lang" in \#*) continue ;; esac
             if [ -f "$DATA/po/${lang}.po" ]; then
-                msgfmt -o "$I18N_TMP/${lang}.mo" "$DATA/po/${lang}.po"
+                msgfmt --check -o "$I18N_TMP/${lang}.mo" "$DATA/po/${lang}.po"
                 install -Dm644 "$I18N_TMP/${lang}.mo" "$SHARE/locale/${lang}/LC_MESSAGES/bigiris.mo"
                 ok "locale: $lang"
             fi

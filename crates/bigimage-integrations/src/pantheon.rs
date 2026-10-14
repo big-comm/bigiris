@@ -34,13 +34,19 @@ fn render(action: &Action) -> String {
     let mime_line: String = action.mime_types.iter().map(|m| format!("{m};")).collect();
     format!(
         "[Contractor Entry]\n\
-         Name={label}\n\
+         Name={label}\n{localized_name}\
          Icon={icon}\n\
-         Description=BigIris — {comment}\n\
+         Description=BigIris — {comment}\n{localized_comment}\
          MimeType={mime_line}\n\
          Exec={exec}\n",
+        localized_name =
+            crate::i18n::localized("Name", |lang| crate::i18n::flat_label(lang, action)),
         icon = action.icon,
         comment = action.label,
+        localized_comment = crate::i18n::localized("Description", |lang| format!(
+            "BigIris — {}",
+            crate::i18n::lookup(lang, action.label)
+        )),
         exec = action.command,
     )
 }

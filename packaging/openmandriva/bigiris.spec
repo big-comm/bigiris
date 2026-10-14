@@ -44,7 +44,7 @@ cargo build --locked --offline --release --features "gui ai" --package bigiris
 while read -r lang; do
     [ -z "$lang" ] && continue
     case "$lang" in \#*) continue ;; esac
-    msgfmt -o "data/po/${lang}.mo" "data/po/${lang}.po"
+    msgfmt --check -o "data/po/${lang}.mo" "data/po/${lang}.po"
 done < data/po/LINGUAS
 
 %check

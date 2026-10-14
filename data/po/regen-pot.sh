@@ -21,13 +21,21 @@ LINGUAS="data/po/LINGUAS"
 xgettext \
   --language=C \
   --keyword=gettext \
+  --keyword=n_ \
   --from-code=UTF-8 \
   --package-name=bigiris \
   --package-version=0.1.0 \
   --msgid-bugs-address=https://github.com/big-comm/bigiris/issues \
   --copyright-holder="BigCommunity Team" \
   -o "$POT" \
-  $(grep -v '^\s*#' "$POTFILES" | grep -v '^\s*$')
+  $(grep -v '^\s*#' "$POTFILES" | grep -v '^\s*$' | grep '\.rs$')
+
+# Extract Python markers with its own parser, without touching Nautilus' domain.
+xgettext --language=Python --keyword=_ --keyword=n_ --from-code=UTF-8 \
+  --join-existing --package-name=bigiris --package-version=0.1.0 \
+  --msgid-bugs-address=https://github.com/big-comm/bigiris/issues \
+  --copyright-holder="BigCommunity Team" -o "$POT" \
+  $(grep '\.py$' "$POTFILES")
 
 # Atualiza cada .po com as novas msgids preservando msgstrs existentes.
 while read -r lang; do

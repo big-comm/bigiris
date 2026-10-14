@@ -48,16 +48,21 @@ fn render(action: &Action) -> String {
          Type=Service\n\
          ServiceTypes=KonqPopupMenu/Plugin\n\
          MimeType={mime_line}\n\
-         X-KDE-Submenu={submenu_path}\n\
+         X-KDE-Submenu={submenu_path}\n{localized_submenu}\
          X-KDE-Priority=TopLevel\n\
          Icon={icon}\n\
-         Name={label}\n\
+         Name={label}\n{localized_name}\
          Actions={action_id}\n\
          \n\
          [Desktop Action {action_id}]\n\
-         Name={label}\n\
+         Name={label}\n{localized_name}\
          Icon={icon}\n\
          Exec={exec}\n",
+        localized_name = crate::i18n::localized_name("Name", action.label),
+        localized_submenu = crate::i18n::localized("X-KDE-Submenu", |lang| match action.submenu {
+            Some(sub) => format!("{TOP_LEVEL_LABEL}/{}", crate::i18n::lookup(lang, sub.label)),
+            None => TOP_LEVEL_LABEL.to_owned(),
+        }),
         icon = action.icon,
         label = action.label,
         exec = action.command,

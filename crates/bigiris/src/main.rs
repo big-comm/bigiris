@@ -622,7 +622,9 @@ fn main() -> color_eyre::Result<()> {
 /// dev `cargo run` where no catalogs are installed yet.
 fn init_i18n() {
     // GTK initializes the user locale during startup, before GUI workers.
-    let _ = gettextrs::bindtextdomain("bigiris", "/usr/share/locale");
+    let locale_dir =
+        std::env::var("BIGIRIS_LOCALE_DIR").unwrap_or_else(|_| "/usr/share/locale".to_owned());
+    let _ = gettextrs::bindtextdomain("bigiris", locale_dir);
     let _ = gettextrs::bind_textdomain_codeset("bigiris", "UTF-8");
     let _ = gettextrs::textdomain("bigiris");
 }

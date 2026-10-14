@@ -83,7 +83,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            libgtk-4-dev libadwaita-1-dev libdav1d-dev pkg-config bubblewrap util-linux xvfb dbus-x11
+            libgtk-4-dev libadwaita-1-dev libdav1d-dev pkg-config bubblewrap util-linux xvfb dbus-x11 gettext locales
       - name: prepare distro Bubblewrap policy and verify isolation
         run: bash .github/scripts/prepare-sandbox.sh
       - uses: dtolnay/rust-toolchain@stable
@@ -101,9 +101,20 @@ jobs:
           GSK_RENDERER: cairo
           BIGIRIS_TEST_ZOOM_REPORT_DIR: ${{ github.workspace }}/target/quality/ci-zoom
         run: |
-          xvfb-run -a dbus-run-session -- cargo test -p bigiris --features "gui ai" \
-            --locked viewer_lifecycle_releases_state_and_workers -- \
-            --ignored --test-threads=1
+          python3 scripts/translations.py compile --destdir "$PWD/target/quality/locale"
+          sudo localedef -i fr_FR -f UTF-8 fr_FR.UTF-8
+          sudo localedef -i he_IL -f UTF-8 he_IL.UTF-8
+          for language in en fr he; do
+            session_locale=en_US.UTF-8
+            if [ "$language" = fr ]; then session_locale=fr_FR.UTF-8; fi
+            if [ "$language" = he ]; then session_locale=he_IL.UTF-8; fi
+            xvfb-run -a dbus-run-session -- env \
+              LC_ALL="$session_locale" LANGUAGE="$language" \
+              BIGIRIS_LOCALE_DIR="$PWD/target/quality/locale" \
+              cargo test -p bigiris --features "gui ai" \
+                --locked viewer_lifecycle_releases_state_and_workers -- \
+                --ignored --test-threads=1
+          done
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -142,6 +153,17 @@ jobs:
       # warnings esperados antes do repo virar publico. Trocar por
       # `appstreamcli validate` (sem --no-net) quando o repo for publico.
       - run: appstreamcli validate --no-net data/com.biglinux.Iris.metainfo.xml
+
+  translations:
+    name: 29-language catalogs and localized integration assets
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends gettext
+      - run: python3 scripts/translations.py check --check-generated
 
   desktop:
     name: .desktop validation

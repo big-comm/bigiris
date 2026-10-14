@@ -5,3 +5,6 @@
 crates/bigiris/src/gui.rs
 crates/bigiris/src/gui/transfers.rs
 crates/bigiris/src/main.rs
+crates/bigimage-integrations/src/action.rs
+data/nautilus/bigiris-menu.py
+scripts/translations.py

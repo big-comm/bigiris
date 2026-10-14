@@ -142,15 +142,17 @@ fn render_action(action: &Action) -> String {
     format!(
         "<action>\n\
          \t<icon>{icon}</icon>\n\
-         \t<name>{label}</name>\n\
+         \t<name>{label}</name>\n{localized_names}\
          \t<submenu>{submenu}</submenu>\n\
          \t<unique-id>bigiris-{id}</unique-id>\n\
          \t<command>{cmd}</command>\n\
-         \t<description>BigIris — {label}</description>\n\
+         \t<description>BigIris — {label}</description>\n{localized_descriptions}\
          \t<range>0</range>\n\
          \t<patterns>*</patterns>\n\
          \t{filter}\n\
          </action>",
+        localized_names = crate::i18n::xml_labels("name", action.label),
+        localized_descriptions = crate::i18n::xml_labels("description", action.label),
         icon = escape_xml(action.icon),
         label = escape_xml(action.label),
         submenu = escape_xml(&submenu_path),
@@ -172,7 +174,7 @@ fn wrap_for_shell(action: &Action) -> String {
     format!("sh -c '{escaped} -- \"$@\"' bigiris-{id} %F", id = action.id)
 }
 
-fn escape_xml(s: &str) -> String {
+pub(crate) fn escape_xml(s: &str) -> String {
     let mut out = String::with_capacity(s.len());
     for c in s.chars() {
         match c {

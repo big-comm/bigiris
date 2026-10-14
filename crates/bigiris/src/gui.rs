@@ -73,6 +73,15 @@ const THEATER_CSS: &str = "
 /// Pixel size of each thumbnail in the film strip (longest edge).
 const THUMB_EDGE: u32 = 80;
 
+const fn n_(text: &'static str) -> &'static str {
+    text
+}
+
+fn translated_strings(source: &[&str]) -> gtk::StringList {
+    let translated: Vec<String> = source.iter().map(|text| gettext(*text)).collect();
+    gtk::StringList::new(&translated.iter().map(String::as_str).collect::<Vec<_>>())
+}
+
 /// Start the viewer event loop. Returns the exit code GTK produced.
 pub fn run_viewer(files: Vec<PathBuf>) -> i32 {
     // Um clique no gerenciador de arquivos entrega um caminho só. Sem isto,
@@ -98,7 +107,7 @@ pub fn run_viewer(files: Vec<PathBuf>) -> i32 {
         }
         let waiting = adw::ApplicationWindow::builder()
             .application(app)
-            .title("BigIris — abrindo imagens")
+            .title(gettext("BigIris — abrindo imagens"))
             .default_width(640)
             .default_height(480)
             .build();
@@ -539,7 +548,7 @@ fn build_window_tracked(
         window.maximize();
     }
 
-    let title = adw::WindowTitle::new("BigIris", "");
+    let title = adw::WindowTitle::new(&gettext("BigIris"), "");
     let header = adw::HeaderBar::new();
     header.set_title_widget(Some(&title));
 
@@ -1858,12 +1867,9 @@ fn save_edits(state: &Rc<RefCell<ViewerState>>) {
         .map(|s| matches!(s.to_ascii_lowercase().as_str(), "jpg" | "jpeg"))
         .unwrap_or(false);
     let body = if is_jpeg {
-        format!(
-            "\"{name}\" será sobrescrito. JPEG é recodificado a cada \
-             gravação — isso pode degradar a qualidade um pouco."
-        )
+        format!("\"{name}\"\n\n{}", gettext("O arquivo será sobrescrito. JPEG é recodificado a cada gravação; isso pode reduzir a qualidade."))
     } else {
-        format!("\"{name}\" será sobrescrito.")
+        format!("\"{name}\"\n\n{}", gettext("O arquivo será sobrescrito."))
     };
     let alert =
         adw::AlertDialog::builder().heading(gettext("Salvar alterações?")).body(body).build();
@@ -2443,7 +2449,7 @@ fn install_viewer_actions(
 /// é Rc<Vec<_>> imutável).
 fn open_file_chooser(window: &adw::ApplicationWindow) {
     let filter = gtk::FileFilter::new();
-    filter.set_name(Some("Imagens"));
+    filter.set_name(Some(&gettext("Imagens")));
     filter.add_mime_type("image/*");
     let filters = gio::ListStore::new::<gtk::FileFilter>();
     filters.append(&filter);
@@ -2653,7 +2659,10 @@ fn trash_current(state: &Rc<RefCell<ViewerState>>) {
     let alert = adw::AlertDialog::builder()
         .heading(gettext("Mover para a lixeira?"))
         .body(format!(
-            "\"{name}\" será movido para a lixeira do sistema. Você pode restaurá-lo depois."
+            "\"{name}\"\n\n{}",
+            gettext(
+                "O arquivo será movido para a lixeira do sistema. Você pode restaurá-lo depois."
+            )
         ))
         .build();
     alert.add_response("cancel", &gettext("Cancelar"));
@@ -2834,10 +2843,9 @@ fn present_about_dialog(parent: &adw::ApplicationWindow) -> adw::AboutDialog {
         .developers(vec!["BigCommunity Team".to_string()])
         .designers(vec!["BigCommunity Team".to_string()])
         .translator_credits("BigCommunity Team")
-        .comments(
-            "Visualizador e conversor de imagens para Linux. Rápido, \
-             acessível por teclado e integrado ao gerenciador de arquivos.",
-        )
+        .comments(gettext(
+            "Visualizador e conversor de imagens para Linux. Rápido, acessível por teclado e integrado ao gerenciador de arquivos.",
+        ))
         .build();
     // About has navigable pages; its own native window keeps credits usable
     // even when the compact start page is shorter than those pages.
@@ -2933,7 +2941,7 @@ fn open_files_dialog(window: &adw::ApplicationWindow) {
         gtk::FileDialog::builder().title(gettext("Selecionar imagens")).modal(true).build();
     // Filtro de imagens: tudo que o nosso decoder aguenta.
     let filter = gtk::FileFilter::new();
-    filter.set_name(Some("Imagens"));
+    filter.set_name(Some(&gettext("Imagens")));
     for mime in [
         "image/jpeg",
         "image/png",
@@ -3064,19 +3072,19 @@ macro_rules! dialog_signal {
 
 /// Target formats shared by Prisma dialogs; keep common formats first.
 const CONVERT_FORMATS: &[(&str, Format)] = &[
-    ("PNG", Format::Png),
-    ("JPG (JPEG)", Format::Jpeg),
-    ("WebP", Format::WebP),
-    ("AVIF", Format::Avif),
-    ("TIFF", Format::Tiff),
-    ("BMP", Format::Bmp),
-    ("GIF", Format::Gif),
-    ("ICO (até 256 × 256)", Format::Ico),
-    ("PNM (Netpbm)", Format::Pnm),
-    ("TGA", Format::Tga),
-    ("QOI", Format::Qoi),
-    ("HDR", Format::Hdr),
-    ("OpenEXR", Format::OpenExr),
+    (n_("PNG"), Format::Png),
+    (n_("JPG (JPEG)"), Format::Jpeg),
+    (n_("WebP"), Format::WebP),
+    (n_("AVIF"), Format::Avif),
+    (n_("TIFF"), Format::Tiff),
+    (n_("BMP"), Format::Bmp),
+    (n_("GIF"), Format::Gif),
+    (n_("ICO (até 256 × 256)"), Format::Ico),
+    (n_("PNM (Netpbm)"), Format::Pnm),
+    (n_("TGA"), Format::Tga),
+    (n_("QOI"), Format::Qoi),
+    (n_("HDR"), Format::Hdr),
+    (n_("OpenEXR"), Format::OpenExr),
 ];
 
 /// Enable only the controls honored by the selected encoder.
@@ -3100,18 +3108,18 @@ fn bind_encode_controls(
 
 /// Overwrite choices shared by convert and resize dialogs.
 const OVERWRITE_CHOICES: &[(&str, OverwritePolicy)] = &[
-    ("Pular se já existir", OverwritePolicy::Skip),
-    ("Sobrescrever o arquivo", OverwritePolicy::Replace),
-    ("Incrementar (_1, _2, …)", OverwritePolicy::Increment),
+    (n_("Pular se já existir"), OverwritePolicy::Skip),
+    (n_("Sobrescrever o arquivo"), OverwritePolicy::Replace),
+    (n_("Incrementar (_1, _2, …)"), OverwritePolicy::Increment),
 ];
 
 /// Interpolation filters for the resize dialog.
 const RESIZE_FILTERS: &[(&str, Filter)] = &[
-    ("Lanczos3 (padrão)", Filter::Lanczos3),
-    ("Mitchell", Filter::Mitchell),
-    ("CatmullRom", Filter::CatmullRom),
-    ("Bilinear", Filter::Bilinear),
-    ("Nearest (sem anti-aliasing)", Filter::Nearest),
+    (n_("Lanczos3 (padrão)"), Filter::Lanczos3),
+    (n_("Mitchell"), Filter::Mitchell),
+    (n_("CatmullRom"), Filter::CatmullRom),
+    (n_("Bilinear"), Filter::Bilinear),
+    (n_("Nearest (sem anti-aliasing)"), Filter::Nearest),
 ];
 
 /// Run the "Converter" modal. Returns GTK's exit code.
@@ -3142,32 +3150,32 @@ fn fill_convert_dialog(
     preview_session: Option<Rc<PreviewSession>>,
 ) -> adw::ApplicationWindow {
     let header = adw::HeaderBar::new();
-    let title = adw::WindowTitle::new("Converter", "Prisma");
+    let title = adw::WindowTitle::new(&gettext("Converter"), "Prisma");
     header.set_title_widget(Some(&title));
 
     let format_names: Vec<&str> = CONVERT_FORMATS.iter().map(|(n, _)| *n).collect();
     let format_row = adw::ComboRow::builder()
         .use_markup(false)
         .title(gettext("Formato de destino"))
-        .model(&gtk::StringList::new(&format_names))
+        .model(&translated_strings(&format_names))
         .build();
 
     let overwrite_names: Vec<&str> = OVERWRITE_CHOICES.iter().map(|(n, _)| *n).collect();
     let overwrite_row = adw::ComboRow::builder()
         .use_markup(false)
         .title(gettext("Se o arquivo de saída existir"))
-        .model(&gtk::StringList::new(&overwrite_names))
+        .model(&translated_strings(&overwrite_names))
         .build();
 
     let files_row = adw::ActionRow::builder()
         .use_markup(false)
-        .title(format!("{} arquivo(s) selecionado(s)", files.len()))
+        .title(format!("{}: {}", gettext("Arquivos selecionados"), files.len()))
         .build();
     files_row.set_subtitle(&files_subtitle(&files));
 
     let quality_spin = adw::SpinRow::with_range(1.0, 100.0, 1.0);
     quality_spin.set_title(&gettext("Qualidade (JPEG/AVIF)"));
-    quality_spin.set_subtitle("1 menor qualidade · 85 equilíbrio · 100 maior qualidade");
+    quality_spin.set_subtitle(&gettext("1 menor qualidade · 85 equilíbrio · 100 maior qualidade"));
     quality_spin.set_value(85.0);
 
     let optimize_switch = adw::SwitchRow::builder()
@@ -3210,7 +3218,7 @@ fn fill_convert_dialog(
     folder_row.add_suffix(&folder_icon);
     let clear_folder_btn = gtk::Button::builder()
         .icon_name("edit-clear-symbolic")
-        .tooltip_text("Usar a mesma pasta do arquivo de origem")
+        .tooltip_text(gettext("Usar a mesma pasta do arquivo de origem"))
         .css_classes(["flat"])
         .valign(gtk::Align::Center)
         .visible(false)
@@ -3221,8 +3229,8 @@ fn fill_convert_dialog(
     let status = gtk::Label::builder().label("").wrap(true).xalign(0.0).build();
     status.add_css_class("dim-label");
 
-    let cancel_btn = gtk::Button::with_label("Cancelar");
-    let apply_btn = gtk::Button::builder().label("Converter").build();
+    let cancel_btn = gtk::Button::with_label(&gettext("Cancelar"));
+    let apply_btn = gtk::Button::builder().label(gettext("Converter")).build();
     apply_btn.add_css_class("suggested-action");
     apply_btn.add_css_class("pill");
 
@@ -3407,28 +3415,33 @@ fn fill_resize_dialog(
     preview_session: Option<Rc<PreviewSession>>,
 ) -> adw::ApplicationWindow {
     let header = adw::HeaderBar::new();
-    let title = adw::WindowTitle::new("Redimensionar", "Prisma");
+    let title = adw::WindowTitle::new(&gettext("Redimensionar"), "Prisma");
     header.set_title_widget(Some(&title));
 
     // ---- Mode selector ------------------------------------------------------
 
-    let mode_names = ["Aresta máxima", "Escala (%)", "Dimensão exata (WxH)", "Encaixar em (WxH)"];
+    let mode_names = [
+        n_("Aresta máxima"),
+        n_("Escala (%)"),
+        n_("Dimensão exata (WxH)"),
+        n_("Encaixar em (WxH)"),
+    ];
     let mode_row = adw::ComboRow::builder()
         .use_markup(false)
-        .title("Modo")
-        .model(&gtk::StringList::new(&mode_names))
+        .title(gettext("Modo"))
+        .model(&translated_strings(&mode_names))
         .build();
 
     // Per-mode parameter pages live inside a Stack; switching the combo swaps
     // the page. Each page owns its own SpinRows so we can read values back.
     let max_edge_spin = adw::SpinRow::with_range(1.0, 16384.0, 1.0);
     max_edge_spin.set_title(&gettext("Aresta máxima"));
-    max_edge_spin.set_subtitle("pixels (lado maior)");
+    max_edge_spin.set_subtitle(&gettext("pixels (lado maior)"));
     max_edge_spin.set_value(1920.0);
 
     let percent_spin = adw::SpinRow::with_range(1.0, 1000.0, 1.0);
     percent_spin.set_title(&gettext("Porcentagem"));
-    percent_spin.set_subtitle("100 = tamanho original");
+    percent_spin.set_subtitle(&gettext("100 = tamanho original"));
     percent_spin.set_value(50.0);
 
     let exact_w = adw::SpinRow::with_range(1.0, 16384.0, 1.0);
@@ -3482,7 +3495,7 @@ fn fill_resize_dialog(
     let filter_row = adw::ComboRow::builder()
         .use_markup(false)
         .title(gettext("Kernel de interpolação"))
-        .model(&gtk::StringList::new(&filter_names))
+        .model(&translated_strings(&filter_names))
         .build();
 
     let mut target_names = vec!["Manter o formato original"];
@@ -3490,19 +3503,19 @@ fn fill_resize_dialog(
     let target_row = adw::ComboRow::builder()
         .use_markup(false)
         .title(gettext("Formato de destino"))
-        .model(&gtk::StringList::new(&target_names))
+        .model(&translated_strings(&target_names))
         .build();
 
     let overwrite_names: Vec<&str> = OVERWRITE_CHOICES.iter().map(|(n, _)| *n).collect();
     let overwrite_row = adw::ComboRow::builder()
         .use_markup(false)
         .title(gettext("Se o arquivo de saída existir"))
-        .model(&gtk::StringList::new(&overwrite_names))
+        .model(&translated_strings(&overwrite_names))
         .build();
 
     let files_row = adw::ActionRow::builder()
         .use_markup(false)
-        .title(format!("{} arquivo(s) selecionado(s)", files.len()))
+        .title(format!("{}: {}", gettext("Arquivos selecionados"), files.len()))
         .build();
     files_row.set_subtitle(&files_subtitle(&files));
 
@@ -3521,8 +3534,8 @@ fn fill_resize_dialog(
     let status = gtk::Label::builder().label("").wrap(true).xalign(0.0).build();
     status.add_css_class("dim-label");
 
-    let cancel_btn = gtk::Button::with_label("Cancelar");
-    let apply_btn = gtk::Button::builder().label("Redimensionar").build();
+    let cancel_btn = gtk::Button::with_label(&gettext("Cancelar"));
+    let apply_btn = gtk::Button::builder().label(gettext("Redimensionar")).build();
     apply_btn.add_css_class("suggested-action");
     apply_btn.add_css_class("pill");
 
@@ -3744,13 +3757,13 @@ fn build_rotate_dialog(app: &adw::Application, files: Rc<Vec<PathBuf>>) -> adw::
         .build();
 
     let header = adw::HeaderBar::new();
-    header.set_title_widget(Some(&adw::WindowTitle::new("Girar", "Prisma")));
+    header.set_title_widget(Some(&adw::WindowTitle::new(&gettext("Girar"), "Prisma")));
 
-    let rotations = ["90° (horário)", "180°", "270° (anti-horário)"];
+    let rotations = [n_("90° (horário)"), n_("180°"), n_("270° (anti-horário)")];
     let rotation_row = adw::ComboRow::builder()
         .use_markup(false)
-        .title("Rotação")
-        .model(&gtk::StringList::new(&rotations))
+        .title(gettext("Rotação"))
+        .model(&translated_strings(&rotations))
         .build();
 
     let mut target_names = vec!["Manter o formato original"];
@@ -3758,20 +3771,18 @@ fn build_rotate_dialog(app: &adw::Application, files: Rc<Vec<PathBuf>>) -> adw::
     let target_row = adw::ComboRow::builder()
         .use_markup(false)
         .title(gettext("Formato de destino"))
-        .model(&gtk::StringList::new(&target_names))
+        .model(&translated_strings(&target_names))
         .build();
 
     let overwrite_row = adw::ComboRow::builder()
         .use_markup(false)
         .title(gettext("Se o arquivo de saída existir"))
-        .model(&gtk::StringList::new(
-            &OVERWRITE_CHOICES.iter().map(|(n, _)| *n).collect::<Vec<_>>(),
-        ))
+        .model(&translated_strings(&OVERWRITE_CHOICES.iter().map(|(n, _)| *n).collect::<Vec<_>>()))
         .build();
 
     let files_row = adw::ActionRow::builder()
         .use_markup(false)
-        .title(format!("{} arquivo(s) selecionado(s)", files.len()))
+        .title(format!("{}: {}", gettext("Arquivos selecionados"), files.len()))
         .build();
     files_row.set_subtitle(&files_subtitle(&files));
 
@@ -3784,8 +3795,8 @@ fn build_rotate_dialog(app: &adw::Application, files: Rc<Vec<PathBuf>>) -> adw::
     let status = gtk::Label::builder().label("").wrap(true).xalign(0.0).build();
     status.add_css_class("dim-label");
 
-    let cancel_btn = gtk::Button::with_label("Cancelar");
-    let apply_btn = gtk::Button::builder().label("Girar").build();
+    let cancel_btn = gtk::Button::with_label(&gettext("Cancelar"));
+    let apply_btn = gtk::Button::builder().label(gettext("Girar")).build();
     apply_btn.add_css_class("suggested-action");
     apply_btn.add_css_class("pill");
 
@@ -4180,7 +4191,7 @@ fn fill_crop_dialog(
     preview_session: Option<Rc<PreviewSession>>,
 ) -> adw::ApplicationWindow {
     let header = adw::HeaderBar::new();
-    header.set_title_widget(Some(&adw::WindowTitle::new("Recortar", "Prisma")));
+    header.set_title_widget(Some(&adw::WindowTitle::new(&gettext("Recortar"), "Prisma")));
 
     let content_h = gtk::Box::builder()
         .orientation(gtk::Orientation::Horizontal)
@@ -4205,14 +4216,14 @@ fn fill_crop_dialog(
 
     let files_row = adw::ActionRow::builder()
         .use_markup(false)
-        .title(format!("{} arquivo(s) selecionado(s)", files.len()))
+        .title(format!("{}: {}", gettext("Arquivos selecionados"), files.len()))
         .build();
     files_row.set_subtitle(&files_subtitle(&files));
 
     let natural_row = adw::ActionRow::builder()
         .use_markup(false)
         .title(gettext("Tamanho original"))
-        .subtitle(format!("{} × {} px (primeiro arquivo)", natural.0, natural.1))
+        .subtitle(format!("{} × {} px ({})", natural.0, natural.1, gettext("Primeiro arquivo")))
         .build();
 
     // Ranges clamp to the first file's natural dims. For multi-file sets
@@ -4238,15 +4249,13 @@ fn fill_crop_dialog(
     let target_row = adw::ComboRow::builder()
         .use_markup(false)
         .title(gettext("Formato de destino"))
-        .model(&gtk::StringList::new(&target_names))
+        .model(&translated_strings(&target_names))
         .build();
 
     let overwrite_row = adw::ComboRow::builder()
         .use_markup(false)
         .title(gettext("Se o arquivo de saída existir"))
-        .model(&gtk::StringList::new(
-            &OVERWRITE_CHOICES.iter().map(|(n, _)| *n).collect::<Vec<_>>(),
-        ))
+        .model(&translated_strings(&OVERWRITE_CHOICES.iter().map(|(n, _)| *n).collect::<Vec<_>>()))
         .build();
 
     let group = adw::PreferencesGroup::new();
@@ -4264,9 +4273,9 @@ fn fill_crop_dialog(
     status.add_css_class("dim-label");
     form_col.append(&status);
 
-    let cancel_btn = gtk::Button::with_label("Cancelar");
-    let reset_btn = gtk::Button::with_label("Centro 50%");
-    let apply_btn = gtk::Button::builder().label("Recortar").build();
+    let cancel_btn = gtk::Button::with_label(&gettext("Cancelar"));
+    let reset_btn = gtk::Button::with_label(&gettext("Centro 50%"));
+    let apply_btn = gtk::Button::builder().label(gettext("Recortar")).build();
     apply_btn.add_css_class("suggested-action");
     apply_btn.add_css_class("pill");
 
@@ -4366,28 +4375,28 @@ fn fill_crop_dialog(
 /// case that motivated the feature (post thumbnail forces square crop on
 /// 16:9 source).
 const EXTENT_RATIO_PRESETS: &[(&str, (u32, u32))] = &[
-    ("YouTube community (1:1)", (1, 1)),
-    ("Instagram feed (4:5)", (4, 5)),
-    ("Stories / Shorts (9:16)", (9, 16)),
-    ("Widescreen (16:9)", (16, 9)),
-    ("Personalizado…", (0, 0)),
+    (n_("YouTube community (1:1)"), (1, 1)),
+    (n_("Instagram feed (4:5)"), (4, 5)),
+    (n_("Stories / Shorts (9:16)"), (9, 16)),
+    (n_("Widescreen (16:9)"), (16, 9)),
+    (n_("Personalizado…"), (0, 0)),
 ];
 
 /// Background-colour presets for the "Letterbox" dialog. The first entry
 /// is the default. `Custom` (last) reveals the hex entry.
 const EXTENT_BG_PRESETS: &[(&str, [u8; 4])] = &[
-    ("Preto suave (#0d0e12)", [0x0d, 0x0e, 0x12, 0xFF]),
-    ("Preto puro (#000000)", [0, 0, 0, 0xFF]),
-    ("Branco (#ffffff)", [0xFF, 0xFF, 0xFF, 0xFF]),
-    ("Transparente", [0, 0, 0, 0]),
-    ("Personalizada (hex)", [0, 0, 0, 0xFF]),
+    (n_("Preto suave (#0d0e12)"), [0x0d, 0x0e, 0x12, 0xFF]),
+    (n_("Preto puro (#000000)"), [0, 0, 0, 0xFF]),
+    (n_("Branco (#ffffff)"), [0xFF, 0xFF, 0xFF, 0xFF]),
+    (n_("Transparente"), [0, 0, 0, 0]),
+    (n_("Personalizada (hex)"), [0, 0, 0, 0xFF]),
 ];
 
 /// Gravity choices exposed in the Prisma dialog. Limited to centre +
 /// vertical pinning because horizontal letterbox use cases are rarer in
 /// social-media workflows; the CLI exposes all nine for completeness.
 const EXTENT_GRAVITIES: &[(&str, Gravity)] =
-    &[("Centro", Gravity::Center), ("Topo", Gravity::North), ("Base", Gravity::South)];
+    &[(n_("Centro"), Gravity::Center), (n_("Topo"), Gravity::North), (n_("Base"), Gravity::South)];
 
 /// Run the "Letterbox" modal. Returns GTK's exit code.
 pub fn run_extent_dialog(files: Vec<PathBuf>) -> i32 {
@@ -4417,7 +4426,10 @@ fn fill_extent_dialog(
     preview_session: Option<Rc<PreviewSession>>,
 ) -> adw::ApplicationWindow {
     let header = adw::HeaderBar::new();
-    header.set_title_widget(Some(&adw::WindowTitle::new("Letterbox", "Prisma · sem corte")));
+    header.set_title_widget(Some(&adw::WindowTitle::new(
+        &gettext("Letterbox"),
+        "Prisma · sem corte",
+    )));
 
     let content_h = gtk::Box::builder()
         .orientation(gtk::Orientation::Horizontal)
@@ -4438,10 +4450,7 @@ fn fill_extent_dialog(
 
     let intro = gtk::Label::builder()
         .label(gettext(
-            "Estende a tela em volta da imagem para encaixá-la num formato \
-             fixo (post de YouTube, feed do Instagram, Stories…) sem cortar \
-             nenhum pixel. A imagem original é centralizada e o resto é \
-             preenchido com a cor escolhida.",
+            "Estende a tela em volta da imagem para encaixá-la num formato fixo (post de YouTube, feed do Instagram, Stories…) sem cortar nenhum pixel. A imagem original é centralizada e o resto é preenchido com a cor escolhida.",
         ))
         .wrap(true)
         .xalign(0.0)
@@ -4450,14 +4459,14 @@ fn fill_extent_dialog(
 
     let files_row = adw::ActionRow::builder()
         .use_markup(false)
-        .title(format!("{} arquivo(s) selecionado(s)", files.len()))
+        .title(format!("{}: {}", gettext("Arquivos selecionados"), files.len()))
         .build();
     files_row.set_subtitle(&files_subtitle(&files));
 
     let natural_row = adw::ActionRow::builder()
         .use_markup(false)
         .title(gettext("Tamanho original"))
-        .subtitle(format!("{} × {} px (primeiro arquivo)", natural.0, natural.1))
+        .subtitle(format!("{} × {} px ({})", natural.0, natural.1, gettext("Primeiro arquivo")))
         .build();
 
     // Aspect preset combo.
@@ -4465,7 +4474,7 @@ fn fill_extent_dialog(
     let ratio_row = adw::ComboRow::builder()
         .use_markup(false)
         .title(gettext("Proporção alvo"))
-        .model(&gtk::StringList::new(&ratio_names))
+        .model(&translated_strings(&ratio_names))
         .build();
 
     // Custom W:H entries — visible only when the "Personalizado…" preset is
@@ -4485,7 +4494,7 @@ fn fill_extent_dialog(
     let bg_row = adw::ComboRow::builder()
         .use_markup(false)
         .title(gettext("Cor de fundo"))
-        .model(&gtk::StringList::new(&bg_names))
+        .model(&translated_strings(&bg_names))
         .build();
 
     let bg_hex = adw::EntryRow::builder()
@@ -4499,7 +4508,7 @@ fn fill_extent_dialog(
     let gravity_row = adw::ComboRow::builder()
         .use_markup(false)
         .title(gettext("Posição da imagem"))
-        .model(&gtk::StringList::new(&gravity_names))
+        .model(&translated_strings(&gravity_names))
         .build();
 
     let predicted_row = adw::ActionRow::builder()
@@ -4513,15 +4522,13 @@ fn fill_extent_dialog(
     let target_row = adw::ComboRow::builder()
         .use_markup(false)
         .title(gettext("Formato de destino"))
-        .model(&gtk::StringList::new(&target_names))
+        .model(&translated_strings(&target_names))
         .build();
 
     let overwrite_row = adw::ComboRow::builder()
         .use_markup(false)
         .title(gettext("Se o arquivo de saída existir"))
-        .model(&gtk::StringList::new(
-            &OVERWRITE_CHOICES.iter().map(|(n, _)| *n).collect::<Vec<_>>(),
-        ))
+        .model(&translated_strings(&OVERWRITE_CHOICES.iter().map(|(n, _)| *n).collect::<Vec<_>>()))
         .build();
 
     let group = adw::PreferencesGroup::new();
@@ -4544,7 +4551,7 @@ fn fill_extent_dialog(
     status.add_css_class("dim-label");
     form_col.append(&status);
 
-    let cancel_btn = gtk::Button::with_label("Cancelar");
+    let cancel_btn = gtk::Button::with_label(&gettext("Cancelar"));
     let apply_btn = gtk::Button::builder().label(gettext("Estender")).build();
     apply_btn.add_css_class("suggested-action");
     apply_btn.add_css_class("pill");
@@ -4624,7 +4631,7 @@ fn fill_extent_dialog(
                     Ok(d) => d,
                     Err(e) => {
                         status.set_text(&e.to_string());
-                        predicted_row.set_subtitle("—");
+                        predicted_row.set_subtitle(&gettext("—"));
                         return;
                     }
                 };
@@ -4767,8 +4774,10 @@ fn fill_upscale_dialog(
     preview_session: Option<Rc<PreviewSession>>,
 ) -> adw::ApplicationWindow {
     let header = adw::HeaderBar::new();
-    header
-        .set_title_widget(Some(&adw::WindowTitle::new("Aumentar resolução", "Prisma · Lanczos3")));
+    header.set_title_widget(Some(&adw::WindowTitle::new(
+        &gettext("Aumentar resolução"),
+        "Prisma · Lanczos3",
+    )));
 
     let content_h = gtk::Box::builder()
         .orientation(gtk::Orientation::Horizontal)
@@ -4800,7 +4809,7 @@ fn fill_upscale_dialog(
 
     let files_row = adw::ActionRow::builder()
         .use_markup(false)
-        .title(format!("{} arquivo(s) selecionado(s)", files.len()))
+        .title(format!("{}: {}", gettext("Arquivos selecionados"), files.len()))
         .build();
     files_row.set_subtitle(&files_subtitle(&files));
 
@@ -4810,15 +4819,15 @@ fn fill_upscale_dialog(
         .subtitle(if natural == (0, 0) {
             "—".to_string()
         } else {
-            format!("{} × {} px (primeiro arquivo)", natural.0, natural.1)
+            format!("{} × {} px ({})", natural.0, natural.1, gettext("Primeiro arquivo"))
         })
         .build();
 
     let factor_names: Vec<&str> = UPSCALE_FACTORS.iter().map(|(n, _)| *n).collect();
     let factor_row = adw::ComboRow::builder()
         .use_markup(false)
-        .title("Fator")
-        .model(&gtk::StringList::new(&factor_names))
+        .title(gettext("Fator"))
+        .model(&translated_strings(&factor_names))
         .build();
 
     let predicted_row = adw::ActionRow::builder()
@@ -4849,15 +4858,13 @@ fn fill_upscale_dialog(
     let target_row = adw::ComboRow::builder()
         .use_markup(false)
         .title(gettext("Formato de destino"))
-        .model(&gtk::StringList::new(&target_names))
+        .model(&translated_strings(&target_names))
         .build();
 
     let overwrite_row = adw::ComboRow::builder()
         .use_markup(false)
         .title(gettext("Se o arquivo de saída existir"))
-        .model(&gtk::StringList::new(
-            &OVERWRITE_CHOICES.iter().map(|(n, _)| *n).collect::<Vec<_>>(),
-        ))
+        .model(&translated_strings(&OVERWRITE_CHOICES.iter().map(|(n, _)| *n).collect::<Vec<_>>()))
         .build();
 
     let group = adw::PreferencesGroup::new();
@@ -4875,8 +4882,8 @@ fn fill_upscale_dialog(
     status.add_css_class("dim-label");
     form_col.append(&status);
 
-    let cancel_btn = gtk::Button::with_label("Cancelar");
-    let apply_btn = gtk::Button::builder().label("Aumentar").build();
+    let cancel_btn = gtk::Button::with_label(&gettext("Cancelar"));
+    let apply_btn = gtk::Button::builder().label(gettext("Aumentar")).build();
     apply_btn.add_css_class("suggested-action");
     apply_btn.add_css_class("pill");
 
@@ -4987,13 +4994,13 @@ fn build_flip_dialog(app: &adw::Application, files: Rc<Vec<PathBuf>>) -> adw::Ap
         .build();
 
     let header = adw::HeaderBar::new();
-    header.set_title_widget(Some(&adw::WindowTitle::new("Espelhar", "Prisma")));
+    header.set_title_widget(Some(&adw::WindowTitle::new(&gettext("Espelhar"), "Prisma")));
 
-    let axes = ["Horizontal (esquerda ↔ direita)", "Vertical (cima ↔ baixo)"];
+    let axes = [n_("Horizontal (esquerda ↔ direita)"), n_("Vertical (cima ↔ baixo)")];
     let axis_row = adw::ComboRow::builder()
         .use_markup(false)
-        .title("Eixo")
-        .model(&gtk::StringList::new(&axes))
+        .title(gettext("Eixo"))
+        .model(&translated_strings(&axes))
         .build();
 
     let mut target_names = vec!["Manter o formato original"];
@@ -5001,20 +5008,18 @@ fn build_flip_dialog(app: &adw::Application, files: Rc<Vec<PathBuf>>) -> adw::Ap
     let target_row = adw::ComboRow::builder()
         .use_markup(false)
         .title(gettext("Formato de destino"))
-        .model(&gtk::StringList::new(&target_names))
+        .model(&translated_strings(&target_names))
         .build();
 
     let overwrite_row = adw::ComboRow::builder()
         .use_markup(false)
         .title(gettext("Se o arquivo de saída existir"))
-        .model(&gtk::StringList::new(
-            &OVERWRITE_CHOICES.iter().map(|(n, _)| *n).collect::<Vec<_>>(),
-        ))
+        .model(&translated_strings(&OVERWRITE_CHOICES.iter().map(|(n, _)| *n).collect::<Vec<_>>()))
         .build();
 
     let files_row = adw::ActionRow::builder()
         .use_markup(false)
-        .title(format!("{} arquivo(s) selecionado(s)", files.len()))
+        .title(format!("{}: {}", gettext("Arquivos selecionados"), files.len()))
         .build();
     files_row.set_subtitle(&files_subtitle(&files));
 
@@ -5027,8 +5032,8 @@ fn build_flip_dialog(app: &adw::Application, files: Rc<Vec<PathBuf>>) -> adw::Ap
     let status = gtk::Label::builder().label("").wrap(true).xalign(0.0).build();
     status.add_css_class("dim-label");
 
-    let cancel_btn = gtk::Button::with_label("Cancelar");
-    let apply_btn = gtk::Button::builder().label("Espelhar").build();
+    let cancel_btn = gtk::Button::with_label(&gettext("Cancelar"));
+    let apply_btn = gtk::Button::builder().label(gettext("Espelhar")).build();
     apply_btn.add_css_class("suggested-action");
     apply_btn.add_css_class("pill");
 
@@ -5133,26 +5138,28 @@ fn fill_adjust_dialog(
     // (Aplicar opera em todos), mas o preview mostra o primeiro.
 
     let header = adw::HeaderBar::new();
-    header.set_title_widget(Some(&adw::WindowTitle::new("Ajustar cores", "Prisma")));
+    header.set_title_widget(Some(&adw::WindowTitle::new(&gettext("Ajustar cores"), "Prisma")));
 
     let brightness = adw::SpinRow::with_range(-100.0, 100.0, 1.0);
     brightness.set_title(&gettext("Brilho"));
-    brightness.set_subtitle("-100 escuro · 0 neutro · +100 claro");
+    brightness.set_subtitle(&gettext("-100 escuro · 0 neutro · +100 claro"));
     brightness.set_value(0.0);
 
     let contrast = adw::SpinRow::with_range(-100.0, 100.0, 1.0);
     contrast.set_title(&gettext("Contraste"));
-    contrast.set_subtitle("-100 plano · 0 neutro · +100 agressivo");
+    contrast.set_subtitle(&gettext("-100 plano · 0 neutro · +100 agressivo"));
     contrast.set_value(0.0);
 
     let saturation = adw::SpinRow::with_range(-100.0, 100.0, 1.0);
     saturation.set_title(&gettext("Saturação"));
-    saturation.set_subtitle("-100 cinza · 0 neutro · +100 vibrante");
+    saturation.set_subtitle(&gettext("-100 cinza · 0 neutro · +100 vibrante"));
     saturation.set_value(0.0);
 
     let gamma = adw::SpinRow::with_range(0.1, 10.0, 0.05);
     gamma.set_title(&gettext("Gamma"));
-    gamma.set_subtitle("Abaixo de 1 clareia os meios-tons · 1 mantém · acima de 1 escurece");
+    gamma.set_subtitle(&gettext(
+        "Abaixo de 1 clareia os meios-tons · 1 mantém · acima de 1 escurece",
+    ));
     gamma.set_digits(2);
     gamma.set_value(1.0);
 
@@ -5161,20 +5168,18 @@ fn fill_adjust_dialog(
     let target_row = adw::ComboRow::builder()
         .use_markup(false)
         .title(gettext("Formato de destino"))
-        .model(&gtk::StringList::new(&target_names))
+        .model(&translated_strings(&target_names))
         .build();
 
     let overwrite_row = adw::ComboRow::builder()
         .use_markup(false)
         .title(gettext("Se o arquivo de saída existir"))
-        .model(&gtk::StringList::new(
-            &OVERWRITE_CHOICES.iter().map(|(n, _)| *n).collect::<Vec<_>>(),
-        ))
+        .model(&translated_strings(&OVERWRITE_CHOICES.iter().map(|(n, _)| *n).collect::<Vec<_>>()))
         .build();
 
     let files_row = adw::ActionRow::builder()
         .use_markup(false)
-        .title(format!("{} arquivo(s) selecionado(s)", files.len()))
+        .title(format!("{}: {}", gettext("Arquivos selecionados"), files.len()))
         .build();
     files_row.set_subtitle(&files_subtitle(&files));
 
@@ -5196,8 +5201,8 @@ fn fill_adjust_dialog(
     let status = gtk::Label::builder().label("").wrap(true).xalign(0.0).build();
     status.add_css_class("dim-label");
 
-    let cancel_btn = gtk::Button::with_label("Cancelar");
-    let apply_btn = gtk::Button::builder().label("Aplicar").build();
+    let cancel_btn = gtk::Button::with_label(&gettext("Cancelar"));
+    let apply_btn = gtk::Button::builder().label(gettext("Aplicar")).build();
     apply_btn.add_css_class("suggested-action");
     apply_btn.add_css_class("pill");
 
@@ -5370,7 +5375,7 @@ fn build_properties_window(app: &adw::Application, path: &Path) -> adw::Applicat
         .application(app)
         .default_width(520)
         .default_height(640)
-        .title(format!("Propriedades — {filename}"))
+        .title(format!("{} — {filename}", gettext("Propriedades")))
         .build();
     let input = path.to_path_buf();
     let cancel = Arc::new(AtomicBool::new(false));
@@ -5415,7 +5420,7 @@ fn fill_properties_window(
     let filename = path.file_name().unwrap_or_default().to_string_lossy();
 
     let header = adw::HeaderBar::new();
-    header.set_title_widget(Some(&adw::WindowTitle::new("Propriedades", &filename)));
+    header.set_title_widget(Some(&adw::WindowTitle::new(&gettext("Propriedades"), &filename)));
 
     let page = adw::PreferencesPage::new();
     page.add(&build_properties_file_group(path, info, fsmeta));
@@ -5670,7 +5675,7 @@ fn build_compare_dialog(app: &adw::Application, files: Rc<Vec<PathBuf>>) -> adw:
         .application(app)
         .default_width(1200)
         .default_height(720)
-        .title("Comparar imagens — Íris")
+        .title(gettext("Comparar imagens — Íris"))
         .build();
 
     let left_path = &files[0];
@@ -5705,7 +5710,7 @@ fn build_compare_dialog(app: &adw::Application, files: Rc<Vec<PathBuf>>) -> adw:
         .build();
 
     let hint = gtk::Label::builder()
-        .label("Arraste o divisor para comparar · Esc fecha")
+        .label(gettext("Arraste o divisor para comparar · Esc fecha"))
         .xalign(0.5)
         .margin_top(6)
         .margin_bottom(6)
@@ -5866,11 +5871,11 @@ fn build_batch_dialog(
         .application(app)
         .default_width(640)
         .default_height(640)
-        .title("Prisma — Lote")
+        .title(gettext("Prisma — Lote"))
         .build();
 
     let header = adw::HeaderBar::new();
-    let title = adw::WindowTitle::new("Conversão em lote", "Prisma");
+    let title = adw::WindowTitle::new(&gettext("Conversão em lote"), "Prisma");
     header.set_title_widget(Some(&title));
 
     let format_names: Vec<&str> = CONVERT_FORMATS.iter().map(|(n, _)| *n).collect();
@@ -5880,17 +5885,17 @@ fn build_batch_dialog(
     // Lista mutável (compartilhada via Rc<RefCell>) — suporta adicionar
     // arquivos e pastas depois do diálogo aberto. `summary_row` é
     // re-renderizada sempre que mudar a lista, via `refresh_files_row`.
-    let files_group = adw::PreferencesGroup::builder().title("Arquivos").build();
+    let files_group = adw::PreferencesGroup::builder().title(gettext("Arquivos")).build();
     let summary_row = adw::ActionRow::builder().use_markup(false).activatable(false).build();
     let add_files_btn = gtk::Button::builder()
         .icon_name("list-add-symbolic")
-        .tooltip_text("Adicionar arquivos")
+        .tooltip_text(gettext("Adicionar arquivos"))
         .css_classes(["flat"])
         .valign(gtk::Align::Center)
         .build();
     let add_folder_btn = gtk::Button::builder()
         .icon_name("folder-symbolic")
-        .tooltip_text("Adicionar pasta (imagens)")
+        .tooltip_text(gettext("Adicionar pasta (imagens)"))
         .css_classes(["flat"])
         .valign(gtk::Align::Center)
         .build();
@@ -5900,18 +5905,18 @@ fn build_batch_dialog(
     refresh_files_row(&summary_row, &files.borrow());
 
     // ── Grupo: conversão ────────────────────────────────────────────────
-    let convert_group = adw::PreferencesGroup::builder().title("Conversão").build();
+    let convert_group = adw::PreferencesGroup::builder().title(gettext("Conversão")).build();
 
     let format_row = adw::ComboRow::builder()
         .use_markup(false)
         .title(gettext("Formato de destino"))
-        .model(&gtk::StringList::new(&format_names))
+        .model(&translated_strings(&format_names))
         .build();
     convert_group.add(&format_row);
 
     let quality_spin = adw::SpinRow::with_range(1.0, 100.0, 1.0);
     quality_spin.set_title(&gettext("Qualidade (JPEG/AVIF)"));
-    quality_spin.set_subtitle("1 menor qualidade · 85 equilíbrio · 100 maior qualidade");
+    quality_spin.set_subtitle(&gettext("1 menor qualidade · 85 equilíbrio · 100 maior qualidade"));
     quality_spin.set_value(85.0);
     convert_group.add(&quality_spin);
 
@@ -5924,18 +5929,18 @@ fn build_batch_dialog(
     bind_encode_controls(&window, &format_row, &quality_spin, &optimize_switch);
 
     // ── Grupo: destino ──────────────────────────────────────────────────
-    let dest_group = adw::PreferencesGroup::builder().title("Destino").build();
+    let dest_group = adw::PreferencesGroup::builder().title(gettext("Destino")).build();
     let overwrite_row = adw::ComboRow::builder()
         .use_markup(false)
         .title(gettext("Se o arquivo de saída existir"))
-        .model(&gtk::StringList::new(&overwrite_names))
+        .model(&translated_strings(&overwrite_names))
         .build();
     dest_group.add(&overwrite_row);
     // Pasta de saída: None = mesma do original. Clicar abre FolderDialog.
     let output_dir: Rc<RefCell<Option<PathBuf>>> = Rc::new(RefCell::new(None));
     let folder_row = adw::ActionRow::builder()
         .use_markup(false)
-        .title("Pasta de saída")
+        .title(gettext("Pasta de saída"))
         .subtitle("Mesma pasta do arquivo de origem")
         .activatable(true)
         .build();
@@ -5944,7 +5949,7 @@ fn build_batch_dialog(
     folder_row.add_suffix(&folder_icon);
     let clear_folder_btn = gtk::Button::builder()
         .icon_name("edit-clear-symbolic")
-        .tooltip_text("Usar a mesma pasta do arquivo de origem")
+        .tooltip_text(gettext("Usar a mesma pasta do arquivo de origem"))
         .css_classes(["flat"])
         .valign(gtk::Align::Center)
         .visible(false)
@@ -5959,7 +5964,7 @@ fn build_batch_dialog(
     progress.set_margin_top(8);
 
     let status = gtk::Label::builder()
-        .label("Aguardando. Clique em Processar para iniciar.")
+        .label(gettext("Aguardando. Clique em Processar para iniciar."))
         .wrap(true)
         .max_width_chars(64)
         .css_classes(["dim-label"])
@@ -5969,9 +5974,11 @@ fn build_batch_dialog(
         .margin_bottom(4)
         .build();
 
-    let apply_btn =
-        gtk::Button::builder().label("Processar").css_classes(["pill", "suggested-action"]).build();
-    let cancel_btn = gtk::Button::builder().label("Cancelar").build();
+    let apply_btn = gtk::Button::builder()
+        .label(gettext("Processar"))
+        .css_classes(["pill", "suggested-action"])
+        .build();
+    let cancel_btn = gtk::Button::builder().label(gettext("Cancelar")).build();
     let btn_bar = gtk::Box::new(gtk::Orientation::Horizontal, 8);
     btn_bar.set_halign(gtk::Align::Center);
     btn_bar.set_margin_top(8);
@@ -6047,7 +6054,7 @@ fn build_batch_dialog(
         let clear_btn = clear_folder_btn.clone();
         dialog_signal!(window, clear_folder_btn, connect_clicked, move |_| {
             *output_dir.borrow_mut() = None;
-            folder_row.set_subtitle("Mesma pasta do arquivo de origem");
+            folder_row.set_subtitle(&gettext("Mesma pasta do arquivo de origem"));
             clear_btn.set_visible(false);
         });
     }
@@ -6164,10 +6171,14 @@ fn build_batch_dialog(
                         if let Some(err) = first_err {
                             status.set_text(&format!("{msg}\n{err}"));
                         }
-                        progress.set_text(Some(if cancelled { "Cancelado" } else { "Concluído" }));
+                        progress.set_text(Some(&gettext(if cancelled {
+                            n_("Cancelado")
+                        } else {
+                            n_("Concluído")
+                        })));
                         apply_btn.set_sensitive(true);
                         let cancel_label = if !cancelled && done == total {
-                            "Fechar".to_string()
+                            gettext("Fechar")
                         } else {
                             gettext("Cancelar")
                         };
@@ -6197,7 +6208,7 @@ fn build_batch_dialog(
 /// total da lista atual de arquivos.
 fn refresh_files_row(row: &adw::ActionRow, files: &[PathBuf]) {
     let total: u64 = files.iter().filter_map(|p| std::fs::metadata(p).ok().map(|m| m.len())).sum();
-    row.set_title(&format!("{} arquivo(s) selecionado(s)", files.len()));
+    row.set_title(&format!("{}: {}", gettext("Arquivos selecionados"), files.len()));
     row.set_subtitle(&format_size(total));
 }
 
@@ -6209,9 +6220,10 @@ fn add_files_to_batch(
     files: &Rc<RefCell<Vec<PathBuf>>>,
     row: &adw::ActionRow,
 ) {
-    let dialog = gtk::FileDialog::builder().title("Adicionar arquivos").modal(true).build();
+    let dialog =
+        gtk::FileDialog::builder().title(gettext("Adicionar arquivos")).modal(true).build();
     let filter = gtk::FileFilter::new();
-    filter.set_name(Some("Imagens"));
+    filter.set_name(Some(&gettext("Imagens")));
     for mime in [
         "image/jpeg",
         "image/png",
@@ -6252,8 +6264,10 @@ fn add_folder_to_batch(
     files: &Rc<RefCell<Vec<PathBuf>>>,
     row: &adw::ActionRow,
 ) {
-    let dialog =
-        gtk::FileDialog::builder().title("Adicionar pasta com imagens").modal(true).build();
+    let dialog = gtk::FileDialog::builder()
+        .title(gettext("Adicionar pasta com imagens"))
+        .modal(true)
+        .build();
     let parent = window.clone();
     let files = files.clone();
     let row = row.clone();
@@ -6312,7 +6326,8 @@ fn pick_output_folder(
     row: &adw::ActionRow,
     clear_btn: &gtk::Button,
 ) {
-    let dialog = gtk::FileDialog::builder().title("Escolher pasta de saída").modal(true).build();
+    let dialog =
+        gtk::FileDialog::builder().title(gettext("Escolher pasta de saída")).modal(true).build();
     let parent = window.clone();
     let output_dir = output_dir.clone();
     let row = row.clone();
@@ -6344,11 +6359,11 @@ fn build_animate_dialog(app: &adw::Application, files: Rc<Vec<PathBuf>>) -> adw:
         .application(app)
         .default_width(520)
         .default_height(520)
-        .title("Criar GIF animado — Prisma")
+        .title(gettext("Criar GIF animado — Prisma"))
         .build();
 
     let header = adw::HeaderBar::new();
-    header.set_title_widget(Some(&adw::WindowTitle::new("Criar GIF animado", "Prisma")));
+    header.set_title_widget(Some(&adw::WindowTitle::new(&gettext("Criar GIF animado"), "Prisma")));
 
     let content = gtk::Box::builder()
         .orientation(gtk::Orientation::Vertical)
@@ -6362,13 +6377,13 @@ fn build_animate_dialog(app: &adw::Application, files: Rc<Vec<PathBuf>>) -> adw:
     if files.len() < 2 {
         let status = adw::StatusPage::builder()
             .icon_name("dialog-warning-symbolic")
-            .title("Selecione pelo menos 2 imagens")
-            .description("Informe vários arquivos de uma vez para montar a animação.")
+            .title(gettext("Selecione pelo menos 2 imagens"))
+            .description(gettext("Informe vários arquivos de uma vez para montar a animação."))
             .vexpand(true)
             .build();
         content.append(&status);
 
-        let close = gtk::Button::with_label("Fechar");
+        let close = gtk::Button::with_label(&gettext("Fechar"));
         {
             let window = window.clone();
             dialog_signal!(window, close, connect_clicked, move |_| window.close());
@@ -6385,24 +6400,24 @@ fn build_animate_dialog(app: &adw::Application, files: Rc<Vec<PathBuf>>) -> adw:
     // Parametric rows.
     let delay_spin = adw::SpinRow::with_range(10.0, 5000.0, 10.0);
     delay_spin.set_title(&gettext("Atraso por quadro (ms)"));
-    delay_spin.set_subtitle("100 ≈ 10 fps · 40 ≈ 25 fps · 1000 = 1 s");
+    delay_spin.set_subtitle(&gettext("100 ≈ 10 fps · 40 ≈ 25 fps · 1000 = 1 s"));
     delay_spin.set_value(100.0);
 
     let loop_row = adw::ComboRow::builder()
         .use_markup(false)
-        .title("Loop")
-        .model(&gtk::StringList::new(&[
-            "Infinito (padrão)",
-            "Uma vez",
-            "2 vezes",
-            "5 vezes",
-            "10 vezes",
+        .title(gettext("Loop"))
+        .model(&translated_strings(&[
+            n_("Infinito (padrão)"),
+            n_("Uma vez"),
+            n_("2 vezes"),
+            n_("5 vezes"),
+            n_("10 vezes"),
         ]))
         .build();
 
     let speed_spin = adw::SpinRow::with_range(1.0, 30.0, 1.0);
     speed_spin.set_title(&gettext("Velocidade do encoder"));
-    speed_spin.set_subtitle("maior = mais rápido, paleta um pouco pior · padrão 10");
+    speed_spin.set_subtitle(&gettext("maior = mais rápido, paleta um pouco pior · padrão 10"));
     speed_spin.set_value(10.0);
 
     // Default output: next to the first frame, named "animated.gif".
@@ -6410,13 +6425,15 @@ fn build_animate_dialog(app: &adw::Application, files: Rc<Vec<PathBuf>>) -> adw:
         .parent()
         .map(|p| p.join("animated.gif"))
         .unwrap_or_else(|| PathBuf::from("animated.gif"));
-    let output_row =
-        adw::EntryRow::builder().use_markup(false).title("Arquivo de saída (.gif)").build();
+    let output_row = adw::EntryRow::builder()
+        .use_markup(false)
+        .title(gettext("Arquivo de saída (.gif)"))
+        .build();
     output_row.set_text(&default_output.to_string_lossy());
 
     let files_row = adw::ActionRow::builder()
         .use_markup(false)
-        .title(format!("{} quadro(s)", files.len()))
+        .title(format!("{}: {}", gettext("Quadros"), files.len()))
         .build();
     files_row.set_subtitle(&files_subtitle(&files));
 
@@ -6432,8 +6449,8 @@ fn build_animate_dialog(app: &adw::Application, files: Rc<Vec<PathBuf>>) -> adw:
     status.add_css_class("dim-label");
     content.append(&status);
 
-    let cancel_btn = gtk::Button::with_label("Cancelar");
-    let apply_btn = gtk::Button::builder().label("Criar GIF").build();
+    let cancel_btn = gtk::Button::with_label(&gettext("Cancelar"));
+    let apply_btn = gtk::Button::builder().label(gettext("Criar GIF")).build();
     apply_btn.add_css_class("suggested-action");
     apply_btn.add_css_class("pill");
 
@@ -6501,13 +6518,13 @@ fn build_animate_dialog(app: &adw::Application, files: Rc<Vec<PathBuf>>) -> adw:
             glib::timeout_add_local(std::time::Duration::from_millis(80), move || {
                 match rx.try_recv() {
                     Ok(Ok(path)) => {
-                        status.set_text(&format!("Pronto: {}", path.display()));
+                        status.set_text(&format!("{}: {}", gettext("Pronto"), path.display()));
                         let w = window.clone();
                         glib::timeout_add_seconds_local_once(2, move || w.close());
                         glib::ControlFlow::Break
                     }
                     Ok(Err(e)) => {
-                        status.set_text(&format!("Falha: {e}"));
+                        status.set_text(&format!("{}: {e}", gettext("Falha")));
                         apply_btn.set_sensitive(true);
                         cancel_btn.set_sensitive(true);
                         glib::ControlFlow::Break
@@ -6588,12 +6605,14 @@ fn build_remove_bg_dialog(
         .application(app)
         .default_width(520)
         .default_height(420)
-        .title("Remover fundo — Prisma")
+        .title(gettext("Remover fundo — Prisma"))
         .build();
 
     let header = adw::HeaderBar::new();
-    header
-        .set_title_widget(Some(&adw::WindowTitle::new("Remover fundo", "Prisma · BiRefNet-lite")));
+    header.set_title_widget(Some(&adw::WindowTitle::new(
+        &gettext("Remover fundo"),
+        "Prisma · BiRefNet-lite",
+    )));
 
     let content = gtk::Box::builder()
         .orientation(gtk::Orientation::Vertical)
@@ -6608,13 +6627,13 @@ fn build_remove_bg_dialog(
     if files.is_empty() {
         let status = adw::StatusPage::builder()
             .icon_name("dialog-warning-symbolic")
-            .title("Nenhuma imagem selecionada")
-            .description("Informe um ou mais arquivos ao abrir o diálogo.")
+            .title(gettext("Nenhuma imagem selecionada"))
+            .description(gettext("Informe um ou mais arquivos ao abrir o diálogo."))
             .vexpand(true)
             .build();
         content.append(&status);
 
-        let close = gtk::Button::with_label("Fechar");
+        let close = gtk::Button::with_label(&gettext("Fechar"));
         {
             let window = window.clone();
             dialog_signal!(window, close, connect_clicked, move |_| window.close());
@@ -6656,7 +6675,7 @@ fn build_remove_bg_dialog(
 
     let files_row = adw::ActionRow::builder()
         .use_markup(false)
-        .title(format!("{} imagem(ns)", files.len()))
+        .title(format!("{}: {}", gettext("Imagens"), files.len()))
         .build();
     files_row.set_subtitle(&files_subtitle(&files));
     let files_icon = gtk::Image::from_icon_name("image-x-generic-symbolic");
@@ -6664,7 +6683,7 @@ fn build_remove_bg_dialog(
 
     let model_row = adw::ActionRow::builder()
         .use_markup(false)
-        .title("Modelo")
+        .title(gettext("Modelo"))
         .subtitle("BiRefNet-lite (MIT) · roda offline no seu computador")
         .build();
     let model_icon = gtk::Image::from_icon_name("application-x-executable-symbolic");
@@ -6682,7 +6701,7 @@ fn build_remove_bg_dialog(
     output_row.add_prefix(&output_icon);
 
     let group = adw::PreferencesGroup::builder()
-        .title("Remover fundo com IA local")
+        .title(gettext("Remover fundo com IA local"))
         .description(
             "O modelo roda inteiramente no seu computador. \
              Nenhuma imagem sai do disco — sem upload, sem conta, sem API externa.",
@@ -6703,8 +6722,8 @@ fn build_remove_bg_dialog(
     status.add_css_class("dim-label");
     content.append(&status);
 
-    let cancel_btn = gtk::Button::with_label("Cancelar");
-    let apply_btn = gtk::Button::builder().label("Remover fundo").build();
+    let cancel_btn = gtk::Button::with_label(&gettext("Cancelar"));
+    let apply_btn = gtk::Button::builder().label(gettext("Remover fundo")).build();
     apply_btn.add_css_class("suggested-action");
     apply_btn.add_css_class("pill");
 
@@ -6888,7 +6907,7 @@ fn build_remove_bg_dialog(
                         let ok = outputs.iter().filter(|o| o.is_some()).count();
                         let fail = outputs.len() - ok;
                         if fail == 0 {
-                            status.set_text(&format!("Pronto: {ok} imagem(ns) gravada(s)"));
+                            status.set_text(&format!("{}: {ok}", gettext("Imagens gravadas")));
                             progress_bar.set_text(Some(&gettext("Concluído")));
                             progress_bar.add_css_class("success");
                             let single = originals.len() == 1;
@@ -6909,11 +6928,15 @@ fn build_remove_bg_dialog(
                             }
                         } else {
                             let detail = first_err.unwrap_or_default();
-                            status.set_text(&format!("{ok} ok, {fail} falha(s). Último: {detail}"));
+                            status.set_text(&format!(
+                                "{}: {ok} · {}: {fail}\n{detail}",
+                                gettext("Imagens gravadas"),
+                                gettext("Falhas")
+                            ));
                             progress_bar.set_text(Some(&gettext("Com erros")));
                             progress_bar.add_css_class("error");
                             apply_btn.set_sensitive(true);
-                            cancel_btn.set_label("Fechar");
+                            cancel_btn.set_label(&gettext("Fechar"));
                         }
                         glib::ControlFlow::Break
                     }
@@ -7727,18 +7750,17 @@ mod lifecycle_tests {
         settle();
         let about_window = about.root().and_downcast::<gtk::Window>().unwrap();
         capture_window(&about_window, "about");
-        let credits_label = find_widget(&about, &mut |widget| {
-            widget.clone().downcast::<gtk::Label>().is_ok_and(|label| {
-                matches!(label.text().as_str(), "Credits" | "Créditos")
-                    && label.ancestor(adw::ActionRow::static_type()).is_some()
+        let credits = find_widget(&about, &mut |widget| {
+            widget.clone().downcast::<adw::ActionRow>().is_ok_and(|row| {
+                row.action_name().as_deref() == Some("navigation.push")
+                    && row
+                        .action_target_value()
+                        .is_some_and(|target| target.str() == Some("credits"))
             })
         })
-        .expect("credits navigation label");
-        let credits = credits_label
-            .ancestor(adw::ActionRow::static_type())
-            .unwrap()
-            .downcast::<adw::ActionRow>()
-            .unwrap();
+        .expect("credits navigation row")
+        .downcast::<adw::ActionRow>()
+        .unwrap();
         gtk::prelude::WidgetExt::activate(&credits);
         settle();
         settle();
@@ -7797,7 +7819,6 @@ mod lifecycle_tests {
         drop(about_window);
         drop(about);
         drop(credits);
-        drop(credits_label);
         drop(menu);
         drop(popover);
         window.destroy();
@@ -7819,7 +7840,22 @@ mod lifecycle_tests {
             Ok("memory"),
             "synthetic GUI tests require GSETTINGS_BACKEND=memory"
         );
+        crate::init_i18n();
         adw::init().expect("GTK display required");
+        if std::env::var_os("BIGIRIS_LOCALE_DIR").is_some() {
+            let language = std::env::var("LANGUAGE").unwrap_or_default();
+            let expected = match language.as_str() {
+                "en" => "Open images…",
+                "fr" => "Ouvrir des images…",
+                "he" => "פתיחת תמונות…",
+                _ => panic!("localized GUI probe expects en, fr or he"),
+            };
+            assert_eq!(
+                gettext("Abrir imagens…"),
+                expected,
+                "GUI did not load the requested catalog"
+            );
+        }
         if let Ok(scheme) = std::env::var("BIGIRIS_TEST_COLOR_SCHEME") {
             let scheme = match scheme.as_str() {
                 "light" => adw::ColorScheme::ForceLight,

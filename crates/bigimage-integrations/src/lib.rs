@@ -14,6 +14,7 @@
 
 pub mod action;
 pub mod dolphin;
+mod i18n;
 pub mod install;
 pub mod nautilus;
 pub mod nemo;

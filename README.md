@@ -98,6 +98,10 @@ extensão no sistema; não é necessário executar `install-integrations --user`
 Para carregar a extensão após instalar ou atualizar, feche o Nautilus com
 `nautilus -q` e abra-o novamente.
 
+O pacote inclui catálogos para os 29 idiomas adotados pelos aplicativos
+BigCommunity. A interface e a extensão Nautilus seguem o idioma da sessão;
+veja o inventário e o fluxo de manutenção em [CONTRIBUTING.md](CONTRIBUTING.md#i18n).
+
 A campanha de testes prioriza GNOME/Wayland; veja os resultados, limites e
 critérios para adoção oficial em [docs/QUALITY.md](docs/QUALITY.md), e os
 comandos reproduzíveis em

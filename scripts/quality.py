@@ -63,7 +63,7 @@ def main():
     run("desktop", ["desktop-file-validate", "data/com.biglinux.Iris.desktop"])
     run("appstream", ["appstreamcli", "validate", "--no-net", "data/com.biglinux.Iris.metainfo.xml"])
     run("schemas", ["glib-compile-schemas", "--strict", "--dry-run", "data"])
-    run("translations", ["msgfmt", "--check", "data/po/en.po", "-o", os.devnull])
+    run("translations", [sys.executable, "scripts/translations.py", "check", "--check-generated"])
     run("shell-syntax", ["bash", "-n", "install.sh"])
     for name in ["pkgbuild/PKGBUILD", "pkgbuild/PKGBUILD.local", "packaging/openmandriva/make-vendor-tarball.sh"]:
         run("syntax-" + name.replace("/", "-"), ["bash", "-n", name])

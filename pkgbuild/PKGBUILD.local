@@ -1,13 +1,6 @@
-# PKGBUILD.local — build a partir do checkout local, sem precisar de
-# repositorio remoto publicado. Uso:
-#
-#   cd pkgbuild
-#   makepkg -si -p PKGBUILD.local
-#
-# Para builds que clonam direto do repo publicado (github.com/big-comm/bigiris)
-# use o PKGBUILD principal (source=git+https://…) — este aqui e um atalho
-# para testar o pacote sem depender de push, e e o mesmo PKGBUILD usado pela
-# CI, garantindo que ela teste exatamente o checkout selecionado.
+# PKGBUILD.local builds the local checkout without cloning the remote.
+# From pkgbuild/, run: makepkg -si -p PKGBUILD.local
+# CI uses this recipe to test the exact commit selected by the workflow.
 
 # Maintainer: Leonardo Athayde <leoathayde@gmail.com>
 # Contributor: Bruno Goncalves <bigbruno@gmail.com>
@@ -40,7 +33,7 @@ optdepends=(
   'pcmanfm-qt: PCManFM-Qt file manager integration (LXQt)'
   'io.elementary.files: Files file manager integration (elementary)'
 )
-makedepends=('rust' 'cargo' 'pkgconf' 'gettext')
+makedepends=('rust' 'cargo' 'pkgconf' 'gettext' 'python')
 # Disable LTO. Arch's default makepkg env appends `-flto=auto` to CFLAGS
 # and `-C linker-plugin-lto` to RUSTFLAGS, which makes cc-rs emit pure
 # LTO bitcode .o files for libmimalloc-sys. The final linker (bfd or
@@ -55,8 +48,8 @@ md5sums=()
 install="$pkgname.install"
 
 prepare() {
-  # Copia o repo inteiro (pai do diretorio do PKGBUILD) para $srcdir/bigiris,
-  # excluindo target/ e .git para o build nao arrastar gigabytes.
+  # Copy the checkout into the source directory, excluding generated
+  # artifacts, version-control metadata and personal agent configuration.
   local src="$startdir/.."
   rm -rf "$srcdir/bigiris"
   mkdir -p "$srcdir/bigiris"
@@ -77,17 +70,18 @@ prepare() {
 
 build() {
   cd "$srcdir/bigiris"
+  python3 scripts/translations.py check
   export RUSTUP_TOOLCHAIN=stable
   export CARGO_TARGET_DIR="$srcdir/target"
-  # `gui` = viewer/dialogos GTK4; `ai` = remover fundo via BiRefNet (ORT).
-  # O backend ORT é carregado dinamicamente; onnxruntime é instalado
-  # como dependência do pacote distribuído pela comunidade.
+  # Build the viewer and AI dialogs together.
+  # ONNX Runtime is loaded dynamically; the distributed package declares
+  # onnxruntime as a runtime dependency.
   cargo build --locked --release --features "gui ai" --package bigiris
 
-  # Compila .mo de cada idioma listado em data/po/LINGUAS.
+  # Compile all translation catalogs listed in data/po/LINGUAS.
   while read -r lang; do
     [[ -z "$lang" || "$lang" == \#* ]] && continue
-    msgfmt -o "data/po/${lang}.mo" "data/po/${lang}.po"
+    msgfmt --check -o "data/po/${lang}.mo" "data/po/${lang}.po"
   done < data/po/LINGUAS
 }
 

@@ -37,13 +37,15 @@ fn render(action: &Action) -> String {
     format!(
         "[Desktop Entry]\n\
          Type=Action\n\
-         Name={label}\n\
+         Name={label}\n{localized_name}\
          Icon={icon}\n\
          Profiles={profile_id};\n\
          \n\
          [X-Action-Profile {profile_id}]\n\
          Exec={exec}\n\
          MimeTypes={mime_line}\n",
+        localized_name =
+            crate::i18n::localized("Name", |lang| crate::i18n::flat_label(lang, action)),
         icon = action.icon,
         exec = action.command,
     )

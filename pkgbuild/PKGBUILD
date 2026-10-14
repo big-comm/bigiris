@@ -10,9 +10,9 @@ depends=(
   'glibc'
   'gtk4>=4.12'
   'libadwaita>=1.5'
-  'dav1d'            # decodificador AVIF
-  'openssl'          # TLS para download de modelos IA (ureq + native-tls)
-  'onnxruntime'      # backend de IA (BiRefNet), carregado dinamicamente
+  'dav1d'            # AVIF decoder
+  'openssl'          # TLS for AI model downloads (ureq + native-tls)
+  'onnxruntime'      # AI backend (BiRefNet), loaded dynamically
   'hicolor-icon-theme'
 )
 optdepends=(
@@ -24,7 +24,7 @@ optdepends=(
   'pcmanfm-qt: PCManFM-Qt file manager integration (LXQt)'
   'io.elementary.files: Files file manager integration (elementary)'
 )
-makedepends=('rust' 'cargo' 'git' 'pkgconf' 'gettext')
+makedepends=('rust' 'cargo' 'git' 'pkgconf' 'gettext' 'python')
 # Disable LTO. Arch's default makepkg env appends `-flto=auto` to CFLAGS
 # and `-C linker-plugin-lto` to RUSTFLAGS, which makes cc-rs emit pure
 # LTO bitcode for libmimalloc-sys's static.o. Without an LLVM gold/LTO
@@ -50,24 +50,25 @@ fi
 
 prepare() {
   cd "${srcdir}/${pkgname}"
-  # blueprint-compiler entra quando a GUI ganhar arquivos .blp.
+  # Add blueprint-compiler when the GUI starts using .blp files.
   true
 }
 
 build() {
   cd "${srcdir}/${pkgname}"
+  python3 scripts/translations.py check
   export RUSTUP_TOOLCHAIN=stable
   export CARGO_TARGET_DIR="$srcdir/target"
-  # `--features "gui ai"` compila o visualizador GTK4 / libadwaita e os
-  # diálogos de IA (remover fundo via BiRefNet, upscale Lanczos3) dentro
-  # do mesmo binario `bigiris` (arquitetura single-binary).
+  # Build the GTK4/libadwaita viewer and AI dialogs in one binary.
+  # Background removal uses BiRefNet; resize/upscale uses Lanczos3.
+  # ONNX Runtime is loaded dynamically at runtime.
   cargo build --locked --release --features "gui ai" --package bigiris
 
-  # Compila os catalogos de traducao listados em data/po/LINGUAS.
-  # msgfmt -> .mo binario; package() instala em /usr/share/locale/<lang>/.
+  # Compile every translation catalog listed in data/po/LINGUAS.
+  # package() installs the resulting .mo files under /usr/share/locale.
   while read -r lang; do
     [[ -z "$lang" || "$lang" == \#* ]] && continue
-    msgfmt -o "data/po/${lang}.mo" "data/po/${lang}.po"
+    msgfmt --check -o "data/po/${lang}.mo" "data/po/${lang}.po"
   done < data/po/LINGUAS
 }
 
@@ -81,11 +82,11 @@ check() {
 package() {
   cd "${srcdir}/${pkgname}"
 
-  # Binario
+  # Binary
   install -Dm755 "$srcdir/target/release/bigiris" \
     "$pkgdir/usr/bin/bigiris"
 
-  # Reverse-DNS IDs (necessarios para Flathub / GNOME Circle; aceitos pelo BigLinux)
+  # Reverse-DNS identifiers shared by the desktop, AppStream and icon.
   install -Dm644 "data/com.biglinux.Iris.desktop" \
     "$pkgdir/usr/share/applications/com.biglinux.Iris.desktop"
   install -Dm644 "data/com.biglinux.Iris.metainfo.xml" \
@@ -95,21 +96,21 @@ package() {
   install -Dm644 "data/icons/hicolor/scalable/apps/com.biglinux.Iris.svg" \
     "$pkgdir/usr/share/icons/hicolor/scalable/apps/com.biglinux.Iris.svg"
 
-  # Documentacao / licenca
+  # Documentation and license
   install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
   install -Dm644 README.md "$pkgdir/usr/share/doc/$pkgname/README.md"
 
-  # Catalogos de traducao compilados em build().
+  # Translation catalogs compiled in build().
   while read -r lang; do
     [[ -z "$lang" || "$lang" == \#* ]] && continue
     install -Dm644 "data/po/${lang}.mo" \
       "$pkgdir/usr/share/locale/${lang}/LC_MESSAGES/$pkgname.mo"
   done < data/po/LINGUAS
 
-  # Service menus system-wide: o proprio binario gera e coloca os arquivos
-  # sob $pkgdir/usr/share/... e $pkgdir/etc/xdg/... para os seis
-  # gerenciadores suportados. Usuarios nao precisam rodar
-  # `install-integrations --user` apos instalar o pacote.
+  # Install file-manager integrations into the package staging directory.
+  # The package provides the system-wide files; users do not need
+  # to register a second personal copy of the integrations.
+  # Nautilus requires the optional nautilus-python package.
   "$srcdir/target/release/bigiris" install-integrations --system \
     --destdir="$pkgdir"
 }

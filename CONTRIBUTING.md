@@ -148,19 +148,46 @@ refatoração estrutural.
 
 ## i18n
 
-Strings de UI ficam em `data/po/`. O fluxo:
+O catálogo usa os mesmos 29 códigos do [Ashy Pass](https://github.com/big-comm/ashypass/tree/main/locale)
+e do [GitRepo](https://github.com/big-comm/gitrepo/tree/main/locale), conferidos em
+14/10/2026. `data/po/LINGUAS` lista: bg, cs, da, de, el, en, es, et, fi, fr,
+he, hr, hu, is, it, ja, ko, nl, no, pl, pt, pt_BR, ro, ru, sk, sv, tr, uk e zh.
+A linguagem-fonte é pt-BR; `pt` usa terminologia de português europeu.
+
+Use `gettext("…")` na interface Rust e `_("…")` na extensão Nautilus. `n_("…")`
+marca rótulos constantes; a tradução ocorre na apresentação, preservando
+IDs, opções e argumentos de comandos. O domínio do Nautilus é local à
+extensão, sem substituir os textos do gerenciador de arquivos.
 
 ```bash
-# Após adicionar/alterar gettext("…") em código fonte:
+# Extrair mensagens novas e atualizar os catálogos:
 data/po/regen-pot.sh
-
-# Edite data/po/<lang>.po pra preencher os msgstr novos.
-# msgfmt valida antes de comitar:
-msgfmt --check data/po/en.po -o /dev/null
+# Preencher/revisar msgstr em data/po/<idioma>.po; depois:
+python3 scripts/translations.py generate
+python3 scripts/translations.py check --check-generated
 ```
 
-A linguagem-fonte é **pt-BR**. Catálogos (`en.po`, futuros `es.po`,
-etc.) traduzem a partir do pt-BR.
+O validador exige todos os idiomas, o mesmo inventário de mensagens,
+traduções não vazias, ausência de fuzzy e preservação de argumentos nomeados.
+Executa `msgfmt --check` em cada catálogo e confere os arquivos gerados.
+As receitas compilam e instalam todos os `.mo` em
+`/usr/share/locale/<idioma>/LC_MESSAGES/bigiris.mo`. Os arquivos de menu
+recebem campos localizados; Thunar suporta nomes e descrições `xml:lang`,
+mas mantém o submenu na linguagem-fonte.
+
+Os catálogos iniciais foram preparados com assistência local de tradução e
+termos reutilizados do GTK/libadwaita; revisão linguística por falantes é
+bem-vinda. A validação técnica não certifica fluência em todos os idiomas.
+Modelos e ferramentas de preparação ficam fora do pacote; não há tradução
+em rede nem inferência adicional durante o uso do aplicativo.
+
+Para conferir uma compilação local com catálogos isolados, sem instalar:
+
+```bash
+python3 scripts/translations.py compile --destdir "$PWD/target/review-locale"
+BIGIRIS_LOCALE_DIR="$PWD/target/review-locale" LANGUAGE=fr ./target/release/bigiris
+```
+
 
 ## Convenções
 

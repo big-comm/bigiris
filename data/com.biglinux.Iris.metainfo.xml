@@ -6,8 +6,35 @@
   <name>Íris</name>
   <name xml:lang="pt-BR">Íris</name>
   <summary>Visualizador e conversor de imagens moderno</summary>
+  <summary xml:lang="bg">Модерна програма за разглеждане и конвертиране на изображения</summary>
+  <summary xml:lang="cs">Moderní prohlížeč obrázků a konvertor</summary>
+  <summary xml:lang="da">Moderne billedfremviser og konverter</summary>
+  <summary xml:lang="de">Moderner Bildbetrachter und Konverter</summary>
+  <summary xml:lang="el">Μοντέρνο πρόγραμμα προβολής και μετατροπής εικόνων</summary>
+  <summary xml:lang="en">Modern image viewer and converter</summary>
+  <summary xml:lang="es">Visor y convertidor de imágenes moderno</summary>
+  <summary xml:lang="et">Kaasaegne pildi vaataja ja muundur</summary>
+  <summary xml:lang="fi">Moderni kuvakatseluohjelma ja muunnin</summary>
+  <summary xml:lang="fr">Visionneuse et convertisseur d&#x27;image moderne</summary>
+  <summary xml:lang="he">מציג וממיר תמונות מודרני</summary>
+  <summary xml:lang="hr">Moderni preglednik slika i konverter</summary>
+  <summary xml:lang="hu">Modern képnézegető és átalakító</summary>
+  <summary xml:lang="is">Nútíma myndskoðari og breytir</summary>
+  <summary xml:lang="it">Visualizzatore e convertitore di immagini moderno</summary>
+  <summary xml:lang="ja">画像ビューアとコンバータ</summary>
+  <summary xml:lang="ko">현대적인 이미지 뷰어와 변환기</summary>
+  <summary xml:lang="nl">Moderne beeldviewer en converter</summary>
+  <summary xml:lang="no">Moderne bildeviser og konverter</summary>
+  <summary xml:lang="pl">Nowoczesna przeglądarka i konwerter obrazów</summary>
+  <summary xml:lang="pt">Visualizador e conversor de imagens moderno</summary>
   <summary xml:lang="pt-BR">Visualizador e conversor de imagens moderno</summary>
-  <summary xml:lang="en-US">Modern image viewer and converter</summary>
+  <summary xml:lang="ro">Vizualizator și convertor modern de imagini</summary>
+  <summary xml:lang="ru">Современный просмотрщик и конвертер изображений</summary>
+  <summary xml:lang="sk">Moderný prehliadač a konvertor obrázkov</summary>
+  <summary xml:lang="sv">Modern bildvisare och omvandlare</summary>
+  <summary xml:lang="tr">Modern resim görüntüleyici ve dönüştürücü</summary>
+  <summary xml:lang="uk">Сучасний переглядач і конвертер зображень</summary>
+  <summary xml:lang="zh">现代图像查看器和转换器</summary>
 
   <description>
     <p>

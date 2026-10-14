@@ -79,6 +79,21 @@ class NautilusContract(unittest.TestCase):
             self.assertEqual(popen.call_args.args[0], ["bigiris", "--dialog=batch", "/tmp/fotos"])
         self.assertEqual(self.provider.get_background_items(file("inode/directory", None)), [])
 
+    def test_localized_labels_keep_action_ids_and_argv_stable(self):
+        folder = file("inode/directory", "/tmp/fotos")
+        image = file("image/png", "/tmp/foto.png")
+        with patch.object(module, "_", side_effect=lambda text: "localized " + text):
+            folder_item = self.provider.get_background_items(folder)[0]
+            self.assertTrue(folder_item.options["label"].startswith("localized "))
+            top = self.provider.get_file_items([image])[0]
+            child = top.submenu.items[0]
+            self.assertTrue(child.options["label"].startswith("localized "))
+            self.assertNotIn("localized", child.options["name"])
+            callback, args = folder_item.callback
+            with patch.object(module.subprocess, "Popen") as popen:
+                callback(folder_item, *args)
+            self.assertEqual(popen.call_args.args[0], ["bigiris", "--dialog=batch", "/tmp/fotos"])
+
     def test_extension_errors_do_not_escape_to_file_manager(self):
         with patch.object(module.subprocess, "Popen", side_effect=FileNotFoundError):
             self.provider._run_action(None, [], ["/tmp/a.png"])

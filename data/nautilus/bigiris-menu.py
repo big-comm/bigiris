@@ -16,6 +16,13 @@
 # acoes forem adicionadas.
 
 import sys
+import gettext
+import os
+
+_ = gettext.translation("bigiris", localedir=os.environ.get("BIGIRIS_LOCALE_DIR", "/usr/share/locale"), fallback=True).gettext
+
+def n_(message):
+    return message
 
 import gi
 
@@ -90,160 +97,160 @@ _DOC_MIMES = {
 _SUBMENUS = [
     (
         "convert",
-        "Converter",
+        n_("Converter"),
         "document-save-as-symbolic",
         "image",
         [
-            ("PNG", ["convert", "--to", "png", "--overwrite", "skip"], _ICON_CONVERT),
-            ("JPG", ["convert", "--to", "jpg", "--overwrite", "skip"], _ICON_CONVERT),
-            ("WebP", ["convert", "--to", "webp", "--overwrite", "skip"], _ICON_CONVERT),
-            ("AVIF", ["convert", "--to", "avif", "--overwrite", "skip"], _ICON_CONVERT),
-            ("TIFF", ["convert", "--to", "tiff", "--overwrite", "skip"], _ICON_CONVERT),
+            (n_("PNG"), ["convert", "--to", "png", "--overwrite", "skip"], _ICON_CONVERT),
+            (n_("JPG"), ["convert", "--to", "jpg", "--overwrite", "skip"], _ICON_CONVERT),
+            (n_("WebP"), ["convert", "--to", "webp", "--overwrite", "skip"], _ICON_CONVERT),
+            (n_("AVIF"), ["convert", "--to", "avif", "--overwrite", "skip"], _ICON_CONVERT),
+            (n_("TIFF"), ["convert", "--to", "tiff", "--overwrite", "skip"], _ICON_CONVERT),
             # PDF fica no menu do BigOCRPDF — evita redundância.
-            ("Mais opções…", ["--dialog=convert"], _ICON_CUSTOM),
+            (n_("Mais opções…"), ["--dialog=convert"], _ICON_CUSTOM),
         ],
     ),
     (
         "resize",
-        "Redimensionar",
+        n_("Redimensionar"),
         "view-fullscreen-symbolic",
         "image",
         [
-            ("25%", ["resize", "--percent", "25"], _ICON_RESIZE),
-            ("50%", ["resize", "--percent", "50"], _ICON_RESIZE),
-            ("200%", ["resize", "--percent", "200"], _ICON_RESIZE),
-            ("HD (1920 px)", ["resize", "--fit", "1920x1920"], _ICON_RESIZE),
-            ("4K (3840 px)", ["resize", "--fit", "3840x3840"], _ICON_RESIZE),
-            ("Mais opções…", ["--dialog=resize"], _ICON_CUSTOM),
+            (n_("25%"), ["resize", "--percent", "25"], _ICON_RESIZE),
+            (n_("50%"), ["resize", "--percent", "50"], _ICON_RESIZE),
+            (n_("200%"), ["resize", "--percent", "200"], _ICON_RESIZE),
+            (n_("HD (1920 px)"), ["resize", "--fit", "1920x1920"], _ICON_RESIZE),
+            (n_("4K (3840 px)"), ["resize", "--fit", "3840x3840"], _ICON_RESIZE),
+            (n_("Mais opções…"), ["--dialog=resize"], _ICON_CUSTOM),
         ],
     ),
     (
         "rotate",
-        "Girar",
+        n_("Girar"),
         "object-rotate-right-symbolic",
         "image",
         [
-            ("90°", ["rotate", "--degrees", "90"], _ICON_ROTATE_R),
-            ("180°", ["rotate", "--degrees", "180"], _ICON_ROTATE_R),
-            ("270°", ["rotate", "--degrees", "270"], _ICON_ROTATE_L),
-            ("Automático (EXIF)", ["rotate", "--auto", "--overwrite", "increment"], _ICON_ROTATE_R),
-            ("Mais opções…", ["--dialog=rotate"], _ICON_CUSTOM),
+            (n_("90°"), ["rotate", "--degrees", "90"], _ICON_ROTATE_R),
+            (n_("180°"), ["rotate", "--degrees", "180"], _ICON_ROTATE_R),
+            (n_("270°"), ["rotate", "--degrees", "270"], _ICON_ROTATE_L),
+            (n_("Automático (EXIF)"), ["rotate", "--auto", "--overwrite", "increment"], _ICON_ROTATE_R),
+            (n_("Mais opções…"), ["--dialog=rotate"], _ICON_CUSTOM),
         ],
     ),
     (
         "flip",
-        "Espelhar",
+        n_("Espelhar"),
         "object-flip-horizontal-symbolic",
         "image",
         [
-            ("Horizontal", ["flip", "--axis", "horizontal"], _ICON_FLIP_H),
-            ("Vertical", ["flip", "--axis", "vertical"], _ICON_FLIP_V),
-            ("Mais opções…", ["--dialog=flip"], _ICON_CUSTOM),
+            (n_("Horizontal"), ["flip", "--axis", "horizontal"], _ICON_FLIP_H),
+            (n_("Vertical"), ["flip", "--axis", "vertical"], _ICON_FLIP_V),
+            (n_("Mais opções…"), ["--dialog=flip"], _ICON_CUSTOM),
         ],
     ),
     (
         "adjust",
-        "Ajustar cores",
+        n_("Ajustar cores"),
         "image-adjust-symbolic",
         "image",
         [
-            ("+ Brilho (+10)", ["adjust", "--brightness", "10"], _ICON_BRIGHT),
-            ("− Brilho (-10)", ["adjust", "--brightness", "-10"], _ICON_BRIGHT),
-            ("+ Contraste (+20)", ["adjust", "--contrast", "20"], _ICON_BRIGHT),
-            ("Preto e branco", ["adjust", "--saturation", "-100"], _ICON_COLOR),
-            ("Cores vivas (+40)", ["adjust", "--saturation", "40"], _ICON_COLOR),
-            ("Mais opções…", ["--dialog=adjust"], _ICON_CUSTOM),
+            (n_("+ Brilho (+10)"), ["adjust", "--brightness", "10"], _ICON_BRIGHT),
+            (n_("− Brilho (-10)"), ["adjust", "--brightness", "-10"], _ICON_BRIGHT),
+            (n_("+ Contraste (+20)"), ["adjust", "--contrast", "20"], _ICON_BRIGHT),
+            (n_("Preto e branco"), ["adjust", "--saturation", "-100"], _ICON_COLOR),
+            (n_("Cores vivas (+40)"), ["adjust", "--saturation", "40"], _ICON_COLOR),
+            (n_("Mais opções…"), ["--dialog=adjust"], _ICON_CUSTOM),
         ],
     ),
     (
         "web",
-        "Para web",
+        n_("Para web"),
         "applications-internet-symbolic",
         "image",
         [
-            ("WhatsApp (1280 px · JPG q85)", [
+            (n_("WhatsApp (1280 px · JPG q85)"), [
                 "resize", "--fit", "1280x1280", "--to", "jpg",
                 "--quality", "85", "--progressive",
             ], _ICON_WEB),
-            ("Instagram (1080 px · JPG q90)", [
+            (n_("Instagram (1080 px · JPG q90)"), [
                 "resize", "--fit", "1080x1080", "--to", "jpg",
                 "--quality", "90", "--progressive",
             ], _ICON_WEB),
-            ("Facebook (2048 px · JPG q85)", [
+            (n_("Facebook (2048 px · JPG q85)"), [
                 "resize", "--fit", "2048x2048", "--to", "jpg",
                 "--quality", "85", "--progressive",
             ], _ICON_WEB),
-            ("Twitter · X (1200 px · JPG q85)", [
+            (n_("Twitter · X (1200 px · JPG q85)"), [
                 "resize", "--fit", "1200x1200", "--to", "jpg",
                 "--quality", "85", "--progressive",
             ], _ICON_WEB),
-            ("Telegram (2560 px · JPG q85)", [
+            (n_("Telegram (2560 px · JPG q85)"), [
                 "resize", "--fit", "2560x2560", "--to", "jpg",
                 "--quality", "85", "--progressive",
             ], _ICON_WEB),
-            ("Discord (2048 px · JPG q80)", [
+            (n_("Discord (2048 px · JPG q80)"), [
                 "resize", "--fit", "2048x2048", "--to", "jpg",
                 "--quality", "80", "--progressive",
             ], _ICON_WEB),
-            ("Otimizar PNG (compressão máxima)", [
+            (n_("Otimizar PNG (compressão máxima)"), [
                 "convert", "--to", "png", "--optimize", "--overwrite", "replace",
             ], _ICON_CONVERT),
-            ("Letterbox YouTube post (1:1)", [
+            (n_("Letterbox YouTube post (1:1)"), [
                 "extent", "--aspect", "1:1", "--bg", "#0d0e12",
             ], _ICON_WEB),
-            ("Letterbox Instagram feed (4:5)", [
+            (n_("Letterbox Instagram feed (4:5)"), [
                 "extent", "--aspect", "4:5", "--bg", "#0d0e12",
             ], _ICON_WEB),
-            ("Letterbox Stories / Shorts (9:16)", [
+            (n_("Letterbox Stories / Shorts (9:16)"), [
                 "extent", "--aspect", "9:16", "--bg", "#0d0e12",
             ], _ICON_WEB),
-            ("Letterbox personalizado…", ["--dialog=extent"], _ICON_WEB),
+            (n_("Letterbox personalizado…"), ["--dialog=extent"], _ICON_WEB),
         ],
     ),
     (
         "metadata",
-        "Metadados",
+        n_("Metadados"),
         "dialog-information-symbolic",
         "image",
         [
-            ("Ver metadados…", ["--dialog=metadata"], _ICON_INFO),
-            ("Remover tudo (re-encode limpo)", ["--dialog=convert"], _ICON_TRASH),
+            (n_("Ver metadados…"), ["--dialog=metadata"], _ICON_INFO),
+            (n_("Remover tudo (re-encode limpo)"), ["--dialog=convert"], _ICON_TRASH),
         ],
     ),
     (
         "utils",
-        "Utilidades",
+        n_("Utilidades"),
         "applications-graphics-symbolic",
         "image",
         [
-            ("Converter em lote (Prisma)…", ["--dialog=batch"], _ICON_CONVERT),
-            ("Criar GIF animado…", ["--dialog=animate"], _ICON_GIF),
-            ("Comparar 2 imagens…", ["--dialog=compare"], _ICON_COMPARE),
+            (n_("Converter em lote (Prisma)…"), ["--dialog=batch"], _ICON_CONVERT),
+            (n_("Criar GIF animado…"), ["--dialog=animate"], _ICON_GIF),
+            (n_("Comparar 2 imagens…"), ["--dialog=compare"], _ICON_COMPARE),
         ],
     ),
     (
         "ai",
-        "IA",
+        n_("IA"),
         "applications-science-symbolic",
         "image",
         [
-            ("Remover fundo (BiRefNet)", ["--dialog=remove-bg"], _ICON_AI),
+            (n_("Remover fundo (BiRefNet)"), ["--dialog=remove-bg"], _ICON_AI),
         ],
     ),
     (
         "pdf",
-        "PDF",
+        n_("PDF"),
         _ICON_PDF,
         "doc",
         [
-            ("Converter para PDF (LibreOffice)", ["to-pdf"], _ICON_PDF),
+            (n_("Converter para PDF (LibreOffice)"), ["to-pdf"], _ICON_PDF),
         ],
     ),
 ]
 
 # Acoes top-level dentro do submenu Iris (fora de sub-sub-menus).
 _TOP_LEVEL_ACTIONS = [
-    ("Visualizar em BigIris", [], _TOP_ICON),
+    (n_("Visualizar em BigIris"), [], _TOP_ICON),
 ]
 
 
@@ -283,7 +290,7 @@ class BigIrisMenuProvider(GObject.GObject, Nautilus.MenuProvider):
         top = Nautilus.MenuItem(
             name="BigIrisExtension::Top",
             label=_TOP_LABEL,
-            tip="Operações BigIris",
+            tip=_("Operações BigIris"),
             icon=_TOP_ICON,
         )
         top_menu = Nautilus.Menu()
@@ -300,7 +307,7 @@ class BigIrisMenuProvider(GObject.GObject, Nautilus.MenuProvider):
 
             sub_item = Nautilus.MenuItem(
                 name=f"BigIrisExtension::Sub::{sub_id}",
-                label=sub_label,
+                label=_(sub_label),
                 icon=sub_icon,
             )
             sub_menu = Nautilus.Menu()
@@ -309,7 +316,7 @@ class BigIrisMenuProvider(GObject.GObject, Nautilus.MenuProvider):
             for action_label, action_args, action_icon in actions:
                 action_item = Nautilus.MenuItem(
                     name=f"BigIrisExtension::Action::{sub_id}::{action_label}",
-                    label=action_label,
+                    label=_(action_label),
                     icon=action_icon or sub_icon,
                 )
                 # `list(...)` defeats Python's late-binding-closure gotcha —
@@ -362,8 +369,8 @@ class BigIrisMenuProvider(GObject.GObject, Nautilus.MenuProvider):
             return []
         item = Nautilus.MenuItem(
             name="BigIrisExtension::BatchFolder",
-            label="BigIris — Processar esta pasta…",
-            tip="Converter imagens da pasta com o Prisma",
+            label=_("BigIris — Processar esta pasta…"),
+            tip=_("Converter imagens da pasta com o Prisma"),
             icon=_ICON_CONVERT,
         )
         item.connect("activate", self._run_action, ["--dialog=batch"], list(paths))

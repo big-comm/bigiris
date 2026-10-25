@@ -17,12 +17,6 @@ depends=(
 )
 optdepends=(
   'nautilus-python: Nautilus context menu integration'
-  'dolphin: Dolphin file manager integration (KDE)'
-  'nautilus: Nautilus file manager integration (GNOME)'
-  'nemo: Nemo file manager integration (Cinnamon)'
-  'thunar: Thunar file manager integration (XFCE)'
-  'pcmanfm-qt: PCManFM-Qt file manager integration (LXQt)'
-  'io.elementary.files: Files file manager integration (elementary)'
 )
 makedepends=('rust' 'cargo' 'git' 'pkgconf' 'gettext' 'python')
 # Disable LTO. Arch's default makepkg env appends `-flto=auto` to CFLAGS

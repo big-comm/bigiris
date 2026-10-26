@@ -2937,17 +2937,23 @@ fn present_about_dialog(parent: &adw::ApplicationWindow) -> adw::AboutDialog {
 
 /// Compact start page with two actions and file-manager drop/paste support.
 fn build_dashboard(window: &adw::ApplicationWindow) -> gtk::Widget {
-    let content = gtk::Box::new(gtk::Orientation::Vertical, 12);
+    let content = gtk::Box::new(gtk::Orientation::Vertical, 18);
     content.set_valign(gtk::Align::Center);
     content.set_margin_top(16);
     content.set_margin_bottom(16);
     content.set_margin_start(20);
     content.set_margin_end(20);
     let icon = gtk::Image::from_icon_name(APP_ID);
-    icon.set_pixel_size(56);
+    icon.set_pixel_size(128);
     content.append(&icon);
+    // Short windows get a smaller icon so the actions stay in view.
+    if let Ok(condition) = adw::BreakpointCondition::parse("max-height: 440px") {
+        let compact = adw::Breakpoint::new(condition);
+        compact.add_setter(&icon, "pixel-size", Some(&64.to_value()));
+        window.add_breakpoint(compact);
+    }
     let title = gtk::Label::new(Some(&gettext("Abra suas imagens")));
-    title.add_css_class("title-2");
+    title.add_css_class("title-1");
     title.set_wrap(true);
     content.append(&title);
     let hint =
@@ -2957,7 +2963,8 @@ fn build_dashboard(window: &adw::ApplicationWindow) -> gtk::Widget {
     hint.set_justify(gtk::Justification::Center);
     hint.set_max_width_chars(38);
     content.append(&hint);
-    let actions = gtk::Box::new(gtk::Orientation::Vertical, 8);
+    let actions = gtk::Box::new(gtk::Orientation::Vertical, 10);
+    actions.set_margin_top(12);
     let open_btn = gtk::Button::builder()
         .label(gettext("Abrir imagens…"))
         .css_classes(["pill", "suggested-action"])

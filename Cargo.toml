@@ -31,7 +31,7 @@ sha2 = "0.10"
 ort = { version = "=2.0.0-rc.10", default-features = false, features = ["load-dynamic", "ndarray"] }
 ndarray = "0.16"
 gtk4 = { version = "0.11", features = ["v4_12"] }
-libadwaita = { version = "0.9", features = ["v1_5"] }
+libadwaita = { version = "0.9", features = ["v1_6"] }
 directories = "5"
 gettext-rs = { version = "0.8", features = ["gettext-system"] }
 image = { version = "0.25", default-features = false, features = [

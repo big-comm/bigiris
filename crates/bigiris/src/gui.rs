@@ -111,8 +111,7 @@ pub fn run_viewer(files: Vec<PathBuf>) -> i32 {
             .default_width(640)
             .default_height(480)
             .build();
-        let spinner = gtk::Spinner::new();
-        spinner.start();
+        let spinner = adw::Spinner::new();
         waiting.set_content(Some(&spinner));
         waiting.present();
         let input = files.as_ref().clone();
@@ -368,7 +367,7 @@ struct ViewerState {
     /// generation token makes rapid navigation discard stale results.
     loader: ViewerLoader,
     load_generation: u64,
-    loading_spinner: gtk::Spinner,
+    loading_spinner: adw::Spinner,
     /// Dialog de propriedades atualmente aberto, se houver. Evita que
     /// cliques repetidos no botão `i` empilhem janelas.
     props_dialog: Option<adw::ApplicationWindow>,
@@ -650,7 +649,7 @@ fn build_window_tracked(
         .build();
     histogram_area.add_css_class("histogram-overlay");
 
-    let loading_spinner = gtk::Spinner::builder()
+    let loading_spinner = adw::Spinner::builder()
         .halign(gtk::Align::Center)
         .valign(gtk::Align::Center)
         .visible(false)
@@ -1885,7 +1884,6 @@ fn save_edits(state: &Rc<RefCell<ViewerState>>) {
             let mut s = state.borrow_mut();
             s.saving = true;
             s.loading_spinner.set_visible(true);
-            s.loading_spinner.start();
         }
         sync_edit_actions(&state);
 
@@ -1909,7 +1907,6 @@ fn save_edits(state: &Rc<RefCell<ViewerState>>) {
                     {
                         let mut s = state.borrow_mut();
                         s.saving = false;
-                        s.loading_spinner.stop();
                         s.loading_spinner.set_visible(false);
                         if result.is_ok() {
                             s.pending_ops.clear();
@@ -1932,7 +1929,6 @@ fn save_edits(state: &Rc<RefCell<ViewerState>>) {
                 Err(mpsc::TryRecvError::Disconnected) => {
                     let mut s = state.borrow_mut();
                     s.saving = false;
-                    s.loading_spinner.stop();
                     s.loading_spinner.set_visible(false);
                     drop(s);
                     sync_edit_actions(&state);
@@ -2014,7 +2010,6 @@ fn request_frame(state: &Rc<RefCell<ViewerState>>, path: PathBuf, ops: Vec<EditO
     zoom::cancel_pending(&mut s);
     s.load_generation = s.load_generation.wrapping_add(1);
     s.loading_spinner.set_visible(true);
-    s.loading_spinner.start();
     s.loader.request(LoadRequest { generation: s.load_generation, path, ops });
 }
 
@@ -2030,7 +2025,6 @@ fn apply_decoded_frame(state: &Rc<RefCell<ViewerState>>, frame: DecodedFrame) {
 
     let mut s = state.borrow_mut();
     if !s.saving {
-        s.loading_spinner.stop();
         s.loading_spinner.set_visible(false);
     }
     zoom::cancel_pending(&mut s);
@@ -5390,8 +5384,7 @@ fn build_properties_window(app: &adw::Application, path: &Path) -> adw::Applicat
         });
         let _ = tx.send(result);
     });
-    let spinner = gtk::Spinner::new();
-    spinner.start();
+    let spinner = adw::Spinner::new();
     window.set_content(Some(&spinner));
     let weak = window.downgrade();
     let input = path.to_path_buf();
@@ -5772,8 +5765,7 @@ fn make_compare_side(path: &Path, window: &adw::ApplicationWindow) -> gtk::Box {
         .vexpand(true)
         .build();
     column.append(&picture);
-    let spinner = gtk::Spinner::new();
-    spinner.start();
+    let spinner = adw::Spinner::new();
     column.append(&spinner);
     let cancel = Arc::new(AtomicBool::new(false));
     let closing = cancel.clone();

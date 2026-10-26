@@ -9,7 +9,7 @@ pendentes. Não há certificação de ausência universal de bugs ou vazamentos.
 
 BigCommunity GNOME/Wayland, x86_64, Ryzen 7 5800H, 16 CPUs lógicas,
 Rust 1.98.1, GTK 4.22.4, libadwaita 1.9.3, dav1d 1.5.4 e ONNX Runtime 1.29.0.
-MSRV do projeto: 1.92. Runtime GTK mínimo: 4.12; libadwaita: 1.5.
+MSRV do projeto: 1.92. Runtime GTK mínimo: 4.12; libadwaita: 1.6.
 
 Somente imagens sintéticas, fixtures de regressão e diretórios de teste foram
 usados. Alterações preexistentes foram preservadas. Evidências locais ficam

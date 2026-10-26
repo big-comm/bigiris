@@ -9,7 +9,7 @@ depends=(
   'gcc-libs'
   'glibc'
   'gtk4>=4.12'
-  'libadwaita>=1.5'
+  'libadwaita>=1.6'
   'dav1d'            # AVIF decoder
   'openssl'          # TLS for AI model downloads (ureq + native-tls)
   'onnxruntime'      # AI backend (BiRefNet), loaded dynamically

@@ -183,8 +183,7 @@ pub(super) fn prepare_dialog(
     files: Rc<Vec<PathBuf>>,
     fill: DialogInitializer,
 ) {
-    let spinner = gtk::Spinner::new();
-    spinner.start();
+    let spinner = adw::Spinner::new();
     let loading = gtk::Box::new(gtk::Orientation::Vertical, 16);
     loading.set_valign(gtk::Align::Center);
     loading.append(&spinner);

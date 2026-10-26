@@ -527,12 +527,13 @@ fn build_window_preloaded(
     let window_width = if has_images {
         settings.as_ref().map_or(1280, |s| s.int("window-width")).max(480)
     } else {
-        420
+        // Same start-page size as GNOME's image viewer (Loupe).
+        600
     };
     let window_height = if has_images {
         settings.as_ref().map_or(800, |s| s.int("window-height")).max(360)
     } else {
-        360
+        498
     };
     let start_maximized =
         has_images && settings.as_ref().is_some_and(|s| s.boolean("window-maximized"));
@@ -7779,7 +7780,7 @@ mod lifecycle_tests {
         settle();
         assert!(!window.is_maximized(), "start page inherited viewer maximization");
         assert!(
-            window.width() <= 440 && window.height() <= 380,
+            window.width() <= 620 && window.height() <= 520,
             "start page grew to {}x{}",
             window.width(),
             window.height()

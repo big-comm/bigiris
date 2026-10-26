@@ -363,6 +363,9 @@ struct ViewerState {
     /// Histograma RGB da imagem atual: `[0..256]=R, [256..512]=G, [512..768]=B`.
     /// Recalculado em cada `update_display`.
     histogram: [u32; 768],
+    /// Switches between the start page, the picture and the error page.
+    stack: gtk::Stack,
+    error_page: adw::StatusPage,
     /// Invisible pixels that keep the neighbours uploaded to the GPU.
     warm_slots: [gtk::Image; 2],
     /// Decode and edit rendering happen away from GTK's main loop. A
@@ -648,6 +651,13 @@ fn build_window_preloaded(
     let stack = gtk::Stack::new();
     stack.add_named(&status, Some("empty"));
     stack.add_named(&scroller, Some("picture"));
+    // Stays on screen when the current file cannot be read, so a missing or
+    // broken file never leaves a silent black window.
+    let error_page = adw::StatusPage::builder()
+        .icon_name("image-missing-symbolic")
+        .title(gettext("Não foi possível abrir a imagem"))
+        .build();
+    stack.add_named(&error_page, Some("error"));
 
     // OSD pill (mpv-style): filename · index · zoom. Hidden by default,
     // pulses on nav/zoom. Crossfade in, slide-down on hide so it feels
@@ -796,6 +806,8 @@ fn build_window_preloaded(
         cursor_hide_source: None,
         slideshow_source: None,
         histogram_area: histogram_area.clone(),
+        stack: stack.clone(),
+        error_page,
         warm_slots,
         histogram: [0u32; 768],
         loader: preload.unwrap_or_else(ViewerLoader::new),
@@ -2178,6 +2190,7 @@ fn show_frame(
     s.natural = natural;
     s.histogram = histogram;
     s.texture = Some(texture);
+    s.stack.set_visible_child_name("picture");
     apply_zoom(s);
     s.histogram_area.queue_draw();
 }
@@ -2388,9 +2401,13 @@ fn apply_decoded_frame(state: &Rc<RefCell<ViewerState>>, frame: DecodedFrame) {
             tracing::error!(path = ?frame.path, %error, "falha ao carregar imagem");
             s.texture = None;
             s.picture.set_paintable(gdk::Paintable::NONE);
-            s.osd_label.set_text(&gettext("Não foi possível abrir a imagem"));
+            let name = frame.path.file_name().map_or_else(
+                || frame.path.display().to_string(),
+                |name| name.to_string_lossy().into_owned(),
+            );
+            s.error_page.set_description(Some(&glib::markup_escape_text(&name)));
+            s.stack.set_visible_child_name("error");
             drop(s);
-            pulse_osd(state);
         }
     }
     schedule_prefetch(state);
@@ -8317,6 +8334,31 @@ mod lifecycle_tests {
         }
         exercise_pointer_zoom(&app, dir.path());
         exercise_prefetch(&app, dir.path());
+
+        // A file that cannot be read keeps an error page on screen.
+        let missing = dir.path().join("missing <&>.jpg");
+        let (window, witness) = build_window_tracked(&app, Rc::new(vec![missing]), 0);
+        window.present();
+        let deadline = std::time::Instant::now() + Duration::from_secs(5);
+        while witness
+            .upgrade()
+            .is_some_and(|s| s.borrow().stack.visible_child_name().as_deref() != Some("error"))
+        {
+            while context.pending() {
+                context.iteration(false);
+            }
+            assert!(std::time::Instant::now() < deadline, "missing file left no error page");
+            std::thread::sleep(Duration::from_millis(5));
+        }
+        assert_eq!(
+            witness.upgrade().unwrap().borrow().error_page.description().as_deref(),
+            Some("missing &lt;&amp;&gt;.jpg")
+        );
+        window.destroy();
+        drop(window);
+        while context.pending() {
+            context.iteration(false);
+        }
 
         // A large collection creates only one page of GTK thumbnails.
         let (large, witness) =

@@ -363,6 +363,8 @@ struct ViewerState {
     /// Histograma RGB da imagem atual: `[0..256]=R, [256..512]=G, [512..768]=B`.
     /// Recalculado em cada `update_display`.
     histogram: [u32; 768],
+    /// Current zoom level shown in the header, e.g. "23%".
+    zoom_level: gtk::Label,
     /// Switches between the start page, the picture and the error page.
     stack: gtk::Stack,
     error_page: adw::StatusPage,
@@ -806,6 +808,12 @@ fn build_window_preloaded(
         cursor_hide_source: None,
         slideshow_source: None,
         histogram_area: histogram_area.clone(),
+        zoom_level: {
+            let label = gtk::Label::new(None);
+            label.set_width_chars(5);
+            label.add_css_class("numeric");
+            label
+        },
         stack: stack.clone(),
         error_page,
         warm_slots,
@@ -921,33 +929,32 @@ fn build_window_preloaded(
     // Quick-buttons do header (esquerda) e menu hamburger (direita).
     // Registrados aqui porque todos fecham sobre `state`.
     install_viewer_actions(app, &window, &state);
-    let open_btn = gtk::Button::from_icon_name("document-open-symbolic");
-    open_btn.set_tooltip_text(Some(&gettext("Abrir imagens (Ctrl+O)")));
-    open_btn.set_action_name(Some("win.open"));
-    header.pack_start(&open_btn);
+    // Header layout follows GNOME's image viewer: navigation as one linked
+    // pair on the left; zoom as one control that shows the current level,
+    // then fullscreen, properties and the main menu on the right. Opening
+    // files lives in the menu (Ctrl+O), so no two buttons share an icon.
+    let has_files = !state.borrow().files.is_empty();
+    let navigation = gtk::Box::new(gtk::Orientation::Horizontal, 0);
+    navigation.add_css_class("linked");
+    navigation.set_visible(has_files);
+    for (icon, tooltip, action) in [
+        ("go-previous-symbolic", gettext("Imagem anterior"), "win.previous"),
+        ("go-next-symbolic", gettext("Próxima imagem"), "win.next"),
+    ] {
+        let button = gtk::Button::from_icon_name(icon);
+        button.set_tooltip_text(Some(&tooltip));
+        button.set_action_name(Some(action));
+        navigation.append(&button);
+    }
+    header.pack_start(&navigation);
 
-    let previous_btn = gtk::Button::from_icon_name("go-previous-symbolic");
-    previous_btn.set_tooltip_text(Some(&gettext("Imagem anterior")));
-    previous_btn.set_action_name(Some("win.previous"));
-    previous_btn.set_visible(!files.is_empty());
-    header.pack_start(&previous_btn);
-
-    let next_btn = gtk::Button::from_icon_name("go-next-symbolic");
-    next_btn.set_tooltip_text(Some(&gettext("Próxima imagem")));
-    next_btn.set_action_name(Some("win.next"));
-    next_btn.set_visible(!files.is_empty());
-    header.pack_start(&next_btn);
+    header.pack_end(&build_header_menu_button(&state));
 
     let info_btn = gtk::Button::from_icon_name("dialog-information-symbolic");
     info_btn.set_tooltip_text(Some(&gettext("Propriedades da imagem (Ctrl+I)")));
     info_btn.set_action_name(Some("win.info"));
-    // Só faz sentido com imagem carregada — na dashboard fica escondido.
-    // Fullscreen fica como F11 e double-click, sem botão dedicado no header
-    // A barra já mantém os controles de janela no lado direito.
-    let has_files = !state.borrow().files.is_empty();
     info_btn.set_visible(has_files);
-    header.pack_start(&info_btn);
-    header.pack_end(&build_header_menu_button(&state));
+    header.pack_end(&info_btn);
 
     let fullscreen_btn = gtk::Button::from_icon_name("view-fullscreen-symbolic");
     fullscreen_btn.set_tooltip_text(Some(&gettext("Tela cheia (F11)")));
@@ -955,23 +962,42 @@ fn build_window_preloaded(
     fullscreen_btn.set_visible(has_files);
     header.pack_end(&fullscreen_btn);
 
-    let zoom_in_btn = gtk::Button::from_icon_name("zoom-in-symbolic");
-    zoom_in_btn.set_tooltip_text(Some(&gettext("Aproximar")));
-    zoom_in_btn.set_action_name(Some("win.zoom-in"));
-    zoom_in_btn.set_visible(has_files);
-    header.pack_end(&zoom_in_btn);
-
-    let fit_btn = gtk::Button::from_icon_name("zoom-fit-best-symbolic");
-    fit_btn.set_tooltip_text(Some(&gettext("Ajustar à janela")));
-    fit_btn.set_action_name(Some("win.zoom-fit"));
-    fit_btn.set_visible(has_files);
-    header.pack_end(&fit_btn);
-
+    let zoom_group = gtk::Box::new(gtk::Orientation::Horizontal, 0);
+    zoom_group.add_css_class("linked");
+    zoom_group.set_visible(has_files);
     let zoom_out_btn = gtk::Button::from_icon_name("zoom-out-symbolic");
     zoom_out_btn.set_tooltip_text(Some(&gettext("Afastar")));
     zoom_out_btn.set_action_name(Some("win.zoom-out"));
-    zoom_out_btn.set_visible(has_files);
-    header.pack_end(&zoom_out_btn);
+    zoom_group.append(&zoom_out_btn);
+    let zoom_menu = gio::Menu::new();
+    zoom_menu.append(Some(&gettext("Ajustar à janela")), Some("win.zoom-fit"));
+    for (label, scale) in [(gettext("Tamanho real (100%)"), 1.0), ("200%".to_string(), 2.0)] {
+        let item = gio::MenuItem::new(Some(&label), None);
+        item.set_action_and_target_value(Some("win.zoom-to"), Some(&scale.to_variant()));
+        zoom_menu.append_item(&item);
+    }
+    let zoom_level = state.borrow().zoom_level.clone();
+    let zoom_btn = gtk::MenuButton::builder()
+        .child(&zoom_level)
+        .menu_model(&zoom_menu)
+        .tooltip_text(gettext("Zoom"))
+        .build();
+    zoom_group.append(&zoom_btn);
+    let zoom_in_btn = gtk::Button::from_icon_name("zoom-in-symbolic");
+    zoom_in_btn.set_tooltip_text(Some(&gettext("Aproximar")));
+    zoom_in_btn.set_action_name(Some("win.zoom-in"));
+    zoom_group.append(&zoom_in_btn);
+    header.pack_end(&zoom_group);
+    {
+        // The fitted level changes with the window size.
+        let scroller = state.borrow().scroller.clone();
+        let state = Rc::downgrade(&state);
+        scroller.hadjustment().connect_changed(move |_| {
+            if let Some(Ok(s)) = state.upgrade().as_ref().map(|state| state.try_borrow()) {
+                s.zoom_level.set_label(&zoom_percent_label(&s));
+            }
+        });
+    }
 
     // Poll decoded frames without blocking GTK. At most the newest valid
     // generation is painted, so fast directory navigation remains smooth.
@@ -1395,11 +1421,7 @@ fn osd_text(state: &Rc<RefCell<ViewerState>>) -> String {
         .file_name()
         .map(|n| n.to_string_lossy().into_owned())
         .unwrap_or_else(|| path.display().to_string());
-    let zoom = match zoom::requested_zoom(&s) {
-        ZoomState::Fit => "Ajustar".to_string(),
-        ZoomState::Scale(x) => format!("{}%", (x * 100.0).round() as i32),
-    };
-    format!("{} · {}/{} · {}", name, s.idx + 1, s.files.len(), zoom)
+    format!("{} · {}/{} · {}", name, s.idx + 1, s.files.len(), zoom_percent_label(&s))
 }
 
 /// Sync the OSD label to the current file/zoom without touching visibility.
@@ -2115,6 +2137,20 @@ fn write_edits_to_disk(path: &Path, ops: &[EditOp]) -> Result<(), Box<dyn std::e
     Ok(())
 }
 
+/// Zoom level as the user sees it. Fitting shows the actual percentage,
+/// like GNOME's image viewer, instead of a mode name.
+fn zoom_percent_label(s: &ViewerState) -> String {
+    if s.texture.is_none() {
+        return "—".to_string();
+    }
+    let viewport = (
+        s.scroller.hadjustment().page_size().max(f64::from(s.scroller.width())) as i32,
+        s.scroller.vadjustment().page_size().max(f64::from(s.scroller.height())) as i32,
+    );
+    let scale = effective_scale(zoom::requested_zoom(s), s.natural, viewport);
+    format!("{}%", (scale * 100.0).round() as i32)
+}
+
 /// Effective on-screen scale factor — used to anchor zoom-in from `Fit` at
 /// the current visual size, so the first click doesn't teleport the image.
 fn effective_scale(zoom: ZoomState, natural: (u32, u32), viewport: (i32, i32)) -> f64 {
@@ -2192,6 +2228,7 @@ fn show_frame(
     s.texture = Some(texture);
     s.stack.set_visible_child_name("picture");
     apply_zoom(s);
+    s.zoom_level.set_label(&zoom_percent_label(s));
     s.histogram_area.queue_draw();
 }
 
@@ -2407,6 +2444,7 @@ fn apply_decoded_frame(state: &Rc<RefCell<ViewerState>>, frame: DecodedFrame) {
             );
             s.error_page.set_description(Some(&glib::markup_escape_text(&name)));
             s.stack.set_visible_child_name("error");
+            s.zoom_level.set_label(&zoom_percent_label(&s));
             drop(s);
         }
     }
@@ -2586,6 +2624,20 @@ fn install_viewer_actions(
         });
     }
     window.add_action(&zoom_fit);
+    let zoom_to = gio::SimpleAction::new("zoom-to", Some(glib::VariantTy::DOUBLE));
+    zoom_to.set_enabled(has_files);
+    {
+        let state = Rc::downgrade(state);
+        zoom_to.connect_activate(move |_, scale| {
+            let (Some(state), Some(scale)) = (state.upgrade(), scale.and_then(|v| v.get::<f64>()))
+            else {
+                return;
+            };
+            set_zoom(&state, ZoomState::Scale(scale));
+            pulse_osd(&state);
+        });
+    }
+    window.add_action(&zoom_to);
 
     // win.copy — copia a textura atual pro clipboard. Qualquer app (Slack,
     // Ctrl+V num chat) consegue colar.
@@ -3351,13 +3403,10 @@ fn refresh_title(state: &Rc<RefCell<ViewerState>>) {
         .unwrap_or_else(|| path.display().to_string());
     // `•` à esquerda sinaliza edições pendentes. Convenção Loupe/TextEditor.
     let name = if s.pending_ops.is_empty() { base_name } else { format!("• {base_name}") };
-    let zoom_desc = match zoom::requested_zoom(&s) {
-        ZoomState::Fit => "Ajustar".to_string(),
-        ZoomState::Scale(x) => format!("{}%", (x * 100.0).round() as i32),
-    };
-    let subtitle = format!("{} de {} · {}", s.idx + 1, s.files.len(), zoom_desc);
+    let subtitle = format!("{} de {}", s.idx + 1, s.files.len());
     s.title.set_title(&name);
     s.title.set_subtitle(&subtitle);
+    s.zoom_level.set_label(&zoom_percent_label(&s));
     drop(s);
     refresh_osd(state);
     refresh_film_strip_active(state);
@@ -7995,6 +8044,7 @@ mod lifecycle_tests {
         anchored("100-percent", full_anchor);
         assert_eq!(state.borrow().picture.width(), 1600);
         assert_eq!(state.borrow().picture.height(), 1200);
+        assert_eq!(state.borrow().zoom_level.label(), "100%", "header zoom level is stale");
         capture_window(&window, "zoom-pointer-100pct");
         let reduced_anchor = image_point();
         window.settings().set_gtk_enable_animations(false);

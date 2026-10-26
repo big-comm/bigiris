@@ -58,20 +58,27 @@ const THEATER_CSS: &str = "
 .theater, .theater scrolledwindow, .theater scrolledwindow > viewport {
     background-color: #101216;
 }
-.film-strip { padding: 4px 8px; }
-.film-strip button { padding: 2px; min-height: 0; min-width: 0; }
-.film-strip button.active-thumb {
-    outline: 2px solid @accent_color;
-    outline-offset: -2px;
+.film-strip-bar { border-radius: 14px; background-color: rgba(0, 0, 0, 0.6); }
+.film-strip { padding: 6px; }
+.film-strip button {
+    padding: 0; min-height: 0; min-width: 0;
+    border-radius: 8px; opacity: 0.6; transition: opacity 150ms ease-out;
 }
+.film-strip button:hover, .film-strip button:focus-visible { opacity: 1; }
+.film-strip button.active-thumb {
+    opacity: 1;
+    outline: 2px solid @accent_color;
+    outline-offset: 2px;
+}
+.histogram-overlay { border-radius: 12px; }
 .viewer-loading { padding: 12px; border-radius: 8px; background: @window_bg_color; color: @window_fg_color; }
 .plasma headerbar button { border-radius: 6px; }
 .plasma .suggested-action { border-radius: 6px; }
 .plasma .viewer-osd { border-radius: 8px; }
 ";
 
-/// Pixel size of each thumbnail in the film strip (longest edge).
-const THUMB_EDGE: u32 = 80;
+/// Side of each square film-strip cell, in logical pixels.
+const THUMB_EDGE: u32 = 64;
 
 const fn n_(text: &'static str) -> &'static str {
     text
@@ -691,14 +698,18 @@ fn build_window_preloaded(
     // Film strip: horizontal row of thumbnail buttons, revealed only when
     // the cursor touches the bottom edge zone. Thumbs are built up lazily
     // (one per idle tick) so huge selections don't stall startup.
-    let film_strip_box = gtk::Box::new(gtk::Orientation::Horizontal, 4);
+    let film_strip_box = gtk::Box::new(gtk::Orientation::Horizontal, 8);
     film_strip_box.add_css_class("film-strip");
+    // A rounded bar that hugs the thumbnails and scrolls when they do not
+    // fit, centred like the OSD controls of GNOME's media apps.
     let film_strip_scroll = gtk::ScrolledWindow::builder()
         .hscrollbar_policy(gtk::PolicyType::Automatic)
         .vscrollbar_policy(gtk::PolicyType::Never)
+        .propagate_natural_width(true)
+        .overflow(gtk::Overflow::Hidden)
         .child(&film_strip_box)
-        .height_request(96)
         .build();
+    film_strip_scroll.add_css_class("film-strip-bar");
 
     let film_strip_buttons = Vec::new();
 
@@ -707,7 +718,10 @@ fn build_window_preloaded(
         .transition_duration(220)
         .reveal_child(false)
         .valign(gtk::Align::End)
-        .halign(gtk::Align::Fill)
+        .halign(gtk::Align::Center)
+        .margin_start(12)
+        .margin_end(12)
+        .margin_bottom(12)
         .child(&film_strip_scroll)
         .build();
     // If there are fewer than two files the strip is meaningless — keep
@@ -721,14 +735,15 @@ fn build_window_preloaded(
     // tecla `G` alterna. Tamanho fixo porque o frame sempre renderiza
     // 256 bins — deixar o widget esticar distorceria as colunas.
     let histogram_area = gtk::DrawingArea::builder()
-        .width_request(260)
-        .height_request(104)
+        .width_request(276)
+        .height_request(120)
         .halign(gtk::Align::End)
         .valign(gtk::Align::Start)
-        .margin_top(8)
-        .margin_end(8)
+        .margin_top(12)
+        .margin_end(12)
         .visible(false)
         .build();
+    histogram_area.add_css_class("osd");
     histogram_area.add_css_class("histogram-overlay");
 
     let loading_spinner = adw::Spinner::builder()
@@ -1187,12 +1202,26 @@ fn build_window_preloaded(
     (window, Rc::downgrade(&state))
 }
 
+/// The picture inside a film-strip cell.
+fn thumb_picture(button: &gtk::Button) -> Option<gtk::Picture> {
+    button.child().and_downcast::<gtk::Overlay>()?.last_child().and_downcast::<gtk::Picture>()
+}
+
 /// Decode a small film-strip frame off the GTK thread. The source codec may
 /// still need to read the full image, but only the downscaled RGBA buffer is
 /// handed to GDK/GPU memory.
 fn decode_thumbnail(path: &Path) -> Result<(Vec<u8>, u32, u32), Box<dyn std::error::Error>> {
     let img = bigimage_core::open_image(path)?;
-    let thumb = img.thumbnail(THUMB_EDGE, THUMB_EDGE).to_rgba8();
+    // Cells crop to a square, so the short side must cover the cell; twice
+    // the cell keeps thumbnails sharp on HiDPI screens.
+    let short = f64::from(img.width().min(img.height()).max(1));
+    let scale = f64::from(THUMB_EDGE * 2) / short;
+    let thumb = img
+        .thumbnail(
+            (f64::from(img.width()) * scale).ceil() as u32,
+            (f64::from(img.height()) * scale).ceil() as u32,
+        )
+        .to_rgba8();
     let (w, h) = thumb.dimensions();
     Ok((thumb.into_raw(), w, h))
 }
@@ -1220,10 +1249,16 @@ fn rebuild_film_strip(state: &Rc<RefCell<ViewerState>>) {
     }
     let mut buttons = Vec::new();
     for (offset, path) in files.iter().skip(start).take(PAGE).enumerate() {
+        // The cell's size comes from a fixed square; the picture is an overlay
+        // on it, so wide or tall images are cropped instead of widening it.
         let picture = gtk::Picture::new();
-        picture.set_content_fit(gtk::ContentFit::Contain);
-        picture.set_size_request(THUMB_EDGE as i32, THUMB_EDGE as i32);
-        let button = gtk::Button::builder().child(&picture).build();
+        picture.set_content_fit(gtk::ContentFit::Cover);
+        let cell = gtk::Overlay::new();
+        let square = gtk::Box::new(gtk::Orientation::Horizontal, 0);
+        square.set_size_request(THUMB_EDGE as i32, THUMB_EDGE as i32);
+        cell.set_child(Some(&square));
+        cell.add_overlay(&picture);
+        let button = gtk::Button::builder().child(&cell).overflow(gtk::Overflow::Hidden).build();
         let name = path.file_name().unwrap_or_default().to_string_lossy();
         button.set_tooltip_text(Some(&name));
         button.update_property(&[gtk::accessible::Property::Label(&name)]);
@@ -1257,7 +1292,7 @@ fn rebuild_film_strip(state: &Rc<RefCell<ViewerState>>) {
             let s = state.borrow();
             let button = weak_buttons.get(offset).and_then(|w| w.upgrade());
             if let (Some(texture), Some(button)) = (s.texture.as_ref(), button) {
-                if let Some(picture) = button.child().and_downcast::<gtk::Picture>() {
+                if let Some(picture) = thumb_picture(&button) {
                     picture.set_paintable(Some(texture));
                 }
             }
@@ -1306,7 +1341,7 @@ fn start_thumbnail_decoding(
             match rx.try_recv() {
                 Ok((index, raw, w, h)) => {
                     if let Some(button) = weak_buttons.get(index).and_then(|w| w.upgrade()) {
-                        if let Some(picture) = button.child().and_downcast::<gtk::Picture>() {
+                        if let Some(picture) = thumb_picture(&button) {
                             picture.set_paintable(Some(&texture_from_rgba(raw, w, h)));
                         }
                     }
@@ -1870,17 +1905,12 @@ fn toggle_histogram(state: &Rc<RefCell<ViewerState>>) {
 /// menores que 256 não perdem picos isolados.
 fn draw_histogram(state: &Rc<RefCell<ViewerState>>, cr: &gtk::cairo::Context, w: i32, h: i32) {
     let hist = state.borrow().histogram;
-    let w = w as f64;
-    let h = h as f64;
-
-    // Fundo — preto translúcido + borda sutil, legível sobre qualquer foto.
-    cr.set_source_rgba(0.0, 0.0, 0.0, 0.55);
-    cr.rectangle(0.0, 0.0, w, h);
-    let _ = cr.fill();
-    cr.set_source_rgba(1.0, 1.0, 1.0, 0.15);
-    cr.set_line_width(1.0);
-    cr.rectangle(0.5, 0.5, w - 1.0, h - 1.0);
-    let _ = cr.stroke();
+    // The rounded OSD background comes from CSS; bars sit inside a margin
+    // so they never touch the corners.
+    const INSET: f64 = 8.0;
+    cr.translate(INSET, INSET);
+    let w = (w as f64 - 2.0 * INSET).max(1.0);
+    let h = (h as f64 - 2.0 * INSET).max(1.0);
 
     // Colapsa os 256 bins pra largura do widget. Se w < 256, cada coluna
     // representa um intervalo; somamos os bins pra não perder picos.
@@ -1897,7 +1927,7 @@ fn draw_histogram(state: &Rc<RefCell<ViewerState>>, cr: &gtk::cairo::Context, w:
         bars.iter().map(|b| b[1]).max().unwrap_or(1).max(1),
         bars.iter().map(|b| b[2]).max().unwrap_or(1).max(1),
     ];
-    let inner_h = h - 2.0;
+    let inner_h = h;
     // Canais em ordem B, G, R — fica mais parecido com Photoshop (R mais
     // destacado no topo dos overlaps aditivos).
     let channels: [(usize, (f64, f64, f64)); 3] =
@@ -1907,7 +1937,7 @@ fn draw_histogram(state: &Rc<RefCell<ViewerState>>, cr: &gtk::cairo::Context, w:
         for (i, bucket) in bars.iter().enumerate() {
             let v = bucket[idx] as f64 / max_per_channel[idx] as f64;
             let bar_h = v * inner_h;
-            cr.rectangle((i as f64) + 0.5, h - 1.0 - bar_h, 1.0, bar_h);
+            cr.rectangle(i as f64, h - bar_h, 1.0, bar_h);
         }
         let _ = cr.fill();
     }
@@ -3038,6 +3068,10 @@ fn show_metadata_for_current(state: &Rc<RefCell<ViewerState>>) {
     };
     let Some(app) = window.application().and_downcast::<adw::Application>() else { return };
     let dialog = build_properties_window(&app, &path);
+    // Attached to the viewer: GTK then drops minimize/maximize, as for any
+    // dialog, and the window closes with its parent.
+    dialog.set_transient_for(Some(&window));
+    dialog.set_destroy_with_parent(true);
     // Quando o user fecha, soltamos a referência — próximo clique abre fresco.
     {
         let state = Rc::downgrade(state);
@@ -3157,26 +3191,12 @@ fn present_shortcuts_dialog(parent: &adw::ApplicationWindow) {
             vec![("<ctrl>question", gettext("Este diálogo")), ("F1", gettext("Sobre"))],
         ),
     ];
-    let names: Vec<_> = shortcuts.iter().map(|(name, _)| name.as_str()).collect();
-    let categories = gtk::StringList::new(&names);
-    let selector = gtk::DropDown::builder()
-        .model(&categories)
-        .tooltip_text(gettext("Categoria dos atalhos"))
-        .hexpand(true)
-        .build();
-    let pages = gtk::Stack::builder().vhomogeneous(false).hhomogeneous(false).build();
-    for (index, (_, entries)) in shortcuts.into_iter().enumerate() {
-        let list = gtk::ListBox::builder().selection_mode(gtk::SelectionMode::None).build();
-        list.add_css_class("boxed-list");
-        list.set_valign(gtk::Align::Start);
+    // One scrolling page with a group per category, like GNOME's own
+    // shortcut windows: everything is visible without picking a category.
+    let page = adw::PreferencesPage::new();
+    for (name, entries) in shortcuts {
+        let group = adw::PreferencesGroup::builder().title(name).build();
         for (accel, desc) in entries {
-            let row = gtk::Box::new(gtk::Orientation::Horizontal, 12);
-            row.set_margin_start(12);
-            row.set_margin_end(12);
-            row.set_margin_top(8);
-            row.set_margin_bottom(8);
-            let title =
-                gtk::Label::builder().label(desc).xalign(0.0).hexpand(true).wrap(true).build();
             let key_text = if accel == "scroll_wheel" {
                 gettext("Roda do mouse")
             } else {
@@ -3193,45 +3213,22 @@ fn present_shortcuts_dialog(parent: &adw::ApplicationWindow) {
                     .collect::<Vec<_>>()
                     .join(" / ")
             };
-            let keys = gtk::Label::builder().label(key_text).build();
+            let keys = gtk::Label::builder().label(key_text).valign(gtk::Align::Center).build();
             keys.add_css_class("dim-label");
-            row.append(&title);
-            row.append(&keys);
-            let list_row =
-                gtk::ListBoxRow::builder().activatable(false).selectable(false).child(&row).build();
-            list.append(&list_row);
+            keys.add_css_class("numeric");
+            let row = adw::ActionRow::builder().title(desc).use_markup(false).build();
+            row.add_suffix(&keys);
+            group.add(&row);
         }
-        pages.add_named(&list, Some(&index.to_string()));
+        page.add(&group);
     }
-    pages.set_visible_child_name("0");
-    {
-        let pages = pages.downgrade();
-        selector.connect_selected_notify(move |selector| {
-            if let Some(pages) = pages.upgrade() {
-                pages.set_visible_child_name(&selector.selected().to_string());
-            }
-        });
-    }
-    let scroller = gtk::ScrolledWindow::builder()
-        .hscrollbar_policy(gtk::PolicyType::Never)
-        .vscrollbar_policy(gtk::PolicyType::Automatic)
-        .vexpand(true)
-        .child(&pages)
-        .build();
-    let content = gtk::Box::new(gtk::Orientation::Vertical, 12);
-    content.set_margin_start(16);
-    content.set_margin_end(16);
-    content.set_margin_top(12);
-    content.set_margin_bottom(16);
-    content.append(&selector);
-    content.append(&scroller);
     let layout = adw::ToolbarView::new();
     layout.add_top_bar(&adw::HeaderBar::new());
-    layout.set_content(Some(&content));
+    layout.set_content(Some(&page));
     let dialog = adw::Dialog::builder()
         .title(gettext("Atalhos de teclado"))
-        .content_width(420)
-        .content_height(320)
+        .content_width(440)
+        .content_height(520)
         .child(&layout)
         .build();
     dialog.present(Some(parent));
@@ -5894,8 +5891,13 @@ fn build_properties_file_group(
     // files (Nextcloud `.chunking-*`, browser `.part`/`.crdownload`, `.tmp`)
     // even when the bytes are a valid PNG/JPEG/etc. Falls back to extension
     // when sniffing fails (truly unknown / corrupt / non-image file).
-    let ext = path.extension().map(|e| e.to_string_lossy().to_uppercase());
-    let sniffed = info.and_then(|i| i.format.clone());
+    let canonical = |name: &str| match name.to_uppercase().as_str() {
+        "JPG" => "JPEG".to_string(),
+        "TIF" => "TIFF".to_string(),
+        other => other.to_string(),
+    };
+    let ext = path.extension().map(|e| canonical(&e.to_string_lossy()));
+    let sniffed = info.and_then(|i| i.format.as_deref()).map(canonical);
     match (sniffed, ext) {
         (Some(s), Some(e)) if s != e => {
             group.add(&info_row("Formato", &format!("{s} (extensão: {e})")));
@@ -8268,15 +8270,11 @@ mod lifecycle_tests {
         present_shortcuts_dialog(&window);
         settle();
         let dialog = window.visible_dialog().unwrap();
-        assert!(dialog.child().unwrap().height() <= 340, "shortcuts exceeded compact height");
+        assert!(
+            dialog.child().unwrap().height() <= window.height(),
+            "shortcuts exceeded the window"
+        );
         capture_window(&window, "shortcuts");
-        let selector = find_widget(&dialog, &mut |widget| widget.is::<gtk::DropDown>())
-            .unwrap()
-            .downcast::<gtk::DropDown>()
-            .unwrap();
-        selector.set_selected(3);
-        settle();
-        capture_window(&window, "shortcuts-editing");
         dialog.close();
         settle();
         window.set_default_size(360, 420);
@@ -8291,7 +8289,6 @@ mod lifecycle_tests {
         capture_window(&window, "shortcuts-narrow");
         window.visible_dialog().unwrap().close();
         settle();
-        drop(selector);
         drop(dialog);
         drop(about_window);
         drop(about);

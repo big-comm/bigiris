@@ -104,7 +104,12 @@ pub fn run_viewer(files: Vec<PathBuf>) -> i32 {
     // segundo plano. Nenhuma janela intermediária aparece antes da foto.
     let preload = files.first().map(|first| {
         let loader = ViewerLoader::new();
-        loader.request(LoadRequest { generation: 1, path: first.clone(), ops: Vec::new() });
+        loader.request(LoadRequest {
+            generation: 1,
+            path: first.clone(),
+            ops: Vec::new(),
+            max_pixels: None,
+        });
         loader
     });
     let folder = (files.len() == 1).then(|| {
@@ -358,10 +363,27 @@ struct ViewerState {
     /// Histograma RGB da imagem atual: `[0..256]=R, [256..512]=G, [512..768]=B`.
     /// Recalculado em cada `update_display`.
     histogram: [u32; 768],
+    /// Invisible pixels that keep the neighbours uploaded to the GPU.
+    warm_slots: [gtk::Image; 2],
     /// Decode and edit rendering happen away from GTK's main loop. A
     /// generation token makes rapid navigation discard stale results.
     loader: ViewerLoader,
     load_generation: u64,
+    /// Decodes the previous and next files while the current one is on
+    /// screen, so arrow keys switch without waiting for a decode.
+    prefetcher: ViewerLoader,
+    /// File the prefetcher is decoding right now.
+    prefetching: Option<PathBuf>,
+    /// The current file and its neighbours, ready to show.
+    frame_cache: Vec<CachedFrame>,
+    /// Files too large to keep in memory ahead of time.
+    prefetch_skip: Vec<PathBuf>,
+    /// False while the current file is still being decoded; prefetching
+    /// waits so it never competes with the image the user asked for.
+    current_ready: bool,
+    /// The current file is the one the prefetcher is already decoding, so
+    /// its result is shown instead of decoding the same file twice.
+    awaiting_prefetch: bool,
     /// Thumbnails wait for the first image so they never compete with it.
     first_frame_shown: bool,
     deferred_thumbnails: Option<Box<dyn FnOnce()>>,
@@ -399,13 +421,45 @@ struct LoadRequest {
     generation: u64,
     path: PathBuf,
     ops: Vec<EditOp>,
+    /// Skip files whose header reports more pixels than this.
+    max_pixels: Option<u64>,
 }
 
 #[derive(Debug)]
 struct DecodedFrame {
     generation: u64,
     path: PathBuf,
+    /// Modification time read before decoding, to spot later changes.
+    modified: Option<std::time::SystemTime>,
+    /// Pixels include in-memory edits, so they do not match the file.
+    edited: bool,
     pixels: Result<RawFrame, String>,
+}
+
+/// A decoded file kept ready on the GTK side.
+#[derive(Clone)]
+struct CachedFrame {
+    path: PathBuf,
+    modified: Option<std::time::SystemTime>,
+    texture: gdk::Texture,
+    natural: (u32, u32),
+    histogram: Histogram,
+}
+
+/// Neighbours above this size are not decoded ahead: three of them would
+/// hold more than half a gigabyte of RGBA pixels.
+const PREFETCH_MAX_PIXELS: u64 = 40_000_000;
+
+/// Pixel count from the file header, without decoding. `None` for formats
+/// the `image` crate cannot probe (RAW, HEIF…); those are decoded anyway.
+fn header_pixels(path: &Path) -> Option<u64> {
+    let (w, h) =
+        image::ImageReader::open(path).ok()?.with_guessed_format().ok()?.into_dimensions().ok()?;
+    Some(u64::from(w) * u64::from(h))
+}
+
+fn file_modified(path: &Path) -> Option<std::time::SystemTime> {
+    std::fs::metadata(path).and_then(|meta| meta.modified()).ok()
 }
 
 /// One coalescing decode worker per viewer. When the user holds an arrow
@@ -439,10 +493,19 @@ impl ViewerLoader {
                     }
                     slot.take().expect("request checked above")
                 };
-                let pixels = crate::codec::with_cancel(worker_stopped.clone(), || {
-                    decode_frame(&request.path, &request.ops)
-                })
-                .map_err(|e| e.to_string());
+                let modified = file_modified(&request.path);
+                let edited = !request.ops.is_empty();
+                let oversized = request.max_pixels.is_some_and(|max| {
+                    header_pixels(&request.path).is_some_and(|pixels| pixels > max)
+                });
+                let pixels = if oversized {
+                    Err("image too large to prefetch".to_string())
+                } else {
+                    crate::codec::with_cancel(worker_stopped.clone(), || {
+                        decode_frame(&request.path, &request.ops)
+                    })
+                    .map_err(|e| e.to_string())
+                };
                 if worker_stopped.load(Ordering::Relaxed) {
                     break;
                 }
@@ -450,6 +513,8 @@ impl ViewerLoader {
                 *worker_results.lock().expect("viewer result slot poisoned") = Some(DecodedFrame {
                     generation: request.generation,
                     path: request.path,
+                    modified,
+                    edited,
                     pixels,
                 });
             })
@@ -667,6 +732,19 @@ fn build_window_preloaded(
     overlay.add_overlay(&strip_revealer);
     overlay.add_overlay(&histogram_area);
     overlay.add_overlay(&loading_spinner);
+    // One-pixel, nearly transparent copies of the neighbours. Drawing them
+    // in the normal frame makes the renderer upload them to the GPU ahead
+    // of time without blocking, so an arrow key only swaps textures.
+    let warm_slots = [gtk::Image::new(), gtk::Image::new()];
+    for slot in &warm_slots {
+        slot.set_pixel_size(1);
+        slot.set_halign(gtk::Align::Start);
+        slot.set_valign(gtk::Align::Start);
+        slot.set_opacity(0.01);
+        slot.set_can_target(false);
+        slot.set_accessible_role(gtk::AccessibleRole::Presentation);
+        overlay.add_overlay(slot);
+    }
 
     let toolbar_view = adw::ToolbarView::new();
     toolbar_view.add_top_bar(&header);
@@ -718,9 +796,16 @@ fn build_window_preloaded(
         cursor_hide_source: None,
         slideshow_source: None,
         histogram_area: histogram_area.clone(),
+        warm_slots,
         histogram: [0u32; 768],
         loader: preload.unwrap_or_else(ViewerLoader::new),
         load_generation: u64::from(preloaded),
+        prefetcher: ViewerLoader::new(),
+        prefetching: None,
+        frame_cache: Vec::new(),
+        prefetch_skip: Vec::new(),
+        current_ready: false,
+        awaiting_prefetch: false,
         first_frame_shown: false,
         deferred_thumbnails: None,
         loading_spinner: loading_spinner.clone(),
@@ -788,6 +873,8 @@ fn build_window_preloaded(
             if let Some(state) = state.upgrade() {
                 let mut s = state.borrow_mut();
                 s.loader.stop();
+                s.prefetcher.stop();
+                s.frame_cache.clear();
                 for source in [
                     s.top_hide_source.take(),
                     s.bottom_hide_source.take(),
@@ -881,11 +968,16 @@ fn build_window_preloaded(
         glib::timeout_add_local(std::time::Duration::from_millis(16), move || {
             if state.borrow().window_weak.upgrade().is_none_or(|window| !window.is_visible()) {
                 state.borrow().loader.stop();
+                state.borrow().prefetcher.stop();
                 return glib::ControlFlow::Break;
             }
             let frame = state.borrow().loader.take_result();
             if let Some(frame) = frame {
                 apply_decoded_frame(&state, frame);
+            }
+            let prefetched = state.borrow().prefetcher.take_result();
+            if let Some(frame) = prefetched {
+                apply_prefetched_frame(&state, frame);
             }
             glib::ControlFlow::Continue
         });
@@ -2037,8 +2129,169 @@ fn update_display(state: &Rc<RefCell<ViewerState>>) {
     // (after undoing back to the original) must not leak into the next image.
     state.borrow_mut().redo_ops.clear();
     sync_edit_actions(state);
-    request_frame(state, path, Vec::new());
+    if !show_cached_frame(state, &path) {
+        let in_flight = state.borrow().prefetching.as_ref() == Some(&path);
+        if in_flight {
+            let mut s = state.borrow_mut();
+            zoom::cancel_pending(&mut s);
+            // Drop any older decode still running for the previous file.
+            s.load_generation = s.load_generation.wrapping_add(1);
+            s.current_ready = false;
+            s.awaiting_prefetch = true;
+        } else {
+            request_frame(state, path, Vec::new());
+        }
+    }
     refresh_title(state);
+}
+
+/// Show `path` from the prefetch cache. Returns false when it is not
+/// there or the file changed on disk since it was decoded.
+fn show_cached_frame(state: &Rc<RefCell<ViewerState>>, path: &Path) -> bool {
+    let modified = file_modified(path);
+    {
+        let mut s = state.borrow_mut();
+        let Some(pos) = s.frame_cache.iter().position(|frame| frame.path == path) else {
+            return false;
+        };
+        if modified.is_none() || s.frame_cache[pos].modified != modified {
+            s.frame_cache.remove(pos);
+            return false;
+        }
+        let frame = s.frame_cache[pos].clone();
+        zoom::cancel_pending(&mut s);
+        s.load_generation = s.load_generation.wrapping_add(1);
+        s.awaiting_prefetch = false;
+        s.current_ready = true;
+        show_frame(&mut s, frame.texture, frame.natural, frame.histogram);
+    }
+    schedule_prefetch(state);
+    true
+}
+
+fn show_frame(
+    s: &mut ViewerState,
+    texture: gdk::Texture,
+    natural: (u32, u32),
+    histogram: Histogram,
+) {
+    s.natural = natural;
+    s.histogram = histogram;
+    s.texture = Some(texture);
+    apply_zoom(s);
+    s.histogram_area.queue_draw();
+}
+
+/// Keep the cached neighbours drawn in the invisible warm-up slots.
+fn refresh_warm_slots(s: &ViewerState) {
+    let neighbours = neighbour_paths(s);
+    for (i, slot) in s.warm_slots.iter().enumerate() {
+        let texture = neighbours
+            .get(i)
+            .and_then(|path| s.frame_cache.iter().find(|frame| &frame.path == path))
+            .map(|frame| frame.texture.clone());
+        slot.set_paintable(texture.as_ref());
+    }
+}
+
+fn remember_frame(s: &mut ViewerState, frame: CachedFrame) {
+    if u64::from(frame.natural.0) * u64::from(frame.natural.1) > PREFETCH_MAX_PIXELS {
+        return;
+    }
+    s.frame_cache.retain(|cached| cached.path != frame.path);
+    s.frame_cache.push(frame);
+}
+
+/// Previous and next files, nearest first, without the current one.
+fn neighbour_paths(s: &ViewerState) -> Vec<PathBuf> {
+    let total = s.files.len();
+    if total < 2 {
+        return Vec::new();
+    }
+    let next = (s.idx + 1) % total;
+    let previous = (s.idx + total - 1) % total;
+    let mut paths = vec![s.files[next].clone()];
+    if previous != next {
+        paths.push(s.files[previous].clone());
+    }
+    paths
+}
+
+/// Decode the next missing neighbour, one at a time, once the current
+/// image is on screen. Frames that are no longer neighbours are freed.
+fn schedule_prefetch(state: &Rc<RefCell<ViewerState>>) {
+    let mut s = state.borrow_mut();
+    let wanted = neighbour_paths(&s);
+    let current = s.files.get(s.idx).cloned();
+    s.frame_cache
+        .retain(|frame| current.as_ref() == Some(&frame.path) || wanted.contains(&frame.path));
+    refresh_warm_slots(&s);
+    if !s.current_ready || s.prefetching.is_some() || !s.pending_ops.is_empty() {
+        return;
+    }
+    let missing = wanted.into_iter().find(|path| {
+        !s.frame_cache.iter().any(|frame| &frame.path == path) && !s.prefetch_skip.contains(path)
+    });
+    if let Some(path) = missing {
+        s.prefetching = Some(path.clone());
+        s.prefetcher.request(LoadRequest {
+            generation: 0,
+            path,
+            ops: Vec::new(),
+            max_pixels: Some(PREFETCH_MAX_PIXELS),
+        });
+    }
+}
+
+fn apply_prefetched_frame(state: &Rc<RefCell<ViewerState>>, frame: DecodedFrame) {
+    let fallback = {
+        let mut s = state.borrow_mut();
+        s.prefetching = None;
+        let is_current = s.awaiting_prefetch
+            && s.pending_ops.is_empty()
+            && s.files.get(s.idx).is_some_and(|path| path == &frame.path);
+        match frame.pixels {
+            Ok((raw, w, h, histogram)) => {
+                let too_large = u64::from(w) * u64::from(h) > PREFETCH_MAX_PIXELS;
+                if too_large {
+                    s.prefetch_skip.push(frame.path.clone());
+                }
+                if is_current || (!too_large && neighbour_paths(&s).contains(&frame.path)) {
+                    let texture = texture_from_rgba(raw, w, h);
+                    remember_frame(
+                        &mut s,
+                        CachedFrame {
+                            path: frame.path.clone(),
+                            modified: frame.modified,
+                            texture: texture.clone(),
+                            natural: (w, h),
+                            histogram,
+                        },
+                    );
+                    if is_current {
+                        zoom::cancel_pending(&mut s);
+                        s.awaiting_prefetch = false;
+                        s.current_ready = true;
+                        show_frame(&mut s, texture, (w, h), histogram);
+                    }
+                }
+                None
+            }
+            // Let the regular loader report the error for the current file.
+            Err(_) if is_current => {
+                s.awaiting_prefetch = false;
+                Some(frame.path)
+            }
+            Err(_) => {
+                s.prefetch_skip.push(frame.path);
+                None
+            }
+        }
+    };
+    match fallback {
+        Some(path) => request_frame(state, path, Vec::new()),
+        None => schedule_prefetch(state),
+    }
 }
 
 /// Splice the sibling list found in the background into a viewer that was
@@ -2068,6 +2321,7 @@ fn adopt_folder(state: &Rc<RefCell<ViewerState>>, mut files: Vec<PathBuf>, index
     rebuild_film_strip(state);
     refresh_title(state);
     refresh_film_strip_active(state);
+    schedule_prefetch(state);
 }
 
 /// Never discard edits as a side effect of navigation. The user can save or
@@ -2085,7 +2339,9 @@ fn request_frame(state: &Rc<RefCell<ViewerState>>, path: PathBuf, ops: Vec<EditO
     let mut s = state.borrow_mut();
     zoom::cancel_pending(&mut s);
     s.load_generation = s.load_generation.wrapping_add(1);
-    s.loader.request(LoadRequest { generation: s.load_generation, path, ops });
+    s.current_ready = false;
+    s.awaiting_prefetch = false;
+    s.loader.request(LoadRequest { generation: s.load_generation, path, ops, max_pixels: None });
 }
 
 fn apply_decoded_frame(state: &Rc<RefCell<ViewerState>>, frame: DecodedFrame) {
@@ -2109,14 +2365,24 @@ fn apply_decoded_frame(state: &Rc<RefCell<ViewerState>>, frame: DecodedFrame) {
         }
     }
     zoom::cancel_pending(&mut s);
+    s.current_ready = true;
     match frame.pixels {
         Ok((raw, w, h, histogram)) => {
             let texture = texture_from_rgba(raw, w, h);
-            s.natural = (w, h);
-            s.histogram = histogram;
-            s.texture = Some(texture);
-            apply_zoom(&s);
-            s.histogram_area.queue_draw();
+            if !frame.edited {
+                remember_frame(
+                    &mut s,
+                    CachedFrame {
+                        path: frame.path,
+                        modified: frame.modified,
+                        texture: texture.clone(),
+                        natural: (w, h),
+                        histogram,
+                    },
+                );
+            }
+            show_frame(&mut s, texture, (w, h), histogram);
+            drop(s);
         }
         Err(error) => {
             tracing::error!(path = ?frame.path, %error, "falha ao carregar imagem");
@@ -2127,6 +2393,7 @@ fn apply_decoded_frame(state: &Rc<RefCell<ViewerState>>, frame: DecodedFrame) {
             pulse_osd(state);
         }
     }
+    schedule_prefetch(state);
 }
 
 /// Constrói um menu curto para as funções menos frequentes. A navegação e
@@ -7748,6 +8015,68 @@ mod lifecycle_tests {
         wait(&|| witness.upgrade().is_none());
     }
 
+    fn exercise_prefetch(app: &adw::Application, directory: &Path) {
+        let files: Vec<_> = ["prefetch-a.png", "prefetch-b.png", "prefetch-c.png"]
+            .iter()
+            .enumerate()
+            .map(|(i, name)| {
+                let path = directory.join(name);
+                image::RgbImage::from_pixel(64, 48, image::Rgb([i as u8 * 100, 50, 50]))
+                    .save(&path)
+                    .unwrap();
+                path
+            })
+            .collect();
+        let (window, witness) = build_window_tracked(app, Rc::new(files.clone()), 0);
+        window.present();
+        let state = witness.upgrade().unwrap();
+        let context = glib::MainContext::default();
+        let wait = |what: &str, condition: &dyn Fn() -> bool| {
+            let deadline = std::time::Instant::now() + Duration::from_secs(5);
+            while !condition() {
+                while context.pending() {
+                    context.iteration(false);
+                }
+                assert!(std::time::Instant::now() < deadline, "prefetch: {what}");
+                std::thread::sleep(Duration::from_millis(5));
+            }
+        };
+        let cached = |path: &PathBuf| state.borrow().frame_cache.iter().any(|f| &f.path == path);
+        wait("neighbours were not decoded", &|| {
+            cached(&files[1]) && cached(&files[2]) && state.borrow().prefetching.is_none()
+        });
+        assert!(
+            state.borrow().warm_slots.iter().all(|slot| slot.paintable().is_some()),
+            "neighbours are not kept uploaded"
+        );
+
+        // The next image is on screen as soon as the key is handled.
+        let expected = state
+            .borrow()
+            .frame_cache
+            .iter()
+            .find(|f| f.path == files[1])
+            .map(|f| f.texture.clone())
+            .unwrap();
+        navigate_relative(&state, 1);
+        assert_eq!(state.borrow().texture.as_ref(), Some(&expected), "cached frame not shown");
+        assert!(state.borrow().current_ready);
+
+        // A neighbour rewritten after it was decoded is read again.
+        wait("new neighbours were not decoded", &|| {
+            cached(&files[2]) && cached(&files[0]) && state.borrow().prefetching.is_none()
+        });
+        std::thread::sleep(Duration::from_millis(20));
+        image::RgbImage::from_pixel(80, 60, image::Rgb([0, 200, 0])).save(&files[2]).unwrap();
+        navigate_relative(&state, 1);
+        wait("changed file was not reloaded", &|| state.borrow().natural == (80, 60));
+
+        window.destroy();
+        drop(state);
+        drop(window);
+        wait("viewer state leaked", &|| witness.upgrade().is_none());
+    }
+
     fn find_widget(
         widget: &impl IsA<gtk::Widget>,
         predicate: &mut impl FnMut(&gtk::Widget) -> bool,
@@ -7987,6 +8316,7 @@ mod lifecycle_tests {
             );
         }
         exercise_pointer_zoom(&app, dir.path());
+        exercise_prefetch(&app, dir.path());
 
         // A large collection creates only one page of GTK thumbnails.
         let (large, witness) =

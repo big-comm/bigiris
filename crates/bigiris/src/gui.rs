@@ -98,43 +98,38 @@ pub fn run_viewer(files: Vec<PathBuf>) -> i32 {
         .flags(gio::ApplicationFlags::NON_UNIQUE)
         .build();
 
-    let files = Rc::new(files);
-    app.connect_activate(move |app| {
-        install_theater_css();
-        if files.is_empty() {
-            build_window(app, Rc::new(Vec::new()), 0).present();
-            return;
-        }
-        let waiting = adw::ApplicationWindow::builder()
-            .application(app)
-            .title(gettext("BigIris — abrindo imagens"))
-            .default_width(640)
-            .default_height(480)
-            .build();
-        let spinner = adw::Spinner::new();
-        waiting.set_content(Some(&spinner));
-        waiting.present();
-        let input = files.as_ref().clone();
+    // Abrir precisa parecer instantâneo: a decodificação da imagem pedida
+    // começa antes do GTK iniciar e corre em paralelo com a criação da
+    // janela, e a varredura da pasta (setas, film strip) acontece em
+    // segundo plano. Nenhuma janela intermediária aparece antes da foto.
+    let preload = files.first().map(|first| {
+        let loader = ViewerLoader::new();
+        loader.request(LoadRequest { generation: 1, path: first.clone(), ops: Vec::new() });
+        loader
+    });
+    let folder = (files.len() == 1).then(|| {
+        let input = files.clone();
         let cancel = Arc::new(AtomicBool::new(false));
-        let closing = cancel.clone();
-        waiting.connect_unrealize(move |_| closing.store(true, Ordering::Release));
+        let worker_cancel = cancel.clone();
         let (tx, rx) = mpsc::sync_channel(1);
         std::thread::spawn(move || {
-            let _ = tx.send(expand_to_folder_cancellable(input, &cancel));
+            let _ = tx.send(expand_to_folder_cancellable(input, &worker_cancel));
         });
-        let weak = waiting.downgrade();
-        let weak_app = app.downgrade();
+        (rx, cancel)
+    });
+    let startup = RefCell::new(Some((files, preload, folder)));
+    app.connect_activate(move |app| {
+        install_theater_css();
+        let Some((files, preload, folder)) = startup.borrow_mut().take() else { return };
+        let (window, state) = build_window_preloaded(app, Rc::new(files), 0, preload);
+        window.present();
+        let Some((rx, cancel)) = folder else { return };
+        window.connect_unrealize(move |_| cancel.store(true, Ordering::Release));
         glib::timeout_add_local(Duration::from_millis(16), move || {
-            let Some(waiting) = weak.upgrade() else { return glib::ControlFlow::Break };
-            if !waiting.is_visible() {
-                return glib::ControlFlow::Break;
-            }
+            let Some(state) = state.upgrade() else { return glib::ControlFlow::Break };
             match rx.try_recv() {
                 Ok((files, index)) => {
-                    if let Some(app) = weak_app.upgrade() {
-                        build_window(&app, Rc::new(files), index).present();
-                    }
-                    waiting.close();
+                    adopt_folder(&state, files, index);
                     glib::ControlFlow::Break
                 }
                 Err(mpsc::TryRecvError::Empty) => glib::ControlFlow::Continue,
@@ -367,6 +362,10 @@ struct ViewerState {
     /// generation token makes rapid navigation discard stale results.
     loader: ViewerLoader,
     load_generation: u64,
+    /// Thumbnails wait for the first image so they never compete with it.
+    first_frame_shown: bool,
+    deferred_thumbnails: Option<Box<dyn FnOnce()>>,
+    /// Only shown while edits are written to disk; loading shows nothing.
     loading_spinner: adw::Spinner,
     /// Dialog de propriedades atualmente aberto, se houver. Evita que
     /// cliques repetidos no botão `i` empilhem janelas.
@@ -505,19 +504,24 @@ impl ViewerState {
     }
 }
 
-fn build_window(
-    app: &adw::Application,
-    files: Rc<Vec<PathBuf>>,
-    start_idx: usize,
-) -> adw::ApplicationWindow {
-    build_window_tracked(app, files, start_idx).0
-}
-
+#[cfg(test)]
 fn build_window_tracked(
     app: &adw::Application,
     files: Rc<Vec<PathBuf>>,
     start_idx: usize,
 ) -> (adw::ApplicationWindow, std::rc::Weak<RefCell<ViewerState>>) {
+    build_window_preloaded(app, files, start_idx, None)
+}
+
+/// `preload` is a loader that already received generation 1 for
+/// `files[start_idx]`, so the first frame is not requested twice.
+fn build_window_preloaded(
+    app: &adw::Application,
+    files: Rc<Vec<PathBuf>>,
+    start_idx: usize,
+    preload: Option<ViewerLoader>,
+) -> (adw::ApplicationWindow, std::rc::Weak<RefCell<ViewerState>>) {
+    let preloaded = preload.is_some();
     let settings = app_settings();
     let has_images = !files.is_empty();
     let window_width = if has_images {
@@ -714,8 +718,10 @@ fn build_window_tracked(
         slideshow_source: None,
         histogram_area: histogram_area.clone(),
         histogram: [0u32; 768],
-        loader: ViewerLoader::new(),
-        load_generation: 0,
+        loader: preload.unwrap_or_else(ViewerLoader::new),
+        load_generation: u64::from(preloaded),
+        first_frame_shown: false,
+        deferred_thumbnails: None,
         loading_spinner: loading_spinner.clone(),
         props_dialog: None,
         pending_ops: Vec::new(),
@@ -886,7 +892,12 @@ fn build_window_tracked(
 
     if has_files {
         stack.set_visible_child_name("picture");
-        update_display(&state);
+        if preloaded {
+            sync_edit_actions(&state);
+            refresh_title(&state);
+        } else {
+            update_display(&state);
+        }
     } else {
         stack.set_visible_child_name("empty");
         title.set_title("BigIris");
@@ -1106,12 +1117,47 @@ fn rebuild_film_strip(state: &Rc<RefCell<ViewerState>>) {
     let weak_buttons: Vec<_> = buttons.iter().map(|b| b.downgrade()).collect();
     state.borrow_mut().film_strip_buttons = buttons;
     let paths: Vec<_> = files.iter().skip(start).take(PAGE).cloned().collect();
+    // The image on screen is already decoded: its thumbnail reuses the
+    // texture instead of decoding the same file a second time.
+    let current = state.borrow().idx.checked_sub(start).filter(|offset| *offset < paths.len());
+    let weak_state = Rc::downgrade(state);
+    let begin = move || {
+        if let (Some(state), Some(offset)) = (weak_state.upgrade(), current) {
+            let s = state.borrow();
+            let button = weak_buttons.get(offset).and_then(|w| w.upgrade());
+            if let (Some(texture), Some(button)) = (s.texture.as_ref(), button) {
+                if let Some(picture) = button.child().and_downcast::<gtk::Picture>() {
+                    picture.set_paintable(Some(texture));
+                }
+            }
+        }
+        start_thumbnail_decoding(paths, current, cancel, weak_buttons, window);
+    };
+    let mut s = state.borrow_mut();
+    if s.first_frame_shown {
+        drop(s);
+        begin();
+    } else {
+        s.deferred_thumbnails = Some(Box::new(begin));
+    }
+}
+
+fn start_thumbnail_decoding(
+    paths: Vec<PathBuf>,
+    skip: Option<usize>,
+    cancel: Arc<AtomicBool>,
+    weak_buttons: Vec<glib::WeakRef<gtk::Button>>,
+    window: glib::WeakRef<adw::ApplicationWindow>,
+) {
     let (tx, rx) = mpsc::sync_channel(2);
     std::thread::spawn(move || {
         crate::codec::with_cancel(cancel.clone(), || {
             for (index, path) in paths.iter().enumerate() {
                 if cancel.load(Ordering::Acquire) {
                     break;
+                }
+                if Some(index) == skip {
+                    continue;
                 }
                 if let Ok((raw, w, h)) = decode_thumbnail(path) {
                     if tx.send((index, raw, w, h)).is_err() {
@@ -1994,6 +2040,35 @@ fn update_display(state: &Rc<RefCell<ViewerState>>) {
     refresh_title(state);
 }
 
+/// Splice the sibling list found in the background into a viewer that was
+/// opened with only the requested file. The visible image stays as it is.
+fn adopt_folder(state: &Rc<RefCell<ViewerState>>, mut files: Vec<PathBuf>, index: usize) {
+    {
+        let mut s = state.borrow_mut();
+        if files.len() < 2 || s.files.len() != 1 || index >= files.len() {
+            return;
+        }
+        // Keep the exact path of the frame already requested, so a decode
+        // still in flight is not discarded as stale.
+        files[index] = s.files[0].clone();
+        s.files = Rc::new(files);
+        s.idx = index;
+        if app_settings().is_none_or(|settings| settings.boolean("filmstrip-visible")) {
+            s.strip_revealer.set_visible(true);
+            s.strip_revealer.set_can_target(true);
+        }
+    }
+    let window = state.borrow().window();
+    for name in ["previous", "next"] {
+        if let Some(action) = window.lookup_action(name).and_downcast::<gio::SimpleAction>() {
+            action.set_enabled(true);
+        }
+    }
+    rebuild_film_strip(state);
+    refresh_title(state);
+    refresh_film_strip_active(state);
+}
+
 /// Never discard edits as a side effect of navigation. The user can save or
 /// undo them first; slideshow also stops so it cannot repeatedly nag or skip.
 fn can_leave_current(state: &Rc<RefCell<ViewerState>>) -> bool {
@@ -2009,7 +2084,6 @@ fn request_frame(state: &Rc<RefCell<ViewerState>>, path: PathBuf, ops: Vec<EditO
     let mut s = state.borrow_mut();
     zoom::cancel_pending(&mut s);
     s.load_generation = s.load_generation.wrapping_add(1);
-    s.loading_spinner.set_visible(true);
     s.loader.request(LoadRequest { generation: s.load_generation, path, ops });
 }
 
@@ -2026,6 +2100,12 @@ fn apply_decoded_frame(state: &Rc<RefCell<ViewerState>>, frame: DecodedFrame) {
     let mut s = state.borrow_mut();
     if !s.saving {
         s.loading_spinner.set_visible(false);
+    }
+    if !s.first_frame_shown {
+        s.first_frame_shown = true;
+        if let Some(begin) = s.deferred_thumbnails.take() {
+            glib::idle_add_local_once(begin);
+        }
     }
     zoom::cancel_pending(&mut s);
     match frame.pixels {
@@ -2997,10 +3077,10 @@ type RawFrame = (Vec<u8>, u32, u32, Histogram);
 fn decode_frame(path: &Path, ops: &[EditOp]) -> Result<RawFrame, Box<dyn std::error::Error>> {
     let img = bigimage_core::open_image(path)?;
     let edited = ops.iter().fold(img, |acc, op| apply_op_to_image(acc, *op));
-    let rgba = edited.to_rgba8();
+    let rgba = edited.into_rgba8();
     let (w, h) = rgba.dimensions();
     let raw = rgba.into_raw();
-    let histogram = compute_histogram(&raw);
+    let histogram = sampled_histogram(&raw);
     Ok((raw, w, h, histogram))
 }
 
@@ -3011,13 +3091,14 @@ fn texture_from_rgba(raw: Vec<u8>, w: u32, h: u32) -> gdk::Texture {
         .upcast()
 }
 
-/// Conta ocorrências de cada byte (0..256) por canal em um buffer RGBA
-/// contíguo. Ignora alpha — pro histograma do viewer o que importa é a
-/// distribuição de luminância por canal. Retorna `[R..256, G..256, B..256]`
-/// concatenado pra o rendering ficar com `.chunks(256)`.
-fn compute_histogram(rgba: &[u8]) -> [u32; 768] {
+/// The overlay draws each channel relative to its own peak, so a regular
+/// sample of about a million pixels gives the same shape as a full count
+/// at a fraction of the cost on large photos.
+fn sampled_histogram(rgba: &[u8]) -> Histogram {
+    let pixels = rgba.as_chunks::<4>().0;
+    let step = (pixels.len() / 1_000_000).max(1);
     let mut h = [0u32; 768];
-    for px in rgba.as_chunks::<4>().0 {
+    for px in pixels.iter().step_by(step) {
         h[px[0] as usize] += 1;
         h[256 + px[1] as usize] += 1;
         h[512 + px[2] as usize] += 1;
@@ -7050,7 +7131,7 @@ mod anchor_tests {
 
     #[test]
     fn histogram_counts_channels_and_ignores_alpha() {
-        use super::compute_histogram;
+        use super::sampled_histogram;
         // 3 pixels: puro vermelho, puro verde (com alpha zero), puro azul.
         // Alpha deve ser ignorado — só somamos R/G/B no ponto certo.
         let rgba = vec![
@@ -7058,7 +7139,7 @@ mod anchor_tests {
             0, 255, 0, 0, //
             0, 0, 255, 255,
         ];
-        let h = compute_histogram(&rgba);
+        let h = sampled_histogram(&rgba);
         // R: bin 255 += 1 (pixel 0); bin 0 += 2 (pixels 1, 2).
         assert_eq!(h[255], 1);
         assert_eq!(h[0], 2);

@@ -2183,11 +2183,19 @@ fn save_edits(state: &Rc<RefCell<ViewerState>>) {
         .and_then(|e| e.to_str())
         .map(|s| matches!(s.to_ascii_lowercase().as_str(), "jpg" | "jpeg"))
         .unwrap_or(false);
-    let body = if is_jpeg {
+    let mut body = if is_jpeg {
         format!("\"{name}\"\n\n{}", gettext("O arquivo será sobrescrito. JPEG é recodificado a cada gravação; isso pode reduzir a qualidade."))
     } else {
         format!("\"{name}\"\n\n{}", gettext("O arquivo será sobrescrito."))
     };
+    let keeps_metadata = image::ImageFormat::from_path(&path)
+        .ok()
+        .and_then(Format::from_image_format)
+        .is_some_and(|format| bigimage_core::metadata::preserved_by(format).is_complete());
+    if !keeps_metadata {
+        body.push_str("\n\n");
+        body.push_str(&gettext("Este formato não guarda todos os metadados da foto (data, câmera, perfil de cor); o que ele não suportar será removido ou convertido."));
+    }
     let alert =
         adw::AlertDialog::builder().heading(gettext("Salvar alterações?")).body(body).build();
     alert.add_response("cancel", &gettext("Cancelar"));
@@ -2243,7 +2251,9 @@ fn save_edits(state: &Rc<RefCell<ViewerState>>) {
 
 /// Grava em arquivo temporário no mesmo diretório, sincroniza e só então
 /// renomeia por cima do destino. Assim, queda de energia ou falha do encoder
-/// deixa o original intacto. Permissões existentes são preservadas.
+/// deixa o original intacto. Permissões existentes são preservadas, assim
+/// como EXIF (com orientação zerada) e o perfil de cor original quando o
+/// formato os suporta — as edições são só geométricas.
 fn write_edits_to_disk(path: &Path, ops: &[EditOp]) -> Result<(), Box<dyn std::error::Error>> {
     let target = if path.symlink_metadata()?.file_type().is_symlink() {
         path.canonicalize()?
@@ -2251,16 +2261,17 @@ fn write_edits_to_disk(path: &Path, ops: &[EditOp]) -> Result<(), Box<dyn std::e
         path.to_path_buf()
     };
     bigimage_core::content::ensure_static(&target)?;
-    let img = bigimage_core::open_image(&target)?;
+    let (img, source) = bigimage_core::open_image_for_resave(&target)?;
     let edited = ops.iter().fold(img, |acc, op| apply_op_to_image(acc, *op));
     let format = Format::from_image_format(image::ImageFormat::from_path(&target)?)
         .ok_or("formato sem encoder suportado")?;
-    bigimage_core::save_image(
+    bigimage_core::save_image_preserving_metadata(
         edited,
         target,
         format,
         &EncodeOptions::default(),
         OverwritePolicy::Replace,
+        &source,
     )?;
     Ok(())
 }

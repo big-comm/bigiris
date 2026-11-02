@@ -70,6 +70,13 @@ pub fn open_image(path: impl AsRef<std::path::Path>) -> image::ImageResult<image
     pipeline::decode_image(path).map(|(img, _)| img)
 }
 
+/// Format of an image file by its content (magic bytes), with the extension
+/// as fallback, without decoding it. This is the format transforms keep (and
+/// name their output after) when no target format is given.
+pub fn sniff_format(path: impl AsRef<std::path::Path>) -> Option<Format> {
+    pipeline::sniff_format(path.as_ref())
+}
+
 /// Read just the dimensions of an image, dispatching the decoder by content.
 /// See [`open_image`] for why this matters.
 pub fn image_dimensions(path: impl AsRef<std::path::Path>) -> image::ImageResult<(u32, u32)> {

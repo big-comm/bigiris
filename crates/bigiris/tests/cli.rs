@@ -427,3 +427,16 @@ fn inherited_descriptors_do_not_break_the_sandboxed_codec() {
     success(output);
     assert_eq!(image::image_dimensions(dir.path().join("a_rot90.png")).unwrap(), (24, 32));
 }
+
+#[test]
+fn collisions_are_planned_by_content_not_extension() {
+    let dir = tempfile::tempdir().unwrap();
+    sized_fixture(dir.path(), "a.png", 32, 24);
+    // A PNG named .jpg: rotate keeps PNG, so both would write a_rot90.png.
+    sized_fixture(dir.path(), "b.png", 16, 12);
+    std::fs::rename(dir.path().join("b.png"), dir.path().join("a.jpg")).unwrap();
+    let args = ["rotate", "--degrees", "90", "--overwrite", "replace", "a.png", "a.jpg"];
+    let output = run(dir.path(), &args);
+    assert_eq!(output.status.code(), Some(1), "{}", String::from_utf8_lossy(&output.stderr));
+    assert!(!dir.path().join("a_rot90.png").exists());
+}

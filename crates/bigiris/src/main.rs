@@ -818,11 +818,16 @@ fn plan_outputs(files: &[PathBuf], naming: Naming) -> color_eyre::Result<Vec<Vec
             .filter(|dir| !dir.as_os_str().is_empty())
             .unwrap_or(Path::new("."));
         let dir = std::fs::canonicalize(dir).unwrap_or_else(|_| dir.to_path_buf());
+        // Without a target the core keeps the format found in the content,
+        // so `a.jpg` holding a PNG writes `a_<suffix>.png`; plan by the same.
         let extension = naming.extension.map(str::to_owned).unwrap_or_else(|| {
-            let own = file.extension().and_then(|e| e.to_str()).unwrap_or_default();
-            Format::parse(own)
-                .map(|format| format.extension().to_owned())
-                .unwrap_or_else(|_| own.to_ascii_lowercase())
+            bigimage_core::sniff_format(file).map_or_else(
+                || {
+                    let own = file.extension().and_then(|e| e.to_str()).unwrap_or_default();
+                    own.to_ascii_lowercase()
+                },
+                |format| format.extension().to_owned(),
+            )
         });
         let key = (dir, file.file_stem().unwrap_or_default().to_os_string(), extension);
         match index.get(&key) {

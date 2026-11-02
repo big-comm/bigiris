@@ -1238,7 +1238,9 @@ fn to_pdf_one(
     use color_eyre::eyre::eyre;
     use std::os::unix::process::CommandExt;
     // Absolute paths: a relative name such as `-doc.txt` would be an option.
-    let file = std::fs::canonicalize(file).map_err(|e| eyre!("{e}"))?;
+    // Not canonical: a symlink keeps its own name and folder for the PDF,
+    // matching how the outputs were planned.
+    let file = std::path::absolute(file).map_err(|e| eyre!("{e}"))?;
     if !file.is_file() {
         return Err(eyre!("não é um arquivo regular"));
     }

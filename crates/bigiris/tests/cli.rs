@@ -334,6 +334,18 @@ fn to_pdf_without_soffice_is_a_clean_fatal_error() {
 }
 
 #[test]
+fn to_pdf_writes_next_to_a_symlink_under_its_name() {
+    let dir = tempfile::tempdir().unwrap();
+    let bin = fake_soffice();
+    std::fs::create_dir(dir.path().join("real")).unwrap();
+    std::fs::write(dir.path().join("real/target.txt"), b"hello").unwrap();
+    std::os::unix::fs::symlink("real/target.txt", dir.path().join("link.txt")).unwrap();
+    success(to_pdf(dir.path(), bin.path(), "write", &["link.txt"]));
+    assert!(std::fs::read(dir.path().join("link.pdf")).unwrap().starts_with(b"%PDF"));
+    assert!(!dir.path().join("real/target.pdf").exists());
+}
+
+#[test]
 fn to_pdf_verifies_output_and_honours_overwrite_policy() {
     let dir = tempfile::tempdir().unwrap();
     let bin = fake_soffice();

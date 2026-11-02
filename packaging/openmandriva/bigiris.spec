@@ -51,8 +51,10 @@ done < data/po/LINGUAS
 export CARGO_HOME="%{_builddir}/cargo-home"
 export CARGO_TARGET_DIR="%{_builddir}/target"
 export CARGO_NET_OFFLINE=true
-cargo test --locked --offline --release --workspace --all-features
-"%{_builddir}/target/release/bigiris" --self-test
+# Same gate as the Arch PKGBUILD: codec self-test, then the full test suite.
+# Inside a build container that forbids nested namespaces, only the three
+# sandbox-dependent CLI tests are filtered (native CI still runs them).
+bash scripts/package-check.sh "%{_builddir}/target"
 desktop-file-validate data/com.biglinux.Iris.desktop
 appstreamcli validate --no-net data/com.biglinux.Iris.metainfo.xml
 glib-compile-schemas --strict --dry-run data

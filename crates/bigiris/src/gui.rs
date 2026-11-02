@@ -3729,7 +3729,7 @@ fn bind_encode_controls(
     let quality = quality.clone();
     let optimize = optimize.clone();
     let update = move || {
-        let format = CONVERT_FORMATS[selected.selected() as usize].1;
+        let format = selected_format(&selected);
         quality.set_sensitive(matches!(format, Format::Jpeg | Format::Avif));
         optimize.set_sensitive(matches!(format, Format::Png | Format::Avif));
     };
@@ -3744,6 +3744,105 @@ const OVERWRITE_CHOICES: &[(&str, OverwritePolicy)] = &[
     (n_("Incrementar (_1, _2, …)"), OverwritePolicy::Increment),
 ];
 
+/// Run a Prisma dialog as its own GApplication instance. NON_UNIQUE: each
+/// service-menu action is a separate process (see run_viewer); otherwise a
+/// second dialog's activation is forwarded to the first process and lost.
+fn run_dialog_app(activate: impl Fn(&adw::Application) + 'static) -> i32 {
+    let app = adw::Application::builder()
+        .application_id(APP_ID)
+        .flags(gio::ApplicationFlags::NON_UNIQUE)
+        .build();
+    app.connect_activate(activate);
+    let code = app.run_with_args::<&str>(&[]);
+    i32::from(u8::from(code))
+}
+
+/// "Formato de destino" combo listing [`CONVERT_FORMATS`].
+fn format_row() -> adw::ComboRow {
+    let names: Vec<&str> = CONVERT_FORMATS.iter().map(|(n, _)| *n).collect();
+    adw::ComboRow::builder()
+        .use_markup(false)
+        .title(gettext("Formato de destino"))
+        .model(&translated_strings(&names))
+        .build()
+}
+
+fn selected_format(row: &adw::ComboRow) -> Format {
+    CONVERT_FORMATS[row.selected() as usize].1
+}
+
+/// "Formato de destino" combo whose first entry keeps the source format.
+fn target_format_row() -> adw::ComboRow {
+    let mut names = vec![n_("Manter o formato original")];
+    names.extend(CONVERT_FORMATS.iter().map(|(n, _)| *n));
+    adw::ComboRow::builder()
+        .use_markup(false)
+        .title(gettext("Formato de destino"))
+        .model(&translated_strings(&names))
+        .build()
+}
+
+/// `None` keeps the source format; see [`target_format_row`].
+fn selected_target_format(row: &adw::ComboRow) -> Option<Format> {
+    match row.selected() {
+        0 => None,
+        n => Some(CONVERT_FORMATS[(n as usize) - 1].1),
+    }
+}
+
+/// "Se o arquivo de saída existir" combo listing [`OVERWRITE_CHOICES`].
+fn overwrite_row() -> adw::ComboRow {
+    let names: Vec<&str> = OVERWRITE_CHOICES.iter().map(|(n, _)| *n).collect();
+    adw::ComboRow::builder()
+        .use_markup(false)
+        .title(gettext("Se o arquivo de saída existir"))
+        .model(&translated_strings(&names))
+        .build()
+}
+
+fn selected_overwrite(row: &adw::ComboRow) -> OverwritePolicy {
+    OVERWRITE_CHOICES[row.selected() as usize].1
+}
+
+/// "<title>: N" row summarizing the selected files.
+fn selection_row(title: &str, files: &[PathBuf]) -> adw::ActionRow {
+    let row = adw::ActionRow::builder()
+        .use_markup(false)
+        .title(format!("{title}: {}", files.len()))
+        .build();
+    row.set_subtitle(&files_subtitle(files));
+    row
+}
+
+/// Dimmed, wrapping status line under a dialog form.
+fn status_label() -> gtk::Label {
+    let status = gtk::Label::builder().label("").wrap(true).xalign(0.0).build();
+    status.add_css_class("dim-label");
+    status
+}
+
+/// End-aligned Cancel + suggested `apply_label` buttons.
+fn action_buttons(apply_label: &str) -> (gtk::Button, gtk::Button, gtk::Box) {
+    let cancel_btn = gtk::Button::with_label(&gettext("Cancelar"));
+    let apply_btn = gtk::Button::builder().label(apply_label).build();
+    apply_btn.add_css_class("suggested-action");
+    apply_btn.add_css_class("pill");
+    let actions = gtk::Box::builder()
+        .orientation(gtk::Orientation::Horizontal)
+        .spacing(8)
+        .halign(gtk::Align::End)
+        .build();
+    actions.append(&cancel_btn);
+    actions.append(&apply_btn);
+    (cancel_btn, apply_btn, actions)
+}
+
+/// Close `window` when `button` is clicked.
+fn close_on_click(window: &adw::ApplicationWindow, button: &gtk::Button) {
+    let target = window.clone();
+    dialog_signal!(window, button, connect_clicked, move |_| target.close());
+}
+
 /// Interpolation filters for the resize dialog.
 const RESIZE_FILTERS: &[(&str, Filter)] = &[
     (n_("Lanczos3 (padrão)"), Filter::Lanczos3),
@@ -3755,17 +3854,8 @@ const RESIZE_FILTERS: &[(&str, Filter)] = &[
 
 /// Run the "Converter" modal. Returns GTK's exit code.
 pub fn run_convert_dialog(files: Vec<PathBuf>) -> i32 {
-    // NON_UNIQUE: each service-menu action is its own process; see run_viewer.
-    let app = adw::Application::builder()
-        .application_id(APP_ID)
-        .flags(gio::ApplicationFlags::NON_UNIQUE)
-        .build();
     let files = Rc::new(files);
-    app.connect_activate(move |app| {
-        build_convert_dialog(app, files.clone()).present();
-    });
-    let code = app.run_with_args::<&str>(&[]);
-    i32::from(u8::from(code))
+    run_dialog_app(move |app| build_convert_dialog(app, files.clone()).present())
 }
 
 fn build_convert_dialog(app: &adw::Application, files: Rc<Vec<PathBuf>>) -> adw::ApplicationWindow {
@@ -3788,25 +3878,11 @@ fn fill_convert_dialog(
     let title = adw::WindowTitle::new(&gettext("Converter"), "Prisma");
     header.set_title_widget(Some(&title));
 
-    let format_names: Vec<&str> = CONVERT_FORMATS.iter().map(|(n, _)| *n).collect();
-    let format_row = adw::ComboRow::builder()
-        .use_markup(false)
-        .title(gettext("Formato de destino"))
-        .model(&translated_strings(&format_names))
-        .build();
+    let format_row = format_row();
 
-    let overwrite_names: Vec<&str> = OVERWRITE_CHOICES.iter().map(|(n, _)| *n).collect();
-    let overwrite_row = adw::ComboRow::builder()
-        .use_markup(false)
-        .title(gettext("Se o arquivo de saída existir"))
-        .model(&translated_strings(&overwrite_names))
-        .build();
+    let overwrite_row = overwrite_row();
 
-    let files_row = adw::ActionRow::builder()
-        .use_markup(false)
-        .title(format!("{}: {}", gettext("Arquivos selecionados"), files.len()))
-        .build();
-    files_row.set_subtitle(&files_subtitle(&files));
+    let files_row = selection_row(&gettext("Arquivos selecionados"), &files);
 
     let quality_spin = adw::SpinRow::with_range(1.0, 100.0, 1.0);
     quality_spin.set_title(&gettext("Qualidade (JPEG/AVIF)"));
@@ -3861,21 +3937,9 @@ fn fill_convert_dialog(
     folder_row.add_suffix(&clear_folder_btn);
     dest_group.add(&folder_row);
 
-    let status = gtk::Label::builder().label("").wrap(true).xalign(0.0).build();
-    status.add_css_class("dim-label");
+    let status = status_label();
 
-    let cancel_btn = gtk::Button::with_label(&gettext("Cancelar"));
-    let apply_btn = gtk::Button::builder().label(gettext("Converter")).build();
-    apply_btn.add_css_class("suggested-action");
-    apply_btn.add_css_class("pill");
-
-    let actions = gtk::Box::builder()
-        .orientation(gtk::Orientation::Horizontal)
-        .spacing(8)
-        .halign(gtk::Align::End)
-        .build();
-    actions.append(&cancel_btn);
-    actions.append(&apply_btn);
+    let (cancel_btn, apply_btn, actions) = action_buttons(&gettext("Converter"));
 
     // Smart prompt: if the source image has an alpha channel and the user
     // picks JPEG, warn that transparency will be flattened.
@@ -3890,7 +3954,7 @@ fn fill_convert_dialog(
             let format_row_clone = format_row.clone();
             let banner = alpha_banner.clone();
             let update = move || {
-                let fmt = CONVERT_FORMATS[format_row_clone.selected() as usize].1;
+                let fmt = selected_format(&format_row_clone);
                 let warn = matches!(fmt, Format::Jpeg);
                 banner.set_revealed(warn);
             };
@@ -3968,10 +4032,7 @@ fn fill_convert_dialog(
     toolbar_view.set_content(Some(&main_box));
     window.set_content(Some(&toolbar_view));
 
-    {
-        let window = window.clone();
-        dialog_signal!(window, cancel_btn, connect_clicked, move |_| window.close());
-    }
+    close_on_click(&window, &cancel_btn);
 
     {
         let files = files.clone();
@@ -3985,10 +4046,8 @@ fn fill_convert_dialog(
         let window = window.clone();
         let output_dir = output_dir.clone();
         dialog_signal!(window, apply_btn.clone(), connect_clicked, move |_| {
-            let fmt_idx = format_row.selected() as usize;
-            let policy_idx = overwrite_row.selected() as usize;
-            let fmt = CONVERT_FORMATS[fmt_idx].1;
-            let policy = OVERWRITE_CHOICES[policy_idx].1;
+            let fmt = selected_format(&format_row);
+            let policy = selected_overwrite(&overwrite_row);
             let opts = EncodeOptions {
                 quality: Some(quality_spin.value() as u8),
                 optimize: optimize_switch.is_active(),
@@ -4021,17 +4080,8 @@ fn fill_convert_dialog(
 
 /// Run the "Redimensionar" modal.
 pub fn run_resize_dialog(files: Vec<PathBuf>) -> i32 {
-    // NON_UNIQUE: each service-menu action is its own process; see run_viewer.
-    let app = adw::Application::builder()
-        .application_id(APP_ID)
-        .flags(gio::ApplicationFlags::NON_UNIQUE)
-        .build();
     let files = Rc::new(files);
-    app.connect_activate(move |app| {
-        build_resize_dialog(app, files.clone()).present();
-    });
-    let code = app.run_with_args::<&str>(&[]);
-    i32::from(u8::from(code))
+    run_dialog_app(move |app| build_resize_dialog(app, files.clone()).present())
 }
 
 fn build_resize_dialog(app: &adw::Application, files: Rc<Vec<PathBuf>>) -> adw::ApplicationWindow {
@@ -4134,26 +4184,11 @@ fn fill_resize_dialog(
         .model(&translated_strings(&filter_names))
         .build();
 
-    let mut target_names = vec![n_("Manter o formato original")];
-    target_names.extend(CONVERT_FORMATS.iter().map(|(n, _)| *n));
-    let target_row = adw::ComboRow::builder()
-        .use_markup(false)
-        .title(gettext("Formato de destino"))
-        .model(&translated_strings(&target_names))
-        .build();
+    let target_row = target_format_row();
 
-    let overwrite_names: Vec<&str> = OVERWRITE_CHOICES.iter().map(|(n, _)| *n).collect();
-    let overwrite_row = adw::ComboRow::builder()
-        .use_markup(false)
-        .title(gettext("Se o arquivo de saída existir"))
-        .model(&translated_strings(&overwrite_names))
-        .build();
+    let overwrite_row = overwrite_row();
 
-    let files_row = adw::ActionRow::builder()
-        .use_markup(false)
-        .title(format!("{}: {}", gettext("Arquivos selecionados"), files.len()))
-        .build();
-    files_row.set_subtitle(&files_subtitle(&files));
+    let files_row = selection_row(&gettext("Arquivos selecionados"), &files);
 
     let group_files = adw::PreferencesGroup::new();
     group_files.add(&files_row);
@@ -4167,21 +4202,9 @@ fn fill_resize_dialog(
     group_options.add(&target_row);
     group_options.add(&overwrite_row);
 
-    let status = gtk::Label::builder().label("").wrap(true).xalign(0.0).build();
-    status.add_css_class("dim-label");
+    let status = status_label();
 
-    let cancel_btn = gtk::Button::with_label(&gettext("Cancelar"));
-    let apply_btn = gtk::Button::builder().label(gettext("Redimensionar")).build();
-    apply_btn.add_css_class("suggested-action");
-    apply_btn.add_css_class("pill");
-
-    let actions = gtk::Box::builder()
-        .orientation(gtk::Orientation::Horizontal)
-        .spacing(8)
-        .halign(gtk::Align::End)
-        .build();
-    actions.append(&cancel_btn);
-    actions.append(&apply_btn);
+    let (cancel_btn, apply_btn, actions) = action_buttons(&gettext("Redimensionar"));
 
     let content = gtk::Box::builder()
         .orientation(gtk::Orientation::Vertical)
@@ -4291,10 +4314,7 @@ fn fill_resize_dialog(
         }
     }
 
-    {
-        let window = window.clone();
-        dialog_signal!(window, cancel_btn, connect_clicked, move |_| window.close());
-    }
+    close_on_click(&window, &cancel_btn);
 
     {
         let files = files.clone();
@@ -4323,11 +4343,8 @@ fn fill_resize_dialog(
                 _ => ResizeMode::Fit { width: fit_w.value() as u32, height: fit_h.value() as u32 },
             };
             let filter = RESIZE_FILTERS[filter_row.selected() as usize].1;
-            let target: Option<Format> = match target_row.selected() {
-                0 => None,
-                n => Some(CONVERT_FORMATS[(n as usize) - 1].1),
-            };
-            let policy = OVERWRITE_CHOICES[overwrite_row.selected() as usize].1;
+            let target = selected_target_format(&target_row);
+            let policy = selected_overwrite(&overwrite_row);
             // Resize dialog doesn't expose quality today — uses defaults.
             // Users who need quality control go through Convert ▸ Personalizar…
             // or chain via CLI.
@@ -4380,17 +4397,8 @@ use batch_runner::run_batch_async;
 
 /// Rotate modal: pick 90 / 180 / 270 and an optional target format.
 pub fn run_rotate_dialog(files: Vec<PathBuf>) -> i32 {
-    // NON_UNIQUE: each service-menu action is its own process; see run_viewer.
-    let app = adw::Application::builder()
-        .application_id(APP_ID)
-        .flags(gio::ApplicationFlags::NON_UNIQUE)
-        .build();
     let files = Rc::new(files);
-    app.connect_activate(move |app| {
-        build_rotate_dialog(app, files.clone()).present();
-    });
-    let code = app.run_with_args::<&str>(&[]);
-    i32::from(u8::from(code))
+    run_dialog_app(move |app| build_rotate_dialog(app, files.clone()).present())
 }
 
 fn build_rotate_dialog(app: &adw::Application, files: Rc<Vec<PathBuf>>) -> adw::ApplicationWindow {
@@ -4411,25 +4419,11 @@ fn build_rotate_dialog(app: &adw::Application, files: Rc<Vec<PathBuf>>) -> adw::
         .model(&translated_strings(&rotations))
         .build();
 
-    let mut target_names = vec![n_("Manter o formato original")];
-    target_names.extend(CONVERT_FORMATS.iter().map(|(n, _)| *n));
-    let target_row = adw::ComboRow::builder()
-        .use_markup(false)
-        .title(gettext("Formato de destino"))
-        .model(&translated_strings(&target_names))
-        .build();
+    let target_row = target_format_row();
 
-    let overwrite_row = adw::ComboRow::builder()
-        .use_markup(false)
-        .title(gettext("Se o arquivo de saída existir"))
-        .model(&translated_strings(&OVERWRITE_CHOICES.iter().map(|(n, _)| *n).collect::<Vec<_>>()))
-        .build();
+    let overwrite_row = overwrite_row();
 
-    let files_row = adw::ActionRow::builder()
-        .use_markup(false)
-        .title(format!("{}: {}", gettext("Arquivos selecionados"), files.len()))
-        .build();
-    files_row.set_subtitle(&files_subtitle(&files));
+    let files_row = selection_row(&gettext("Arquivos selecionados"), &files);
 
     let group = adw::PreferencesGroup::new();
     group.add(&files_row);
@@ -4437,21 +4431,9 @@ fn build_rotate_dialog(app: &adw::Application, files: Rc<Vec<PathBuf>>) -> adw::
     group.add(&target_row);
     group.add(&overwrite_row);
 
-    let status = gtk::Label::builder().label("").wrap(true).xalign(0.0).build();
-    status.add_css_class("dim-label");
+    let status = status_label();
 
-    let cancel_btn = gtk::Button::with_label(&gettext("Cancelar"));
-    let apply_btn = gtk::Button::builder().label(gettext("Girar")).build();
-    apply_btn.add_css_class("suggested-action");
-    apply_btn.add_css_class("pill");
-
-    let actions = gtk::Box::builder()
-        .orientation(gtk::Orientation::Horizontal)
-        .spacing(8)
-        .halign(gtk::Align::End)
-        .build();
-    actions.append(&cancel_btn);
-    actions.append(&apply_btn);
+    let (cancel_btn, apply_btn, actions) = action_buttons(&gettext("Girar"));
 
     let content = gtk::Box::builder()
         .orientation(gtk::Orientation::Vertical)
@@ -4470,10 +4452,7 @@ fn build_rotate_dialog(app: &adw::Application, files: Rc<Vec<PathBuf>>) -> adw::
     toolbar_view.set_content(Some(&content));
     window.set_content(Some(&toolbar_view));
 
-    {
-        let window = window.clone();
-        dialog_signal!(window, cancel_btn, connect_clicked, move |_| window.close());
-    }
+    close_on_click(&window, &cancel_btn);
 
     {
         let files = files.clone();
@@ -4490,11 +4469,8 @@ fn build_rotate_dialog(app: &adw::Application, files: Rc<Vec<PathBuf>>) -> adw::
                 1 => Rotation::Deg180,
                 _ => Rotation::Deg270,
             };
-            let target: Option<Format> = match target_row.selected() {
-                0 => None,
-                n => Some(CONVERT_FORMATS[(n as usize) - 1].1),
-            };
-            let policy = OVERWRITE_CHOICES[overwrite_row.selected() as usize].1;
+            let target = selected_target_format(&target_row);
+            let policy = selected_overwrite(&overwrite_row);
 
             apply_btn.set_sensitive(false);
             cancel_btn.set_sensitive(false);
@@ -4807,17 +4783,8 @@ fn build_crop_preview_column(
 
 /// Crop modal: rectangular window by (x, y, w, h) with live preview.
 pub fn run_crop_dialog(files: Vec<PathBuf>) -> i32 {
-    // NON_UNIQUE: each service-menu action is its own process; see run_viewer.
-    let app = adw::Application::builder()
-        .application_id(APP_ID)
-        .flags(gio::ApplicationFlags::NON_UNIQUE)
-        .build();
     let files = Rc::new(files);
-    app.connect_activate(move |app| {
-        build_crop_dialog(app, files.clone()).present();
-    });
-    let code = app.run_with_args::<&str>(&[]);
-    i32::from(u8::from(code))
+    run_dialog_app(move |app| build_crop_dialog(app, files.clone()).present())
 }
 
 fn build_crop_dialog(app: &adw::Application, files: Rc<Vec<PathBuf>>) -> adw::ApplicationWindow {
@@ -4860,11 +4827,7 @@ fn fill_crop_dialog(
         .width_request(360)
         .build();
 
-    let files_row = adw::ActionRow::builder()
-        .use_markup(false)
-        .title(format!("{}: {}", gettext("Arquivos selecionados"), files.len()))
-        .build();
-    files_row.set_subtitle(&files_subtitle(&files));
+    let files_row = selection_row(&gettext("Arquivos selecionados"), &files);
 
     let natural_row = adw::ActionRow::builder()
         .use_markup(false)
@@ -4890,19 +4853,9 @@ fn fill_crop_dialog(
     h_spin.set_title(&gettext("Altura (px)"));
     h_spin.set_value(initial.height as f64);
 
-    let mut target_names = vec![n_("Manter o formato original")];
-    target_names.extend(CONVERT_FORMATS.iter().map(|(n, _)| *n));
-    let target_row = adw::ComboRow::builder()
-        .use_markup(false)
-        .title(gettext("Formato de destino"))
-        .model(&translated_strings(&target_names))
-        .build();
+    let target_row = target_format_row();
 
-    let overwrite_row = adw::ComboRow::builder()
-        .use_markup(false)
-        .title(gettext("Se o arquivo de saída existir"))
-        .model(&translated_strings(&OVERWRITE_CHOICES.iter().map(|(n, _)| *n).collect::<Vec<_>>()))
-        .build();
+    let overwrite_row = overwrite_row();
 
     let group = adw::PreferencesGroup::new();
     group.add(&files_row);
@@ -4915,24 +4868,12 @@ fn fill_crop_dialog(
     group.add(&overwrite_row);
     form_col.append(&group);
 
-    let status = gtk::Label::builder().label("").wrap(true).xalign(0.0).build();
-    status.add_css_class("dim-label");
+    let status = status_label();
     form_col.append(&status);
 
-    let cancel_btn = gtk::Button::with_label(&gettext("Cancelar"));
     let reset_btn = gtk::Button::with_label(&gettext("Centro 50%"));
-    let apply_btn = gtk::Button::builder().label(gettext("Recortar")).build();
-    apply_btn.add_css_class("suggested-action");
-    apply_btn.add_css_class("pill");
-
-    let actions = gtk::Box::builder()
-        .orientation(gtk::Orientation::Horizontal)
-        .spacing(8)
-        .halign(gtk::Align::End)
-        .build();
-    actions.append(&reset_btn);
-    actions.append(&cancel_btn);
-    actions.append(&apply_btn);
+    let (cancel_btn, apply_btn, actions) = action_buttons(&gettext("Recortar"));
+    actions.prepend(&reset_btn);
     form_col.append(&actions);
 
     content_h.append(&form_col);
@@ -4965,10 +4906,7 @@ fn fill_crop_dialog(
         });
     }
 
-    {
-        let window = window.clone();
-        dialog_signal!(window, cancel_btn, connect_clicked, move |_| window.close());
-    }
+    close_on_click(&window, &cancel_btn);
 
     {
         let files = files.clone();
@@ -4989,11 +4927,8 @@ fn fill_crop_dialog(
                 w_spin.value() as u32,
                 h_spin.value() as u32,
             );
-            let target: Option<Format> = match target_row.selected() {
-                0 => None,
-                n => Some(CONVERT_FORMATS[(n as usize) - 1].1),
-            };
-            let policy = OVERWRITE_CHOICES[overwrite_row.selected() as usize].1;
+            let target = selected_target_format(&target_row);
+            let policy = selected_overwrite(&overwrite_row);
 
             apply_btn.set_sensitive(false);
             cancel_btn.set_sensitive(false);
@@ -5046,17 +4981,8 @@ const EXTENT_GRAVITIES: &[(&str, Gravity)] =
 
 /// Run the "Letterbox" modal. Returns GTK's exit code.
 pub fn run_extent_dialog(files: Vec<PathBuf>) -> i32 {
-    // NON_UNIQUE: each service-menu action is its own process; see run_viewer.
-    let app = adw::Application::builder()
-        .application_id(APP_ID)
-        .flags(gio::ApplicationFlags::NON_UNIQUE)
-        .build();
     let files = Rc::new(files);
-    app.connect_activate(move |app| {
-        build_extent_dialog(app, files.clone()).present();
-    });
-    let code = app.run_with_args::<&str>(&[]);
-    i32::from(u8::from(code))
+    run_dialog_app(move |app| build_extent_dialog(app, files.clone()).present())
 }
 
 fn build_extent_dialog(app: &adw::Application, files: Rc<Vec<PathBuf>>) -> adw::ApplicationWindow {
@@ -5107,11 +5033,7 @@ fn fill_extent_dialog(
         .build();
     intro.add_css_class("dim-label");
 
-    let files_row = adw::ActionRow::builder()
-        .use_markup(false)
-        .title(format!("{}: {}", gettext("Arquivos selecionados"), files.len()))
-        .build();
-    files_row.set_subtitle(&files_subtitle(&files));
+    let files_row = selection_row(&gettext("Arquivos selecionados"), &files);
 
     let natural_row = adw::ActionRow::builder()
         .use_markup(false)
@@ -5167,19 +5089,9 @@ fn fill_extent_dialog(
         .subtitle("—")
         .build();
 
-    let mut target_names = vec![n_("Manter o formato original")];
-    target_names.extend(CONVERT_FORMATS.iter().map(|(n, _)| *n));
-    let target_row = adw::ComboRow::builder()
-        .use_markup(false)
-        .title(gettext("Formato de destino"))
-        .model(&translated_strings(&target_names))
-        .build();
+    let target_row = target_format_row();
 
-    let overwrite_row = adw::ComboRow::builder()
-        .use_markup(false)
-        .title(gettext("Se o arquivo de saída existir"))
-        .model(&translated_strings(&OVERWRITE_CHOICES.iter().map(|(n, _)| *n).collect::<Vec<_>>()))
-        .build();
+    let overwrite_row = overwrite_row();
 
     let group = adw::PreferencesGroup::new();
     group.add(&files_row);
@@ -5197,22 +5109,10 @@ fn fill_extent_dialog(
     form_col.append(&intro);
     form_col.append(&group);
 
-    let status = gtk::Label::builder().label("").wrap(true).xalign(0.0).build();
-    status.add_css_class("dim-label");
+    let status = status_label();
     form_col.append(&status);
 
-    let cancel_btn = gtk::Button::with_label(&gettext("Cancelar"));
-    let apply_btn = gtk::Button::builder().label(gettext("Estender")).build();
-    apply_btn.add_css_class("suggested-action");
-    apply_btn.add_css_class("pill");
-
-    let actions = gtk::Box::builder()
-        .orientation(gtk::Orientation::Horizontal)
-        .spacing(8)
-        .halign(gtk::Align::End)
-        .build();
-    actions.append(&cancel_btn);
-    actions.append(&apply_btn);
+    let (cancel_btn, apply_btn, actions) = action_buttons(&gettext("Estender"));
     form_col.append(&actions);
 
     content_h.append(&form_col);
@@ -5343,10 +5243,7 @@ fn fill_extent_dialog(
     // Initial paint.
     refresh();
 
-    {
-        let window = window.clone();
-        dialog_signal!(window, cancel_btn, connect_clicked, move |_| window.close());
-    }
+    close_on_click(&window, &cancel_btn);
 
     {
         let files = files.clone();
@@ -5365,11 +5262,8 @@ fn fill_extent_dialog(
                     return;
                 }
             };
-            let target: Option<Format> = match target_row.selected() {
-                0 => None,
-                n => Some(CONVERT_FORMATS[(n as usize) - 1].1),
-            };
-            let policy = OVERWRITE_CHOICES[overwrite_row.selected() as usize].1;
+            let target = selected_target_format(&target_row);
+            let policy = selected_overwrite(&overwrite_row);
 
             apply_btn.set_sensitive(false);
             cancel_btn.set_sensitive(false);
@@ -5398,17 +5292,8 @@ const UPSCALE_FACTORS: &[(&str, u8)] = &[("2× (200%)", 2), ("3× (300%)", 3), (
 
 /// Upscale modal: pick an integer factor and run Lanczos3 resize.
 pub fn run_upscale_dialog(files: Vec<PathBuf>) -> i32 {
-    // NON_UNIQUE: each service-menu action is its own process; see run_viewer.
-    let app = adw::Application::builder()
-        .application_id(APP_ID)
-        .flags(gio::ApplicationFlags::NON_UNIQUE)
-        .build();
     let files = Rc::new(files);
-    app.connect_activate(move |app| {
-        build_upscale_dialog(app, files.clone()).present();
-    });
-    let code = app.run_with_args::<&str>(&[]);
-    i32::from(u8::from(code))
+    run_dialog_app(move |app| build_upscale_dialog(app, files.clone()).present())
 }
 
 fn build_upscale_dialog(app: &adw::Application, files: Rc<Vec<PathBuf>>) -> adw::ApplicationWindow {
@@ -5458,11 +5343,7 @@ fn fill_upscale_dialog(
         .build();
     engine_note.add_css_class("dim-label");
 
-    let files_row = adw::ActionRow::builder()
-        .use_markup(false)
-        .title(format!("{}: {}", gettext("Arquivos selecionados"), files.len()))
-        .build();
-    files_row.set_subtitle(&files_subtitle(&files));
+    let files_row = selection_row(&gettext("Arquivos selecionados"), &files);
 
     let natural_row = adw::ActionRow::builder()
         .use_markup(false)
@@ -5504,19 +5385,9 @@ fn fill_upscale_dialog(
         dialog_signal!(window, factor_row, connect_selected_notify, move |_| refresh_prediction());
     }
 
-    let mut target_names = vec![n_("Manter o formato original")];
-    target_names.extend(CONVERT_FORMATS.iter().map(|(n, _)| *n));
-    let target_row = adw::ComboRow::builder()
-        .use_markup(false)
-        .title(gettext("Formato de destino"))
-        .model(&translated_strings(&target_names))
-        .build();
+    let target_row = target_format_row();
 
-    let overwrite_row = adw::ComboRow::builder()
-        .use_markup(false)
-        .title(gettext("Se o arquivo de saída existir"))
-        .model(&translated_strings(&OVERWRITE_CHOICES.iter().map(|(n, _)| *n).collect::<Vec<_>>()))
-        .build();
+    let overwrite_row = overwrite_row();
 
     let group = adw::PreferencesGroup::new();
     group.add(&files_row);
@@ -5529,22 +5400,10 @@ fn fill_upscale_dialog(
     form_col.append(&engine_note);
     form_col.append(&group);
 
-    let status = gtk::Label::builder().label("").wrap(true).xalign(0.0).build();
-    status.add_css_class("dim-label");
+    let status = status_label();
     form_col.append(&status);
 
-    let cancel_btn = gtk::Button::with_label(&gettext("Cancelar"));
-    let apply_btn = gtk::Button::builder().label(gettext("Aumentar")).build();
-    apply_btn.add_css_class("suggested-action");
-    apply_btn.add_css_class("pill");
-
-    let actions = gtk::Box::builder()
-        .orientation(gtk::Orientation::Horizontal)
-        .spacing(8)
-        .halign(gtk::Align::End)
-        .build();
-    actions.append(&cancel_btn);
-    actions.append(&apply_btn);
+    let (cancel_btn, apply_btn, actions) = action_buttons(&gettext("Aumentar"));
     form_col.append(&actions);
 
     content_h.append(&form_col);
@@ -5580,10 +5439,7 @@ fn fill_upscale_dialog(
     toolbar_view.set_content(Some(&content_h));
     window.set_content(Some(&toolbar_view));
 
-    {
-        let window = window.clone();
-        dialog_signal!(window, cancel_btn, connect_clicked, move |_| window.close());
-    }
+    close_on_click(&window, &cancel_btn);
 
     {
         let files = files.clone();
@@ -5596,11 +5452,8 @@ fn fill_upscale_dialog(
         let window = window.clone();
         dialog_signal!(window, apply_btn.clone(), connect_clicked, move |_| {
             let factor = UPSCALE_FACTORS[factor_row.selected() as usize].1;
-            let target: Option<Format> = match target_row.selected() {
-                0 => None,
-                n => Some(CONVERT_FORMATS[(n as usize) - 1].1),
-            };
-            let policy = OVERWRITE_CHOICES[overwrite_row.selected() as usize].1;
+            let target = selected_target_format(&target_row);
+            let policy = selected_overwrite(&overwrite_row);
 
             apply_btn.set_sensitive(false);
             cancel_btn.set_sensitive(false);
@@ -5627,17 +5480,8 @@ fn fill_upscale_dialog(
 
 /// Flip modal: horizontal or vertical mirror.
 pub fn run_flip_dialog(files: Vec<PathBuf>) -> i32 {
-    // NON_UNIQUE: each service-menu action is its own process; see run_viewer.
-    let app = adw::Application::builder()
-        .application_id(APP_ID)
-        .flags(gio::ApplicationFlags::NON_UNIQUE)
-        .build();
     let files = Rc::new(files);
-    app.connect_activate(move |app| {
-        build_flip_dialog(app, files.clone()).present();
-    });
-    let code = app.run_with_args::<&str>(&[]);
-    i32::from(u8::from(code))
+    run_dialog_app(move |app| build_flip_dialog(app, files.clone()).present())
 }
 
 fn build_flip_dialog(app: &adw::Application, files: Rc<Vec<PathBuf>>) -> adw::ApplicationWindow {
@@ -5658,25 +5502,11 @@ fn build_flip_dialog(app: &adw::Application, files: Rc<Vec<PathBuf>>) -> adw::Ap
         .model(&translated_strings(&axes))
         .build();
 
-    let mut target_names = vec![n_("Manter o formato original")];
-    target_names.extend(CONVERT_FORMATS.iter().map(|(n, _)| *n));
-    let target_row = adw::ComboRow::builder()
-        .use_markup(false)
-        .title(gettext("Formato de destino"))
-        .model(&translated_strings(&target_names))
-        .build();
+    let target_row = target_format_row();
 
-    let overwrite_row = adw::ComboRow::builder()
-        .use_markup(false)
-        .title(gettext("Se o arquivo de saída existir"))
-        .model(&translated_strings(&OVERWRITE_CHOICES.iter().map(|(n, _)| *n).collect::<Vec<_>>()))
-        .build();
+    let overwrite_row = overwrite_row();
 
-    let files_row = adw::ActionRow::builder()
-        .use_markup(false)
-        .title(format!("{}: {}", gettext("Arquivos selecionados"), files.len()))
-        .build();
-    files_row.set_subtitle(&files_subtitle(&files));
+    let files_row = selection_row(&gettext("Arquivos selecionados"), &files);
 
     let group = adw::PreferencesGroup::new();
     group.add(&files_row);
@@ -5684,21 +5514,9 @@ fn build_flip_dialog(app: &adw::Application, files: Rc<Vec<PathBuf>>) -> adw::Ap
     group.add(&target_row);
     group.add(&overwrite_row);
 
-    let status = gtk::Label::builder().label("").wrap(true).xalign(0.0).build();
-    status.add_css_class("dim-label");
+    let status = status_label();
 
-    let cancel_btn = gtk::Button::with_label(&gettext("Cancelar"));
-    let apply_btn = gtk::Button::builder().label(gettext("Espelhar")).build();
-    apply_btn.add_css_class("suggested-action");
-    apply_btn.add_css_class("pill");
-
-    let actions = gtk::Box::builder()
-        .orientation(gtk::Orientation::Horizontal)
-        .spacing(8)
-        .halign(gtk::Align::End)
-        .build();
-    actions.append(&cancel_btn);
-    actions.append(&apply_btn);
+    let (cancel_btn, apply_btn, actions) = action_buttons(&gettext("Espelhar"));
 
     let content = gtk::Box::builder()
         .orientation(gtk::Orientation::Vertical)
@@ -5717,10 +5535,7 @@ fn build_flip_dialog(app: &adw::Application, files: Rc<Vec<PathBuf>>) -> adw::Ap
     toolbar_view.set_content(Some(&content));
     window.set_content(Some(&toolbar_view));
 
-    {
-        let window = window.clone();
-        dialog_signal!(window, cancel_btn, connect_clicked, move |_| window.close());
-    }
+    close_on_click(&window, &cancel_btn);
 
     {
         let files = files.clone();
@@ -5736,11 +5551,8 @@ fn build_flip_dialog(app: &adw::Application, files: Rc<Vec<PathBuf>>) -> adw::Ap
                 0 => FlipAxis::Horizontal,
                 _ => FlipAxis::Vertical,
             };
-            let target: Option<Format> = match target_row.selected() {
-                0 => None,
-                n => Some(CONVERT_FORMATS[(n as usize) - 1].1),
-            };
-            let policy = OVERWRITE_CHOICES[overwrite_row.selected() as usize].1;
+            let target = selected_target_format(&target_row);
+            let policy = selected_overwrite(&overwrite_row);
 
             apply_btn.set_sensitive(false);
             cancel_btn.set_sensitive(false);
@@ -5764,17 +5576,8 @@ fn build_flip_dialog(app: &adw::Application, files: Rc<Vec<PathBuf>>) -> adw::Ap
 
 /// Adjust modal: brightness + contrast + saturation + gamma.
 pub fn run_adjust_dialog(files: Vec<PathBuf>) -> i32 {
-    // NON_UNIQUE: each service-menu action is its own process; see run_viewer.
-    let app = adw::Application::builder()
-        .application_id(APP_ID)
-        .flags(gio::ApplicationFlags::NON_UNIQUE)
-        .build();
     let files = Rc::new(files);
-    app.connect_activate(move |app| {
-        build_adjust_dialog(app, files.clone()).present();
-    });
-    let code = app.run_with_args::<&str>(&[]);
-    i32::from(u8::from(code))
+    run_dialog_app(move |app| build_adjust_dialog(app, files.clone()).present())
 }
 
 fn build_adjust_dialog(app: &adw::Application, files: Rc<Vec<PathBuf>>) -> adw::ApplicationWindow {
@@ -5822,25 +5625,11 @@ fn fill_adjust_dialog(
     gamma.set_digits(2);
     gamma.set_value(1.0);
 
-    let mut target_names = vec![n_("Manter o formato original")];
-    target_names.extend(CONVERT_FORMATS.iter().map(|(n, _)| *n));
-    let target_row = adw::ComboRow::builder()
-        .use_markup(false)
-        .title(gettext("Formato de destino"))
-        .model(&translated_strings(&target_names))
-        .build();
+    let target_row = target_format_row();
 
-    let overwrite_row = adw::ComboRow::builder()
-        .use_markup(false)
-        .title(gettext("Se o arquivo de saída existir"))
-        .model(&translated_strings(&OVERWRITE_CHOICES.iter().map(|(n, _)| *n).collect::<Vec<_>>()))
-        .build();
+    let overwrite_row = overwrite_row();
 
-    let files_row = adw::ActionRow::builder()
-        .use_markup(false)
-        .title(format!("{}: {}", gettext("Arquivos selecionados"), files.len()))
-        .build();
-    files_row.set_subtitle(&files_subtitle(&files));
+    let files_row = selection_row(&gettext("Arquivos selecionados"), &files);
 
     let group_files = adw::PreferencesGroup::new();
     group_files.add(&files_row);
@@ -5857,21 +5646,9 @@ fn fill_adjust_dialog(
     group_out.add(&target_row);
     group_out.add(&overwrite_row);
 
-    let status = gtk::Label::builder().label("").wrap(true).xalign(0.0).build();
-    status.add_css_class("dim-label");
+    let status = status_label();
 
-    let cancel_btn = gtk::Button::with_label(&gettext("Cancelar"));
-    let apply_btn = gtk::Button::builder().label(gettext("Aplicar")).build();
-    apply_btn.add_css_class("suggested-action");
-    apply_btn.add_css_class("pill");
-
-    let actions_box = gtk::Box::builder()
-        .orientation(gtk::Orientation::Horizontal)
-        .spacing(8)
-        .halign(gtk::Align::End)
-        .build();
-    actions_box.append(&cancel_btn);
-    actions_box.append(&apply_btn);
+    let (cancel_btn, apply_btn, actions_box) = action_buttons(&gettext("Aplicar"));
 
     let content = gtk::Box::builder()
         .orientation(gtk::Orientation::Vertical)
@@ -5952,10 +5729,7 @@ fn fill_adjust_dialog(
         }
     }
 
-    {
-        let window = window.clone();
-        dialog_signal!(window, cancel_btn, connect_clicked, move |_| window.close());
-    }
+    close_on_click(&window, &cancel_btn);
 
     {
         let files = files.clone();
@@ -5976,11 +5750,8 @@ fn fill_adjust_dialog(
                 saturation: saturation.value() as f32,
                 gamma: gamma.value() as f32,
             };
-            let target: Option<Format> = match target_row.selected() {
-                0 => None,
-                n => Some(CONVERT_FORMATS[(n as usize) - 1].1),
-            };
-            let policy = OVERWRITE_CHOICES[overwrite_row.selected() as usize].1;
+            let target = selected_target_format(&target_row);
+            let policy = selected_overwrite(&overwrite_row);
 
             apply_btn.set_sensitive(false);
             cancel_btn.set_sensitive(false);
@@ -6010,18 +5781,11 @@ fn fill_adjust_dialog(
 /// Run the metadata viewer for `files[0]`. Multi-select still opens but
 /// only the first file is inspected — a "próximo" navegator fica para M3.
 pub fn run_metadata_dialog(files: Vec<PathBuf>) -> i32 {
-    // NON_UNIQUE: each service-menu action is its own process; see run_viewer.
-    let app = adw::Application::builder()
-        .application_id(APP_ID)
-        .flags(gio::ApplicationFlags::NON_UNIQUE)
-        .build();
-    let files = Rc::new(files);
-    app.connect_activate(move |app| {
-        let Some(first) = files.first() else { return };
-        build_properties_window(app, first).present();
-    });
-    let code = app.run_with_args::<&str>(&[]);
-    i32::from(u8::from(code))
+    run_dialog_app(move |app| {
+        if let Some(first) = files.first() {
+            build_properties_window(app, first).present();
+        }
+    })
 }
 
 /// Janela de propriedades da imagem. Sempre traz as infos básicas do
@@ -6343,17 +6107,8 @@ pub fn run_compare_dialog(files: Vec<PathBuf>) -> i32 {
         tracing::warn!(count = files.len(), "compare needs two files; falling back to viewer");
         return run_viewer(files);
     }
-    // NON_UNIQUE: each service-menu action is its own process; see run_viewer.
-    let app = adw::Application::builder()
-        .application_id(APP_ID)
-        .flags(gio::ApplicationFlags::NON_UNIQUE)
-        .build();
     let files = Rc::new(files);
-    app.connect_activate(move |app| {
-        build_compare_dialog(app, files.clone()).present();
-    });
-    let code = app.run_with_args::<&str>(&[]);
-    i32::from(u8::from(code))
+    run_dialog_app(move |app| build_compare_dialog(app, files.clone()).present())
 }
 
 fn build_compare_dialog(app: &adw::Application, files: Rc<Vec<PathBuf>>) -> adw::ApplicationWindow {
@@ -6528,17 +6283,8 @@ fn make_compare_side(path: &Path, window: &adw::ApplicationWindow) -> gtk::Box {
 /// Prisma Lote — converter em lote. Pega a lista de arquivos recebida via
 /// CLI, expande pastas e aplica a conversão no pool paralelo compartilhado.
 pub fn run_batch_dialog(files: Vec<PathBuf>) -> i32 {
-    // NON_UNIQUE: each service-menu action is its own process; see run_viewer.
-    let app = adw::Application::builder()
-        .application_id(APP_ID)
-        .flags(gio::ApplicationFlags::NON_UNIQUE)
-        .build();
     let files = Rc::new(RefCell::new(expand_batch_inputs(files)));
-    app.connect_activate(move |app| {
-        build_batch_dialog(app, files.clone()).present();
-    });
-    let code = app.run_with_args::<&str>(&[]);
-    i32::from(u8::from(code))
+    run_dialog_app(move |app| build_batch_dialog(app, files.clone()).present())
 }
 
 fn expand_batch_inputs(inputs: Vec<PathBuf>) -> Vec<PathBuf> {
@@ -6570,9 +6316,6 @@ fn build_batch_dialog(
     let title = adw::WindowTitle::new(&gettext("Conversão em lote"), "Prisma");
     header.set_title_widget(Some(&title));
 
-    let format_names: Vec<&str> = CONVERT_FORMATS.iter().map(|(n, _)| *n).collect();
-    let overwrite_names: Vec<&str> = OVERWRITE_CHOICES.iter().map(|(n, _)| *n).collect();
-
     // ── Grupo: arquivos ─────────────────────────────────────────────────
     // Lista mutável (compartilhada via Rc<RefCell>) — suporta adicionar
     // arquivos e pastas depois do diálogo aberto. `summary_row` é
@@ -6599,11 +6342,7 @@ fn build_batch_dialog(
     // ── Grupo: conversão ────────────────────────────────────────────────
     let convert_group = adw::PreferencesGroup::builder().title(gettext("Conversão")).build();
 
-    let format_row = adw::ComboRow::builder()
-        .use_markup(false)
-        .title(gettext("Formato de destino"))
-        .model(&translated_strings(&format_names))
-        .build();
+    let format_row = format_row();
     convert_group.add(&format_row);
 
     let quality_spin = adw::SpinRow::with_range(1.0, 100.0, 1.0);
@@ -6622,11 +6361,7 @@ fn build_batch_dialog(
 
     // ── Grupo: destino ──────────────────────────────────────────────────
     let dest_group = adw::PreferencesGroup::builder().title(gettext("Destino")).build();
-    let overwrite_row = adw::ComboRow::builder()
-        .use_markup(false)
-        .title(gettext("Se o arquivo de saída existir"))
-        .model(&translated_strings(&overwrite_names))
-        .build();
+    let overwrite_row = overwrite_row();
     dest_group.add(&overwrite_row);
     // Pasta de saída: None = mesma do original. Clicar abre FolderDialog.
     let output_dir: Rc<RefCell<Option<PathBuf>>> = Rc::new(RefCell::new(None));
@@ -6787,10 +6522,8 @@ fn build_batch_dialog(
         let output_dir = output_dir.clone();
         let auto_close = auto_close.clone();
         dialog_signal!(window, apply_btn.clone(), connect_clicked, move |_| {
-            let fmt_idx = format_row.selected() as usize;
-            let policy_idx = overwrite_row.selected() as usize;
-            let fmt = CONVERT_FORMATS[fmt_idx].1;
-            let policy = OVERWRITE_CHOICES[policy_idx].1;
+            let fmt = selected_format(&format_row);
+            let policy = selected_overwrite(&overwrite_row);
             let opts = EncodeOptions {
                 quality: Some(quality_spin.value() as u8),
                 optimize: optimize_switch.is_active(),
@@ -7131,17 +6864,8 @@ fn pick_output_folder(
 use batch_runner::format_size;
 
 pub fn run_animate_dialog(files: Vec<PathBuf>) -> i32 {
-    // NON_UNIQUE: each service-menu action is its own process; see run_viewer.
-    let app = adw::Application::builder()
-        .application_id(APP_ID)
-        .flags(gio::ApplicationFlags::NON_UNIQUE)
-        .build();
     let files = Rc::new(files);
-    app.connect_activate(move |app| {
-        build_animate_dialog(app, files.clone()).present();
-    });
-    let code = app.run_with_args::<&str>(&[]);
-    i32::from(u8::from(code))
+    run_dialog_app(move |app| build_animate_dialog(app, files.clone()).present())
 }
 
 fn build_animate_dialog(app: &adw::Application, files: Rc<Vec<PathBuf>>) -> adw::ApplicationWindow {
@@ -7174,10 +6898,7 @@ fn build_animate_dialog(app: &adw::Application, files: Rc<Vec<PathBuf>>) -> adw:
         content.append(&status);
 
         let close = gtk::Button::with_label(&gettext("Fechar"));
-        {
-            let window = window.clone();
-            dialog_signal!(window, close, connect_clicked, move |_| window.close());
-        }
+        close_on_click(&window, &close);
         content.append(&close);
 
         let tv = adw::ToolbarView::new();
@@ -7221,11 +6942,7 @@ fn build_animate_dialog(app: &adw::Application, files: Rc<Vec<PathBuf>>) -> adw:
         .build();
     output_row.set_text(&default_output.to_string_lossy());
 
-    let files_row = adw::ActionRow::builder()
-        .use_markup(false)
-        .title(format!("{}: {}", gettext("Quadros"), files.len()))
-        .build();
-    files_row.set_subtitle(&files_subtitle(&files));
+    let files_row = selection_row(&gettext("Quadros"), &files);
 
     let group = adw::PreferencesGroup::new();
     group.add(&files_row);
@@ -7235,22 +6952,10 @@ fn build_animate_dialog(app: &adw::Application, files: Rc<Vec<PathBuf>>) -> adw:
     group.add(&output_row);
     content.append(&group);
 
-    let status = gtk::Label::builder().label("").wrap(true).xalign(0.0).build();
-    status.add_css_class("dim-label");
+    let status = status_label();
     content.append(&status);
 
-    let cancel_btn = gtk::Button::with_label(&gettext("Cancelar"));
-    let apply_btn = gtk::Button::builder().label(gettext("Criar GIF")).build();
-    apply_btn.add_css_class("suggested-action");
-    apply_btn.add_css_class("pill");
-
-    let actions_box = gtk::Box::builder()
-        .orientation(gtk::Orientation::Horizontal)
-        .spacing(8)
-        .halign(gtk::Align::End)
-        .build();
-    actions_box.append(&cancel_btn);
-    actions_box.append(&apply_btn);
+    let (cancel_btn, apply_btn, actions_box) = action_buttons(&gettext("Criar GIF"));
     content.append(&actions_box);
 
     let tv = adw::ToolbarView::new();
@@ -7258,10 +6963,7 @@ fn build_animate_dialog(app: &adw::Application, files: Rc<Vec<PathBuf>>) -> adw:
     tv.set_content(Some(&content));
     window.set_content(Some(&tv));
 
-    {
-        let window = window.clone();
-        dialog_signal!(window, cancel_btn, connect_clicked, move |_| window.close());
-    }
+    close_on_click(&window, &cancel_btn);
 
     {
         let files = files.clone();
@@ -7523,17 +7225,8 @@ enum BgUiState {
 }
 
 pub fn run_remove_bg_dialog(files: Vec<PathBuf>) -> i32 {
-    // NON_UNIQUE: each service-menu action is its own process; see run_viewer.
-    let app = adw::Application::builder()
-        .application_id(APP_ID)
-        .flags(gio::ApplicationFlags::NON_UNIQUE)
-        .build();
     let files = Rc::new(files);
-    app.connect_activate(move |app| {
-        build_remove_bg_dialog(app, files.clone()).present();
-    });
-    let code = app.run_with_args::<&str>(&[]);
-    i32::from(u8::from(code))
+    run_dialog_app(move |app| build_remove_bg_dialog(app, files.clone()).present())
 }
 
 fn build_remove_bg_dialog(
@@ -7573,10 +7266,7 @@ fn build_remove_bg_dialog(
         content.append(&status);
 
         let close = gtk::Button::with_label(&gettext("Fechar"));
-        {
-            let window = window.clone();
-            dialog_signal!(window, close, connect_clicked, move |_| window.close());
-        }
+        close_on_click(&window, &close);
         content.append(&close);
 
         let tv = adw::ToolbarView::new();
@@ -7609,11 +7299,7 @@ fn build_remove_bg_dialog(
     memory_row.add_css_class("dim-label");
     content.append(&memory_row);
 
-    let files_row = adw::ActionRow::builder()
-        .use_markup(false)
-        .title(format!("{}: {}", gettext("Imagens"), files.len()))
-        .build();
-    files_row.set_subtitle(&files_subtitle(&files));
+    let files_row = selection_row(&gettext("Imagens"), &files);
     let files_icon = gtk::Image::from_icon_name("image-x-generic-symbolic");
     files_row.add_prefix(&files_icon);
 
@@ -7653,22 +7339,10 @@ fn build_remove_bg_dialog(
         gtk::ProgressBar::builder().show_text(true).visible(false).margin_top(6).build();
     content.append(&progress_bar);
 
-    let status = gtk::Label::builder().label("").wrap(true).xalign(0.0).build();
-    status.add_css_class("dim-label");
+    let status = status_label();
     content.append(&status);
 
-    let cancel_btn = gtk::Button::with_label(&gettext("Cancelar"));
-    let apply_btn = gtk::Button::builder().label(gettext("Remover fundo")).build();
-    apply_btn.add_css_class("suggested-action");
-    apply_btn.add_css_class("pill");
-
-    let actions_box = gtk::Box::builder()
-        .orientation(gtk::Orientation::Horizontal)
-        .spacing(8)
-        .halign(gtk::Align::End)
-        .build();
-    actions_box.append(&cancel_btn);
-    actions_box.append(&apply_btn);
+    let (cancel_btn, apply_btn, actions_box) = action_buttons(&gettext("Remover fundo"));
     content.append(&actions_box);
 
     let tv = adw::ToolbarView::new();
@@ -7689,10 +7363,7 @@ fn build_remove_bg_dialog(
             glib::Propagation::Proceed
         });
     }
-    {
-        let window = window.clone();
-        dialog_signal!(window, cancel_btn, connect_clicked, move |_| window.close());
-    }
+    close_on_click(&window, &cancel_btn);
 
     {
         let files_rc = files.clone();

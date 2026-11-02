@@ -234,23 +234,71 @@ pub fn extent_file(
 }
 
 /// Pure in-memory extent — shared with the preview pipeline.
+///
+/// The canvas keeps the source sample depth (8-bit, 16-bit or float) and
+/// stays gray when both the source and the background are gray; an alpha
+/// channel is only added when the source has one or the background is not
+/// fully opaque. Float canvases receive the background in linear light,
+/// matching the linear convention used for float images.
 pub fn apply_to(src: &DynamicImage, opts: &ExtentOptions) -> Result<DynamicImage> {
+    use image::ColorType;
     let (sw, sh) = (src.width(), src.height());
     let (nw, nh) = opts.size.resolve(sw, sh)?;
 
-    pipeline::check_dimensions(nw, nh, 4)?;
+    let [r, g, b, a] = opts.background;
+    let depth: u8 = match src.color() {
+        ColorType::L8 | ColorType::La8 | ColorType::Rgb8 | ColorType::Rgba8 => 1,
+        ColorType::Rgb32F | ColorType::Rgba32F => 4,
+        _ => 2,
+    };
+    let gray = depth != 4
+        && matches!(src.color(), ColorType::L8 | ColorType::La8 | ColorType::L16 | ColorType::La16)
+        && r == g
+        && g == b;
+    let alpha = src.color().has_alpha() || a != 0xFF;
+    let channels = match (gray, alpha) {
+        (true, false) => 1,
+        (true, true) => 2,
+        (false, false) => 3,
+        (false, true) => 4,
+    };
+    pipeline::check_dimensions(nw, nh, channels * depth)?;
     let (dx, dy) = opts.gravity.place(sw, sh, nw, nh);
+    let (dx, dy) = (i64::from(dx), i64::from(dy));
 
-    let bg = Rgba(opts.background);
-    let mut canvas: ImageBuffer<Rgba<u8>, Vec<u8>> = ImageBuffer::from_pixel(nw, nh, bg);
-
-    // Normalise source to RGBA so the overlay step always agrees on
-    // pixel format. Costs a copy but keeps the placement code trivial
-    // and correct for paletted/luminance inputs.
-    let src_rgba = src.to_rgba8();
-    imageops::overlay(&mut canvas, &src_rgba, i64::from(dx), i64::from(dy));
-
-    Ok(DynamicImage::ImageRgba8(canvas))
+    macro_rules! compose {
+        ($pixel:expr, $convert:ident, $variant:ident) => {{
+            let mut canvas = ImageBuffer::from_pixel(nw, nh, $pixel);
+            imageops::overlay(&mut canvas, &src.$convert(), dx, dy);
+            DynamicImage::$variant(canvas)
+        }};
+    }
+    let wide = |v: u8| u16::from(v) * 257;
+    let linear = |v: u8| {
+        let v = f32::from(v) / 255.0;
+        if v <= 0.040_45 {
+            v / 12.92
+        } else {
+            ((v + 0.055) / 1.055).powf(2.4)
+        }
+    };
+    use image::{Luma, LumaA, Rgb};
+    Ok(match (depth, channels) {
+        (1, 1) => compose!(Luma([r]), to_luma8, ImageLuma8),
+        (1, 2) => compose!(LumaA([r, a]), to_luma_alpha8, ImageLumaA8),
+        (1, 3) => compose!(Rgb([r, g, b]), to_rgb8, ImageRgb8),
+        (1, _) => compose!(Rgba([r, g, b, a]), to_rgba8, ImageRgba8),
+        (2, 1) => compose!(Luma([wide(r)]), to_luma16, ImageLuma16),
+        (2, 2) => compose!(LumaA([wide(r), wide(a)]), to_luma_alpha16, ImageLumaA16),
+        (2, 3) => compose!(Rgb([wide(r), wide(g), wide(b)]), to_rgb16, ImageRgb16),
+        (2, _) => compose!(Rgba([wide(r), wide(g), wide(b), wide(a)]), to_rgba16, ImageRgba16),
+        (_, 3) => compose!(Rgb([linear(r), linear(g), linear(b)]), to_rgb32f, ImageRgb32F),
+        _ => compose!(
+            Rgba([linear(r), linear(g), linear(b), f32::from(a) / 255.0]),
+            to_rgba32f,
+            ImageRgba32F
+        ),
+    })
 }
 
 fn filename_suffix(width: u32, height: u32) -> String {
@@ -393,6 +441,48 @@ mod tests {
         assert_eq!(out, dir.path().join("in_extent-10x10.png"));
         let img = image::open(&out).unwrap();
         assert_eq!((img.width(), img.height()), (10, 10));
+    }
+
+    #[test]
+    fn canvas_keeps_source_depth_and_gray_layout() {
+        use image::ColorType;
+        let opts = ExtentOptions {
+            size: ExtentSize::Exact { width: 4, height: 2 },
+            background: [10, 10, 10, 0xFF],
+            gravity: Gravity::West,
+        };
+        let rgb16 = DynamicImage::ImageRgb16(ImageBuffer::from_pixel(
+            2,
+            2,
+            image::Rgb([12345u16, 23456, 34567]),
+        ));
+        let out = apply_to(&rgb16, &opts).unwrap();
+        assert_eq!(out.color(), ColorType::Rgb16);
+        assert_eq!(out.as_rgb16().unwrap().get_pixel(0, 0).0, [12345, 23456, 34567]);
+        assert_eq!(out.as_rgb16().unwrap().get_pixel(3, 0).0, [2570, 2570, 2570]);
+
+        let gray16 =
+            DynamicImage::ImageLuma16(ImageBuffer::from_pixel(2, 2, image::Luma([40000u16])));
+        let out = apply_to(&gray16, &opts).unwrap();
+        assert_eq!(out.color(), ColorType::L16);
+        assert_eq!(out.as_luma16().unwrap().get_pixel(1, 1).0, [40000]);
+
+        let gray8 = DynamicImage::ImageLuma8(ImageBuffer::from_pixel(2, 2, image::Luma([7u8])));
+        assert_eq!(apply_to(&gray8, &opts).unwrap().color(), ColorType::L8);
+        // A coloured or translucent background needs RGB / alpha.
+        let red = ExtentOptions { background: [255, 0, 0, 0xFF], ..opts };
+        assert_eq!(apply_to(&gray16, &red).unwrap().color(), ColorType::Rgb16);
+        let clear = ExtentOptions { background: [0, 0, 0, 0], ..opts };
+        assert_eq!(apply_to(&gray8, &clear).unwrap().color(), ColorType::La8);
+
+        let float = DynamicImage::ImageRgb32F(ImageBuffer::from_pixel(
+            2,
+            2,
+            image::Rgb([2.0f32, 0.5, 0.0]),
+        ));
+        let out = apply_to(&float, &opts).unwrap();
+        assert_eq!(out.color(), ColorType::Rgb32F);
+        assert_eq!(out.as_rgb32f().unwrap().get_pixel(0, 0).0, [2.0, 0.5, 0.0]);
     }
 
     #[test]

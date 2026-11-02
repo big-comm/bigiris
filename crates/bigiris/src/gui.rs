@@ -407,7 +407,7 @@ struct ViewerState {
     loading_spinner: adw::Spinner,
     /// Dialog de propriedades atualmente aberto, se houver. Evita que
     /// cliques repetidos no botão `i` empilhem janelas.
-    props_dialog: Option<adw::ApplicationWindow>,
+    props_dialog: Option<(adw::ApplicationWindow, PathBuf)>,
     /// Edições pendentes (rotate/flip) aplicadas in-memory sobre a
     /// imagem decodificada. Vazio = arquivo "limpo". `Ctrl+S` grava e
     /// limpa; a navegação é bloqueada enquanto houver alterações.
@@ -3112,11 +3112,6 @@ fn present_print_dialog(
 /// Reusa o dialog de metadados existente com os arquivos do viewer.
 /// Spawna nova janela (o dialog é uma AppWindow independente).
 fn show_metadata_for_current(state: &Rc<RefCell<ViewerState>>) {
-    // Se já existe uma janela aberta, traz pra frente em vez de empilhar.
-    if let Some(existing) = state.borrow().props_dialog.clone() {
-        existing.present();
-        return;
-    }
     let (window, path) = {
         let s = state.borrow();
         if s.files.is_empty() {
@@ -3124,6 +3119,18 @@ fn show_metadata_for_current(state: &Rc<RefCell<ViewerState>>) {
         }
         (s.window().clone(), s.files[s.idx].clone())
     };
+    // Se já existe uma janela aberta para esta imagem, traz pra frente em
+    // vez de empilhar. Depois de navegar, ela descreveria a imagem errada:
+    // fecha e monta uma nova.
+    let existing = state.borrow_mut().props_dialog.take();
+    if let Some((dialog, shown)) = existing {
+        if shown == path {
+            dialog.present();
+            state.borrow_mut().props_dialog = Some((dialog, shown));
+            return;
+        }
+        dialog.destroy();
+    }
     let Some(app) = window.application().and_downcast::<adw::Application>() else { return };
     let dialog = build_properties_window(&app, &path);
     // Attached to the viewer: GTK then drops minimize/maximize, as for any
@@ -3133,14 +3140,17 @@ fn show_metadata_for_current(state: &Rc<RefCell<ViewerState>>) {
     // Quando o user fecha, soltamos a referência — próximo clique abre fresco.
     {
         let state = Rc::downgrade(state);
-        dialog.connect_close_request(move |_| {
+        dialog.connect_close_request(move |closing| {
             if let Some(state) = state.upgrade() {
-                state.borrow_mut().props_dialog = None;
+                let mut s = state.borrow_mut();
+                if s.props_dialog.as_ref().is_some_and(|(open, _)| open == closing) {
+                    s.props_dialog = None;
+                }
             }
             glib::Propagation::Proceed
         });
     }
-    state.borrow_mut().props_dialog = Some(dialog.clone());
+    state.borrow_mut().props_dialog = Some((dialog.clone(), path));
     dialog.present();
 }
 

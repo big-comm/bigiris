@@ -813,6 +813,14 @@ impl Naming<'_> {
 /// `increment`; callers then process each group in order, so the numbered
 /// names are deterministic. Under `increment`, an input named like another
 /// input's numbered output (`x_1` next to `x`) joins that group as well.
+///
+/// PNM is planned conservatively under one key (`ppm`): the core only picks
+/// `.pgm` or `.ppm` from the decoded pixels, so a gray and a colour input
+/// sharing a stem are refused although they would not collide. Telling
+/// them apart here would mean decoding untrusted headers in this process
+/// (or one extra sandboxed run per input) before any work starts; the cost
+/// of the false refusal is a rename. Reports always print the path the core
+/// actually wrote ([`ConvertOutcome`]), never this planned one.
 fn plan_outputs(files: &[PathBuf], naming: Naming) -> color_eyre::Result<Vec<Vec<PathBuf>>> {
     use std::collections::{HashMap, HashSet};
     let mut seen = HashSet::new();
@@ -1428,7 +1436,7 @@ fn run_install(user: bool, system: bool, destdir: Option<PathBuf>) -> color_eyre
             let scope = resolve_scope(user, system);
             tracing::info!(?scope, "install-integrations");
             bigimage_integrations::install(scope)
-                .map_err(|e| color_eyre::eyre::eyre!("install falhou: {e}"))?
+                .map_err(|e| color_eyre::eyre::eyre!("a instalação falhou: {e}"))?
         }
     };
     print_install_report(&report, "instalado");
@@ -1446,7 +1454,7 @@ fn run_uninstall() -> color_eyre::Result<()> {
     let scope = bigimage_integrations::Scope::User;
     tracing::info!(?scope, "uninstall-integrations");
     let report = bigimage_integrations::uninstall(scope)
-        .map_err(|e| color_eyre::eyre::eyre!("uninstall falhou: {e}"))?;
+        .map_err(|e| color_eyre::eyre::eyre!("a remoção falhou: {e}"))?;
     print_install_report(&report, "removido");
     if report.is_success() {
         Ok(())
@@ -1468,6 +1476,11 @@ fn print_install_report(report: &bigimage_integrations::Report, verb: &str) {
     for outcome in &report.outcomes {
         let status = if outcome.error.is_some() {
             "FALHA"
+        } else if outcome.packaged {
+            // The package ships it system-wide: nothing personal was written
+            // and stale copies from earlier user installs were removed.
+            // Without this it read "sem alterações", as if install were a no-op.
+            "fornecido pelo pacote"
         } else if outcome.files.is_empty() {
             if outcome.detected {
                 "sem alterações"

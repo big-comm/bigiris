@@ -21,7 +21,9 @@ fn remove_bg_one_with_session(
     src: &Path,
 ) -> Result<PathBuf, String> {
     bigimage_core::content::ensure_static(src).map_err(|e| e.to_string())?;
-    let img = bigimage_core::open_image(src).map_err(|e| format!("decode: {e}"))?;
+    let img = bigimage_core::open_image(src).map_err(|e| {
+        fill(&gettext("Não foi possível ler a imagem: {error}"), &[("error", &e.to_string())])
+    })?;
     let out = session.process(&img).map_err(|e| e.to_string())?;
     // Increment, never Replace: the dialog promises not to overwrite, and
     // `foto.jpg` + `foto.png` in one batch both map to `foto_nobg.png`.
@@ -32,13 +34,15 @@ fn remove_bg_one_with_session(
         &EncodeOptions::default(),
         OverwritePolicy::Increment,
     )
-    .map_err(|e| format!("encode: {e}"))?;
+    .map_err(|e| {
+        fill(&gettext("Não foi possível gravar o resultado: {error}"), &[("error", &e.to_string())])
+    })?;
     Ok(outcome.path().to_path_buf())
 }
 
-/// Worker-thread state for the remove-bg dialog. Shared via `Arc<Mutex>`
-/// with a `glib::timeout_add_local` on the UI thread, which polls every
-/// 100 ms and reflects the latest snapshot into the ProgressBar + label.
+/// Worker-thread state for the remove-bg dialog. Shared via `Arc<Mutex>`;
+/// the worker raises a [`viewer::Wake`] after each change and a task on
+/// the GTK loop reflects the latest snapshot into the ProgressBar + label.
 #[derive(Clone, Debug)]
 enum BgUiState {
     /// Worker hasn't started yet (apply not clicked).
@@ -47,9 +51,9 @@ enum BgUiState {
     Download { done: u64, total: u64 },
     /// Running inference on file `idx` (0-based) of `total`.
     Processing { idx: usize, total: usize, file: String },
-    /// Worker finished. `outputs` are per-input written paths (or None
-    /// for failed inputs — lines up with the originals by index).
-    Done { outputs: Vec<Option<PathBuf>>, first_err: Option<String> },
+    /// Worker finished. `outputs` pairs the index of each input processed
+    /// in this run with its written path (None when it failed).
+    Done { outputs: Vec<(usize, Option<PathBuf>)>, first_err: Option<String> },
 }
 
 pub fn run_remove_bg_dialog(files: Vec<PathBuf>) -> i32 {
@@ -193,6 +197,11 @@ pub(in crate::gui) fn build_remove_bg_dialog(
     }
     close_on_click(&window, &cancel_btn);
 
+    // Result of every input across runs: a retry only processes the ones
+    // still missing, so files that already succeeded are not written again
+    // as `_nobg_1.png`.
+    let results: Rc<RefCell<Vec<Option<PathBuf>>>> = Rc::new(RefCell::new(vec![None; files.len()]));
+
     {
         let files_rc = files.clone();
         let status = status.clone();
@@ -206,96 +215,111 @@ pub(in crate::gui) fn build_remove_bg_dialog(
                 status.set_text(&error.to_string());
                 return;
             }
+            let pending: Vec<(usize, PathBuf)> = files_rc
+                .iter()
+                .enumerate()
+                .filter(|(idx, _)| results.borrow().get(*idx).is_some_and(Option::is_none))
+                .map(|(idx, path)| (idx, path.clone()))
+                .collect();
+            if pending.is_empty() {
+                return;
+            }
             batch_runner::disarm_auto_close(&window);
             apply_btn.set_sensitive(false);
             // Cancelar continua disponível — vira "abortar e fechar".
             cancel_btn.set_label(&gettext("Cancelar"));
+            progress_bar.remove_css_class("error");
+            progress_bar.remove_css_class("success");
             progress_bar.set_visible(true);
             progress_bar.set_fraction(0.0);
             progress_bar.set_text(Some(&gettext("Preparando…")));
             status.set_text("");
 
-            // Rc<Vec<PathBuf>> não é Send — worker recebe um Vec próprio.
-            let files_owned: Vec<PathBuf> = (*files_rc).clone();
             let shared: std::sync::Arc<std::sync::Mutex<BgUiState>> =
                 std::sync::Arc::new(std::sync::Mutex::new(BgUiState::Idle));
+            let wake = viewer::Wake::default();
 
-            let worker = {
+            {
                 let shared = shared.clone();
                 let cancelled_w = cancelled.clone();
+                let wake = wake.clone();
                 std::thread::spawn(move || {
+                    // Closes the wake-up when the worker ends, also by panic:
+                    // the UI then reads the final state instead of waiting.
+                    struct CloseOnDrop(viewer::Wake);
+                    impl Drop for CloseOnDrop {
+                        fn drop(&mut self) {
+                            self.0.close();
+                        }
+                    }
+                    let _close = CloseOnDrop(wake.clone());
+                    let publish = |state: BgUiState| {
+                        *shared.lock().unwrap_or_else(|p| p.into_inner()) = state;
+                        wake.notify();
+                    };
                     // Build a single BgSession for the whole batch — Download
                     // progress streams once, then the loaded weights are
                     // reused for every file. Previous code reloaded ~224 MB
                     // per file (perf review I-ORT).
-                    let total = files_owned.len();
-                    let session_progress_shared = shared.clone();
-                    let session_result = bigimage_ai::background::BgSession::new(move |stage| {
+                    let total = pending.len();
+                    let session_result = bigimage_ai::background::BgSession::new(|stage| {
                         if let bigimage_ai::background::BgStage::Download { done, total } = stage {
-                            let mut st =
-                                session_progress_shared.lock().unwrap_or_else(|p| p.into_inner());
-                            *st = BgUiState::Download { done, total };
+                            publish(BgUiState::Download { done, total });
                         }
                     });
                     let mut session = match session_result {
                         Ok(s) => s,
                         Err(e) => {
-                            let mut st = shared.lock().unwrap_or_else(|p| p.into_inner());
-                            *st = BgUiState::Done {
-                                outputs: vec![None; total],
-                                first_err: Some(format!("falha ao carregar modelo: {e}")),
-                            };
+                            publish(BgUiState::Done {
+                                outputs: pending.iter().map(|(idx, _)| (*idx, None)).collect(),
+                                first_err: Some(fill(
+                                    &gettext("Falha ao carregar o modelo: {error}"),
+                                    &[("error", &e.to_string())],
+                                )),
+                            });
                             return;
                         }
                     };
 
-                    let mut outputs: Vec<Option<PathBuf>> = Vec::with_capacity(total);
+                    let mut outputs = Vec::with_capacity(total);
                     let mut first_err: Option<String> = None;
-                    for (idx, path) in files_owned.iter().enumerate() {
+                    for (position, (idx, path)) in pending.iter().enumerate() {
                         // Bail entre arquivos — não dá para interromper o
                         // session.run() do ORT no meio, mas pelo menos o
                         // próximo arquivo do lote não é tocado.
                         if cancelled_w.load(std::sync::atomic::Ordering::Relaxed) {
-                            outputs.push(None);
+                            outputs.push((*idx, None));
                             continue;
                         }
-                        {
-                            // A poisoned mutex would normally panic the worker
-                            // and silently kill the GUI thread when the timeout
-                            // poll later tried to lock; into_inner() recovers
-                            // the inner state and lets the dialog finish with
-                            // a clean error instead.
-                            let mut st = shared.lock().unwrap_or_else(|p| p.into_inner());
-                            *st = BgUiState::Processing {
-                                idx,
-                                total,
-                                file: path
-                                    .file_name()
-                                    .map(|n| n.to_string_lossy().into_owned())
-                                    .unwrap_or_default(),
-                            };
-                        }
+                        publish(BgUiState::Processing {
+                            idx: position,
+                            total,
+                            file: path
+                                .file_name()
+                                .map(|n| n.to_string_lossy().into_owned())
+                                .unwrap_or_default(),
+                        });
                         // Scoped cancel lets closing the window stop the
                         // isolated decode instead of waiting for it.
                         let result = crate::codec::with_cancel(cancelled_w.clone(), || {
                             remove_bg_one_with_session(&mut session, path)
                         });
                         match result {
-                            Ok(out) => outputs.push(Some(out)),
+                            Ok(out) => outputs.push((*idx, Some(out))),
                             Err(e) => {
                                 if first_err.is_none() {
                                     first_err = Some(format!("{}: {e}", path.display()));
                                 }
-                                outputs.push(None);
+                                outputs.push((*idx, None));
                             }
                         }
                     }
-                    let mut st = shared.lock().unwrap_or_else(|p| p.into_inner());
-                    *st = BgUiState::Done { outputs, first_err };
-                })
-            };
+                    publish(BgUiState::Done { outputs, first_err });
+                });
+            }
 
-            // UI poll @ 10 Hz. Se a janela já foi fechada (cancelled), não
+            // Awaited on the GTK loop: it wakes only when the worker
+            // publishes progress. Se a janela já foi fechada (cancelled), não
             // tocamos mais nos widgets, mas seguramos o app até o worker
             // terminar: sair no meio da gravação deixaria `.part` órfãos.
             let progress_bar = progress_bar.clone();
@@ -304,97 +328,70 @@ pub(in crate::gui) fn build_remove_bg_dialog(
             let cancel_btn = cancel_btn.clone();
             let window = window.clone();
             let originals = files_rc.clone();
-            let cancelled_poll = cancelled.clone();
+            let results = results.clone();
+            let cancelled_ui = cancelled.clone();
             let hold = window.application().map(|app| app.hold());
-            glib::timeout_add_local(std::time::Duration::from_millis(100), move || {
-                let _hold = &hold;
-                let finished = worker.is_finished();
-                if cancelled_poll.load(std::sync::atomic::Ordering::Relaxed) {
-                    return if finished {
-                        glib::ControlFlow::Break
-                    } else {
-                        glib::ControlFlow::Continue
-                    };
+            glib::MainContext::default().spawn_local(async move {
+                let _hold = hold;
+                let snapshot = || shared.lock().unwrap_or_else(|p| p.into_inner()).clone();
+                while wake.wait().await {
+                    if !cancelled_ui.load(std::sync::atomic::Ordering::Relaxed) {
+                        show_bg_progress(&progress_bar, &snapshot());
+                    }
                 }
-                let snapshot = shared.lock().unwrap_or_else(|p| p.into_inner()).clone();
+                if cancelled_ui.load(std::sync::atomic::Ordering::Relaxed) {
+                    return;
+                }
                 // The worker died (panic) without its summary: let the user
-                // retry or close instead of polling forever.
-                if finished && !matches!(snapshot, BgUiState::Done { .. }) {
+                // retry or close.
+                let BgUiState::Done { outputs, first_err } = snapshot() else {
                     status.set_text(&gettext(
                         "O processamento terminou inesperadamente. Tente novamente.",
                     ));
                     apply_btn.set_sensitive(true);
                     cancel_btn.set_label(&gettext("Fechar"));
-                    return glib::ControlFlow::Break;
-                }
-                match snapshot {
-                    BgUiState::Idle => glib::ControlFlow::Continue,
-                    BgUiState::Download { done, total } => {
-                        let frac = if total > 0 {
-                            (done as f64 / total as f64).clamp(0.0, 1.0)
-                        } else {
-                            0.0
-                        };
-                        progress_bar.set_fraction(frac);
-                        progress_bar.set_text(Some(&fill(
-                            &gettext("Baixando modelo (uma vez só): {done} / {total}"),
-                            &[("done", &format_size(done)), ("total", &format_size(total))],
-                        )));
-                        glib::ControlFlow::Continue
-                    }
-                    BgUiState::Processing { idx, total, file } => {
-                        let frac = (idx as f64 / total.max(1) as f64).clamp(0.0, 1.0);
-                        progress_bar.set_fraction(frac);
-                        progress_bar.set_text(Some(&fill(
-                            &gettext("Processando {current}/{total} — {file}"),
-                            &[
-                                ("current", &(idx + 1).to_string()),
-                                ("total", &total.to_string()),
-                                ("file", &file),
-                            ],
-                        )));
-                        glib::ControlFlow::Continue
-                    }
-                    BgUiState::Done { outputs, first_err } => {
-                        // Checa cancelamento antes de qualquer side-effect:
-                        // se o usuário fechou a janela durante a inferência,
-                        // não queremos que o Compare apareça sozinho.
-                        progress_bar.set_fraction(1.0);
-                        let ok = outputs.iter().filter(|o| o.is_some()).count();
-                        let fail = outputs.len() - ok;
-                        if fail == 0 {
-                            status.set_text(&format!("{}: {ok}", gettext("Imagens gravadas")));
-                            progress_bar.set_text(Some(&gettext("Concluído")));
-                            progress_bar.add_css_class("success");
-                            let single = originals.len() == 1;
-                            if single {
-                                if let (Some(orig), Some(Some(out))) =
-                                    (originals.first(), outputs.first())
-                                {
-                                    spawn_compare_viewer(orig, out);
-                                }
-                                // Single-file: fecha imediato enquanto o
-                                // Compare abre — evita janela dupla visível.
-                                window.close();
-                            } else {
-                                // Lote: segura 2 s pra o usuário conferir o
-                                // sumário antes de sumir.
-                                batch_runner::arm_auto_close(&window, 2);
-                            }
-                        } else {
-                            let detail = first_err.unwrap_or_default();
-                            status.set_text(&format!(
-                                "{}: {ok} · {}: {fail}\n{detail}",
-                                gettext("Imagens gravadas"),
-                                gettext("Falhas")
-                            ));
-                            progress_bar.set_text(Some(&gettext("Com erros")));
-                            progress_bar.add_css_class("error");
-                            apply_btn.set_sensitive(true);
-                            cancel_btn.set_label(&gettext("Fechar"));
+                    return;
+                };
+                {
+                    let mut results = results.borrow_mut();
+                    for (idx, output) in outputs {
+                        if let Some(slot) = results.get_mut(idx) {
+                            *slot = output;
                         }
-                        glib::ControlFlow::Break
                     }
+                }
+                progress_bar.set_fraction(1.0);
+                let results = results.borrow();
+                let ok = results.iter().filter(|o| o.is_some()).count();
+                let fail = results.len() - ok;
+                if fail == 0 {
+                    status.set_text(&format!("{}: {ok}", gettext("Imagens gravadas")));
+                    progress_bar.set_text(Some(&gettext("Concluído")));
+                    progress_bar.add_css_class("success");
+                    if originals.len() == 1 {
+                        if let (Some(orig), Some(Some(out))) = (originals.first(), results.first())
+                        {
+                            spawn_compare_viewer(orig, out);
+                        }
+                        // Single-file: fecha imediato enquanto o
+                        // Compare abre — evita janela dupla visível.
+                        window.close();
+                    } else {
+                        // Lote: segura 2 s pra o usuário conferir o
+                        // sumário antes de sumir.
+                        batch_runner::arm_auto_close(&window, 2);
+                    }
+                } else {
+                    let detail = first_err.unwrap_or_default();
+                    status.set_text(&format!(
+                        "{}: {ok} · {}: {fail}\n{detail}",
+                        gettext("Imagens gravadas"),
+                        gettext("Falhas")
+                    ));
+                    progress_bar.set_text(Some(&gettext("Com erros")));
+                    progress_bar.add_css_class("error");
+                    apply_btn.set_sensitive(true);
+                    cancel_btn.set_label(&gettext("Fechar"));
                 }
             });
         });
@@ -403,12 +400,45 @@ pub(in crate::gui) fn build_remove_bg_dialog(
     window
 }
 
+/// Reflect a running worker's latest state in the progress bar.
+fn show_bg_progress(progress_bar: &gtk::ProgressBar, state: &BgUiState) {
+    match state {
+        BgUiState::Idle | BgUiState::Done { .. } => {}
+        BgUiState::Download { done, total } => {
+            let frac =
+                if *total > 0 { (*done as f64 / *total as f64).clamp(0.0, 1.0) } else { 0.0 };
+            progress_bar.set_fraction(frac);
+            progress_bar.set_text(Some(&fill(
+                &gettext("Baixando modelo (uma vez só): {done} / {total}"),
+                &[("done", &format_size(*done)), ("total", &format_size(*total))],
+            )));
+        }
+        BgUiState::Processing { idx, total, file } => {
+            let frac = (*idx as f64 / (*total).max(1) as f64).clamp(0.0, 1.0);
+            progress_bar.set_fraction(frac);
+            progress_bar.set_text(Some(&fill(
+                &gettext("Processando {current}/{total} — {file}"),
+                &[
+                    ("current", &(idx + 1).to_string()),
+                    ("total", &total.to_string()),
+                    ("file", file),
+                ],
+            )));
+        }
+    }
+}
+
 /// Launch the Compare dialog in a separate process so both windows can
 /// coexist (each `adw::Application` instance takes over the main loop).
 /// Called right after a successful single-file remove-bg so the user
 /// sees original vs. result side-by-side.
 fn spawn_compare_viewer(original: &Path, result: &Path) {
     let flag = std::ffi::OsStr::new("--dialog=compare");
-    let _ =
-        super::super::transfers::spawn_bigiris([flag, original.as_os_str(), result.as_os_str()]);
+    // `--` keeps a file named like `-x.png` from being read as a flag.
+    let _ = super::super::transfers::spawn_bigiris([
+        flag,
+        std::ffi::OsStr::new("--"),
+        original.as_os_str(),
+        result.as_os_str(),
+    ]);
 }

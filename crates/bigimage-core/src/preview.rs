@@ -164,6 +164,10 @@ impl PreviewSession {
             PreviewOp::Rotate(r) => Ok(rotate::apply_to(&self.thumbnail, *r)),
             PreviewOp::Flip(a) => Ok(flip::apply_to(&self.thumbnail, *a)),
             PreviewOp::Crop(rect) => {
+                // Validate in source pixels first, with crop_file's error:
+                // the scaled rect is clamped to the thumbnail and would
+                // hide a crop that the real operation rejects.
+                rect.validate_against(self.natural_size.0, self.natural_size.1)?;
                 let scaled = scale_rect(
                     *rect,
                     self.natural_size,
@@ -181,6 +185,10 @@ impl PreviewSession {
                 // the canvas always contains it (independent rounding of the
                 // canvas vs. the thumbnail used to drift a pixel below it and
                 // make `resolve` reject the preview).
+                // Same reasoning as crop: an exact size smaller than the
+                // source is rejected by extent_file, but would be clamped
+                // up to the thumbnail here.
+                opts.size.resolve(self.natural_size.0, self.natural_size.1)?;
                 let (tw, th) = (self.thumbnail.width(), self.thumbnail.height());
                 let preview_opts = match opts.size {
                     ExtentSize::Aspect { .. } => *opts,
@@ -445,5 +453,24 @@ mod tests {
         let sess = PreviewSession::open(&src).unwrap();
         let cropped = sess.apply(&PreviewOp::Crop(CropRect::new(500, 250, 1000, 500))).unwrap();
         assert_eq!((cropped.width(), cropped.height()), (400, 200));
+    }
+
+    #[test]
+    fn preview_rejects_operations_the_file_pipeline_rejects() {
+        let dir = TempDir::new().unwrap();
+        let src = write_fixture(dir.path(), "bounds.png", 1000, 500);
+        let sess = PreviewSession::open(&src).unwrap();
+        let replace = crate::OverwritePolicy::Replace;
+        for rect in [CropRect::new(900, 0, 200, 10), CropRect::new(0, 0, 0, 10)] {
+            let preview = sess.apply(&PreviewOp::Crop(rect)).unwrap_err().to_string();
+            let file = crate::crop_file(&src, rect, None, replace).unwrap_err().to_string();
+            assert_eq!(preview, file);
+        }
+        let small = ExtentOptions::new(ExtentSize::Exact { width: 999, height: 600 });
+        let preview = sess.apply(&PreviewOp::Extent(small)).unwrap_err().to_string();
+        let file = crate::extent_file(&src, small, None, replace).unwrap_err().to_string();
+        assert_eq!(preview, file);
+        // The bottom-right edge itself is still valid.
+        sess.apply(&PreviewOp::Crop(CropRect::new(900, 0, 100, 500))).unwrap();
     }
 }

@@ -30,7 +30,7 @@ impl CropRect {
         format!("_crop-{}x{}+{}+{}", self.width, self.height, self.x, self.y)
     }
 
-    fn validate_against(&self, img_w: u32, img_h: u32) -> Result<()> {
+    pub(crate) fn validate_against(&self, img_w: u32, img_h: u32) -> Result<()> {
         if self.width == 0 || self.height == 0 {
             return Err(BigImageError::InvalidInput(format!(
                 "recorte com dimensão zero: {}x{}",

@@ -40,6 +40,10 @@ pub struct ScopePaths {
     pub data: PathBuf,
     /// `~/.config` / `/etc/xdg`.
     pub config: PathBuf,
+    /// System configuration dirs (`$XDG_CONFIG_DIRS`, default `/etc/xdg`)
+    /// that Thunar falls back to when the user has no `uca.xml`. Only set
+    /// for a real user install; empty means "none" (tests, system scope).
+    pub xdg_config_dirs: Vec<PathBuf>,
 }
 
 impl ScopePaths {
@@ -53,6 +57,7 @@ impl ScopePaths {
                     home: base.home_dir().to_path_buf(),
                     data: base.data_dir().to_path_buf(),
                     config: base.config_dir().to_path_buf(),
+                    xdg_config_dirs: config_dirs_from(std::env::var_os("XDG_CONFIG_DIRS")),
                 })
             }
             Scope::System => Ok(Self {
@@ -60,6 +65,7 @@ impl ScopePaths {
                 home: PathBuf::from("/"),
                 data: PathBuf::from("/usr/share"),
                 config: PathBuf::from("/etc/xdg"),
+                xdg_config_dirs: Vec::new(),
             }),
         }
     }
@@ -70,7 +76,7 @@ impl ScopePaths {
         let home: PathBuf = home.into();
         let data = home.join(".local/share");
         let config = home.join(".config");
-        Self { scope: Scope::User, home, data, config }
+        Self { scope: Scope::User, home, data, config, xdg_config_dirs: Vec::new() }
     }
 
     /// System-wide scope prefixed with a `DESTDIR` for packaging. Ensures
@@ -83,6 +89,7 @@ impl ScopePaths {
             home: destdir.clone(),
             data: destdir.join("usr/share"),
             config: destdir.join("etc/xdg"),
+            xdg_config_dirs: Vec::new(),
         }
     }
 
@@ -139,6 +146,19 @@ impl ScopePaths {
     /// `~/.local/share/metainfo/` — AppStream metainfo XML.
     pub fn metainfo_dir(&self) -> PathBuf {
         self.data.join("metainfo")
+    }
+}
+
+/// Parse `$XDG_CONFIG_DIRS`. The spec ignores relative entries, and an
+/// unset or empty value means the default `/etc/xdg`.
+fn config_dirs_from(value: Option<std::ffi::OsString>) -> Vec<PathBuf> {
+    let dirs: Vec<PathBuf> = value
+        .map(|v| std::env::split_paths(&v).filter(|p| p.is_absolute()).collect())
+        .unwrap_or_default();
+    if dirs.is_empty() {
+        vec![PathBuf::from("/etc/xdg")]
+    } else {
+        dirs
     }
 }
 
@@ -268,6 +288,18 @@ mod tests {
         assert!(remove_matching(&dir, "bigiris-", ".desktop").unwrap().is_empty());
         assert!(target.exists());
         assert!(dir.join("bigiris-dir.desktop").is_dir());
+    }
+
+    #[test]
+    fn config_dirs_follow_the_xdg_spec() {
+        let etc = vec![PathBuf::from("/etc/xdg")];
+        assert_eq!(config_dirs_from(None), etc);
+        assert_eq!(config_dirs_from(Some("".into())), etc);
+        assert_eq!(config_dirs_from(Some("relative:also/rel".into())), etc);
+        assert_eq!(
+            config_dirs_from(Some("/opt/xdg::rel:/etc/xdg".into())),
+            vec![PathBuf::from("/opt/xdg"), PathBuf::from("/etc/xdg")]
+        );
     }
 
     #[test]

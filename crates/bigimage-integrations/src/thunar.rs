@@ -8,10 +8,15 @@
 //! tagged with `<unique-id>bigiris-…</unique-id>` and live as siblings of
 //! any pre-existing `<action>` blocks; uninstall just drops ours.
 //!
+//! Thunar reads only the *first* `Thunar/uca.xml` it finds, user file
+//! before `$XDG_CONFIG_DIRS` (`/etc/xdg`). So when the user has no file
+//! yet, we seed it from that system file — exactly what Thunar does the
+//! first time it saves — otherwise the new personal file would hide the
+//! distribution defaults ("Open Terminal Here", "Search for Files").
+//!
 //! **User scope only.** The system-wide `/etc/xdg/Thunar/uca.xml` is owned
-//! by the `thunar` package (it ships the default "Open Terminal Here" and
-//! "Search for Files" actions). A distro package that also shipped it
-//! would conflict with `thunar` on install, and forcing it would wipe those
+//! by the `thunar` package. A distro package that also shipped it would
+//! conflict with `thunar` on install, and forcing it would wipe those
 //! defaults. So `--system` / `--destdir` installs skip Thunar entirely;
 //! users get the actions with `bigiris install-integrations --user`, which
 //! merges them into their personal `~/.config/Thunar/uca.xml`.
@@ -41,21 +46,25 @@ pub fn install(paths: &ScopePaths) -> io::Result<Vec<PathBuf>> {
     if let Some(parent) = target.parent() {
         std::fs::create_dir_all(parent)?;
     }
-    let existing = read_or_default(&target)?;
-    let stripped = strip_bigiris_actions(&existing);
+    let base = match read_existing(&target)? {
+        Some(body) => body,
+        None => seed_from_system(&paths.xdg_config_dirs),
+    };
+    let stripped = strip_bigiris_actions(&base);
     let merged = inject_before_close(&stripped, &render_all_actions());
     safe_write_with_mode(&target, merged, paths.scope, UCA_MODE)?;
     Ok(vec![target])
 }
 
 /// Drop every bigiris-owned `<action>` from `uca.xml`. In user scope, if
-/// the resulting file contains no actions at all (we were the only
-/// source), it is removed so Thunar falls back to its built-in defaults.
+/// what remains is just what Thunar would show without a personal file
+/// (no actions at all, or exactly the system defaults we seeded it with),
+/// the file is removed so Thunar falls back to the system defaults again.
 ///
-/// In system scope this only cleans actions that older BigIris packages
-/// merged into `/etc/xdg/Thunar/uca.xml`; that file belongs to the
-/// `thunar` package and is never deleted. A file without any of our
-/// actions is left untouched in both scopes.
+/// The CLI only runs this in user scope. The system-scope branch (strip
+/// actions an old BigIris package merged into `/etc/xdg/Thunar/uca.xml`,
+/// never deleting that `thunar`-owned file) is library-only for now. A
+/// file without any of our actions is left untouched.
 pub fn uninstall(paths: &ScopePaths) -> io::Result<Vec<PathBuf>> {
     let target = paths.thunar_uca();
     if !target.exists() {
@@ -66,7 +75,9 @@ pub fn uninstall(paths: &ScopePaths) -> io::Result<Vec<PathBuf>> {
     if stripped == existing {
         return Ok(Vec::new());
     }
-    if paths.scope == Scope::User && !stripped.contains("<action>") {
+    let only_defaults = !stripped.contains("<action>")
+        || same_xml(&stripped, &seed_from_system(&paths.xdg_config_dirs));
+    if paths.scope == Scope::User && only_defaults {
         std::fs::remove_file(&target)?;
     } else {
         safe_write_with_mode(&target, stripped, paths.scope, UCA_MODE)?;
@@ -74,12 +85,51 @@ pub fn uninstall(paths: &ScopePaths) -> io::Result<Vec<PathBuf>> {
     Ok(vec![target])
 }
 
-fn read_or_default(path: &Path) -> io::Result<String> {
-    if path.exists() {
-        std::fs::read_to_string(path)
-    } else {
-        Ok(EMPTY_XML.to_string())
+/// The user's current `uca.xml`, or `None` when there is none yet (an
+/// empty file counts as none: Thunar cannot parse it either). A file that
+/// lost its closing `</actions>` is refused rather than rebuilt, because
+/// rebuilding would drop every custom action the user still has in it.
+fn read_existing(path: &Path) -> io::Result<Option<String>> {
+    if !path.exists() {
+        return Ok(None);
     }
+    let body = std::fs::read_to_string(path)?;
+    if body.trim().is_empty() {
+        return Ok(None);
+    }
+    if !body.contains("</actions>") {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidData,
+            format!(
+                "{} has no closing </actions> tag (truncated or edited by hand?); \
+                 it was left untouched so your custom actions are not lost. \
+                 Repair it, or move it aside (for example to uca.xml.bak) to start over, \
+                 then run the command again",
+                path.display()
+            ),
+        ));
+    }
+    Ok(Some(body))
+}
+
+/// What Thunar shows when the user has no `uca.xml`: the first system
+/// `Thunar/uca.xml` along `config_dirs`, minus actions an old BigIris
+/// package may have merged into it. An unreadable or broken system file
+/// yields no actions, as it does in Thunar.
+fn seed_from_system(config_dirs: &[PathBuf]) -> String {
+    let Some(system) = config_dirs.iter().map(|d| d.join("Thunar/uca.xml")).find(|p| p.is_file())
+    else {
+        return EMPTY_XML.to_string();
+    };
+    match std::fs::read_to_string(system) {
+        Ok(body) if body.contains("</actions>") => strip_bigiris_actions(&body),
+        _ => EMPTY_XML.to_string(),
+    }
+}
+
+/// Equal up to whitespace — our merge re-indents around the insertion.
+fn same_xml(a: &str, b: &str) -> bool {
+    a.split_whitespace().eq(b.split_whitespace())
 }
 
 /// Remove every `<action>…<unique-id>bigiris-…</unique-id>…</action>` block,
@@ -472,6 +522,70 @@ mod tests {
         assert!(read(&real).contains("<unique-id>bigiris-view</unique-id>"));
     }
 
+    /// A user home plus one system config dir holding Thunar's defaults
+    /// (and a stray action an old BigIris package merged into it).
+    fn home_with_system_defaults(tmp: &TempDir) -> ScopePaths {
+        let empty = tmp.path().join("xdg-empty");
+        let system = tmp.path().join("xdg-system");
+        let later = tmp.path().join("xdg-later");
+        for dir in [&system, &later] {
+            std::fs::create_dir_all(dir.join("Thunar")).unwrap();
+        }
+        std::fs::write(
+            system.join("Thunar/uca.xml"),
+            "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<actions>\n\
+             <action>\n\t<name>Open Terminal Here</name>\n\
+             \t<unique-id>1-default-terminal</unique-id>\n</action>\n\
+             <action>\n\t<name>Old</name>\n\t<unique-id>bigiris-view</unique-id>\n</action>\n\
+             </actions>\n",
+        )
+        .unwrap();
+        // Thunar uses only the first file found, so this one never counts.
+        std::fs::write(
+            later.join("Thunar/uca.xml"),
+            "<actions>\n<action><unique-id>2-shadowed</unique-id></action>\n</actions>\n",
+        )
+        .unwrap();
+        let mut paths = ScopePaths::rooted_at(tmp.path().join("home"));
+        paths.xdg_config_dirs = vec![empty, system, later];
+        paths
+    }
+
+    #[test]
+    fn fresh_install_seeds_from_first_system_uca_like_thunar() {
+        use std::os::unix::fs::PermissionsExt;
+        let tmp = TempDir::new().unwrap();
+        let paths = home_with_system_defaults(&tmp);
+        install(&paths).unwrap();
+        let body = read(&paths.thunar_uca());
+        assert!(body.contains("1-default-terminal"), "system defaults hidden: {body}");
+        assert!(!body.contains("2-shadowed"), "only the first system file counts");
+        assert_eq!(body.matches("<unique-id>bigiris-view</unique-id>").count(), 1);
+        assert!(!body.contains("<name>Old</name>"), "stale packaged action copied");
+        let mode = std::fs::metadata(paths.thunar_uca()).unwrap().permissions().mode();
+        assert_eq!(mode & 0o777, 0o600, "new uca.xml must be private like Thunar's");
+    }
+
+    #[test]
+    fn uninstall_drops_seeded_copy_but_keeps_later_user_actions() {
+        let tmp = TempDir::new().unwrap();
+        let paths = home_with_system_defaults(&tmp);
+        install(&paths).unwrap();
+        uninstall(&paths).unwrap();
+        assert!(!paths.thunar_uca().exists(), "copy of the system defaults left behind");
+
+        install(&paths).unwrap();
+        let body = read(&paths.thunar_uca()).replace(
+            "</actions>",
+            "<action><unique-id>user-added-later</unique-id></action>\n</actions>",
+        );
+        std::fs::write(paths.thunar_uca(), body).unwrap();
+        uninstall(&paths).unwrap();
+        let body = read(&paths.thunar_uca());
+        assert!(body.contains("user-added-later") && body.contains("1-default-terminal"));
+        assert!(!body.contains("bigiris-"));
+    }
+
     #[test]
     fn install_keeps_existing_uca_mode_and_creates_private_file() {
         use std::os::unix::fs::PermissionsExt;
@@ -485,6 +599,28 @@ mod tests {
         install(&paths).unwrap();
         let mode = std::fs::metadata(paths.thunar_uca()).unwrap().permissions().mode();
         assert_eq!(mode & 0o777, 0o640);
+    }
+
+    #[test]
+    fn install_refuses_uca_without_closing_tag_and_leaves_it_alone() {
+        let tmp = TempDir::new().unwrap();
+        let paths = ScopePaths::rooted_at(tmp.path());
+        std::fs::create_dir_all(paths.thunar_uca().parent().unwrap()).unwrap();
+        let broken = "<actions>\n<action><unique-id>precious</unique-id></action>\n";
+        std::fs::write(paths.thunar_uca(), broken).unwrap();
+        let err = install(&paths).unwrap_err();
+        assert!(err.to_string().contains("uca.xml.bak"), "unhelpful error: {err}");
+        assert_eq!(read(&paths.thunar_uca()), broken);
+    }
+
+    #[test]
+    fn install_treats_empty_uca_as_missing() {
+        let tmp = TempDir::new().unwrap();
+        let paths = ScopePaths::rooted_at(tmp.path());
+        std::fs::create_dir_all(paths.thunar_uca().parent().unwrap()).unwrap();
+        std::fs::write(paths.thunar_uca(), "\n").unwrap();
+        install(&paths).unwrap();
+        assert!(read(&paths.thunar_uca()).contains("bigiris-view"));
     }
 
     #[test]

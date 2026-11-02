@@ -333,12 +333,9 @@ mod apply_tests {
     /// Wayland socket, eventfds) that anything spawned from Apply inherits
     /// unless the spawn path closes them.
     ///
-    /// Limitation: unit tests run without `codec::configure()`, so decoding
-    /// happens in-process here and the sandboxed worker is not spawned. The
-    /// test covers the dialog → Apply → output path; it only exercises the
-    /// descriptor hygiene once codec.rs offers a process-wide test worker
-    /// override (its `TEST_EXECUTABLE` is thread-local and batch workers
-    /// run on other threads).
+    /// Decoding goes through the real sandboxed worker (`target/<profile>/
+    /// bigiris`, so run with `--all-targets` or after building the binary),
+    /// which is what catches descriptors leaking from GTK/Mesa into Apply.
     #[test]
     #[ignore = "requires a graphical display; run alone with GSETTINGS_BACKEND=memory"]
     fn resize_apply_after_first_frame_writes_output() {
@@ -347,6 +344,7 @@ mod apply_tests {
             Ok("memory"),
             "synthetic GUI tests require GSETTINGS_BACKEND=memory"
         );
+        crate::codec::configure_for_tests(None);
         adw::init().expect("GTK display required");
         let app = adw::Application::builder()
             .application_id("com.biglinux.Iris.ResizeApplyProbe")

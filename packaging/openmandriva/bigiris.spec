@@ -92,7 +92,6 @@ done < data/po/LINGUAS
 %{_datadir}/file-manager/actions/bigiris-*.desktop
 %{_datadir}/contractor/bigiris-*.contract
 %{_datadir}/nautilus-python/extensions/bigiris-menu.py
-%config(noreplace) %{_sysconfdir}/xdg/Thunar/uca.xml
 
 %changelog
 * Sat Sep 12 2026 Leonardo Athayde <leoathayde@gmail.com> 0.1.0-1

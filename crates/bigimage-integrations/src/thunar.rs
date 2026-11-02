@@ -7,18 +7,32 @@
 //! the string beats parsing the full XML grammar. Our actions are all
 //! tagged with `<unique-id>bigiris-…</unique-id>` and live as siblings of
 //! any pre-existing `<action>` blocks; uninstall just drops ours.
+//!
+//! **User scope only.** The system-wide `/etc/xdg/Thunar/uca.xml` is owned
+//! by the `thunar` package (it ships the default "Open Terminal Here" and
+//! "Search for Files" actions). A distro package that also shipped it
+//! would conflict with `thunar` on install, and forcing it would wipe those
+//! defaults. So `--system` / `--destdir` installs skip Thunar entirely;
+//! users get the actions with `bigiris install-integrations --user`, which
+//! merges them into their personal `~/.config/Thunar/uca.xml`.
 
 use std::io;
 use std::path::{Path, PathBuf};
 
 use crate::action::{Action, ACTIONS, TOP_LEVEL_LABEL};
 use crate::safe_fs::safe_write;
-use crate::scope::ScopePaths;
+use crate::scope::{Scope, ScopePaths};
 
 const EMPTY_XML: &str = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<actions>\n</actions>\n";
 
 /// Install (or refresh) our actions in `~/.config/Thunar/uca.xml`.
+///
+/// No-op for [`Scope::System`]: see the module docs for why we never write
+/// Thunar's package-owned system file.
 pub fn install(paths: &ScopePaths) -> io::Result<Vec<PathBuf>> {
+    if paths.scope == Scope::System {
+        return Ok(Vec::new());
+    }
     let target = paths.thunar_uca();
     if let Some(parent) = target.parent() {
         std::fs::create_dir_all(parent)?;
@@ -30,9 +44,14 @@ pub fn install(paths: &ScopePaths) -> io::Result<Vec<PathBuf>> {
     Ok(vec![target])
 }
 
-/// Drop every bigiris-owned `<action>` from `uca.xml`. If the resulting file
-/// contains no actions at all (we were the only source), it is removed so
-/// Thunar falls back to its built-in defaults.
+/// Drop every bigiris-owned `<action>` from `uca.xml`. In user scope, if
+/// the resulting file contains no actions at all (we were the only
+/// source), it is removed so Thunar falls back to its built-in defaults.
+///
+/// In system scope this only cleans actions that older BigIris packages
+/// merged into `/etc/xdg/Thunar/uca.xml`; that file belongs to the
+/// `thunar` package and is never deleted. A file without any of our
+/// actions is left untouched in both scopes.
 pub fn uninstall(paths: &ScopePaths) -> io::Result<Vec<PathBuf>> {
     let target = paths.thunar_uca();
     if !target.exists() {
@@ -40,7 +59,10 @@ pub fn uninstall(paths: &ScopePaths) -> io::Result<Vec<PathBuf>> {
     }
     let existing = std::fs::read_to_string(&target)?;
     let stripped = strip_bigiris_actions(&existing);
-    if !stripped.contains("<action>") {
+    if stripped == existing {
+        return Ok(Vec::new());
+    }
+    if paths.scope == Scope::User && !stripped.contains("<action>") {
         std::fs::remove_file(&target)?;
     } else {
         safe_write(&target, stripped)?;
@@ -131,14 +153,7 @@ fn render_action(action: &Action) -> String {
     // as shell metasyntax. Wrap in `sh -c '… "$@"' progname …` so paths
     // become positional args ($1, $2, …) and never re-traverse the parser.
     let safe_cmd = wrap_for_shell(action);
-    // Filter element: `<image-files/>` restricts the action to image MIME
-    // (KDE/GNOME convention). Document-MIME actions (PDF submenu) need
-    // `<other-files/>` or they're invisible on .docx/.odt selections.
-    let file_filter = if action.mime_types.iter().any(|m| m.starts_with("image/")) {
-        "<image-files/>"
-    } else {
-        "<other-files/>"
-    };
+    let file_filter = file_filters(action.mime_types).join("\n\t");
     format!(
         "<action>\n\
          \t<icon>{icon}</icon>\n\
@@ -172,6 +187,32 @@ fn wrap_for_shell(action: &Action) -> String {
     // contain a single quote, but escape anyway: `'` → `'\''`.
     let escaped = body.replace('\'', r"'\''");
     format!("sh -c '{escaped} -- \"$@\"' bigiris-{id} %F", id = action.id)
+}
+
+/// Map MIME patterns onto Thunar's appearance-condition elements. Thunar
+/// has no MIME list, only coarse classes (`<image-files/>`,
+/// `<directories/>`, …); an action shows up when the selection matches any
+/// listed class, so a mixed MIME list (the PDF submenu covers ODF/Office
+/// *and* `text/*`) needs several elements.
+fn file_filters(mime_types: &[&str]) -> Vec<&'static str> {
+    let mut filters: Vec<&'static str> = Vec::new();
+    for mime in mime_types {
+        let filter = match *mime {
+            "inode/directory" => "<directories/>",
+            m if m.starts_with("image/") => "<image-files/>",
+            m if m.starts_with("text/") => "<text-files/>",
+            m if m.starts_with("audio/") => "<audio-files/>",
+            m if m.starts_with("video/") => "<video-files/>",
+            _ => "<other-files/>",
+        };
+        if !filters.contains(&filter) {
+            filters.push(filter);
+        }
+    }
+    if filters.is_empty() {
+        filters.push("<other-files/>");
+    }
+    filters
 }
 
 pub(crate) fn escape_xml(s: &str) -> String {
@@ -325,6 +366,104 @@ mod tests {
         let xml = render_action(a);
         assert!(xml.contains("<other-files/>"), "DOC_MIME action missing <other-files/>: {xml}");
         assert!(!xml.contains("<image-files/>"), "DOC_MIME action wrongly emits <image-files/>");
+    }
+
+    #[test]
+    fn document_action_also_matches_text_files() {
+        // DOC_MIME includes text/plain, text/markdown, … which Thunar
+        // classifies as text files, not as "other" files.
+        let a = ACTIONS.iter().find(|a| a.id == "pdf-convert").unwrap();
+        let xml = render_action(a);
+        assert!(xml.contains("<text-files/>"), "text/* MIME missing <text-files/>: {xml}");
+    }
+
+    #[test]
+    fn directory_action_renders_directories_filter() {
+        let a = ACTIONS.iter().find(|a| a.mime_types == ["inode/directory"]).unwrap();
+        let xml = render_action(a);
+        assert!(xml.contains("<directories/>"), "folder action missing <directories/>: {xml}");
+        assert!(!xml.contains("<other-files/>"), "folder action shown on regular files");
+    }
+
+    #[test]
+    fn file_filters_map_each_class_once() {
+        assert_eq!(file_filters(&["inode/directory"]), ["<directories/>"]);
+        assert_eq!(file_filters(&["image/*", "image/png"]), ["<image-files/>"]);
+        assert_eq!(
+            file_filters(&["application/pdf", "text/plain", "text/csv", "application/rtf"]),
+            ["<other-files/>", "<text-files/>"]
+        );
+        assert_eq!(file_filters(&["audio/ogg", "video/mp4"]), ["<audio-files/>", "<video-files/>"]);
+        assert_eq!(file_filters(&[]), ["<other-files/>"]);
+    }
+
+    #[test]
+    fn system_scope_never_writes_thunar_package_file() {
+        // /etc/xdg/Thunar/uca.xml is owned by the thunar package.
+        let tmp = TempDir::new().unwrap();
+        let paths = ScopePaths::system_with_destdir(tmp.path());
+        assert!(install(&paths).unwrap().is_empty());
+        assert!(!paths.thunar_uca().exists());
+    }
+
+    #[test]
+    fn system_uninstall_strips_legacy_actions_but_keeps_package_file() {
+        let tmp = TempDir::new().unwrap();
+        let seed = ScopePaths::rooted_at(tmp.path().join("seed"));
+        install(&seed).unwrap();
+        let paths = ScopePaths::system_with_destdir(tmp.path().join("root"));
+        std::fs::create_dir_all(paths.thunar_uca().parent().unwrap()).unwrap();
+        std::fs::copy(seed.thunar_uca(), paths.thunar_uca()).unwrap();
+        assert_eq!(uninstall(&paths).unwrap(), vec![paths.thunar_uca()]);
+        let body = read(&paths.thunar_uca());
+        assert!(!body.contains("bigiris-"));
+        assert!(body.contains("</actions>"));
+    }
+
+    #[test]
+    fn uninstall_without_our_actions_leaves_file_untouched() {
+        use std::os::unix::fs::MetadataExt;
+        let tmp = TempDir::new().unwrap();
+        let paths = ScopePaths::rooted_at(tmp.path());
+        std::fs::create_dir_all(paths.thunar_uca().parent().unwrap()).unwrap();
+        std::fs::write(paths.thunar_uca(), EMPTY_XML).unwrap();
+        let inode = std::fs::metadata(paths.thunar_uca()).unwrap().ino();
+        assert!(uninstall(&paths).unwrap().is_empty());
+        assert_eq!(std::fs::metadata(paths.thunar_uca()).unwrap().ino(), inode);
+    }
+
+    #[test]
+    fn install_replaces_uca_atomically_and_keeps_user_actions() {
+        use std::os::unix::fs::MetadataExt;
+        let tmp = TempDir::new().unwrap();
+        let paths = ScopePaths::rooted_at(tmp.path());
+        let dir = paths.thunar_uca().parent().unwrap().to_path_buf();
+        std::fs::create_dir_all(&dir).unwrap();
+        let existing = "<actions>\n<action><unique-id>user-1</unique-id></action>\n</actions>\n";
+        std::fs::write(paths.thunar_uca(), existing).unwrap();
+        let inode = std::fs::metadata(paths.thunar_uca()).unwrap().ino();
+        install(&paths).unwrap();
+        // New inode = rename-over, not truncate-in-place.
+        assert_ne!(std::fs::metadata(paths.thunar_uca()).unwrap().ino(), inode);
+        assert!(read(&paths.thunar_uca()).contains("user-1"));
+        let stray: Vec<_> = std::fs::read_dir(&dir)
+            .unwrap()
+            .map(|e| e.unwrap().file_name())
+            .filter(|n| n != "uca.xml")
+            .collect();
+        assert!(stray.is_empty(), "temp files left behind: {stray:?}");
+    }
+
+    #[test]
+    fn install_refuses_symlinked_uca() {
+        let tmp = TempDir::new().unwrap();
+        let paths = ScopePaths::rooted_at(tmp.path());
+        std::fs::create_dir_all(paths.thunar_uca().parent().unwrap()).unwrap();
+        let real = tmp.path().join("elsewhere.xml");
+        std::fs::write(&real, EMPTY_XML).unwrap();
+        std::os::unix::fs::symlink(&real, paths.thunar_uca()).unwrap();
+        assert!(install(&paths).is_err());
+        assert_eq!(read(&real), EMPTY_XML);
     }
 
     #[test]

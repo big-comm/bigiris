@@ -112,4 +112,11 @@ package() {
 
   "$srcdir/target/release/bigiris" install-integrations --system \
     --destdir="$pkgdir"
+  # /etc/xdg/Thunar/uca.xml belongs to the thunar package; shipping it too
+  # makes the two packages conflict. Thunar actions are per user
+  # ("bigiris install-integrations --user"), so refuse any regression.
+  if [[ -e "$pkgdir/etc/xdg/Thunar/uca.xml" ]]; then
+    echo 'error: package must not ship /etc/xdg/Thunar/uca.xml (owned by thunar)' >&2
+    return 1
+  fi
 }

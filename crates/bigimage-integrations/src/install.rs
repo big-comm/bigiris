@@ -348,8 +348,10 @@ mod tests {
         assert!(report.is_success());
         // Dolphin .desktop files should sit under DESTDIR/usr/share/kio/servicemenus/.
         assert!(tmp.path().join("usr/share/kio/servicemenus/bigiris-convert-png.desktop").exists());
-        // Thunar's uca.xml goes under DESTDIR/etc/xdg/Thunar/.
-        assert!(tmp.path().join("etc/xdg/Thunar/uca.xml").exists());
+        // /etc/xdg/Thunar/uca.xml belongs to the thunar package; a distro
+        // package shipping it would file-conflict with thunar.
+        assert!(!tmp.path().join("etc/xdg/Thunar/uca.xml").exists());
+        assert!(!tmp.path().join("etc").exists(), "packages must not stage anything in /etc");
         assert!(tmp.path().join("usr/share/nautilus-python/extensions/bigiris-menu.py").exists());
     }
 }

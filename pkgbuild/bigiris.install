@@ -11,12 +11,29 @@ _refresh_caches() {
   fi
 }
 
+# Thunar keeps custom actions in /etc/xdg/Thunar/uca.xml, a file owned by
+# the thunar package, so BigIris no longer ships Thunar actions system-wide.
+# Each user merges them into ~/.config/Thunar/uca.xml instead.
+_thunar_hint() {
+  command -v thunar &>/dev/null || return 0
+  echo '==> Thunar: run "bigiris install-integrations --user" as your user'
+  echo '    to add the BigIris actions to the Thunar context menu.'
+  # Older BigIris packages owned /etc/xdg/Thunar/uca.xml (only possible with
+  # a forced install over thunar); removing that package drops the file.
+  if [ ! -e /etc/xdg/Thunar/uca.xml ] && pacman -Qq thunar &>/dev/null; then
+    echo '==> /etc/xdg/Thunar/uca.xml is missing: reinstall thunar'
+    echo '    (pacman -S thunar) to restore its default custom actions.'
+  fi
+}
+
 post_install() {
   _refresh_caches
+  _thunar_hint
 }
 
 post_upgrade() {
   _refresh_caches
+  _thunar_hint
 }
 
 post_remove() {

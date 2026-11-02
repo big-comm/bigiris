@@ -811,12 +811,14 @@ impl Naming<'_> {
 /// Repeated spellings of one file (`a.png`, `./a.png`) are processed once.
 /// Distinct inputs that collide are refused unless the policy is
 /// `increment`; callers then process each group in order, so the numbered
-/// names are deterministic.
+/// names are deterministic. Under `increment`, an input named like another
+/// input's numbered output (`x_1` next to `x`) joins that group as well.
 fn plan_outputs(files: &[PathBuf], naming: Naming) -> color_eyre::Result<Vec<Vec<PathBuf>>> {
     use std::collections::{HashMap, HashSet};
     let mut seen = HashSet::new();
     let mut groups: Vec<Vec<PathBuf>> = Vec::new();
     let mut index = HashMap::new();
+    let mut planned = Vec::new();
     for file in files {
         let identity = std::fs::canonicalize(file)
             .or_else(|_| std::path::absolute(file))
@@ -841,7 +843,22 @@ fn plan_outputs(files: &[PathBuf], naming: Naming) -> color_eyre::Result<Vec<Vec
                 |format| format.extension().to_owned(),
             )
         });
-        let key = (dir, file.file_stem().unwrap_or_default().to_os_string(), extension);
+        planned.push(((dir, file.file_stem().unwrap_or_default().to_os_string(), extension), file));
+    }
+    let keys: HashSet<_> = planned.iter().map(|(key, _)| key.clone()).collect();
+    for (mut key, file) in planned {
+        // `increment` numbers outputs `x_1`, `x_2`, … which is exactly what
+        // an input stem `x_1` produces. Run such inputs in the group of `x`,
+        // so the names do not depend on which batch worker gets there first.
+        if naming.policy == OverwritePolicy::Increment {
+            while let Some(base) = numbered_base(&key.1) {
+                let candidate = (key.0.clone(), base, key.2.clone());
+                if !keys.contains(&candidate) {
+                    break;
+                }
+                key = candidate;
+            }
+        }
         match index.get(&key) {
             Some(&group) => groups.get_mut(group).map_or((), |g: &mut Vec<_>| g.push(file.clone())),
             None => {
@@ -867,6 +884,20 @@ fn plan_outputs(files: &[PathBuf], naming: Naming) -> color_eyre::Result<Vec<Vec
         return Err(color_eyre::eyre::eyre!(codec::sanitize_text(&message)));
     }
     Ok(groups)
+}
+
+/// `x` for a stem `x_N` as written by the `increment` policy (N >= 1, no
+/// leading zero).
+fn numbered_base(stem: &std::ffi::OsStr) -> Option<std::ffi::OsString> {
+    use std::os::unix::ffi::{OsStrExt, OsStringExt};
+    let bytes = stem.as_bytes();
+    let split = bytes.iter().rposition(|&byte| byte == b'_')?;
+    let number = &bytes[split + 1..];
+    let numbered = !number.is_empty()
+        && number[0] != b'0'
+        && number.iter().all(u8::is_ascii_digit)
+        && split > 0;
+    numbered.then(|| std::ffi::OsString::from_vec(bytes[..split].to_vec()))
 }
 
 fn run_per_file<F>(
@@ -1508,5 +1539,37 @@ fn dispatch_gui(dialog: Option<Dialog>, files: &[PathBuf]) -> color_eyre::Result
             None => gui::run_viewer(files.to_vec()),
         };
         std::process::exit(code);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn increment_groups_numbered_stems_with_their_base() {
+        let dir = tempfile::tempdir().unwrap();
+        let names = ["x_1.png", "IMG_2.png", "x.png", "x_1_1.png", "x_01.png", "_1.png"];
+        let files: Vec<_> = names.iter().map(|name| dir.path().join(name)).collect();
+        for file in &files {
+            std::fs::write(file, b"").unwrap();
+        }
+        let naming = Naming::image(Some(Format::Png), OverwritePolicy::Increment);
+        let groups = plan_outputs(&files, naming).unwrap();
+        let named: Vec<Vec<_>> = groups
+            .iter()
+            .map(|group| group.iter().map(|path| path.file_name().unwrap()).collect())
+            .collect();
+        // `x_1_1` -> `x_1` -> `x`; IMG_2 has no `IMG` input; `x_01` is no counter.
+        let expected = [
+            vec!["x_1.png", "x.png", "x_1_1.png"],
+            vec!["IMG_2.png"],
+            vec!["x_01.png"],
+            vec!["_1.png"],
+        ];
+        assert_eq!(named, expected);
+        // Other policies never number outputs, so nothing is merged.
+        let naming = Naming::image(Some(Format::Png), OverwritePolicy::Skip);
+        assert_eq!(plan_outputs(&files, naming).unwrap().len(), names.len());
     }
 }

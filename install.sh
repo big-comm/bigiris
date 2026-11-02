@@ -111,18 +111,29 @@ if [ "$BIN_ONLY" -eq 0 ]; then
     DATA="$SRC/data"
     SHARE="$PREFIX/share"
 
-    # .desktop, metainfo, ícone
-    say "Instalando .desktop, metainfo e ícone"
-    install -Dm644 "$DATA/com.biglinux.Iris.desktop"      "$SHARE/applications/com.biglinux.Iris.desktop"
-    install -Dm644 "$DATA/com.biglinux.Iris.metainfo.xml" "$SHARE/metainfo/com.biglinux.Iris.metainfo.xml"
-    install -Dm644 "$DATA/icons/hicolor/scalable/apps/com.biglinux.Iris.svg" \
-        "$SHARE/icons/hicolor/scalable/apps/com.biglinux.Iris.svg"
+    # .desktop, metainfo, ícone — só quando o pacote da distro não os
+    # fornece: uma cópia pessoal sombrearia a do pacote e ficaria velha.
+    # `install-integrations --user` (abaixo) remove cópias antigas nossas.
+    if [ -e /usr/share/applications/com.biglinux.Iris.desktop ]; then
+        say "Pacote do sistema já fornece .desktop, metainfo e ícone — pulando"
+    else
+        say "Instalando .desktop, metainfo e ícone"
+        install -Dm644 "$DATA/com.biglinux.Iris.desktop"      "$SHARE/applications/com.biglinux.Iris.desktop"
+        install -Dm644 "$DATA/com.biglinux.Iris.metainfo.xml" "$SHARE/metainfo/com.biglinux.Iris.metainfo.xml"
+        install -Dm644 "$DATA/icons/hicolor/scalable/apps/com.biglinux.Iris.svg" \
+            "$SHARE/icons/hicolor/scalable/apps/com.biglinux.Iris.svg"
+    fi
 
     # GSettings schema (necessário para o app GUI ler/gravar preferências)
     say "Instalando e compilando gschema"
     install -Dm644 "$DATA/com.biglinux.Iris.gschema.xml" "$SHARE/glib-2.0/schemas/com.biglinux.Iris.gschema.xml"
     if command -v glib-compile-schemas >/dev/null; then
-        glib-compile-schemas "$SHARE/glib-2.0/schemas" && ok "schemas compilados"
+        # `cmd && ok` dentro de um if não dispara o set -e: a falha sumiria.
+        if glib-compile-schemas "$SHARE/glib-2.0/schemas"; then
+            ok "schemas compilados"
+        else
+            warn "glib-compile-schemas falhou — o app pode reclamar de schema na 1ª execução"
+        fi
     else
         warn "glib-compile-schemas ausente — o app pode reclamar de schema na 1ª execução"
     fi
@@ -145,7 +156,11 @@ if [ "$BIN_ONLY" -eq 0 ]; then
 
     # Service menus dos gerenciadores de arquivos (Nautilus, Dolphin, Nemo, etc.)
     say "Instalando integrações dos gerenciadores de arquivos (--user)"
-    "$PREFIX/bin/bigiris" install-integrations --user && ok "integrações instaladas"
+    # Uma falha aqui deixa menus de contexto ausentes ou desatualizados;
+    # `cmd && ok` escondia isso do set -e e o script terminava em "sucesso".
+    "$PREFIX/bin/bigiris" install-integrations --user \
+        || die "install-integrations --user falhou (veja as mensagens acima)"
+    ok "integrações instaladas"
 
     # Atualiza caches do desktop (best-effort)
     command -v update-desktop-database >/dev/null && \

@@ -210,13 +210,24 @@ fn userns_hardening() -> bool {
             .stderr(Stdio::null())
             .spawn()
         else {
+            tracing::warn!(
+                "bwrap indisponível para testar --disable-userns; sandbox sem esse reforço"
+            );
             return false;
         };
         let mut child = ChildGuard(child);
-        matches!(
+        let supported = matches!(
             wait_child(&mut child.0, Instant::now() + Duration::from_secs(10), false),
             Ok(status) if status.success()
-        )
+        );
+        if !supported {
+            // Logged once: the answer is cached for the whole process.
+            tracing::warn!(
+                "bwrap recusou --disable-userns (bwrap < 0.8 ou política do sistema); \
+                 o codec isolado roda sem esse reforço"
+            );
+        }
+        supported
     })
 }
 

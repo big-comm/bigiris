@@ -7129,47 +7129,191 @@ fn build_animate_dialog(app: &adw::Application, files: Rc<Vec<PathBuf>>) -> adw:
                 loop_mode,
                 speed: speed_spin.value() as i32,
             };
-            let output: PathBuf = output_row.text().as_str().into();
-
-            apply_btn.set_sensitive(false);
-            cancel_btn.set_sensitive(false);
-            status.set_text(&gettext("Montando GIF…"));
-
-            // Worker thread runs make_gif (encoding 100 frames at 4K can
-            // take several seconds); main loop polls a oneshot channel
-            // for the result. Window stays responsive throughout.
-            let (tx, rx) = std::sync::mpsc::channel();
-            let files_owned: Vec<PathBuf> = (*files).clone();
-            std::thread::spawn(move || {
-                let _ = tx.send(make_gif(&files_owned, &output, opts));
-            });
-
-            let status = status.clone();
-            let window = window.clone();
-            let apply_btn = apply_btn.clone();
-            let cancel_btn = cancel_btn.clone();
-            glib::timeout_add_local(std::time::Duration::from_millis(80), move || {
-                match rx.try_recv() {
-                    Ok(Ok(path)) => {
-                        status.set_text(&format!("{}: {}", gettext("Pronto"), path.display()));
-                        let w = window.clone();
-                        glib::timeout_add_seconds_local_once(2, move || w.close());
-                        glib::ControlFlow::Break
-                    }
-                    Ok(Err(e)) => {
-                        status.set_text(&format!("{}: {e}", gettext("Falha")));
-                        apply_btn.set_sensitive(true);
-                        cancel_btn.set_sensitive(true);
-                        glib::ControlFlow::Break
-                    }
-                    Err(std::sync::mpsc::TryRecvError::Empty) => glib::ControlFlow::Continue,
-                    Err(std::sync::mpsc::TryRecvError::Disconnected) => glib::ControlFlow::Break,
+            let output = match gif_output_path(output_row.text().as_str(), &files) {
+                Ok(output) => output,
+                Err(message) => {
+                    status.set_text(&message);
+                    return;
                 }
-            });
+            };
+            // Show the path that will actually be written (".gif" may
+            // have been appended).
+            output_row.set_text(&output.to_string_lossy());
+            let exists = output.exists();
+            let shown = output.display().to_string();
+
+            let start = {
+                let files = files.clone();
+                let status = status.clone();
+                let apply_btn = apply_btn.clone();
+                let cancel_btn = cancel_btn.clone();
+                let window = window.clone();
+                move || {
+                    start_animate_run(
+                        (*files).clone(),
+                        output.clone(),
+                        opts,
+                        &status,
+                        &apply_btn,
+                        &cancel_btn,
+                        &window,
+                    )
+                }
+            };
+            if !exists {
+                start();
+                return;
+            }
+            // make_gif publishes with Replace; only replace an existing
+            // file the user explicitly agreed to lose.
+            let alert = adw::AlertDialog::builder()
+                .heading(gettext("Substituir arquivo existente?"))
+                .body(shown)
+                .build();
+            alert.add_response("cancel", &gettext("Cancelar"));
+            alert.add_response("replace", &gettext("Substituir"));
+            alert.set_response_appearance("replace", adw::ResponseAppearance::Destructive);
+            alert.set_default_response(Some("cancel"));
+            alert.set_close_response("cancel");
+            alert.connect_response(Some("replace"), move |_, _| start());
+            alert.present(Some(&window));
         });
     }
 
     window
+}
+
+/// Validate the free-text GIF destination. The result always ends in
+/// `.gif` and never names one of the frames: make_gif replaces its output,
+/// so typing a frame's path would otherwise turn that photo into a GIF.
+fn gif_output_path(text: &str, frames: &[PathBuf]) -> Result<PathBuf, String> {
+    let text = text.trim();
+    if text.is_empty() {
+        return Err(gettext("Informe o arquivo de saída."));
+    }
+    let mut output = PathBuf::from(text);
+    if !output.extension().is_some_and(|ext| ext.eq_ignore_ascii_case("gif")) {
+        let mut name = output.into_os_string();
+        name.push(".gif");
+        output = PathBuf::from(name);
+    }
+    if output.is_dir() {
+        return Err(gettext("O arquivo de saída não pode ser uma pasta."));
+    }
+    let target = comparable_path(&output);
+    if frames.iter().any(|frame| comparable_path(frame) == target) {
+        return Err(gettext("O arquivo de saída não pode ser um dos quadros."));
+    }
+    Ok(output)
+}
+
+/// Canonical form of `path` for identity checks, also for files that do
+/// not exist yet (the parent is canonicalized and the name re-attached).
+fn comparable_path(path: &Path) -> PathBuf {
+    if let Ok(canonical) = std::fs::canonicalize(path) {
+        return canonical;
+    }
+    let parent = match path.parent() {
+        Some(parent) if !parent.as_os_str().is_empty() => parent,
+        _ => Path::new("."),
+    };
+    match (std::fs::canonicalize(parent), path.file_name()) {
+        (Ok(parent), Some(name)) => parent.join(name),
+        _ => path.to_path_buf(),
+    }
+}
+
+/// Encode the GIF on a worker thread and reflect the result in the dialog.
+fn start_animate_run(
+    frames: Vec<PathBuf>,
+    output: PathBuf,
+    opts: AnimateOptions,
+    status: &gtk::Label,
+    apply_btn: &gtk::Button,
+    cancel_btn: &gtk::Button,
+    window: &adw::ApplicationWindow,
+) {
+    apply_btn.set_sensitive(false);
+    cancel_btn.set_sensitive(false);
+    status.set_text(&gettext("Montando GIF…"));
+
+    // Worker thread runs make_gif (encoding 100 frames at 4K can
+    // take several seconds); main loop polls a oneshot channel
+    // for the result. Window stays responsive throughout.
+    let (tx, rx) = std::sync::mpsc::channel();
+    std::thread::spawn(move || {
+        let _ = tx.send(make_gif(&frames, &output, opts));
+    });
+
+    let status = status.clone();
+    let window = window.clone();
+    let apply_btn = apply_btn.clone();
+    let cancel_btn = cancel_btn.clone();
+    glib::timeout_add_local(std::time::Duration::from_millis(80), move || match rx.try_recv() {
+        Ok(Ok(path)) => {
+            status.set_text(&format!("{}: {}", gettext("Pronto"), path.display()));
+            let w = window.clone();
+            glib::timeout_add_seconds_local_once(2, move || w.close());
+            glib::ControlFlow::Break
+        }
+        Ok(Err(e)) => {
+            status.set_text(&format!("{}: {e}", gettext("Falha")));
+            apply_btn.set_sensitive(true);
+            cancel_btn.set_sensitive(true);
+            glib::ControlFlow::Break
+        }
+        Err(std::sync::mpsc::TryRecvError::Empty) => glib::ControlFlow::Continue,
+        Err(std::sync::mpsc::TryRecvError::Disconnected) => glib::ControlFlow::Break,
+    });
+}
+
+#[cfg(test)]
+mod gif_output_tests {
+    use super::gif_output_path;
+    use std::path::PathBuf;
+
+    fn frames(dir: &std::path::Path) -> Vec<PathBuf> {
+        let frames = vec![dir.join("a.png"), dir.join("b.jpg")];
+        for frame in &frames {
+            std::fs::write(frame, b"x").unwrap();
+        }
+        frames
+    }
+
+    #[test]
+    fn rejects_a_frame_as_output() {
+        let dir = tempfile::tempdir().unwrap();
+        let frames = frames(dir.path());
+        // Same file through a different spelling still counts as a frame.
+        let dotted = dir.path().join(".").join("a.png.gif");
+        std::fs::write(&dotted, b"x").unwrap();
+        let mut with_gif = frames.clone();
+        with_gif.push(dotted.clone());
+        assert!(gif_output_path(&dotted.to_string_lossy(), &with_gif).is_err());
+        assert!(
+            gif_output_path(&dir.path().join("./a.png.gif").to_string_lossy(), &with_gif).is_err()
+        );
+    }
+
+    #[test]
+    fn appends_gif_extension_instead_of_replacing_a_frame() {
+        let dir = tempfile::tempdir().unwrap();
+        let frames = frames(dir.path());
+        let out = gif_output_path(&frames[0].to_string_lossy(), &frames).unwrap();
+        assert_eq!(out, dir.path().join("a.png.gif"));
+        let out = gif_output_path(&dir.path().join("anim.GIF").to_string_lossy(), &frames).unwrap();
+        assert_eq!(out, dir.path().join("anim.GIF"));
+    }
+
+    #[test]
+    fn rejects_empty_and_directory_outputs() {
+        let dir = tempfile::tempdir().unwrap();
+        let frames = frames(dir.path());
+        assert!(gif_output_path("   ", &frames).is_err());
+        let folder = dir.path().join("pasta.gif");
+        std::fs::create_dir(&folder).unwrap();
+        assert!(gif_output_path(&folder.to_string_lossy(), &frames).is_err());
+    }
 }
 
 /// Output path for `remove_background` — always PNG to preserve alpha.

@@ -1259,7 +1259,7 @@ fn decode_thumbnail(path: &Path) -> Result<(Vec<u8>, u32, u32), Box<dyn std::err
     // the cell keeps thumbnails sharp on HiDPI screens. Never upscale and
     // cap the long side: extreme aspect ratios must not allocate gigabytes.
     let (width, height) = viewer::thumbnail_dimensions(img.width(), img.height(), THUMB_EDGE * 2);
-    let thumb = img.thumbnail(width, height).to_rgba8();
+    let thumb = bigimage_core::into_srgb_rgba8(img.thumbnail(width, height));
     let (w, h) = thumb.dimensions();
     Ok((thumb.into_raw(), w, h))
 }
@@ -3065,7 +3065,7 @@ fn print_current(state: &Rc<RefCell<ViewerState>>) {
         crate::codec::with_cancel(cancel, || {
             bigimage_core::open_image(input)
                 .map(|image| {
-                    let rgba = image.to_rgba8();
+                    let rgba = bigimage_core::into_srgb_rgba8(image);
                     let size = rgba.dimensions();
                     (premultiply_for_cairo(rgba.into_raw()), size)
                 })
@@ -3586,7 +3586,8 @@ type RawFrame = (Vec<u8>, u32, u32, Histogram);
 fn decode_frame(path: &Path, ops: &[EditOp]) -> Result<RawFrame, Box<dyn std::error::Error>> {
     let img = bigimage_core::open_image(path)?;
     let edited = ops.iter().fold(img, |acc, op| apply_op_to_image(acc, *op));
-    let rgba = edited.into_rgba8();
+    // Float (EXR/HDR) pixels are linear: encode them to sRGB for display.
+    let rgba = bigimage_core::into_srgb_rgba8(edited);
     let (w, h) = rgba.dimensions();
     let raw = rgba.into_raw();
     let histogram = sampled_histogram(&raw);
@@ -4742,5 +4743,26 @@ mod print_pixel_tests {
         let values: Vec<_> =
             result.as_chunks::<4>().0.iter().map(|p| u32::from_ne_bytes(*p)).collect();
         assert_eq!(values, vec![0x80643219, 0x00000000, 0xff020304]);
+    }
+}
+
+#[cfg(test)]
+mod float_display_tests {
+    /// Linear 0.5 must reach the screen as sRGB ≈188, not as a bare 128.
+    #[test]
+    fn linear_float_images_display_in_srgb() {
+        let dir = tempfile::tempdir().unwrap();
+        let exr = dir.path().join("half.exr");
+        let linear = image::Rgba32FImage::from_pixel(4, 2, image::Rgba([0.5, 0.5, 0.5, 1.0]));
+        linear.save(&exr).unwrap();
+        let hdr = dir.path().join("half.hdr");
+        image::Rgb32FImage::from_pixel(4, 2, image::Rgb([0.5, 0.5, 0.5])).save(&hdr).unwrap();
+        for path in [exr, hdr] {
+            let (raw, w, h, _) = super::decode_frame(&path, &[]).unwrap();
+            assert_eq!((w, h), (4, 2));
+            let pixel = &raw[..4];
+            assert!(pixel[..3].iter().all(|v| v.abs_diff(188) <= 1), "{path:?}: {pixel:?}");
+            assert_eq!(pixel[3], 255);
+        }
     }
 }

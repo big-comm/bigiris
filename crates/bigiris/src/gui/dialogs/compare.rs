@@ -139,7 +139,7 @@ fn make_compare_side(path: &Path, window: &adw::ApplicationWindow) -> gtk::Box {
         crate::codec::with_cancel(cancel, || {
             let result = bigimage_core::open_image(input)
                 .map(|image| {
-                    let rgba = image.thumbnail(2048, 2048).to_rgba8();
+                    let rgba = bigimage_core::into_srgb_rgba8(image.thumbnail(2048, 2048));
                     let size = rgba.dimensions();
                     (rgba.into_raw(), size)
                 })

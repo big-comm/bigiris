@@ -6,7 +6,7 @@ use super::*;
 /// Consumes the image (the RGBA buffer is handed to a `glib::Bytes` that
 /// owns the allocation from there on).
 pub(super) fn dynamic_image_to_texture(img: DynamicImage) -> gdk::Texture {
-    let rgba = img.to_rgba8();
+    let rgba = bigimage_core::into_srgb_rgba8(img);
     let (w, h) = rgba.dimensions();
     let stride = (w as usize) * 4;
     let bytes = glib::Bytes::from_owned(rgba.into_raw());
@@ -143,7 +143,7 @@ pub(super) fn refresh_preview(session: &PreviewSession, picture: &gtk::Picture, 
             let image = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
                 session
                     .apply(&request.1)
-                    .map(|img| DynamicImage::ImageRgba8(img.to_rgba8()))
+                    .map(|img| DynamicImage::ImageRgba8(bigimage_core::into_srgb_rgba8(img)))
                     .map_err(|e| e.to_string())
             }))
             .unwrap_or_else(|_| Err("preview renderer panicked".to_string()));

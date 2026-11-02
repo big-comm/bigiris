@@ -387,3 +387,25 @@ fn to_pdf_timeout_kills_the_whole_soffice_tree() {
     assert!(leftovers(dir.path()).is_empty());
     assert!(!process_running("30.4242"), "soffice child survived the timeout");
 }
+
+#[test]
+fn animate_keeps_an_existing_output_unless_asked() {
+    let dir = tempfile::tempdir().unwrap();
+    fixture(dir.path(), "frame.png");
+    let gif = dir.path().join("out.gif");
+    std::fs::write(&gif, b"existing").unwrap();
+    // Default skip: the existing file is left alone and that is not a failure.
+    let output = run(dir.path(), &["animate", "-o", "out.gif", "frame.png"]);
+    success(output.clone());
+    assert!(String::from_utf8_lossy(&output.stdout).contains("skip "));
+    assert_eq!(std::fs::read(&gif).unwrap(), b"existing");
+    // A frame named as the output is not turned into a GIF by default either.
+    success(run(dir.path(), &["animate", "-o", "frame.png", "frame.png"]));
+    assert!(image::open(dir.path().join("frame.png")).is_ok());
+    let increment = ["animate", "--overwrite", "increment", "-o", "out.gif", "frame.png"];
+    success(run(dir.path(), &increment));
+    assert!(image::open(dir.path().join("out_1.gif")).is_ok());
+    let replace = ["animate", "--overwrite", "replace", "-o", "out.gif", "frame.png"];
+    success(run(dir.path(), &replace));
+    assert!(image::open(&gif).is_ok());
+}

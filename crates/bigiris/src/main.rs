@@ -484,6 +484,9 @@ enum Command {
         /// Velocidade do encoder 1..30 (maior = mais rápido, pior paleta).
         #[arg(long, default_value_t = 10)]
         speed: i32,
+        /// Política de sobrescrita do arquivo de saída.
+        #[arg(long, default_value_t, value_enum)]
+        overwrite: OverwriteArg,
         /// Quadros em ordem (mínimo 1).
         #[arg(value_name = "FRAME", required = true)]
         frames: Vec<PathBuf>,
@@ -634,8 +637,8 @@ fn main() -> color_eyre::Result<()> {
         Some(Command::Upscale { factor, overwrite, files }) => {
             run_upscale(factor, overwrite.into(), &files)
         }
-        Some(Command::Animate { output, delay, loop_count, speed, frames }) => {
-            run_animate(&output, delay, loop_count, speed, &frames)
+        Some(Command::Animate { output, delay, loop_count, speed, overwrite, frames }) => {
+            run_animate(&output, delay, loop_count, speed, overwrite.into(), &frames)
         }
         Some(Command::Batch { profile, files }) => run_batch(&profile, &files),
         Some(Command::InstallIntegrations { user, system, destdir }) => {
@@ -979,6 +982,7 @@ fn run_animate(
     delay_ms: u32,
     loop_count: u16,
     speed: i32,
+    policy: OverwritePolicy,
     frames: &[PathBuf],
 ) -> color_eyre::Result<()> {
     let loop_mode = match loop_count {
@@ -987,10 +991,14 @@ fn run_animate(
         n => LoopMode::Finite(n),
     };
     let opts = AnimateOptions { delay_ms, loop_mode, speed };
-    tracing::info!(?output, ?opts, frames = frames.len(), "animate");
-    match bigimage_core::make_gif(frames, output, opts) {
-        Ok(written) => {
-            println!("ok  {} quadro(s) -> {}", frames.len(), written.display());
+    tracing::info!(?output, ?opts, ?policy, frames = frames.len(), "animate");
+    match bigimage_core::make_gif_with_policy(frames, output, opts, policy) {
+        Ok(ConvertOutcome::Written { output }) => {
+            println!("ok  {} quadro(s) -> {}", frames.len(), output.display());
+            Ok(())
+        }
+        Ok(ConvertOutcome::Skipped { output }) => {
+            println!("skip animate (já existe: {})", output.display());
             Ok(())
         }
         // Frames were read but could not be turned into the animation.

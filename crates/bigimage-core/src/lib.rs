@@ -33,7 +33,9 @@ pub mod rotate;
 
 pub use adjust::{adjust_file, adjust_file_with_options, AdjustOps};
 pub use animate::{make_gif, make_gif_with_policy, AnimateOptions, LoopMode};
-pub use convert::{convert_file, convert_file_to, ConvertOutcome, OverwritePolicy};
+pub use convert::{
+    convert_file, convert_file_to, into_srgb_rgba8, ConvertOutcome, OverwritePolicy,
+};
 pub use crop::{crop_file, crop_file_with_options, CropRect};
 pub use encode::EncodeOptions;
 pub use extent::{

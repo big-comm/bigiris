@@ -172,6 +172,15 @@ fn srgb_from_linear(img: DynamicImage) -> DynamicImage {
     img
 }
 
+/// 8-bit sRGB RGBA for display, quantised the way [`crate::save_image`]
+/// writes 8-bit formats: float images (OpenEXR/HDR) are scene-linear and get
+/// the sRGB transfer function first, clamping values above 1.0; integer
+/// images are converted as-is. A bare `to_rgba8()` would show linear pixels
+/// far too dark.
+pub fn into_srgb_rgba8(image: DynamicImage) -> image::RgbaImage {
+    srgb_from_linear(image).into_rgba8()
+}
+
 /// sRGB-encoded integer pixels → linear float pixels. Float images are
 /// already linear and pass through.
 fn linear_from_srgb(img: DynamicImage) -> DynamicImage {
@@ -261,6 +270,21 @@ fn flatten_alpha_keep_depth(img: DynamicImage) -> DynamicImage {
             flatten_alpha_keep_depth(DynamicImage::ImageRgba16(other.into_rgba16()))
         }
         other => DynamicImage::ImageRgb16(other.into_rgb16()),
+    }
+}
+
+#[cfg(test)]
+mod display_tests {
+    use super::*;
+
+    #[test]
+    fn linear_floats_display_through_the_srgb_transfer() {
+        let linear = image::Rgba32FImage::from_pixel(1, 1, image::Rgba([0.5, 0.0, 2.0, 0.5]));
+        let rgba = into_srgb_rgba8(DynamicImage::ImageRgba32F(linear));
+        assert_eq!(rgba.get_pixel(0, 0).0, [188, 0, 255, 128]);
+        let encoded = image::RgbImage::from_pixel(1, 1, image::Rgb([128, 7, 255]));
+        let rgba = into_srgb_rgba8(DynamicImage::ImageRgb8(encoded));
+        assert_eq!(rgba.get_pixel(0, 0).0, [128, 7, 255, 255]);
     }
 }
 

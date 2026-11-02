@@ -18,7 +18,7 @@ pub fn install(paths: &ScopePaths) -> io::Result<Vec<PathBuf>> {
     let mut written = Vec::new();
     for action in ACTIONS {
         let file = dir.join(format!("bigiris-{}.contract", action.id));
-        safe_write(&file, render(action))?;
+        safe_write(&file, render(action), paths.scope)?;
         written.push(file);
     }
     Ok(written)

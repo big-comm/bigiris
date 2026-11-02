@@ -88,7 +88,7 @@ pub(crate) fn install_with_system_path(
     // nautilus-python extension: único ponto de entrada oficial.
     std::fs::create_dir_all(&ext_dir)?;
     let ext_file = ext_dir.join(PYTHON_EXTENSION_FILENAME);
-    crate::safe_fs::safe_write(&ext_file, PYTHON_EXTENSION)?;
+    crate::safe_fs::safe_write(&ext_file, PYTHON_EXTENSION, paths.scope)?;
     written.push(ext_file);
 
     Ok(written)

@@ -7,7 +7,7 @@ use std::io;
 use std::path::PathBuf;
 
 use crate::action::{Action, ACTIONS, TOP_LEVEL_LABEL};
-use crate::safe_fs::safe_write_with_mode;
+use crate::safe_fs::{safe_write_with_mode, FileMode};
 use crate::scope::{remove_matching, ScopePaths};
 
 /// Install one `.desktop` per [`Action`] into `~/.local/share/kio/servicemenus/`.
@@ -20,7 +20,7 @@ pub fn install(paths: &ScopePaths) -> io::Result<Vec<PathBuf>> {
         // Dolphin treats executable permission as the trust marker for
         // user-owned ServiceMenus and silently rejects a regular `0644`
         // desktop file. Re-applying the mode also repairs older installs.
-        safe_write_with_mode(&file, render(action), 0o755)?;
+        safe_write_with_mode(&file, render(action), paths.scope, FileMode::Exact(0o755))?;
         written.push(file);
     }
     Ok(written)

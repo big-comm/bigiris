@@ -20,10 +20,14 @@ use std::io;
 use std::path::{Path, PathBuf};
 
 use crate::action::{Action, ACTIONS, TOP_LEVEL_LABEL};
-use crate::safe_fs::safe_write;
+use crate::safe_fs::{safe_write_with_mode, FileMode};
 use crate::scope::{Scope, ScopePaths};
 
 const EMPTY_XML: &str = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<actions>\n</actions>\n";
+
+/// `uca.xml` may hold hosts, users or tokens in custom commands. Thunar
+/// creates it `0600` (`g_mkstemp`); keep whatever mode the user has.
+const UCA_MODE: FileMode = FileMode::KeepExisting(0o600);
 
 /// Install (or refresh) our actions in `~/.config/Thunar/uca.xml`.
 ///
@@ -40,7 +44,7 @@ pub fn install(paths: &ScopePaths) -> io::Result<Vec<PathBuf>> {
     let existing = read_or_default(&target)?;
     let stripped = strip_bigiris_actions(&existing);
     let merged = inject_before_close(&stripped, &render_all_actions());
-    safe_write(&target, merged)?;
+    safe_write_with_mode(&target, merged, paths.scope, UCA_MODE)?;
     Ok(vec![target])
 }
 
@@ -65,7 +69,7 @@ pub fn uninstall(paths: &ScopePaths) -> io::Result<Vec<PathBuf>> {
     if paths.scope == Scope::User && !stripped.contains("<action>") {
         std::fs::remove_file(&target)?;
     } else {
-        safe_write(&target, stripped)?;
+        safe_write_with_mode(&target, stripped, paths.scope, UCA_MODE)?;
     }
     Ok(vec![target])
 }
@@ -455,15 +459,32 @@ mod tests {
     }
 
     #[test]
-    fn install_refuses_symlinked_uca() {
+    fn install_follows_users_own_dotfile_symlink() {
+        // stow / home-manager link ~/.config/Thunar/uca.xml into a repo.
         let tmp = TempDir::new().unwrap();
         let paths = ScopePaths::rooted_at(tmp.path());
         std::fs::create_dir_all(paths.thunar_uca().parent().unwrap()).unwrap();
-        let real = tmp.path().join("elsewhere.xml");
+        let real = tmp.path().join("dotfiles-uca.xml");
         std::fs::write(&real, EMPTY_XML).unwrap();
         std::os::unix::fs::symlink(&real, paths.thunar_uca()).unwrap();
-        assert!(install(&paths).is_err());
-        assert_eq!(read(&real), EMPTY_XML);
+        install(&paths).unwrap();
+        assert!(std::fs::symlink_metadata(paths.thunar_uca()).unwrap().file_type().is_symlink());
+        assert!(read(&real).contains("<unique-id>bigiris-view</unique-id>"));
+    }
+
+    #[test]
+    fn install_keeps_existing_uca_mode_and_creates_private_file() {
+        use std::os::unix::fs::PermissionsExt;
+        let tmp = TempDir::new().unwrap();
+        let paths = ScopePaths::rooted_at(tmp.path());
+        install(&paths).unwrap();
+        let mode = std::fs::metadata(paths.thunar_uca()).unwrap().permissions().mode();
+        assert_eq!(mode & 0o777, 0o600, "new uca.xml must be private like Thunar's");
+        let mode = std::fs::Permissions::from_mode(0o640);
+        std::fs::set_permissions(paths.thunar_uca(), mode).unwrap();
+        install(&paths).unwrap();
+        let mode = std::fs::metadata(paths.thunar_uca()).unwrap().permissions().mode();
+        assert_eq!(mode & 0o777, 0o640);
     }
 
     #[test]

@@ -296,7 +296,7 @@ fn install_app_files_with_system(
         if std::fs::create_dir_all(dir).is_err() {
             continue;
         }
-        if crate::safe_fs::safe_write(&target, with_marker(content, kind)).is_ok() {
+        if crate::safe_fs::safe_write(&target, with_marker(content, kind), paths.scope).is_ok() {
             written.push(target);
         }
     }

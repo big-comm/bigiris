@@ -60,3 +60,9 @@ strip = "debuginfo"
 
 [profile.dev]
 opt-level = 1
+
+# image 0.25.10 with the AVIF decoder termination fix from upstream
+# (image-rs/image@3d74c477). A crafted AVIF without a decodable frame made
+# AvifDecoder::new spin forever. Drop this once image > 0.25.10 ships the fix.
+[patch.crates-io]
+image = { path = "third_party/image" }

@@ -159,3 +159,23 @@ fn avif_declared_box_beyond_file_is_rejected_before_allocation() {
     assert!(open_image(&path).is_err());
     assert!(bigimage_core::image_dimensions(&path).is_err());
 }
+
+/// Fuzzer-found AVIF whose AV1 stream never yields a picture. image 0.25.10
+/// spun forever in `AvifDecoder::new`; the vendored fix must fail promptly.
+/// Runs on a worker thread so a regression fails instead of hanging the suite.
+#[test]
+fn avif_without_decodable_picture_terminates() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("no-picture.avif");
+    std::fs::write(&path, include_bytes!("fixtures/avif-no-picture.avif")).unwrap();
+    let (tx, rx) = std::sync::mpsc::channel();
+    std::thread::spawn(move || {
+        let dimensions = bigimage_core::backend::dimensions_in_process(&path).is_err();
+        let decode = bigimage_core::backend::decode_in_process(&path).is_err();
+        let _ = tx.send((dimensions, decode));
+    });
+    let (dimensions_err, decode_err) = rx
+        .recv_timeout(std::time::Duration::from_secs(30))
+        .expect("AVIF decoder did not terminate within 30 s");
+    assert!(dimensions_err && decode_err);
+}

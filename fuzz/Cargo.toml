@@ -28,3 +28,7 @@ doc = false
 bench = false
 
 [workspace]
+
+# Same AVIF termination fix as the root workspace (see ../Cargo.toml).
+[patch.crates-io]
+image = { path = "../third_party/image" }

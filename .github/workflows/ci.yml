@@ -9,6 +9,14 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+# Least privilege for GITHUB_TOKEN: every job only reads the repository.
+# upload-artifact and rust-cache use the runtime token, not GITHUB_TOKEN.
+# Third-party actions are pinned to full commit SHAs (tag in the comment);
+# rust-toolchain is pinned to a master commit with an explicit `toolchain:`
+# because its stable/nightly refs are moving branches.
+permissions:
+  contents: read
+
 env:
   CARGO_TERM_COLOR: always
 
@@ -17,9 +25,10 @@ jobs:
     name: rustfmt
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # master (2026-10-16)
         with:
+          toolchain: stable
           components: rustfmt
       - run: cargo fmt --all --check
 
@@ -27,7 +36,7 @@ jobs:
     name: clippy (headless)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       # `image` is a non-optional dep with `avif-native` enabled, which
       # pulls dav1d-sys. dav1d is an image codec, not a UI lib, so even
       # the "headless" workspace build needs libdav1d-dev.
@@ -35,50 +44,54 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends libdav1d-dev pkg-config bubblewrap util-linux
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # master (2026-10-16)
         with:
+          toolchain: stable
           components: clippy
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
       - run: cargo clippy --workspace --all-targets --locked -- -D warnings
 
   clippy-gui:
     name: clippy (gui + ai)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - name: install GTK4/libadwaita/dav1d dev
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
             libgtk-4-dev libadwaita-1-dev libdav1d-dev pkg-config bubblewrap util-linux
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # master (2026-10-16)
         with:
+          toolchain: stable
           components: clippy
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
       - run: cargo clippy --workspace --all-features --all-targets --locked -- -D warnings
 
   test:
     name: test (headless)
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - name: install libdav1d-dev
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends libdav1d-dev pkg-config bubblewrap util-linux
       - name: prepare distro Bubblewrap policy and verify isolation
         run: bash .github/scripts/prepare-sandbox.sh
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
+      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # master (2026-10-16)
+        with:
+          toolchain: stable
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
       # Sandbox tests exercise the distro bubblewrap policy and fail closed.
       # Do not disable AppArmor or add broad container capabilities to pass.
       - run: cargo test --workspace --all-targets --locked
 
   test-gui:
     name: test (gui + ai)
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04  # libadwaita >= 1.6 (feature v1_6, AdwSpinner)
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - name: install GTK4/libadwaita/dav1d dev
         run: |
           sudo apt-get update
@@ -86,8 +99,10 @@ jobs:
             libgtk-4-dev libadwaita-1-dev libdav1d-dev pkg-config bubblewrap util-linux xvfb dbus-x11 gettext locales
       - name: prepare distro Bubblewrap policy and verify isolation
         run: bash .github/scripts/prepare-sandbox.sh
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
+      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # master (2026-10-16)
+        with:
+          toolchain: stable
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
       # Tests in `crates/bigiris/src/gui.rs` (the 20 anchor/zoom tests)
       # only compile with `--features gui`, so they need their own job.
       # Sandbox tests exercise the distro bubblewrap policy and fail closed.
@@ -115,7 +130,7 @@ jobs:
                 --locked viewer_lifecycle_releases_state_and_workers -- \
                 --ignored --test-threads=1
           done
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: always()
         with:
           name: painted-zoom-frames
@@ -123,9 +138,9 @@ jobs:
 
   build:
     name: build (release, gui + ai)
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04  # libadwaita >= 1.6 (feature v1_6, AdwSpinner)
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - name: install GTK4/libadwaita/dav1d dev
         run: |
           sudo apt-get update
@@ -133,8 +148,10 @@ jobs:
             libgtk-4-dev libadwaita-1-dev libdav1d-dev pkg-config bubblewrap util-linux
       - name: prepare distro Bubblewrap policy and verify isolation
         run: bash .github/scripts/prepare-sandbox.sh
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
+      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # master (2026-10-16)
+        with:
+          toolchain: stable
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
       # `ai` usa load-dynamic do ort: compila sem libonnxruntime presente,
       # so precisaria do .so em runtime (e self-test nao carrega o backend).
       - run: cargo build --release --locked --features "gui ai" -p bigiris
@@ -144,7 +161,7 @@ jobs:
     name: AppStream metainfo validation
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - name: install appstreamcli
         run: |
           sudo apt-get update
@@ -158,9 +175,10 @@ jobs:
     name: 29-language catalogs and localized integration assets
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # master (2026-10-16)
         with:
+          toolchain: stable
           components: rustfmt
       - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends gettext
       - run: python3 scripts/translations.py check --check-generated
@@ -169,7 +187,7 @@ jobs:
     name: .desktop validation
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - name: install desktop-file-utils
         run: |
           sudo apt-get update
@@ -186,7 +204,7 @@ jobs:
           pacman -Syu --noconfirm --needed base-devel rust git sudo
           useradd -m builder
           echo "builder ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - name: chown for builder
         run: chown -R builder:builder .
       # Usa PKGBUILD.local (build do checkout local, sem clone remoto).
@@ -209,7 +227,7 @@ jobs:
     name: Nautilus extension contracts
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - run: PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -v
       - run: glib-compile-schemas --strict --dry-run data
 
@@ -217,9 +235,11 @@ jobs:
     name: RustSec dependency audit
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # master (2026-10-16)
+        with:
+          toolchain: stable
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
       - run: cargo install cargo-audit --locked
       - run: cargo audit --deny unsound
 
@@ -227,13 +247,15 @@ jobs:
     name: Synthetic core stress and stability
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - name: install codec dev files
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends libdav1d-dev pkg-config bubblewrap util-linux
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
+      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # master (2026-10-16)
+        with:
+          toolchain: stable
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
       - run: cargo build --release --locked -p bigimage-core --example quality_probe
       - run: ./target/release/examples/quality_probe stress 32
       - run: ./target/release/examples/quality_probe soak 30
@@ -242,13 +264,15 @@ jobs:
     name: Core memory errors and leaks (Valgrind)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - name: install codec and debugger files
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends libdav1d-dev pkg-config bubblewrap util-linux valgrind libc6-dbg
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
+      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # master (2026-10-16)
+        with:
+          toolchain: stable
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
       - run: cargo build --release --locked -p bigimage-core --example quality_probe
       - name: instrument synthetic decode/resize/preview/encode cycles
         run: |
@@ -264,12 +288,14 @@ jobs:
     env:
       RUSTUP_TOOLCHAIN: nightly
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - run: sudo apt-get update && sudo apt-get install -y libdav1d-dev pkg-config
-      - uses: dtolnay/rust-toolchain@nightly
-      - uses: Swatinem/rust-cache@v2
+      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # master (2026-10-16)
+        with:
+          toolchain: nightly
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
       - run: python3 scripts/fuzz.py --seconds 30
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: always()
         with:
           name: fuzz-evidence

@@ -314,3 +314,468 @@ fn large_ico_is_scaled_to_supported_dimensions() {
     .unwrap();
     assert_eq!(open_image(out.path()).unwrap().dimensions(), (256, 128));
 }
+
+#[test]
+fn gray_png_with_gray_icc_profile_opens() {
+    use image::ImageEncoder;
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("gray.png");
+    let mut encoder = image::codecs::png::PngEncoder::new(std::fs::File::create(&path).unwrap());
+    encoder
+        .set_icc_profile(moxcms::ColorProfile::new_gray_with_gamma(2.2).encode().unwrap())
+        .unwrap();
+    encoder.write_image(&[100u8; 6], 3, 2, image::ExtendedColorType::L8).unwrap();
+    let image = open_image(&path).unwrap();
+    assert_eq!(image.color(), image::ColorType::L8);
+    assert_eq!(image.dimensions(), (3, 2));
+}
+
+fn expected_new_file_mode() -> u32 {
+    let umask = std::fs::read_to_string("/proc/self/status")
+        .ok()
+        .and_then(|status| {
+            status.lines().find_map(|line| {
+                line.strip_prefix("Umask:").and_then(|v| u32::from_str_radix(v.trim(), 8).ok())
+            })
+        })
+        .unwrap_or(0o022);
+    0o666 & !umask
+}
+
+#[cfg(unix)]
+#[test]
+fn new_outputs_get_umask_permissions_instead_of_private_temp_mode() {
+    use std::os::unix::fs::PermissionsExt;
+    let mode = |path: &Path| std::fs::metadata(path).unwrap().permissions().mode() & 0o777;
+    let dir = tempfile::tempdir().unwrap();
+    let src = fixture(dir.path(), "perm.png", 80);
+    for policy in [OverwritePolicy::Replace, OverwritePolicy::Skip, OverwritePolicy::Increment] {
+        let out = convert_file_to(
+            &src,
+            Some(&dir.path().join(format!("{policy:?}"))),
+            Format::Jpeg,
+            &EncodeOptions::default(),
+            policy,
+        )
+        .unwrap();
+        assert_eq!(mode(out.path()), expected_new_file_mode(), "{policy:?}");
+    }
+    let gif = dir.path().join("anim.gif");
+    make_gif(std::slice::from_ref(&src), &gif, AnimateOptions::default()).unwrap();
+    assert_eq!(mode(&gif), expected_new_file_mode());
+
+    // Replacing an existing file keeps that file's permissions.
+    std::fs::set_permissions(&gif, std::fs::Permissions::from_mode(0o640)).unwrap();
+    make_gif(std::slice::from_ref(&src), &gif, AnimateOptions::default()).unwrap();
+    assert_eq!(mode(&gif), 0o640);
+    // Bits the umask strips at creation (group/other write) are restored.
+    let replaced = dir.path().join("Replace/perm.jpg");
+    for bits in [0o600, 0o666, 0o604] {
+        std::fs::set_permissions(&replaced, std::fs::Permissions::from_mode(bits)).unwrap();
+        convert_file_to(
+            &src,
+            Some(&dir.path().join("Replace")),
+            Format::Jpeg,
+            &EncodeOptions::default(),
+            OverwritePolicy::Replace,
+        )
+        .unwrap();
+        assert_eq!(mode(&replaced), bits);
+    }
+}
+
+#[test]
+fn skip_policy_returns_before_decoding_when_destination_is_known() {
+    use bigimage_core::*;
+    let dir = tempfile::tempdir().unwrap();
+    // Valid header up to the pixel data, truncated inside it: the header
+    // checks pass, decoding it would fail.
+    let src = dir.path().join("broken.png");
+    let good = std::fs::read(fixture(dir.path(), "good.png", 1)).unwrap();
+    let idat = good.windows(4).position(|w| w == b"IDAT").unwrap();
+    std::fs::write(&src, &good[..idat + 8]).unwrap();
+    assert!(open_image(&src).is_err());
+    let skip = OverwritePolicy::Skip;
+    let existing = |name: &str| {
+        let path = dir.path().join(name);
+        std::fs::write(&path, b"keep").unwrap();
+        path
+    };
+    let outcomes = [
+        (
+            existing("broken_crop-1x1+0+0.png"),
+            crop_file(&src, CropRect::new(0, 0, 1, 1), None, skip),
+        ),
+        (
+            existing("broken_flipH.jpg"),
+            flip_file(&src, FlipAxis::Horizontal, Some(Format::Jpeg), skip),
+        ),
+        (existing("broken_rot90.png"), rotate_file(&src, Rotation::Deg90, None, skip)),
+        (existing("broken_auto.png"), rotate_file_auto(&src, None, skip)),
+        (
+            existing("broken_b10.png"),
+            adjust_file(&src, AdjustOps { brightness: 10, ..AdjustOps::default() }, None, skip),
+        ),
+        (
+            existing("broken_extent-64x64.png"),
+            extent_file(
+                &src,
+                ExtentOptions::new(ExtentSize::Exact { width: 64, height: 64 }),
+                None,
+                skip,
+            ),
+        ),
+        (
+            existing("broken_10.png"),
+            resize_file(
+                &src,
+                ResizeMode::MaxEdge(10),
+                Filter::Nearest,
+                None,
+                &EncodeOptions::default(),
+                skip,
+            ),
+        ),
+    ];
+    for (path, outcome) in outcomes {
+        assert_eq!(outcome.unwrap(), ConvertOutcome::Skipped { output: path.clone() });
+        assert_eq!(std::fs::read(&path).unwrap(), b"keep");
+    }
+}
+
+/// Skip must not hide an invalid request: with or without an existing
+/// output of that name, the same operation fails the same way.
+#[test]
+fn skip_policy_still_rejects_invalid_operations() {
+    use bigimage_core::*;
+    let dir = tempfile::tempdir().unwrap();
+    let src = fixture(dir.path(), "src.png", 1); // 32x24
+    let skip = OverwritePolicy::Skip;
+    let existing = |name: &str| std::fs::write(dir.path().join(name), b"keep").unwrap();
+    let crop = CropRect::new(20, 0, 40, 10);
+    let extent = ExtentOptions::new(ExtentSize::Exact { width: 30, height: 30 });
+    let fresh_crop = crop_file(&src, crop, None, skip).unwrap_err().to_string();
+    let fresh_extent = extent_file(&src, extent, None, skip).unwrap_err().to_string();
+    existing("src_crop-40x10+20+0.png");
+    existing("src_extent-30x30.png");
+    assert_eq!(crop_file(&src, crop, None, skip).unwrap_err().to_string(), fresh_crop);
+    assert_eq!(extent_file(&src, extent, None, skip).unwrap_err().to_string(), fresh_extent);
+    // Valid only once transposed (as for an EXIF-rotated photo): still
+    // skipped before decoding, the decode path stays authoritative.
+    existing("src_crop-20x30+0+0.png");
+    let transposed = crop_file(&src, CropRect::new(0, 0, 20, 30), None, skip).unwrap();
+    assert!(matches!(transposed, ConvertOutcome::Skipped { .. }));
+
+    // Animated input: refused, never reported as skipped.
+    let gif = dir.path().join("anim.gif");
+    make_gif(&[src.clone(), fixture(dir.path(), "b.png", 200)], &gif, AnimateOptions::default())
+        .unwrap();
+    existing("anim_rot90.gif");
+    existing("anim.png");
+    assert!(matches!(
+        rotate_file(&gif, Rotation::Deg90, None, skip),
+        Err(BigImageError::InvalidInput(_))
+    ));
+    assert!(matches!(
+        convert_file(&gif, Format::Png, &EncodeOptions::default(), skip),
+        Err(BigImageError::InvalidInput(_))
+    ));
+}
+
+#[test]
+fn pnm_outputs_are_named_after_the_written_pixels() {
+    use bigimage_core::*;
+    let dir = tempfile::tempdir().unwrap();
+    let gray = dir.path().join("gray.png");
+    image::GrayImage::from_pixel(6, 4, image::Luma([90])).save(&gray).unwrap();
+    let color = fixture(dir.path(), "color.png", 9);
+    let opts = EncodeOptions::default();
+    let replace = OverwritePolicy::Replace;
+    let pgm = convert_file(&gray, Format::Pnm, &opts, replace).unwrap();
+    assert_eq!(pgm.path(), dir.path().join("gray.pgm"));
+    assert_eq!(&std::fs::read(pgm.path()).unwrap()[..2], b"P5");
+    let ppm = convert_file(&color, Format::Pnm, &opts, replace).unwrap();
+    assert_eq!(ppm.path(), dir.path().join("color.ppm"));
+    assert_eq!(&std::fs::read(ppm.path()).unwrap()[..2], b"P6");
+
+    // Keeping the source format: a gray PGM stays .pgm.
+    let rotated = rotate_file(pgm.path(), Rotation::Deg90, None, replace).unwrap();
+    assert_eq!(rotated.path(), dir.path().join("gray_rot90.pgm"));
+    // A coloured canvas turns gray pixels into colour: .ppm.
+    let extent = ExtentOptions::new(ExtentSize::Exact { width: 8, height: 8 })
+        .with_background([255, 0, 0, 255]);
+    let extended = extent_file(&gray, extent, Some(Format::Pnm), replace).unwrap();
+    assert_eq!(extended.path(), dir.path().join("gray_extent-8x8.ppm"));
+
+    // Skip is decided against the real name, after decoding.
+    std::fs::write(dir.path().join("gray_rot90.pgm"), b"keep").unwrap();
+    let skipped = rotate_file(pgm.path(), Rotation::Deg90, None, OverwritePolicy::Skip).unwrap();
+    assert_eq!(skipped, ConvertOutcome::Skipped { output: dir.path().join("gray_rot90.pgm") });
+    assert_eq!(std::fs::read(dir.path().join("gray_rot90.pgm")).unwrap(), b"keep");
+    let skipped = convert_file(&gray, Format::Pnm, &opts, OverwritePolicy::Skip).unwrap();
+    assert_eq!(skipped, ConvertOutcome::Skipped { output: dir.path().join("gray.pgm") });
+    assert_no_partials(dir.path());
+}
+
+#[test]
+fn single_file_operations_honour_caller_encode_options() {
+    use bigimage_core::*;
+    let dir = tempfile::tempdir().unwrap();
+    let src = dir.path().join("noise.png");
+    let noise = RgbImage::from_fn(64, 64, |x, y| {
+        Rgb([(x * 37 + y * 11) as u8, (x * x + y * 7) as u8, (x ^ y) as u8 * 3])
+    });
+    noise.save(&src).unwrap();
+    let size = |quality: u8| {
+        let opts = EncodeOptions { quality: Some(quality), ..EncodeOptions::default() };
+        let out = dir.path().join(format!("q{quality}"));
+        std::fs::create_dir_all(&out).unwrap();
+        let input = out.join("noise.png");
+        std::fs::copy(&src, &input).unwrap();
+        let jpeg = Some(Format::Jpeg);
+        let replace = OverwritePolicy::Replace;
+        [
+            crop_file_with_options(&input, CropRect::new(0, 0, 60, 60), jpeg, &opts, replace),
+            flip_file_with_options(&input, FlipAxis::Vertical, jpeg, &opts, replace),
+            rotate_file_with_options(&input, Rotation::Deg180, jpeg, &opts, replace),
+            rotate_file_auto_with_options(&input, jpeg, &opts, replace),
+            adjust_file_with_options(
+                &input,
+                AdjustOps { contrast: 5.0, ..AdjustOps::default() },
+                jpeg,
+                &opts,
+                replace,
+            ),
+            extent_file_with_options(
+                &input,
+                ExtentOptions::new(ExtentSize::Exact { width: 70, height: 70 }),
+                jpeg,
+                &opts,
+                replace,
+            ),
+        ]
+        .map(|outcome| std::fs::metadata(outcome.unwrap().path()).unwrap().len())
+    };
+    let (low, high) = (size(10), size(95));
+    for (low, high) in low.iter().zip(high.iter()) {
+        assert!(low < high, "quality ignored: q10={low} q95={high}");
+    }
+}
+
+/// Depth/alpha policy documented on `save_image` (findings: float to
+/// PNG/TIFF without added alpha, extent canvas depth, PNM depth).
+#[test]
+fn documented_depth_and_alpha_policy_holds() {
+    let dir = tempfile::tempdir().unwrap();
+    let save = |image: DynamicImage, name: &str, format: Format| {
+        let path = dir.path().join(name);
+        bigimage_core::save_image(
+            image,
+            &path,
+            format,
+            &EncodeOptions::default(),
+            OverwritePolicy::Replace,
+        )
+        .unwrap();
+        image::open(&path).unwrap()
+    };
+    let float = DynamicImage::ImageRgb32F(image::ImageBuffer::from_pixel(
+        2,
+        2,
+        image::Rgb([0.5f32, 0.25, 1.0]),
+    ));
+    let png = save(float.clone(), "float.png", Format::Png);
+    assert_eq!(png.color(), image::ColorType::Rgb16);
+    let px = png.to_rgb8().get_pixel(0, 0).0;
+    assert!((187..=189).contains(&px[0]), "sRGB transfer missing: {px:?}");
+    assert_eq!(save(float, "float.tiff", Format::Tiff).color(), image::ColorType::Rgb16);
+
+    let gray16 =
+        DynamicImage::ImageLuma16(image::ImageBuffer::from_pixel(3, 2, image::Luma([40000u16])));
+    let rgb16 = DynamicImage::ImageRgb16(image::ImageBuffer::from_pixel(
+        3,
+        2,
+        image::Rgb([1000u16, 2000, 3000]),
+    ));
+    let gray8 = DynamicImage::ImageLuma8(image::ImageBuffer::from_pixel(3, 2, image::Luma([77u8])));
+    assert_eq!(save(gray16.clone(), "g16.pgm", Format::Pnm), gray16);
+    assert_eq!(save(rgb16.clone(), "c16.ppm", Format::Pnm), rgb16);
+    assert_eq!(save(gray8.clone(), "g8.pgm", Format::Pnm), gray8);
+
+    let extent = ExtentOptions::new(ExtentSize::Exact { width: 5, height: 4 });
+    let extended = bigimage_core::extent::apply_to(&rgb16, &extent).unwrap();
+    assert_eq!(save(extended, "extent.png", Format::Png).color(), image::ColorType::Rgb16);
+    let extended = bigimage_core::extent::apply_to(&gray16, &extent).unwrap();
+    assert_eq!(save(extended, "extent-gray.png", Format::Png).color(), image::ColorType::L16);
+}
+
+/// Every in-memory colour type must save to every advertised format, both
+/// through `save_image` and through the metadata-preserving resave with a
+/// profile of the matching colour model (GRAY for gray pixels, RGB
+/// otherwise). Regression: gray+alpha (produced by extent) failed for TIFF.
+#[test]
+fn every_colour_type_saves_to_every_format() {
+    use image::{ImageBuffer, Luma, LumaA, Rgba};
+    let (w, h) = (5, 3);
+    let images = [
+        DynamicImage::ImageLuma8(ImageBuffer::from_pixel(w, h, Luma([90u8]))),
+        DynamicImage::ImageLumaA8(ImageBuffer::from_pixel(w, h, LumaA([90u8, 128]))),
+        DynamicImage::ImageRgb8(ImageBuffer::from_pixel(w, h, Rgb([90u8, 20, 200]))),
+        DynamicImage::ImageRgba8(ImageBuffer::from_pixel(w, h, Rgba([90u8, 20, 200, 128]))),
+        DynamicImage::ImageLuma16(ImageBuffer::from_pixel(w, h, Luma([40000u16]))),
+        DynamicImage::ImageLumaA16(ImageBuffer::from_pixel(w, h, LumaA([40000u16, 30000]))),
+        DynamicImage::ImageRgb16(ImageBuffer::from_pixel(w, h, Rgb([40000u16, 2000, 60000]))),
+        DynamicImage::ImageRgba16(ImageBuffer::from_pixel(
+            w,
+            h,
+            Rgba([40000u16, 2000, 60000, 30000]),
+        )),
+        DynamicImage::ImageRgb32F(ImageBuffer::from_pixel(w, h, Rgb([0.2f32, 1.5, 0.0]))),
+        DynamicImage::ImageRgba32F(ImageBuffer::from_pixel(w, h, Rgba([0.2f32, 1.5, 0.0, 0.5]))),
+    ];
+    let gray_icc = moxcms::ColorProfile::new_gray_with_gamma(2.2).encode().unwrap();
+    let rgb_icc = moxcms::ColorProfile::new_display_p3().encode().unwrap();
+    let dir = tempfile::tempdir().unwrap();
+    let opts = EncodeOptions { quality: Some(60), avif_speed: 10, ..EncodeOptions::default() };
+    for image in &images {
+        let gray = matches!(
+            image.color(),
+            image::ColorType::L8
+                | image::ColorType::La8
+                | image::ColorType::L16
+                | image::ColorType::La16
+        );
+        let source = bigimage_core::SourceMetadata {
+            exif: None,
+            icc: Some(if gray { gray_icc.clone() } else { rgb_icc.clone() }),
+        };
+        for &format in Format::all() {
+            let name = format!("{:?}-{format:?}.{}", image.color(), format.extension());
+            let path = dir.path().join(&name);
+            bigimage_core::save_image(
+                image.clone(),
+                &path,
+                format,
+                &opts,
+                OverwritePolicy::Replace,
+            )
+            .unwrap_or_else(|e| panic!("save {name}: {e}"));
+            assert_eq!(open_image(&path).unwrap().dimensions(), (w, h), "{name}");
+            let path = dir.path().join(format!("resave-{name}"));
+            bigimage_core::save_image_preserving_metadata(
+                image.clone(),
+                &path,
+                format,
+                &opts,
+                OverwritePolicy::Replace,
+                &source,
+            )
+            .unwrap_or_else(|e| panic!("resave {name}: {e}"));
+            assert_eq!(open_image(&path).unwrap().dimensions(), (w, h), "resave {name}");
+        }
+    }
+    assert_no_partials(dir.path());
+}
+
+/// Append an `irot` property to `ipco`, associate it with the single item
+/// in `ipma` (as the encoder writes it), grow the enclosing box sizes and
+/// shift the `iloc` offsets that point past the insertion.
+fn add_primary_irot(file: &[u8], angle: u8) -> Vec<u8> {
+    fn find(bytes: &[u8], kind: &[u8; 4]) -> usize {
+        bytes.windows(4).position(|w| w == kind).expect("box present") - 4
+    }
+    fn size(bytes: &[u8], at: usize) -> usize {
+        u32::from_be_bytes(bytes[at..at + 4].try_into().unwrap()) as usize
+    }
+    fn grow(bytes: &mut [u8], at: usize, by: usize) {
+        let new = (size(bytes, at) + by) as u32;
+        bytes[at..at + 4].copy_from_slice(&new.to_be_bytes());
+    }
+    let mut out = file.to_vec();
+    let (meta, iprp, ipco, ipma) =
+        (find(file, b"meta"), find(file, b"iprp"), find(file, b"ipco"), find(file, b"ipma"));
+    assert!(ipco < ipma, "encoder layout changed");
+    // ipma v0, flags 0: entry_count(4) item_ID(2) count(1) assoc(1)...
+    assert_eq!(&file[ipma + 12..ipma + 16], &[0, 0, 0, 1]);
+    // The new property's 1-based index is the current child count + 1.
+    let mut count = 0;
+    let mut p = ipco + 8;
+    while p < ipco + size(file, ipco) {
+        count += 1;
+        p += size(file, p);
+    }
+    let ipma_end = ipma + size(file, ipma);
+    out.insert(ipma_end, 0x80 | (count + 1) as u8);
+    out[ipma + 18] += 1;
+    grow(&mut out, ipma, 1);
+    let ipco_end = ipco + size(file, ipco);
+    let irot = [0, 0, 0, 9, b'i', b'r', b'o', b't', angle];
+    out.splice(ipco_end..ipco_end, irot);
+    grow(&mut out, ipco, 9);
+    grow(&mut out, iprp, 10);
+    grow(&mut out, meta, 10);
+    // iloc v0: offset/length sizes, base_offset size, item_count(2), then
+    // per item: id(2) data_ref(2) base_offset(n) extent_count(2) extents.
+    let iloc = find(&out, b"iloc");
+    assert!(iloc < ipco, "iloc must precede the insertion");
+    assert_eq!(out[iloc + 8], 0, "iloc version");
+    let (offset_size, length_size) =
+        ((out[iloc + 12] >> 4) as usize, (out[iloc + 12] & 15) as usize);
+    let base_size = (out[iloc + 13] >> 4) as usize;
+    let items = u16::from_be_bytes([out[iloc + 14], out[iloc + 15]]);
+    let mut cursor = iloc + 16;
+    let bump = |bytes: &mut [u8], at: usize, n: usize| {
+        if n == 0 {
+            return;
+        }
+        let mut value = 0u64;
+        for b in &bytes[at..at + n] {
+            value = value << 8 | u64::from(*b);
+        }
+        value += 10;
+        for i in 0..n {
+            bytes[at + n - 1 - i] = (value >> (8 * i)) as u8;
+        }
+    };
+    for _ in 0..items {
+        cursor += 4;
+        bump(&mut out, cursor, base_size);
+        cursor += base_size;
+        let extents = u16::from_be_bytes([out[cursor], out[cursor + 1]]);
+        cursor += 2;
+        for _ in 0..extents {
+            if base_size == 0 {
+                bump(&mut out, cursor, offset_size);
+            }
+            cursor += offset_size + length_size;
+        }
+    }
+    out
+}
+
+#[test]
+fn avif_irot_property_of_primary_item_is_applied_on_decode() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("rotated.avif");
+    // 4x2: left half red, right half blue.
+    let source =
+        RgbImage::from_fn(4, 2, |x, _| if x < 2 { Rgb([255, 0, 0]) } else { Rgb([0, 0, 255]) });
+    bigimage_core::save_image(
+        DynamicImage::ImageRgb8(source),
+        &path,
+        Format::Avif,
+        &EncodeOptions { quality: Some(100), ..EncodeOptions::default() },
+        OverwritePolicy::Replace,
+    )
+    .unwrap();
+    let bytes = add_primary_irot(&std::fs::read(&path).unwrap(), 1);
+    std::fs::write(&path, &bytes).unwrap();
+
+    let decoded = open_image(&path).unwrap().to_rgb8();
+    assert_eq!(decoded.dimensions(), (2, 4));
+    // Anticlockwise: the right (blue) half ends up on top.
+    let top = decoded.get_pixel(0, 0).0;
+    let bottom = decoded.get_pixel(0, 3).0;
+    assert!(top[2] > 200 && top[0] < 60, "top {top:?}");
+    assert!(bottom[0] > 200 && bottom[2] < 60, "bottom {bottom:?}");
+}

@@ -6,7 +6,9 @@
 //! 2. Dialog: `bigiris --dialog=<name> [FILE...]` (used by file-manager service menus)
 //! 3. Headless CLI: `bigiris <subcommand> ...` (used by CI/CD and quick service-menu actions)
 
-#![forbid(unsafe_code)]
+// `deny`, not `forbid`: exactly one audited `unsafe` block is allowed, the
+// `pre_exec` hook in `codec::close_inherited_descriptors`.
+#![deny(unsafe_code)]
 
 // Faster allocator for the multi-thread batch path. ~5-15% wall-clock
 // win on a 100-file convert batch on a 16-thread CPU per the perf
@@ -20,7 +22,14 @@ mod codec;
 #[cfg(feature = "gui")]
 mod gui;
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
+
+/// One exit-status convention for every headless command.
+const EXIT_PARTIAL: i32 = 2;
+const EXIT_CODES: &str = "Códigos de saída:\n  \
+    0  sucesso (inclui arquivos ignorados por já existirem)\n  \
+    1  uso inválido ou erro fatal antes de processar (nada foi gravado)\n  \
+    2  falha parcial: um ou mais arquivos não puderam ser processados";
 
 use bigimage_core::{
     AdjustOps, AnimateOptions, ConvertOutcome, CropRect, EncodeOptions, ExtentOptions, ExtentSize,
@@ -34,6 +43,7 @@ use clap::{Args, Parser, Subcommand, ValueEnum};
     version,
     about = "Visualizador rápido e conversor de imagens para Linux",
     long_about = None,
+    after_help = EXIT_CODES,
 )]
 struct Cli {
     /// Abrir apenas um diálogo modal específico (usado por service menus)
@@ -441,9 +451,12 @@ enum Command {
     },
     /// Remover fundo usando IA (headless)
     RemoveBg {
-        /// Modelo: birefnet-lite | birefnet | u2net | u2netp
-        #[arg(long, default_value = "birefnet-lite")]
-        model: String,
+        /// Modelo de segmentação.
+        #[arg(long, value_enum, default_value_t = ModelArg::BirefnetLite)]
+        model: ModelArg,
+        /// Política quando `<nome>_nobg.png` já existe.
+        #[arg(long = "overwrite", value_enum, default_value_t = OverwriteArg::Skip)]
+        overwrite: OverwriteArg,
         #[arg(value_name = "FILE", required = true)]
         files: Vec<PathBuf>,
     },
@@ -473,6 +486,9 @@ enum Command {
         /// Velocidade do encoder 1..30 (maior = mais rápido, pior paleta).
         #[arg(long, default_value_t = 10)]
         speed: i32,
+        /// Política de sobrescrita do arquivo de saída.
+        #[arg(long, default_value_t, value_enum)]
+        overwrite: OverwriteArg,
         /// Quadros em ordem (mínimo 1).
         #[arg(value_name = "FRAME", required = true)]
         frames: Vec<PathBuf>,
@@ -504,9 +520,24 @@ enum Command {
     /// para PDF via LibreOffice headless. Saída gravada ao lado do
     /// arquivo de origem.
     ToPdf {
+        /// Política quando `<nome>.pdf` já existe.
+        #[arg(long = "overwrite", value_enum, default_value_t = OverwriteArg::Skip)]
+        overwrite: OverwriteArg,
+        /// Tempo máximo por documento, em segundos.
+        #[arg(long, default_value_t = 120, value_parser = clap::value_parser!(u64).range(1..=3600))]
+        timeout: u64,
         #[arg(value_name = "FILE", required = true)]
         files: Vec<PathBuf>,
     },
+}
+
+/// Background-removal models this build can actually run.
+#[derive(ValueEnum, Debug, Clone, Copy, Default)]
+#[value(rename_all = "kebab-case")]
+enum ModelArg {
+    /// BiRefNet Lite (único modelo disponível hoje).
+    #[default]
+    BirefnetLite,
 }
 
 fn main() -> color_eyre::Result<()> {
@@ -523,7 +554,11 @@ fn main() -> color_eyre::Result<()> {
 
     init_i18n();
 
-    let cli = Cli::parse();
+    // clap exits with 2 on usage errors; 2 means partial failure here.
+    let cli = Cli::try_parse().unwrap_or_else(|error| {
+        let _ = error.print();
+        std::process::exit(i32::from(error.use_stderr()));
+    });
 
     codec::configure();
 
@@ -561,7 +596,7 @@ fn main() -> color_eyre::Result<()> {
             let policy: OverwritePolicy = overwrite.into();
             if auto {
                 tracing::info!(?target, ?policy, count = files.len(), "rotate auto (EXIF)");
-                run_per_file(&files, "rotate", |f| {
+                run_per_file(&files, "rotate", Naming::image(target, policy), |f| {
                     bigimage_core::rotate_file_auto(f, target, policy)
                 })
             } else {
@@ -571,7 +606,7 @@ fn main() -> color_eyre::Result<()> {
                     })?
                     .into();
                 tracing::info!(?rotation, ?target, ?policy, count = files.len(), "rotate");
-                run_per_file(&files, "rotate", |f| {
+                run_per_file(&files, "rotate", Naming::image(target, policy), |f| {
                     bigimage_core::rotate_file(f, rotation, target, policy)
                 })
             }
@@ -598,19 +633,23 @@ fn main() -> color_eyre::Result<()> {
                 &files,
             )
         }
-        Some(Command::RemoveBg { model, files }) => run_remove_bg(&model, &files),
+        Some(Command::RemoveBg { model, overwrite, files }) => {
+            run_remove_bg(model, overwrite.into(), &files)
+        }
         Some(Command::Upscale { factor, overwrite, files }) => {
             run_upscale(factor, overwrite.into(), &files)
         }
-        Some(Command::Animate { output, delay, loop_count, speed, frames }) => {
-            run_animate(&output, delay, loop_count, speed, &frames)
+        Some(Command::Animate { output, delay, loop_count, speed, overwrite, frames }) => {
+            run_animate(&output, delay, loop_count, speed, overwrite.into(), &frames)
         }
         Some(Command::Batch { profile, files }) => run_batch(&profile, &files),
         Some(Command::InstallIntegrations { user, system, destdir }) => {
             run_install(user, system, destdir)
         }
         Some(Command::UninstallIntegrations) => run_uninstall(),
-        Some(Command::ToPdf { files }) => run_to_pdf(&files),
+        Some(Command::ToPdf { overwrite, timeout, files }) => {
+            run_to_pdf(&files, overwrite.into(), std::time::Duration::from_secs(timeout))
+        }
         None => dispatch_gui(cli.dialog, &cli.files),
     }
 }
@@ -632,8 +671,9 @@ fn init_i18n() {
 fn self_test() -> color_eyre::Result<()> {
     codec::self_test()?;
     println!(
-        "bigiris self-test OK [sandbox + decode]  (bigiris={}  core={}  ai={} [onnx={}]  integrations={})",
+        "bigiris self-test OK [sandbox + decode]  (bigiris={}+{}  core={}  ai={} [onnx={}]  integrations={})",
         env!("CARGO_PKG_VERSION"),
+        env!("BIGIRIS_BUILD_ID"),
         bigimage_core::version(),
         bigimage_ai::version(),
         bigimage_ai::onnx_available(),
@@ -651,7 +691,9 @@ fn run_convert(
     let target = Format::parse(to)
         .map_err(|e| color_eyre::eyre::eyre!("formato de destino inválido: {e}"))?;
     tracing::info!(?target, ?opts, ?policy, count = files.len(), "convert");
-    run_per_file(files, "convert", |f| bigimage_core::convert_file(f, target, &opts, policy))
+    run_per_file(files, "convert", Naming::image(Some(target), policy), |f| {
+        bigimage_core::convert_file(f, target, &opts, policy)
+    })
 }
 
 fn run_resize(
@@ -664,7 +706,7 @@ fn run_resize(
 ) -> color_eyre::Result<()> {
     let target = parse_optional_target(to)?;
     tracing::info!(?mode, ?filter, ?target, ?opts, ?policy, count = files.len(), "resize");
-    run_per_file(files, "resize", |f| {
+    run_per_file(files, "resize", Naming::image(target, policy), |f| {
         bigimage_core::resize_file(f, mode, filter, target, &opts, policy)
     })
 }
@@ -677,7 +719,9 @@ fn run_flip(
 ) -> color_eyre::Result<()> {
     let target = parse_optional_target(to)?;
     tracing::info!(?axis, ?target, ?policy, count = files.len(), "flip");
-    run_per_file(files, "flip", |f| bigimage_core::flip_file(f, axis, target, policy))
+    run_per_file(files, "flip", Naming::image(target, policy), |f| {
+        bigimage_core::flip_file(f, axis, target, policy)
+    })
 }
 
 fn run_crop(
@@ -688,7 +732,9 @@ fn run_crop(
 ) -> color_eyre::Result<()> {
     let target = parse_optional_target(to)?;
     tracing::info!(?rect, ?target, ?policy, count = files.len(), "crop");
-    run_per_file(files, "crop", |f| bigimage_core::crop_file(f, rect, target, policy))
+    run_per_file(files, "crop", Naming::image(target, policy), |f| {
+        bigimage_core::crop_file(f, rect, target, policy)
+    })
 }
 
 fn run_extent(
@@ -704,7 +750,11 @@ fn run_extent(
         .map_err(|e| color_eyre::eyre::eyre!("--bg inválido: {e}"))?;
     let opts = ExtentOptions { size, background, gravity };
     tracing::info!(?opts, ?target, ?policy, count = files.len(), "extent");
-    run_per_file(files, "extent", |f| bigimage_core::extent_file(f, opts, target, policy))
+    let naming = Naming {
+        per_image_suffix: matches!(size, ExtentSize::Aspect { .. }),
+        ..Naming::image(target, policy)
+    };
+    run_per_file(files, "extent", naming, |f| bigimage_core::extent_file(f, opts, target, policy))
 }
 
 fn run_adjust(
@@ -715,7 +765,9 @@ fn run_adjust(
 ) -> color_eyre::Result<()> {
     let target = parse_optional_target(to)?;
     tracing::info!(?ops, ?target, ?policy, count = files.len(), "adjust");
-    run_per_file(files, "adjust", |f| bigimage_core::adjust_file(f, ops, target, policy))
+    run_per_file(files, "adjust", Naming::image(target, policy), |f| {
+        bigimage_core::adjust_file(f, ops, target, policy)
+    })
 }
 
 fn parse_optional_target(to: Option<&str>) -> color_eyre::Result<Option<Format>> {
@@ -728,16 +780,162 @@ fn parse_optional_target(to: Option<&str>) -> color_eyre::Result<Option<Format>>
     }
 }
 
-fn run_per_file<F>(files: &[PathBuf], op_name: &str, mut op: F) -> color_eyre::Result<()>
+/// How a command names outputs: `<dir>/<stem><suffix>.<ext>`. The suffix is
+/// usually fixed per invocation, so inputs sharing directory, stem and
+/// extension resolve to the same file.
+#[derive(Clone, Copy)]
+struct Naming<'a> {
+    output_dir: Option<&'a Path>,
+    /// `None` keeps each input's own format.
+    extension: Option<&'static str>,
+    policy: OverwritePolicy,
+    /// The suffix depends on each image (`extent --aspect` names the output
+    /// after the resulting canvas), so a shared stem is only a possible
+    /// collision: it is not refused up front, and [`run_per_file`] reports
+    /// an input that really replaced an earlier output.
+    per_image_suffix: bool,
+}
+
+impl Naming<'_> {
+    fn image(target: Option<Format>, policy: OverwritePolicy) -> Naming<'static> {
+        Naming {
+            output_dir: None,
+            extension: target.map(|format| format.extension()),
+            policy,
+            per_image_suffix: false,
+        }
+    }
+}
+
+/// Group inputs by destination, in input order, before any work starts.
+/// Repeated spellings of one file (`a.png`, `./a.png`) are processed once.
+/// Distinct inputs that collide are refused unless the policy is
+/// `increment`; callers then process each group in order, so the numbered
+/// names are deterministic. Under `increment`, an input named like another
+/// input's numbered output (`x_1` next to `x`) joins that group as well.
+///
+/// PNM is planned conservatively under one key (`ppm`): the core only picks
+/// `.pgm` or `.ppm` from the decoded pixels, so a gray and a colour input
+/// sharing a stem are refused although they would not collide. Telling
+/// them apart here would mean decoding untrusted headers in this process
+/// (or one extra sandboxed run per input) before any work starts; the cost
+/// of the false refusal is a rename. Reports always print the path the core
+/// actually wrote ([`ConvertOutcome`]), never this planned one.
+fn plan_outputs(files: &[PathBuf], naming: Naming) -> color_eyre::Result<Vec<Vec<PathBuf>>> {
+    use std::collections::{HashMap, HashSet};
+    let mut seen = HashSet::new();
+    let mut groups: Vec<Vec<PathBuf>> = Vec::new();
+    let mut index = HashMap::new();
+    let mut planned = Vec::new();
+    for file in files {
+        let identity = std::fs::canonicalize(file)
+            .or_else(|_| std::path::absolute(file))
+            .unwrap_or_else(|_| file.clone());
+        if !seen.insert(identity) {
+            continue;
+        }
+        let dir = naming
+            .output_dir
+            .or_else(|| file.parent())
+            .filter(|dir| !dir.as_os_str().is_empty())
+            .unwrap_or(Path::new("."));
+        let dir = std::fs::canonicalize(dir).unwrap_or_else(|_| dir.to_path_buf());
+        // Without a target the core keeps the format found in the content,
+        // so `a.jpg` holding a PNG writes `a_<suffix>.png`; plan by the same.
+        let extension = naming.extension.map(str::to_owned).unwrap_or_else(|| {
+            bigimage_core::sniff_format(file).map_or_else(
+                || {
+                    let own = file.extension().and_then(|e| e.to_str()).unwrap_or_default();
+                    own.to_ascii_lowercase()
+                },
+                |format| format.extension().to_owned(),
+            )
+        });
+        planned.push(((dir, file.file_stem().unwrap_or_default().to_os_string(), extension), file));
+    }
+    let keys: HashSet<_> = planned.iter().map(|(key, _)| key.clone()).collect();
+    for (mut key, file) in planned {
+        // `increment` numbers outputs `x_1`, `x_2`, … which is exactly what
+        // an input stem `x_1` produces. Run such inputs in the group of `x`,
+        // so the names do not depend on which batch worker gets there first.
+        if naming.policy == OverwritePolicy::Increment {
+            while let Some(base) = numbered_base(&key.1) {
+                let candidate = (key.0.clone(), base, key.2.clone());
+                if !keys.contains(&candidate) {
+                    break;
+                }
+                key = candidate;
+            }
+        }
+        match index.get(&key) {
+            Some(&group) => groups.get_mut(group).map_or((), |g: &mut Vec<_>| g.push(file.clone())),
+            None => {
+                index.insert(key, groups.len());
+                groups.push(vec![file.clone()]);
+            }
+        }
+    }
+    let collisions: Vec<_> = groups.iter().filter(|group| group.len() > 1).collect();
+    if !collisions.is_empty()
+        && naming.policy != OverwritePolicy::Increment
+        && !naming.per_image_suffix
+    {
+        let mut message = String::from("várias entradas gravariam o mesmo arquivo de saída:");
+        for group in collisions {
+            let names: Vec<_> = group.iter().map(|path| path.display().to_string()).collect();
+            message.push_str("\n  ");
+            message.push_str(&names.join(", "));
+        }
+        message.push_str(
+            "\nRenomeie as entradas, processe-as separadamente ou use a política increment.",
+        );
+        return Err(color_eyre::eyre::eyre!(codec::sanitize_text(&message)));
+    }
+    Ok(groups)
+}
+
+/// `x` for a stem `x_N` as written by the `increment` policy (N >= 1, no
+/// leading zero).
+fn numbered_base(stem: &std::ffi::OsStr) -> Option<std::ffi::OsString> {
+    use std::os::unix::ffi::{OsStrExt, OsStringExt};
+    let bytes = stem.as_bytes();
+    let split = bytes.iter().rposition(|&byte| byte == b'_')?;
+    let number = &bytes[split + 1..];
+    let numbered = !number.is_empty()
+        && number[0] != b'0'
+        && number.iter().all(u8::is_ascii_digit)
+        && split > 0;
+    numbered.then(|| std::ffi::OsString::from_vec(bytes[..split].to_vec()))
+}
+
+fn run_per_file<F>(
+    files: &[PathBuf],
+    op_name: &str,
+    naming: Naming,
+    mut op: F,
+) -> color_eyre::Result<()>
 where
     F: FnMut(&PathBuf) -> bigimage_core::Result<ConvertOutcome>,
 {
+    let groups = plan_outputs(files, naming)?;
     let mut written = 0usize;
     let mut skipped = 0usize;
     let mut failed = 0usize;
+    // Outputs of this run, to catch per-image names that still collided.
+    let mut outputs = std::collections::HashSet::new();
 
-    for f in files {
+    for f in groups.iter().flatten() {
         match op(f) {
+            Ok(ConvertOutcome::Written { output })
+                if naming.per_image_suffix && !outputs.insert(output.clone()) =>
+            {
+                failed += 1;
+                eprintln!(
+                    "err {}: substituiu a saída de outra entrada: {}",
+                    f.display(),
+                    codec::sanitize_text(&output.display().to_string())
+                );
+            }
             Ok(ConvertOutcome::Written { output }) => {
                 written += 1;
                 println!("ok  {} -> {}", f.display(), output.display());
@@ -748,7 +946,7 @@ where
             }
             Err(e) => {
                 failed += 1;
-                eprintln!("err {}: {e}", f.display());
+                eprintln!("err {}: {}", f.display(), codec::sanitize_text(&e.to_string()));
             }
         }
     }
@@ -756,67 +954,85 @@ where
     eprintln!("{op_name}: {written} gravado(s), {skipped} ignorado(s), {failed} falha(s)");
 
     if failed > 0 {
-        std::process::exit(2);
+        std::process::exit(EXIT_PARTIAL);
     }
     Ok(())
 }
 
-fn run_remove_bg(model: &str, files: &[PathBuf]) -> color_eyre::Result<()> {
-    tracing::info!(%model, count = files.len(), "remove-bg");
+fn run_remove_bg(
+    model: ModelArg,
+    policy: OverwritePolicy,
+    files: &[PathBuf],
+) -> color_eyre::Result<()> {
+    tracing::info!(?model, ?policy, count = files.len(), "remove-bg");
     if !bigimage_ai::onnx_available() {
-        eprintln!(
-            "aviso: esta build nao tem a feature `ai`. Recompile com \
+        return Err(color_eyre::eyre::eyre!(
+            "esta build não tem a feature `ai`. Recompile com \
              `cargo build --features ai` e instale onnxruntime (Arch: \
              `pacman -S onnxruntime`)."
-        );
-        std::process::exit(2);
+        ));
     }
-    if model != "birefnet-lite" {
-        return Err(color_eyre::eyre::eyre!("modelo não suportado: {model}"));
-    }
+    let naming = Naming::image(Some(Format::Png), policy);
+    let groups = plan_outputs(files, naming)?;
 
     let mut ok = 0usize;
+    let mut skipped = 0usize;
     let mut fail = 0usize;
-    let mut session = bigimage_ai::background::BgSession::new(|_| {})?;
-    for f in files {
-        match remove_bg_one(f, &mut session) {
-            Ok(out) => {
+    // Loaded on first use: skipping existing outputs needs no model.
+    let mut session = None;
+    for f in groups.iter().flatten() {
+        let dest = remove_bg_output(f);
+        if policy == OverwritePolicy::Skip && dest.exists() {
+            skipped += 1;
+            println!("skip {} (já existe: {})", f.display(), dest.display());
+            continue;
+        }
+        let session = match &mut session {
+            Some(session) => session,
+            None => session.insert(bigimage_ai::background::BgSession::new(|_| {})?),
+        };
+        match remove_bg_one(f, dest, policy, session) {
+            Ok(ConvertOutcome::Written { output }) => {
                 ok += 1;
-                println!("ok  {} -> {}", f.display(), out.display());
+                println!("ok  {} -> {}", f.display(), output.display());
+            }
+            Ok(ConvertOutcome::Skipped { output }) => {
+                skipped += 1;
+                println!("skip {} (já existe: {})", f.display(), output.display());
             }
             Err(e) => {
                 fail += 1;
-                eprintln!("err {}: {e}", f.display());
+                eprintln!("err {}: {}", f.display(), codec::sanitize_text(&e.to_string()));
             }
         }
     }
-    eprintln!("remove-bg: {ok} gravado(s), {fail} falha(s)");
+    eprintln!("remove-bg: {ok} gravado(s), {skipped} ignorado(s), {fail} falha(s)");
     if fail > 0 {
-        std::process::exit(2);
+        std::process::exit(EXIT_PARTIAL);
     }
     Ok(())
 }
 
+/// `<dir>/<stem>_nobg.png`, built from the raw OS name so non-UTF-8 stems
+/// keep distinct outputs.
+fn remove_bg_output(path: &Path) -> PathBuf {
+    let mut name = path.file_stem().unwrap_or_default().to_os_string();
+    name.push("_nobg.png");
+    path.parent().filter(|dir| !dir.as_os_str().is_empty()).unwrap_or(Path::new(".")).join(name)
+}
+
 fn remove_bg_one(
-    path: &std::path::Path,
+    path: &Path,
+    dest: PathBuf,
+    policy: OverwritePolicy,
     session: &mut bigimage_ai::background::BgSession,
-) -> color_eyre::Result<PathBuf> {
+) -> color_eyre::Result<ConvertOutcome> {
     bigimage_core::content::ensure_static(path)?;
     let img =
         bigimage_core::open_image(path).map_err(|e| color_eyre::eyre::eyre!("decode: {e}"))?;
     let out_img = session.process(&img).map_err(|e| color_eyre::eyre::eyre!("{e}"))?;
-    let stem = path.file_stem().and_then(|s| s.to_str()).unwrap_or("output");
-    let parent = path.parent().unwrap_or_else(|| std::path::Path::new("."));
-    let dest = parent.join(format!("{stem}_nobg.png"));
-    bigimage_core::save_image(
-        out_img,
-        &dest,
-        Format::Png,
-        &EncodeOptions::default(),
-        OverwritePolicy::Replace,
-    )
-    .map_err(|e| color_eyre::eyre::eyre!("encode: {e}"))?;
-    Ok(dest)
+    bigimage_core::save_image(out_img, dest, Format::Png, &EncodeOptions::default(), policy)
+        .map_err(|e| color_eyre::eyre::eyre!("encode: {e}"))
 }
 
 /// Upscale via resize Lanczos3 (CPU). Produz saída `<stem>_<pct>pct.<ext>`.
@@ -830,7 +1046,7 @@ fn run_upscale(factor: u8, policy: OverwritePolicy, files: &[PathBuf]) -> color_
     let mode = ResizeMode::Percent(percent);
     tracing::info!(factor, ?policy, count = files.len(), "upscale (lanczos3)");
     let opts = bigimage_core::EncodeOptions::default();
-    run_per_file(files, "upscale", |f| {
+    run_per_file(files, "upscale", Naming::image(None, policy), |f| {
         bigimage_core::resize_file(f, mode, Filter::Lanczos3, None, &opts, policy)
     })
 }
@@ -840,6 +1056,7 @@ fn run_animate(
     delay_ms: u32,
     loop_count: u16,
     speed: i32,
+    policy: OverwritePolicy,
     frames: &[PathBuf],
 ) -> color_eyre::Result<()> {
     let loop_mode = match loop_count {
@@ -848,11 +1065,22 @@ fn run_animate(
         n => LoopMode::Finite(n),
     };
     let opts = AnimateOptions { delay_ms, loop_mode, speed };
-    tracing::info!(?output, ?opts, frames = frames.len(), "animate");
-    let written = bigimage_core::make_gif(frames, output, opts)
-        .map_err(|e| color_eyre::eyre::eyre!("animate: {e}"))?;
-    println!("ok  {} quadro(s) -> {}", frames.len(), written.display());
-    Ok(())
+    tracing::info!(?output, ?opts, ?policy, frames = frames.len(), "animate");
+    match bigimage_core::make_gif_with_policy(frames, output, opts, policy) {
+        Ok(ConvertOutcome::Written { output }) => {
+            println!("ok  {} quadro(s) -> {}", frames.len(), output.display());
+            Ok(())
+        }
+        Ok(ConvertOutcome::Skipped { output }) => {
+            println!("skip animate (já existe: {})", output.display());
+            Ok(())
+        }
+        // Frames were read but could not be turned into the animation.
+        Err(e) => {
+            eprintln!("err animate: {}", codec::sanitize_text(&e.to_string()));
+            std::process::exit(EXIT_PARTIAL);
+        }
+    }
 }
 
 #[derive(Debug, serde::Deserialize)]
@@ -921,47 +1149,55 @@ fn run_batch(profile: &std::path::Path, inputs: &[PathBuf]) -> color_eyre::Resul
         }
     }
     files.sort();
-    files.dedup();
     if files.is_empty() {
         return Err(color_eyre::eyre::eyre!("nenhuma imagem encontrada para o lote"));
     }
+    let naming = Naming {
+        output_dir: profile.output_dir.as_deref(),
+        extension: Some(format.extension()),
+        policy,
+        per_image_suffix: false,
+    };
+    // Each group shares one destination and runs in order on one worker,
+    // which keeps `increment` numbering deterministic.
+    let groups = plan_outputs(&files, naming)?;
 
-    let total = files.len();
+    let total: usize = groups.iter().map(Vec::len).sum();
     let opts = EncodeOptions {
         quality: profile.quality,
         progressive: profile.progressive,
         optimize: profile.optimize,
         ..EncodeOptions::default()
     };
-    let files = Arc::new(files);
+    let flat: Vec<PathBuf> = groups.iter().flatten().cloned().collect();
+    let worker_count = bigimage_core::resources::batch_worker_count(&flat).min(groups.len());
+    let groups = Arc::new(groups);
     let output_dir = Arc::new(profile.output_dir);
     let next = Arc::new(AtomicUsize::new(0));
     let (tx, rx) = mpsc::channel();
-    let worker_count = bigimage_core::resources::batch_worker_count(&files);
     tracing::info!(?format, ?policy, total, worker_count, "batch");
 
     let workers: Vec<_> = (0..worker_count)
         .map(|_| {
-            let files = files.clone();
+            let groups = groups.clone();
             let output_dir = output_dir.clone();
             let next = next.clone();
             let tx = tx.clone();
             std::thread::spawn(move || loop {
                 let idx = next.fetch_add(1, Ordering::Relaxed);
-                if idx >= files.len() {
-                    break;
-                }
-                let input = files[idx].clone();
-                let result = bigimage_core::convert_file_to(
-                    &input,
-                    output_dir.as_deref(),
-                    format,
-                    &opts,
-                    policy,
-                )
-                .map_err(|e| e.to_string());
-                if tx.send((input, result)).is_err() {
-                    break;
+                let Some(group) = groups.get(idx) else { break };
+                for input in group {
+                    let result = bigimage_core::convert_file_to(
+                        input,
+                        output_dir.as_deref(),
+                        format,
+                        &opts,
+                        policy,
+                    )
+                    .map_err(|e| codec::sanitize_text(&e.to_string()));
+                    if tx.send((input.clone(), result)).is_err() {
+                        return;
+                    }
                 }
             })
         })
@@ -971,7 +1207,6 @@ fn run_batch(profile: &std::path::Path, inputs: &[PathBuf]) -> color_eyre::Resul
     let mut ok = 0usize;
     let mut skipped = 0usize;
     let mut failed = 0usize;
-    let mut first_error = None;
     for (done, (input, result)) in rx.into_iter().enumerate() {
         match result {
             Ok(ConvertOutcome::Written { output }) => {
@@ -990,7 +1225,6 @@ fn run_batch(profile: &std::path::Path, inputs: &[PathBuf]) -> color_eyre::Resul
             }
             Err(error) => {
                 failed += 1;
-                first_error.get_or_insert_with(|| format!("{}: {error}", input.display()));
                 eprintln!("[{}/{}] erro {}: {error}", done + 1, total, input.display());
             }
         }
@@ -998,12 +1232,12 @@ fn run_batch(profile: &std::path::Path, inputs: &[PathBuf]) -> color_eyre::Resul
     for worker in workers {
         if worker.join().is_err() {
             failed += 1;
-            first_error.get_or_insert_with(|| "um worker terminou inesperadamente".to_string());
+            eprintln!("erro: um worker terminou inesperadamente");
         }
     }
     println!("batch: {ok} gravado(s), {skipped} ignorado(s), {failed} falha(s)");
-    if let Some(error) = first_error {
-        return Err(color_eyre::eyre::eyre!(error));
+    if failed > 0 {
+        std::process::exit(EXIT_PARTIAL);
     }
     Ok(())
 }
@@ -1013,8 +1247,12 @@ fn run_batch(profile: &std::path::Path, inputs: &[PathBuf]) -> color_eyre::Resul
 /// LibreOffice aceita — ou seja, todo o conjunto que nosso irmão
 /// BigOCRPDF **não** cobre (ele só faz imagens + PDFs existentes).
 /// Saída vai ao lado de cada arquivo de origem.
-fn run_to_pdf(files: &[PathBuf]) -> color_eyre::Result<()> {
-    tracing::info!(count = files.len(), "to-pdf");
+fn run_to_pdf(
+    files: &[PathBuf],
+    policy: OverwritePolicy,
+    timeout: std::time::Duration,
+) -> color_eyre::Result<()> {
+    tracing::info!(?policy, ?timeout, count = files.len(), "to-pdf");
     // Verifica soffice uma única vez antes de iterar — falhar cedo se não
     // estiver instalado evita vomitar o mesmo erro N vezes.
     let soffice_path = which_soffice().ok_or_else(|| {
@@ -1024,43 +1262,155 @@ fn run_to_pdf(files: &[PathBuf]) -> color_eyre::Result<()> {
              (ex.: `sudo pacman -S libreoffice-fresh`)."
         )
     })?;
+    let naming =
+        Naming { output_dir: None, extension: Some("pdf"), policy, per_image_suffix: false };
+    let groups = plan_outputs(files, naming)?;
 
     let mut ok = 0usize;
+    let mut skipped = 0usize;
     let mut fail = 0usize;
-    for file in files {
-        let out_dir = file.parent().unwrap_or(std::path::Path::new("."));
-        let status = std::process::Command::new(&soffice_path)
-            .arg("--headless")
-            .arg("--convert-to")
-            .arg("pdf")
-            .arg("--outdir")
-            .arg(out_dir)
-            .arg(file)
-            .status();
-        match status {
-            Ok(s) if s.success() => {
+    for file in groups.iter().flatten() {
+        match to_pdf_one(&soffice_path, file, policy, timeout) {
+            Ok(ConvertOutcome::Written { output }) => {
                 ok += 1;
-                println!(
-                    "ok  {} → {}.pdf",
-                    file.display(),
-                    file.file_stem().unwrap_or_default().to_string_lossy()
-                );
+                println!("ok  {} -> {}", file.display(), output.display());
             }
-            Ok(s) => {
-                fail += 1;
-                eprintln!("err {}: soffice exit {}", file.display(), s);
+            Ok(ConvertOutcome::Skipped { output }) => {
+                skipped += 1;
+                println!("skip {} (já existe: {})", file.display(), output.display());
             }
             Err(e) => {
                 fail += 1;
-                eprintln!("err {}: falha ao invocar soffice: {e}", file.display());
+                eprintln!("err {}: {}", file.display(), codec::sanitize_text(&e.to_string()));
             }
         }
     }
-    println!("to-pdf: {ok} gravado(s), {fail} falha(s)");
+    eprintln!("to-pdf: {ok} gravado(s), {skipped} ignorado(s), {fail} falha(s)");
     if fail > 0 {
-        std::process::exit(2);
+        std::process::exit(EXIT_PARTIAL);
     }
     Ok(())
+}
+
+/// Convert one document in a private LibreOffice profile and a private
+/// output folder, then publish the PDF with the overwrite policy.
+///
+/// soffice exits 0 when it cannot load a document or when another instance
+/// owns the profile, so success means "a PDF exists in the private
+/// staging folder", not the status.
+fn to_pdf_one(
+    soffice: &Path,
+    file: &Path,
+    policy: OverwritePolicy,
+    timeout: std::time::Duration,
+) -> color_eyre::Result<ConvertOutcome> {
+    use color_eyre::eyre::eyre;
+    use std::os::unix::process::CommandExt;
+    // Absolute paths: a relative name such as `-doc.txt` would be an option.
+    // Not canonical: a symlink keeps its own name and folder for the PDF,
+    // matching how the outputs were planned.
+    let file = std::path::absolute(file).map_err(|e| eyre!("{e}"))?;
+    if !file.is_file() {
+        return Err(eyre!("não é um arquivo regular"));
+    }
+    let dir = file.parent().unwrap_or(Path::new("/"));
+    let stem = file.file_stem().ok_or_else(|| eyre!("nome de arquivo inválido"))?;
+    let mut name = stem.to_os_string();
+    name.push(".pdf");
+    let destination = dir.join(&name);
+    if policy == OverwritePolicy::Skip && destination.exists() {
+        return Ok(ConvertOutcome::Skipped { output: destination });
+    }
+    // Same folder as the destination, so publishing is an atomic rename.
+    let staging = tempfile::Builder::new().prefix(".bigiris-pdf-").tempdir_in(dir)?;
+    let profile = tempfile::Builder::new().prefix("bigiris-soffice-").tempdir()?;
+    let mut child = codec::close_inherited_descriptors(&mut std::process::Command::new(soffice))
+        .arg(format!("-env:UserInstallation={}", file_url(profile.path())))
+        .args(["--headless", "--norestore", "--nolockcheck", "--convert-to", "pdf", "--outdir"])
+        .arg(staging.path())
+        .arg(&file)
+        .stdin(std::process::Stdio::null())
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        // soffice forks soffice.bin; a group lets the timeout reach both.
+        .process_group(0)
+        .spawn()
+        .map_err(|e| eyre!("falha ao invocar soffice: {e}"))?;
+    let deadline = std::time::Instant::now() + timeout;
+    let status = loop {
+        if let Some(status) = child.try_wait()? {
+            break status;
+        }
+        if std::time::Instant::now() >= deadline {
+            let group = rustix::process::Pid::from_child(&child);
+            let _ = rustix::process::kill_process_group(group, rustix::process::Signal::KILL);
+            let _ = child.wait();
+            return Err(eyre!("soffice excedeu o limite de {} s", timeout.as_secs()));
+        }
+        std::thread::sleep(std::time::Duration::from_millis(50));
+    };
+    let produced = staging.path().join(&name);
+    // The staging folder is new and private, so anything there is fresh;
+    // no mtime comparison, which clock skew on NFS/SMB would break.
+    let produced_pdf =
+        std::fs::symlink_metadata(&produced).is_ok_and(|meta| meta.is_file() && meta.len() > 0);
+    if !produced_pdf {
+        return Err(eyre!("soffice não gerou o PDF ({status})"));
+    }
+    publish_file(&produced, destination, policy)
+}
+
+/// Move `source` to `destination` honouring the policy without ever
+/// clobbering an existing file for `skip` and `increment`.
+fn publish_file(
+    source: &Path,
+    destination: PathBuf,
+    policy: OverwritePolicy,
+) -> color_eyre::Result<ConvertOutcome> {
+    if policy == OverwritePolicy::Replace {
+        std::fs::rename(source, &destination)?;
+        return Ok(ConvertOutcome::Written { output: destination });
+    }
+    let mut temp = tempfile::TempPath::try_from_path(source)?;
+    for n in 0..=9_999u32 {
+        let candidate = if n == 0 {
+            destination.clone()
+        } else {
+            let mut name = destination.file_stem().unwrap_or_default().to_os_string();
+            name.push(format!("_{n}"));
+            if let Some(ext) = destination.extension() {
+                name.push(".");
+                name.push(ext);
+            }
+            destination.with_file_name(name)
+        };
+        match temp.persist_noclobber(&candidate) {
+            Ok(()) => return Ok(ConvertOutcome::Written { output: candidate }),
+            Err(e) if e.error.kind() == std::io::ErrorKind::AlreadyExists => {
+                if policy == OverwritePolicy::Skip {
+                    return Ok(ConvertOutcome::Skipped { output: destination });
+                }
+                temp = e.path;
+            }
+            Err(e) => return Err(e.error.into()),
+        }
+    }
+    Err(color_eyre::eyre::eyre!("muitos arquivos com o mesmo nome: {}", destination.display()))
+}
+
+/// `file://` URL for a local path, percent-encoding everything but RFC 3986
+/// unreserved characters and `/`.
+fn file_url(path: &Path) -> String {
+    use std::os::unix::ffi::OsStrExt;
+    let mut url = String::from("file://");
+    for &byte in path.as_os_str().as_bytes() {
+        if byte.is_ascii_alphanumeric() || b"/-._~".contains(&byte) {
+            url.push(char::from(byte));
+        } else {
+            url.push_str(&format!("%{byte:02X}"));
+        }
+    }
+    url
 }
 
 /// Procura o binário `soffice` no PATH. Prefixo canonical do LibreOffice
@@ -1086,14 +1436,14 @@ fn run_install(user: bool, system: bool, destdir: Option<PathBuf>) -> color_eyre
             let scope = resolve_scope(user, system);
             tracing::info!(?scope, "install-integrations");
             bigimage_integrations::install(scope)
-                .map_err(|e| color_eyre::eyre::eyre!("install falhou: {e}"))?
+                .map_err(|e| color_eyre::eyre::eyre!("a instalação falhou: {e}"))?
         }
     };
     print_install_report(&report, "instalado");
     if report.is_success() {
         Ok(())
     } else {
-        std::process::exit(2);
+        std::process::exit(EXIT_PARTIAL);
     }
 }
 
@@ -1104,12 +1454,12 @@ fn run_uninstall() -> color_eyre::Result<()> {
     let scope = bigimage_integrations::Scope::User;
     tracing::info!(?scope, "uninstall-integrations");
     let report = bigimage_integrations::uninstall(scope)
-        .map_err(|e| color_eyre::eyre::eyre!("uninstall falhou: {e}"))?;
+        .map_err(|e| color_eyre::eyre::eyre!("a remoção falhou: {e}"))?;
     print_install_report(&report, "removido");
     if report.is_success() {
         Ok(())
     } else {
-        std::process::exit(2);
+        std::process::exit(EXIT_PARTIAL);
     }
 }
 
@@ -1126,6 +1476,11 @@ fn print_install_report(report: &bigimage_integrations::Report, verb: &str) {
     for outcome in &report.outcomes {
         let status = if outcome.error.is_some() {
             "FALHA"
+        } else if outcome.packaged {
+            // The package ships it system-wide: nothing personal was written
+            // and stale copies from earlier user installs were removed.
+            // Without this it read "sem alterações", as if install were a no-op.
+            "fornecido pelo pacote"
         } else if outcome.files.is_empty() {
             if outcome.detected {
                 "sem alterações"
@@ -1197,5 +1552,37 @@ fn dispatch_gui(dialog: Option<Dialog>, files: &[PathBuf]) -> color_eyre::Result
             None => gui::run_viewer(files.to_vec()),
         };
         std::process::exit(code);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn increment_groups_numbered_stems_with_their_base() {
+        let dir = tempfile::tempdir().unwrap();
+        let names = ["x_1.png", "IMG_2.png", "x.png", "x_1_1.png", "x_01.png", "_1.png"];
+        let files: Vec<_> = names.iter().map(|name| dir.path().join(name)).collect();
+        for file in &files {
+            std::fs::write(file, b"").unwrap();
+        }
+        let naming = Naming::image(Some(Format::Png), OverwritePolicy::Increment);
+        let groups = plan_outputs(&files, naming).unwrap();
+        let named: Vec<Vec<_>> = groups
+            .iter()
+            .map(|group| group.iter().map(|path| path.file_name().unwrap()).collect())
+            .collect();
+        // `x_1_1` -> `x_1` -> `x`; IMG_2 has no `IMG` input; `x_01` is no counter.
+        let expected = [
+            vec!["x_1.png", "x.png", "x_1_1.png"],
+            vec!["IMG_2.png"],
+            vec!["x_01.png"],
+            vec!["_1.png"],
+        ];
+        assert_eq!(named, expected);
+        // Other policies never number outputs, so nothing is merged.
+        let naming = Naming::image(Some(Format::Png), OverwritePolicy::Skip);
+        assert_eq!(plan_outputs(&files, naming).unwrap().len(), names.len());
     }
 }

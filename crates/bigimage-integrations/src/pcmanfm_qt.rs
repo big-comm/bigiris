@@ -18,7 +18,7 @@ pub fn install(paths: &ScopePaths) -> io::Result<Vec<PathBuf>> {
     let mut written = Vec::new();
     for action in ACTIONS {
         let file = dir.join(format!("bigiris-{}.desktop", action.id));
-        safe_write(&file, render(action))?;
+        safe_write(&file, render(action), paths.scope)?;
         written.push(file);
     }
     Ok(written)
@@ -36,6 +36,7 @@ fn render(action: &Action) -> String {
 
     format!(
         "[Desktop Entry]\n\
+         X-BigIris-Generated=true\n\
          Type=Action\n\
          Name={label}\n{localized_name}\
          Icon={icon}\n\

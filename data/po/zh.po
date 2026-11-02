@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: bigiris 0.1.0\n"
 "Report-Msgid-Bugs-To: https://github.com/big-comm/bigiris/issues\n"
-"POT-Creation-Date: 2026-10-14 01:35-0300\n"
+"POT-Creation-Date: 2026-11-02 18:04-0300\n"
 "PO-Revision-Date: 2026-10-14 01:37-0300\n"
 "Last-Translator: BigCommunity Team\n"
 "Language-Team: BigCommunity Team\n"
@@ -15,1129 +15,1538 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: crates/bigiris/src/gui.rs:110
-msgid "BigIris — abrindo imagens"
-msgstr "BigIris — 开放图像"
-
-#: crates/bigiris/src/gui.rs:551
+#: crates/bigiris/src/gui.rs:648
 msgid "BigIris"
 msgstr "BigIris"
 
-#: crates/bigiris/src/gui.rs:746
+#: crates/bigiris/src/gui.rs:683 crates/bigiris/src/gui/previews.rs:240
+msgid "Não foi possível abrir a imagem"
+msgstr "无法打开文件"
+
+#: crates/bigiris/src/gui.rs:923 crates/bigiris/src/gui.rs:3264
 msgid "Aguarde o salvamento terminar"
 msgstr "等待保存完成"
 
-#: crates/bigiris/src/gui.rs:757
+#: crates/bigiris/src/gui.rs:934
 msgid "Descartar alterações?"
 msgstr "丢弃更改?"
 
-#: crates/bigiris/src/gui.rs:758
+#: crates/bigiris/src/gui.rs:935
 msgid "A imagem tem edições que ainda não foram salvas."
 msgstr "该图像有未保存的更改。"
 
-#: crates/bigiris/src/gui.rs:760
+#: crates/bigiris/src/gui.rs:937
 msgid "Continuar editando"
 msgstr "继续编辑"
 
-#: crates/bigiris/src/gui.rs:761
+#: crates/bigiris/src/gui.rs:938
 msgid "Descartar"
 msgstr "丢弃更改"
 
-#: crates/bigiris/src/gui.rs:820
-msgid "Abrir imagens (Ctrl+O)"
-msgstr "打开图像(Ctrl+O)"
-
-#: crates/bigiris/src/gui.rs:825
+#: crates/bigiris/src/gui.rs:1007
 msgid "Imagem anterior"
 msgstr "上一张图片"
 
-#: crates/bigiris/src/gui.rs:831
+#: crates/bigiris/src/gui.rs:1008
 msgid "Próxima imagem"
 msgstr "下一张图片"
 
-#: crates/bigiris/src/gui.rs:837
+#: crates/bigiris/src/gui.rs:1020
 msgid "Propriedades da imagem (Ctrl+I)"
 msgstr "图像属性(Ctrl+I)"
 
-#: crates/bigiris/src/gui.rs:848
+#: crates/bigiris/src/gui.rs:1026
 msgid "Tela cheia (F11)"
 msgstr "全屏模式(F11)"
 
-#: crates/bigiris/src/gui.rs:854
-msgid "Aproximar"
-msgstr "放大"
-
-#: crates/bigiris/src/gui.rs:860 crates/bigiris/src/gui.rs:2704
-msgid "Ajustar à janela"
-msgstr "适合窗口"
-
-#: crates/bigiris/src/gui.rs:866
+#: crates/bigiris/src/gui.rs:1035
 msgid "Afastar"
 msgstr "缩小"
 
-#: crates/bigiris/src/gui.rs:1638
+#: crates/bigiris/src/gui.rs:1039 crates/bigiris/src/gui.rs:3623
+msgid "Ajustar à janela"
+msgstr "适合窗口"
+
+#: crates/bigiris/src/gui.rs:1040 crates/bigiris/src/gui.rs:3624
+msgid "Tamanho real (100%)"
+msgstr "实际规模(100%)"
+
+#: crates/bigiris/src/gui.rs:1049 crates/bigiris/src/gui.rs:3620
+msgid "Zoom"
+msgstr "缩放"
+
+#: crates/bigiris/src/gui.rs:1053
+msgid "Aproximar"
+msgstr "放大"
+
+#: crates/bigiris/src/gui.rs:2028
 msgid "Slideshow: pausado"
 msgstr "幻灯片显示:暂停"
 
-#: crates/bigiris/src/gui.rs:1870
+#: crates/bigiris/src/gui.rs:2056
+msgid "Slideshow: a cada {interval} s"
+msgstr "幻灯片：每 {interval} 秒"
+
+#: crates/bigiris/src/gui.rs:2078
+msgid "Histograma ligado"
+msgstr "直方图已开启"
+
+#: crates/bigiris/src/gui.rs:2080
+msgid "Histograma desligado"
+msgstr "直方图已关闭"
+
+#: crates/bigiris/src/gui.rs:2265
 msgid ""
 "O arquivo será sobrescrito. JPEG é recodificado a cada gravação; isso pode "
 "reduzir a qualidade."
 msgstr "文件将被覆盖。 JPEG 每次保存时都会重新编码;这可能会降低质量。"
 
-#: crates/bigiris/src/gui.rs:1872
+#: crates/bigiris/src/gui.rs:2267
 msgid "O arquivo será sobrescrito."
 msgstr "文件将被覆盖。"
 
-#: crates/bigiris/src/gui.rs:1875
+#: crates/bigiris/src/gui.rs:2273
+msgid ""
+"Este formato não guarda todos os metadados da foto (data, câmera, perfil de "
+"cor); o que ele não suportar será removido ou convertido."
+msgstr ""
+"此格式无法保留照片的全部元数据（日期、相机、色彩配置文件）；不支持的内容将被"
+"移除或转换。"
+
+#: crates/bigiris/src/gui.rs:2276
 msgid "Salvar alterações?"
 msgstr "保存更改?"
 
-#: crates/bigiris/src/gui.rs:1876 crates/bigiris/src/gui.rs:2668
-#: crates/bigiris/src/gui.rs:3232 crates/bigiris/src/gui.rs:3537
-#: crates/bigiris/src/gui.rs:3798 crates/bigiris/src/gui.rs:4276
-#: crates/bigiris/src/gui.rs:4554 crates/bigiris/src/gui.rs:4885
-#: crates/bigiris/src/gui.rs:5035 crates/bigiris/src/gui.rs:5204
-#: crates/bigiris/src/gui.rs:5981 crates/bigiris/src/gui.rs:6110
-#: crates/bigiris/src/gui.rs:6183 crates/bigiris/src/gui.rs:6452
-#: crates/bigiris/src/gui.rs:6725 crates/bigiris/src/gui.rs:6777
+#: crates/bigiris/src/gui.rs:2277 crates/bigiris/src/gui.rs:3528
+#: crates/bigiris/src/gui/dialogs/animate.rs:187
+#: crates/bigiris/src/gui/dialogs/batch.rs:131
+#: crates/bigiris/src/gui/dialogs/batch.rs:269
+#: crates/bigiris/src/gui/dialogs/batch.rs:362
+#: crates/bigiris/src/gui/dialogs/mod.rs:184
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:230
+#: crates/bigiris/src/gui/previews.rs:202
 msgid "Cancelar"
 msgstr "取消"
 
-#: crates/bigiris/src/gui.rs:1877
+#: crates/bigiris/src/gui.rs:2278
 msgid "Salvar"
 msgstr "保存文件"
 
-#: crates/bigiris/src/gui.rs:1922
+#: crates/bigiris/src/gui.rs:2326
 msgid "Salvo"
 msgstr "文件已保存。"
 
-#: crates/bigiris/src/gui.rs:1925
-msgid "Falha ao salvar"
-msgstr "保存失败"
+#: crates/bigiris/src/gui.rs:2405
+msgid ""
+"Este arquivo é animado, tem várias páginas ou não pôde ser verificado. Girar "
+"ou espelhar e salvar descartaria os outros quadros, então ele não foi "
+"alterado."
+msgstr ""
+"此文件为动画、包含多页或无法检查。旋转或翻转后保存会丢弃其他帧，因此未作更"
+"改。"
 
-#: crates/bigiris/src/gui.rs:2007
+#: crates/bigiris/src/gui.rs:2406
+msgid ""
+"O BigIris não sabe gravar este formato. As alterações não podem ser salvas "
+"no próprio arquivo."
+msgstr "BigIris 无法写入此格式。无法将更改保存到原文件。"
+
+#: crates/bigiris/src/gui.rs:2407
+msgid "Sem permissão para alterar este arquivo ou a pasta dele."
+msgstr "没有权限修改此文件或其所在文件夹。"
+
+#: crates/bigiris/src/gui.rs:2409
+msgid "O arquivo não foi alterado. Detalhes: {detail}"
+msgstr "文件未被更改。详情：{detail}"
+
+#: crates/bigiris/src/gui.rs:2421
+msgid "Não foi possível salvar"
+msgstr "无法保存"
+
+#: crates/bigiris/src/gui.rs:2424
+msgid "Manter alterações"
+msgstr "保留更改"
+
+#: crates/bigiris/src/gui.rs:2425
+msgid "Descartar alterações"
+msgstr "丢弃更改"
+
+#: crates/bigiris/src/gui.rs:2510
+msgid "o formato não guarda EXIF"
+msgstr "该格式不保存 EXIF"
+
+#: crates/bigiris/src/gui.rs:2511
+msgid "EXIF grande demais para JPEG"
+msgstr "EXIF 对 JPEG 来说过大"
+
+#: crates/bigiris/src/gui.rs:2512
+msgid "EXIF inválido"
+msgstr "无效的 EXIF"
+
+#: crates/bigiris/src/gui.rs:2515
+msgid "perfil de cor convertido para sRGB"
+msgstr "色彩配置文件已转换为 sRGB"
+
+#: crates/bigiris/src/gui.rs:2516
+msgid "perfil de cor inválido ignorado"
+msgstr "已忽略无效的色彩配置文件"
+
+#: crates/bigiris/src/gui.rs:2517
+msgid "metadados não suportados"
+msgstr "不支持的元数据"
+
+#: crates/bigiris/src/gui.rs:2527
+msgid "Salvo. Alguns metadados não puderam ser mantidos: {list}"
+msgstr "已保存。部分元数据无法保留：{list}"
+
+#: crates/bigiris/src/gui.rs:2787
 msgid "Salve ou desfaça as alterações antes de navegar"
 msgstr "导航前保存或撤销更改"
 
-#: crates/bigiris/src/gui.rs:2050
-msgid "Não foi possível abrir a imagem"
-msgstr "无法打开文件"
-
-#: crates/bigiris/src/gui.rs:2065 crates/bigiris/src/gui.rs:2887
-#: crates/bigiris/src/gui.rs:7714
+#: crates/bigiris/src/gui.rs:2868 crates/bigiris/src/gui.rs:3776
+#: crates/bigiris/src/gui.rs:4786 crates/bigiris/src/gui.rs:4921
 msgid "Abrir imagens…"
 msgstr "打开图像…"
 
-#: crates/bigiris/src/gui.rs:2066 crates/bigiris/src/gui.rs:2738
+#: crates/bigiris/src/gui.rs:2869 crates/bigiris/src/gui.rs:3657
 msgid "Colar arquivos de imagem"
 msgstr "粘贴图像文件"
 
-#: crates/bigiris/src/gui.rs:2068 crates/bigiris/src/gui.rs:2737
+#: crates/bigiris/src/gui.rs:2871 crates/bigiris/src/gui.rs:3656
 msgid "Copiar imagem"
 msgstr "复制图像"
 
-#: crates/bigiris/src/gui.rs:2069
+#: crates/bigiris/src/gui.rs:2872
 msgid "Imprimir…"
 msgstr "打印…"
 
-#: crates/bigiris/src/gui.rs:2071 crates/bigiris/src/gui.rs:2899
-#: crates/bigiris/src/gui.rs:7714
+#: crates/bigiris/src/gui.rs:2874 crates/bigiris/src/gui.rs:3788
+#: crates/bigiris/src/gui.rs:4786
 msgid "Processar uma pasta…"
 msgstr "处理此文件夹…"
 
-#: crates/bigiris/src/gui.rs:2076 crates/bigiris/src/gui.rs:2723
+#: crates/bigiris/src/gui.rs:2879 crates/bigiris/src/gui.rs:3642
 msgid "Desfazer"
 msgstr "撤销"
 
-#: crates/bigiris/src/gui.rs:2077 crates/bigiris/src/gui.rs:2724
+#: crates/bigiris/src/gui.rs:2880 crates/bigiris/src/gui.rs:3643
 msgid "Refazer"
 msgstr "重做"
 
-#: crates/bigiris/src/gui.rs:2079 crates/bigiris/src/gui.rs:2725
+#: crates/bigiris/src/gui.rs:2882 crates/bigiris/src/gui.rs:3644
 msgid "Girar à direita"
 msgstr "向右旋转"
 
-#: crates/bigiris/src/gui.rs:2080 crates/bigiris/src/gui.rs:2726
+#: crates/bigiris/src/gui.rs:2883 crates/bigiris/src/gui.rs:3645
 msgid "Girar à esquerda"
 msgstr "向左旋转"
 
-#: crates/bigiris/src/gui.rs:2081
+#: crates/bigiris/src/gui.rs:2884
 msgid "Girar 180°"
 msgstr "旋转180度"
 
-#: crates/bigiris/src/gui.rs:2082
+#: crates/bigiris/src/gui.rs:2885
 msgid "Espelhar horizontal"
 msgstr "水平翻轉"
 
-#: crates/bigiris/src/gui.rs:2083
+#: crates/bigiris/src/gui.rs:2886
 msgid "Espelhar vertical"
 msgstr "垂直翻轉"
 
-#: crates/bigiris/src/gui.rs:2084 crates/bigiris/src/gui.rs:2727
+#: crates/bigiris/src/gui.rs:2887 crates/bigiris/src/gui.rs:3646
 msgid "Recortar…"
 msgstr "作物…"
 
-#: crates/bigiris/src/gui.rs:2086
+#: crates/bigiris/src/gui.rs:2889
 msgid "Editar imagem"
 msgstr "编辑图像"
 
-#: crates/bigiris/src/gui.rs:2088 crates/bigiris/src/gui.rs:2728
+#: crates/bigiris/src/gui.rs:2891 crates/bigiris/src/gui.rs:3647
 msgid "Remover fundo (IA)…"
 msgstr "删除背景(AI)…"
 
-#: crates/bigiris/src/gui.rs:2089 crates/bigiris/src/gui.rs:2729
+#: crates/bigiris/src/gui.rs:2892 crates/bigiris/src/gui.rs:3648
 msgid "Aumentar resolução…"
 msgstr "高档…"
 
-#: crates/bigiris/src/gui.rs:2090
+#: crates/bigiris/src/gui.rs:2893
 msgid "Ferramentas"
 msgstr "工具"
 
-#: crates/bigiris/src/gui.rs:2092 crates/bigiris/src/gui.rs:2730
+#: crates/bigiris/src/gui.rs:2895 crates/bigiris/src/gui.rs:3649
 msgid "Salvar alterações"
 msgstr "保存更改"
 
-#: crates/bigiris/src/gui.rs:2093 crates/bigiris/src/gui.rs:2741
+#: crates/bigiris/src/gui.rs:2896 crates/bigiris/src/gui.rs:3660
 msgid "Mover para a lixeira"
 msgstr "移动到垃圾桶"
 
-#: crates/bigiris/src/gui.rs:2097
+#: crates/bigiris/src/gui.rs:2900
 msgid "Atalhos do teclado"
 msgstr "键盘快捷键"
 
-#: crates/bigiris/src/gui.rs:2098
+#: crates/bigiris/src/gui.rs:2901
 msgid "Sobre o BigIris"
 msgstr "关于BigIris"
 
-#: crates/bigiris/src/gui.rs:2103
+#: crates/bigiris/src/gui.rs:2906
 msgid "Menu principal"
 msgstr "主菜单"
 
-#: crates/bigiris/src/gui.rs:2452 crates/bigiris/src/gui.rs:2944
-#: crates/bigiris/src/gui.rs:6226 crates/bigiris/src/gui.rs:6678
+#: crates/bigiris/src/gui.rs:3266
+msgid "Salve ou desfaça as alterações antes de usar esta ferramenta"
+msgstr "使用此工具前请先保存或撤销更改"
+
+#: crates/bigiris/src/gui.rs:3282 crates/bigiris/src/gui.rs:3834
+#: crates/bigiris/src/gui/dialogs/batch.rs:404
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:134
 msgid "Imagens"
 msgstr "图像"
 
-#: crates/bigiris/src/gui.rs:2458 crates/bigiris/src/gui.rs:2736
+#: crates/bigiris/src/gui.rs:3288 crates/bigiris/src/gui.rs:3655
 msgid "Abrir imagens"
 msgstr "打开图像"
 
-#: crates/bigiris/src/gui.rs:2576
+#: crates/bigiris/src/gui.rs:3340 crates/bigiris/src/gui.rs:3380
+msgid "Não foi possível preparar a página"
+msgstr "无法准备页面"
+
+#: crates/bigiris/src/gui.rs:3362
+msgid "O preparo da impressão falhou"
+msgstr "打印准备失败"
+
+#: crates/bigiris/src/gui.rs:3419
 msgid "Não foi possível imprimir"
 msgstr "无法打印"
 
-#: crates/bigiris/src/gui.rs:2579 crates/bigiris/src/gui.rs:2717
-#: crates/bigiris/src/gui.rs:6181 crates/bigiris/src/gui.rs:6386
-#: crates/bigiris/src/gui.rs:6636 crates/bigiris/src/gui.rs:6939
+#: crates/bigiris/src/gui.rs:3422 crates/bigiris/src/gui.rs:3554
+#: crates/bigiris/src/gui/dialogs/animate.rs:53
+#: crates/bigiris/src/gui/dialogs/batch.rs:360
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:100
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:352
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:394
 #: crates/bigiris/src/gui/transfers.rs:99
 msgid "Fechar"
 msgstr "关闭"
 
-#: crates/bigiris/src/gui.rs:2660
+#: crates/bigiris/src/gui.rs:3520
 msgid "Mover para a lixeira?"
 msgstr "移动到垃圾桶?"
 
-#: crates/bigiris/src/gui.rs:2664
+#: crates/bigiris/src/gui.rs:3524
 msgid ""
 "O arquivo será movido para a lixeira do sistema. Você pode restaurá-lo "
 "depois."
 msgstr "该文件将被移动到回收站,您可以稍后恢复。"
 
-#: crates/bigiris/src/gui.rs:2669
+#: crates/bigiris/src/gui.rs:3529
 msgid "Mover"
 msgstr "移動"
 
-#: crates/bigiris/src/gui.rs:2693
+#: crates/bigiris/src/gui.rs:3551
+msgid "Não foi possível mover para a lixeira"
+msgstr "无法移动到垃圾桶"
+
+#: crates/bigiris/src/gui.rs:3612
 msgid "Navegação"
 msgstr "导航"
 
-#: crates/bigiris/src/gui.rs:2695
+#: crates/bigiris/src/gui.rs:3614
 msgid "Anterior / próximo"
 msgstr "上一个/下一个"
 
-#: crates/bigiris/src/gui.rs:2696
+#: crates/bigiris/src/gui.rs:3615
 msgid "Primeiro / último"
 msgstr "第一/最后"
 
-#: crates/bigiris/src/gui.rs:2697
+#: crates/bigiris/src/gui.rs:3616
 msgid "Slideshow (auto-avanço)"
 msgstr "幻灯片"
 
-#: crates/bigiris/src/gui.rs:2701
-msgid "Zoom"
-msgstr "缩放"
-
-#: crates/bigiris/src/gui.rs:2703
+#: crates/bigiris/src/gui.rs:3622
 msgid "Aproximar / afastar"
 msgstr "放大/缩小"
 
-#: crates/bigiris/src/gui.rs:2705
-msgid "Tamanho real (100%)"
-msgstr "实际规模(100%)"
-
-#: crates/bigiris/src/gui.rs:2706
+#: crates/bigiris/src/gui.rs:3625
 msgid "Zoom contínuo"
 msgstr "连续变焦"
 
-#: crates/bigiris/src/gui.rs:2710
+#: crates/bigiris/src/gui.rs:3629
 msgid "Janela"
 msgstr "窗口"
 
-#: crates/bigiris/src/gui.rs:2712
+#: crates/bigiris/src/gui.rs:3631
 msgid "Tela cheia"
 msgstr "全屏"
 
-#: crates/bigiris/src/gui.rs:2713
+#: crates/bigiris/src/gui.rs:3632
 msgid "Modo teatro"
 msgstr "影院模式"
 
-#: crates/bigiris/src/gui.rs:2714
+#: crates/bigiris/src/gui.rs:3633
 msgid "Fita de miniaturas"
 msgstr "缩略图"
 
-#: crates/bigiris/src/gui.rs:2715
+#: crates/bigiris/src/gui.rs:3634
 msgid "Histograma RGB"
 msgstr "RGB直方图"
 
-#: crates/bigiris/src/gui.rs:2716
+#: crates/bigiris/src/gui.rs:3635
 msgid "Fixar barras visíveis"
 msgstr "保持控件可见"
 
-#: crates/bigiris/src/gui.rs:2721
+#: crates/bigiris/src/gui.rs:3636
+msgid "Sair da tela cheia ou fechar"
+msgstr "退出全屏或关闭"
+
+#: crates/bigiris/src/gui.rs:3640
 msgid "Edição"
 msgstr "编辑"
 
-#: crates/bigiris/src/gui.rs:2734 crates/bigiris/src/gui.rs:5463
+#: crates/bigiris/src/gui.rs:3653
+#: crates/bigiris/src/gui/dialogs/properties.rs:120
 msgid "Arquivo"
 msgstr "文件"
 
-#: crates/bigiris/src/gui.rs:2739
+#: crates/bigiris/src/gui.rs:3658
 msgid "Imprimir"
 msgstr "印刷"
 
-#: crates/bigiris/src/gui.rs:2740 crates/bigiris/src/gui.rs:5378
-#: crates/bigiris/src/gui.rs:5423
+#: crates/bigiris/src/gui.rs:3659
+#: crates/bigiris/src/gui/dialogs/properties.rs:38
+#: crates/bigiris/src/gui/dialogs/properties.rs:80
 msgid "Propriedades"
 msgstr "属性"
 
-#: crates/bigiris/src/gui.rs:2745
+#: crates/bigiris/src/gui.rs:3664
 msgid "Ajuda"
 msgstr "帮助"
 
-#: crates/bigiris/src/gui.rs:2746
+#: crates/bigiris/src/gui.rs:3665
 msgid "Este diálogo"
 msgstr "此对话框"
 
-#: crates/bigiris/src/gui.rs:2746
+#: crates/bigiris/src/gui.rs:3665
 msgid "Sobre"
 msgstr "关于"
 
-#: crates/bigiris/src/gui.rs:2753
-msgid "Categoria dos atalhos"
-msgstr "快捷方式分类"
-
-#: crates/bigiris/src/gui.rs:2770
+#: crates/bigiris/src/gui.rs:3675
 msgid "Roda do mouse"
 msgstr "鼠标滚轮"
 
-#: crates/bigiris/src/gui.rs:2821
+#: crates/bigiris/src/gui.rs:3703
 msgid "Atalhos de teclado"
 msgstr "键盘快捷键"
 
-#: crates/bigiris/src/gui.rs:2847
+#: crates/bigiris/src/gui.rs:3729
 msgid ""
 "Visualizador e conversor de imagens para Linux. Rápido, acessível por "
 "teclado e integrado ao gerenciador de arquivos."
-msgstr "适用于 Linux 的图像查看器和转换器。 快速,键盘可访问并与文件管理器集成。"
+msgstr ""
+"适用于 Linux 的图像查看器和转换器。 快速,键盘可访问并与文件管理器集成。"
 
-#: crates/bigiris/src/gui.rs:2874
+#: crates/bigiris/src/gui.rs:3762
 msgid "Abra suas imagens"
 msgstr "打开您的图像"
 
-#: crates/bigiris/src/gui.rs:2879
+#: crates/bigiris/src/gui.rs:3767
 msgid "Arraste imagens para cá ou cole arquivos com Ctrl+V."
 msgstr "将图像拖放到这里或使用 Ctrl+V 粘贴文件。"
 
-#: crates/bigiris/src/gui.rs:2921
+#: crates/bigiris/src/gui.rs:3810
 msgid "Selecionar pasta com imagens"
 msgstr "选择一个包含图像的文件夹"
 
-#: crates/bigiris/src/gui.rs:2941
+#: crates/bigiris/src/gui.rs:3831
 msgid "Selecionar imagens"
 msgstr "选择图像"
 
-#: crates/bigiris/src/gui.rs:3075
-#: crates/bigimage-integrations/src/action.rs:150
-#: data/nautilus/bigiris-menu.py:104
-msgid "PNG"
-msgstr "PNG"
+#: crates/bigiris/src/gui.rs:3878
+msgid "{current} de {total}"
+msgstr "{current} / {total}"
 
-#: crates/bigiris/src/gui.rs:3076
-msgid "JPG (JPEG)"
-msgstr "JPG (JPEG)"
+#: crates/bigiris/src/gui/batch_runner.rs:82
+msgid "≈ mesmo tamanho"
+msgstr "≈ 大小相同"
 
-#: crates/bigiris/src/gui.rs:3077
-#: crates/bigimage-integrations/src/action.rs:166
-#: data/nautilus/bigiris-menu.py:106
-msgid "WebP"
-msgstr "WebP"
+#: crates/bigiris/src/gui/batch_runner.rs:160
+msgid "{written} gravado(s), {skipped} ignorado(s), {failed} falha(s)"
+msgstr "已写入：{written}，已跳过：{skipped}，失败：{failed}"
 
-#: crates/bigiris/src/gui.rs:3078
-#: crates/bigimage-integrations/src/action.rs:174
-#: data/nautilus/bigiris-menu.py:107
-msgid "AVIF"
-msgstr "AVIF"
+#: crates/bigiris/src/gui/batch_runner.rs:190
+msgid "Concluído em {time} · {counts}"
+msgstr "用时 {time} 完成 · {counts}"
 
-#: crates/bigiris/src/gui.rs:3079
-#: crates/bigimage-integrations/src/action.rs:182
-#: data/nautilus/bigiris-menu.py:108
-msgid "TIFF"
-msgstr "TIFF"
-
-#: crates/bigiris/src/gui.rs:3080
-msgid "BMP"
-msgstr "BMP"
-
-#: crates/bigiris/src/gui.rs:3081
-msgid "GIF"
-msgstr "GIF"
-
-#: crates/bigiris/src/gui.rs:3082
-msgid "ICO (até 256 × 256)"
-msgstr "ICO(最多256×255)"
-
-#: crates/bigiris/src/gui.rs:3083
-msgid "PNM (Netpbm)"
-msgstr "PNM (Netpbm)"
-
-#: crates/bigiris/src/gui.rs:3084
-msgid "TGA"
-msgstr "TGA"
-
-#: crates/bigiris/src/gui.rs:3085
-msgid "QOI"
-msgstr "QOI"
-
-#: crates/bigiris/src/gui.rs:3086
-msgid "HDR"
-msgstr "HDR"
-
-#: crates/bigiris/src/gui.rs:3087
-msgid "OpenEXR"
-msgstr "OpenEXR"
-
-#: crates/bigiris/src/gui.rs:3111
-msgid "Pular se já existir"
-msgstr "跳过现有文件"
-
-#: crates/bigiris/src/gui.rs:3112
-msgid "Sobrescrever o arquivo"
-msgstr "覆盖文件"
-
-#: crates/bigiris/src/gui.rs:3113
-msgid "Incrementar (_1, _2, …)"
-msgstr "添加一个后缀 ( _ 1, _ 2, …)"
-
-#: crates/bigiris/src/gui.rs:3118
-msgid "Lanczos3 (padrão)"
-msgstr "(默认值) (Lanczos3)"
-
-#: crates/bigiris/src/gui.rs:3119
-msgid "Mitchell"
-msgstr "Mitchell"
-
-#: crates/bigiris/src/gui.rs:3120
-msgid "CatmullRom"
-msgstr "CatmullRom"
-
-#: crates/bigiris/src/gui.rs:3121
-msgid "Bilinear"
-msgstr "Bilinear"
-
-#: crates/bigiris/src/gui.rs:3122
-msgid "Nearest (sem anti-aliasing)"
-msgstr "最近(无抗锯齿)"
-
-#: crates/bigiris/src/gui.rs:3141
-msgid "Converter imagens — Prisma"
-msgstr "转换图像 — Prisma"
-
-#: crates/bigiris/src/gui.rs:3153 crates/bigiris/src/gui.rs:3233
-#: crates/bigimage-integrations/src/action.rs:75
-#: data/nautilus/bigiris-menu.py:100
-msgid "Converter"
-msgstr "转换图像"
-
-#: crates/bigiris/src/gui.rs:3159 crates/bigiris/src/gui.rs:3505
-#: crates/bigiris/src/gui.rs:3773 crates/bigiris/src/gui.rs:4251
-#: crates/bigiris/src/gui.rs:4524 crates/bigiris/src/gui.rs:4860
-#: crates/bigiris/src/gui.rs:5010 crates/bigiris/src/gui.rs:5170
-#: crates/bigiris/src/gui.rs:5912
-msgid "Formato de destino"
-msgstr "目标格式"
-
-#: crates/bigiris/src/gui.rs:3166 crates/bigiris/src/gui.rs:3512
-#: crates/bigiris/src/gui.rs:3779 crates/bigiris/src/gui.rs:4257
-#: crates/bigiris/src/gui.rs:4530 crates/bigiris/src/gui.rs:4866
-#: crates/bigiris/src/gui.rs:5016 crates/bigiris/src/gui.rs:5176
-#: crates/bigiris/src/gui.rs:5935
-msgid "Se o arquivo de saída existir"
-msgstr "如果输出文件存在"
-
-#: crates/bigiris/src/gui.rs:3172 crates/bigiris/src/gui.rs:3518
-#: crates/bigiris/src/gui.rs:3785 crates/bigiris/src/gui.rs:4219
-#: crates/bigiris/src/gui.rs:4462 crates/bigiris/src/gui.rs:4812
-#: crates/bigiris/src/gui.rs:5022 crates/bigiris/src/gui.rs:5182
-#: crates/bigiris/src/gui.rs:6211
-msgid "Arquivos selecionados"
-msgstr "选定的文件"
-
-#: crates/bigiris/src/gui.rs:3177 crates/bigiris/src/gui.rs:5918
-msgid "Qualidade (JPEG/AVIF)"
-msgstr "质量(JPEG/AVIF)"
-
-#: crates/bigiris/src/gui.rs:3178 crates/bigiris/src/gui.rs:5919
-msgid "1 menor qualidade · 85 equilíbrio · 100 maior qualidade"
-msgstr "1低质量 · 85平衡 · 100高质量"
-
-#: crates/bigiris/src/gui.rs:3183 crates/bigiris/src/gui.rs:5925
-msgid "Otimizar tamanho"
-msgstr "优化尺寸"
-
-#: crates/bigiris/src/gui.rs:3190
-msgid "Avançado"
-msgstr "高级"
-
-#: crates/bigiris/src/gui.rs:3191
-msgid "Otimização do encoder"
-msgstr "编码器优化"
-
-#: crates/bigiris/src/gui.rs:3197 crates/bigiris/src/gui.rs:5908
-msgid "Conversão"
-msgstr "转换"
-
-#: crates/bigiris/src/gui.rs:3204 crates/bigiris/src/gui.rs:5932
-msgid "Destino"
-msgstr "目的地"
-
-#: crates/bigiris/src/gui.rs:3212 crates/bigiris/src/gui.rs:5943
-msgid "Pasta de saída"
-msgstr "输出文件夹"
-
-#: crates/bigiris/src/gui.rs:3213 crates/bigiris/src/gui.rs:3315
-#: crates/bigiris/src/gui.rs:6057
-msgid "Mesma pasta do arquivo de origem"
-msgstr "与源文件相同的文件夹"
-
-#: crates/bigiris/src/gui.rs:3221 crates/bigiris/src/gui.rs:5952
-msgid "Usar a mesma pasta do arquivo de origem"
-msgstr "使用源文件文件夹"
-
-#: crates/bigiris/src/gui.rs:3249
+#: crates/bigiris/src/gui/batch_runner.rs:199
 msgid ""
-"Esta imagem tem transparência — JPEG perde o canal alfa. Considere PNG ou "
-"WebP."
-msgstr "此图像具有透明度 — JPEG 丢失了 alpha 通道。 考虑 PNG 或 WebP。"
-
-#: crates/bigiris/src/gui.rs:3372
-msgid "Convertendo…"
-msgstr "转换…"
-
-#: crates/bigiris/src/gui.rs:3378
-msgid "Convertendo"
-msgstr "转换"
-
-#: crates/bigiris/src/gui.rs:3406
-msgid "Redimensionar imagens — Prisma"
-msgstr "调整图像大小 — Prisma"
-
-#: crates/bigiris/src/gui.rs:3418 crates/bigiris/src/gui.rs:3538
-#: crates/bigimage-integrations/src/action.rs:79
-#: data/nautilus/bigiris-menu.py:115
-msgid "Redimensionar"
-msgstr "调整图像大小"
-
-#: crates/bigiris/src/gui.rs:3424 crates/bigiris/src/gui.rs:3438
-msgid "Aresta máxima"
-msgstr "最大边界"
-
-#: crates/bigiris/src/gui.rs:3425
-msgid "Escala (%)"
-msgstr "比额表(%)"
-
-#: crates/bigiris/src/gui.rs:3426
-msgid "Dimensão exata (WxH)"
-msgstr "确切尺寸(WxH)"
-
-#: crates/bigiris/src/gui.rs:3427
-msgid "Encaixar em (WxH)"
-msgstr "适合范围(WxH)"
-
-#: crates/bigiris/src/gui.rs:3431
-msgid "Modo"
-msgstr "模式"
-
-#: crates/bigiris/src/gui.rs:3439
-msgid "pixels (lado maior)"
-msgstr "像素(最长边)"
-
-#: crates/bigiris/src/gui.rs:3443
-msgid "Porcentagem"
-msgstr "百分比"
-
-#: crates/bigiris/src/gui.rs:3444
-msgid "100 = tamanho original"
-msgstr "100 = 原始大小"
-
-#: crates/bigiris/src/gui.rs:3448
-msgid "Largura"
-msgstr "宽度"
-
-#: crates/bigiris/src/gui.rs:3451
-msgid "Altura"
-msgstr "高度"
-
-#: crates/bigiris/src/gui.rs:3455
-msgid "Largura máxima"
-msgstr "最大宽度"
-
-#: crates/bigiris/src/gui.rs:3458
-msgid "Altura máxima"
-msgstr "最大高度"
-
-#: crates/bigiris/src/gui.rs:3497
-msgid "Kernel de interpolação"
-msgstr "插值内核"
-
-#: crates/bigiris/src/gui.rs:3526
-msgid "Modo de redimensionamento"
-msgstr "调整大小模式"
-
-#: crates/bigiris/src/gui.rs:3529
-msgid "Opções"
-msgstr "备选方案"
-
-#: crates/bigiris/src/gui.rs:3702
-msgid "Redimensionando…"
-msgstr "调整大小…"
-
-#: crates/bigiris/src/gui.rs:3708
-msgid "Redimensionando"
-msgstr "调整大小"
-
-#: crates/bigiris/src/gui.rs:3756
-msgid "Girar imagens — Prisma"
-msgstr "旋转图像 — Prisma"
-
-#: crates/bigiris/src/gui.rs:3760 crates/bigiris/src/gui.rs:3799
-#: crates/bigimage-integrations/src/action.rs:83
-#: data/nautilus/bigiris-menu.py:129
-msgid "Girar"
-msgstr "旋转图像"
-
-#: crates/bigiris/src/gui.rs:3762
-msgid "90° (horário)"
-msgstr "90°(顺时针方向)"
-
-#: crates/bigiris/src/gui.rs:3762
-#: crates/bigimage-integrations/src/action.rs:259
-#: data/nautilus/bigiris-menu.py:134
-msgid "180°"
-msgstr "180°"
-
-#: crates/bigiris/src/gui.rs:3762
-msgid "270° (anti-horário)"
-msgstr "270°(逆时针方向)"
-
-#: crates/bigiris/src/gui.rs:3765
-msgid "Rotação"
-msgstr "轮换"
-
-#: crates/bigiris/src/gui.rs:3856
-msgid "Girando…"
-msgstr "旋转…"
-
-#: crates/bigiris/src/gui.rs:3862
-msgid "Girando"
-msgstr "旋转"
-
-#: crates/bigiris/src/gui.rs:4182
-msgid "Recortar — Prisma"
-msgstr "Crop-棱镜 (Prisma)"
-
-#: crates/bigiris/src/gui.rs:4194 crates/bigiris/src/gui.rs:4278
-msgid "Recortar"
-msgstr "裁剪图像"
-
-#: crates/bigiris/src/gui.rs:4225 crates/bigiris/src/gui.rs:4468
-#: crates/bigiris/src/gui.rs:4818
-msgid "Tamanho original"
-msgstr "原始尺寸"
-
-#: crates/bigiris/src/gui.rs:4226 crates/bigiris/src/gui.rs:4469
-#: crates/bigiris/src/gui.rs:4822
-msgid "Primeiro arquivo"
-msgstr "第一档案"
-
-#: crates/bigiris/src/gui.rs:4232
-msgid "X (px)"
-msgstr "X(像素)"
-
-#: crates/bigiris/src/gui.rs:4236
-msgid "Y (px)"
-msgstr "Y(像素)"
-
-#: crates/bigiris/src/gui.rs:4240
-msgid "Largura (px)"
-msgstr "宽度(px)"
-
-#: crates/bigiris/src/gui.rs:4244
-msgid "Altura (px)"
-msgstr "高度(px)"
-
-#: crates/bigiris/src/gui.rs:4277
-msgid "Centro 50%"
-msgstr "中央 50%"
-
-#: crates/bigiris/src/gui.rs:4354
-msgid "Recortando…"
-msgstr "裁剪…"
-
-#: crates/bigiris/src/gui.rs:4360
-msgid "Recortando"
-msgstr "剪裁"
-
-#: crates/bigiris/src/gui.rs:4378
-msgid "YouTube community (1:1)"
-msgstr "YouTube 社区 (1:1)"
-
-#: crates/bigiris/src/gui.rs:4379
-msgid "Instagram feed (4:5)"
-msgstr "2016年04月25日 星期五 冲绳(4:5) (Instagram)"
-
-#: crates/bigiris/src/gui.rs:4380
-msgid "Stories / Shorts (9:16)"
-msgstr "故事/短片(9:16)"
-
-#: crates/bigiris/src/gui.rs:4381
-msgid "Widescreen (16:9)"
-msgstr "宽屏(16:9)"
-
-#: crates/bigiris/src/gui.rs:4382
-msgid "Personalizado…"
-msgstr "定制…"
-
-#: crates/bigiris/src/gui.rs:4388
-msgid "Preto suave (#0d0e12)"
-msgstr "软黑色 ( # 0d0e12)"
-
-#: crates/bigiris/src/gui.rs:4389
-msgid "Preto puro (#000000)"
-msgstr "纯黑色 ( # 000,001)"
-
-#: crates/bigiris/src/gui.rs:4390
-msgid "Branco (#ffffff)"
-msgstr "白色 (#ffffff)"
-
-#: crates/bigiris/src/gui.rs:4391
-msgid "Transparente"
-msgstr "透明"
-
-#: crates/bigiris/src/gui.rs:4392
-msgid "Personalizada (hex)"
-msgstr "自定义(十六进制)"
-
-#: crates/bigiris/src/gui.rs:4399
-msgid "Centro"
-msgstr "中央"
-
-#: crates/bigiris/src/gui.rs:4399
-msgid "Topo"
-msgstr "顶部边缘"
-
-#: crates/bigiris/src/gui.rs:4399
-msgid "Base"
-msgstr "底部边缘"
-
-#: crates/bigiris/src/gui.rs:4417
-msgid "Letterbox — Prisma"
-msgstr "邮箱 - 棱镜 (Prisma)"
-
-#: crates/bigiris/src/gui.rs:4430
-msgid "Letterbox"
-msgstr "Letterbox"
-
-#: crates/bigiris/src/gui.rs:4453
-msgid ""
-"Estende a tela em volta da imagem para encaixá-la num formato fixo (post de "
-"YouTube, feed do Instagram, Stories…) sem cortar nenhum pixel. A imagem "
-"original é centralizada e o resto é preenchido com a cor escolhida."
+"{before} → {after} ({delta}) · média por arquivo {average_before} → "
+"{average_after}"
 msgstr ""
-"将画布扩展到图像周围,以适应固定格式(YouTube 帖子、Instagram 源、故事 ), 而不裁剪任何像素。 "
-"原始图像处于中心位置,剩余区域用所选颜色填充。"
+"{before} → {after}（{delta}）· 每个文件平均 {average_before} → "
+"{average_after}"
 
-#: crates/bigiris/src/gui.rs:4476
-msgid "Proporção alvo"
-msgstr "目标宽高比"
+#: crates/bigiris/src/gui/batch_runner.rs:222
+#: crates/bigiris/src/gui/dialogs/animate.rs:315
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:349
+msgid "O processamento terminou inesperadamente. Tente novamente."
+msgstr "处理意外终止。请重试。"
 
-#: crates/bigiris/src/gui.rs:4483
-msgid "Razão W"
-msgstr "宽度比"
+#: crates/bigiris/src/gui/batch_runner.rs:311
+msgid "falha inesperada no worker"
+msgstr "worker 意外失败"
 
-#: crates/bigiris/src/gui.rs:4486
-msgid "Razão H"
-msgstr "高度比"
+#: crates/bigiris/src/gui/batch_runner.rs:359
+msgid "um worker terminou inesperadamente"
+msgstr "一个 worker 意外终止"
 
-#: crates/bigiris/src/gui.rs:4496
-msgid "Cor de fundo"
-msgstr "背景颜色"
-
-#: crates/bigiris/src/gui.rs:4502
-msgid "Hex (#RRGGBB)"
-msgstr "十六进制"
-
-#: crates/bigiris/src/gui.rs:4510
-msgid "Posição da imagem"
-msgstr "图像位置"
-
-#: crates/bigiris/src/gui.rs:4516 crates/bigiris/src/gui.rs:4835
-msgid "Destino previsto"
-msgstr "预测目的地"
-
-#: crates/bigiris/src/gui.rs:4555
-msgid "Estender"
-msgstr "延长"
-
-#: crates/bigiris/src/gui.rs:4634
-msgid "—"
-msgstr "—"
-
-#: crates/bigiris/src/gui.rs:4726
-msgid "Estendendo…"
-msgstr "延长…"
-
-#: crates/bigiris/src/gui.rs:4732
-msgid "Estendendo"
-msgstr "延长"
-
-#: crates/bigiris/src/gui.rs:4765
-msgid "Aumentar resolução — Prisma"
-msgstr "高档 — 棱镜 (Prisma)"
-
-#: crates/bigiris/src/gui.rs:4778
-msgid "Aumentar resolução"
-msgstr "升级图像"
-
-#: crates/bigiris/src/gui.rs:4829
-msgid "Fator"
-msgstr "因子"
-
-#: crates/bigiris/src/gui.rs:4886
-msgid "Aumentar"
-msgstr "升级图像"
-
-#: crates/bigiris/src/gui.rs:4956
-msgid "Aumentando…"
-msgstr "升级…"
-
-#: crates/bigiris/src/gui.rs:4965
-msgid "Aumentando"
-msgstr "升级"
-
-#: crates/bigiris/src/gui.rs:4993
-msgid "Espelhar imagens — Prisma"
-msgstr "翻转图像 — Prisma"
-
-#: crates/bigiris/src/gui.rs:4997 crates/bigiris/src/gui.rs:5036
-#: crates/bigimage-integrations/src/action.rs:87
-#: data/nautilus/bigiris-menu.py:142
-msgid "Espelhar"
-msgstr "翻轉圖像"
-
-#: crates/bigiris/src/gui.rs:4999
-msgid "Horizontal (esquerda ↔ direita)"
-msgstr "水平(左→右)"
-
-#: crates/bigiris/src/gui.rs:4999
-msgid "Vertical (cima ↔ baixo)"
-msgstr "垂直(顶部↔底部)"
-
-#: crates/bigiris/src/gui.rs:5002
-msgid "Eixo"
-msgstr "轴"
-
-#: crates/bigiris/src/gui.rs:5092
-msgid "Espelhando…"
-msgstr "翻转…"
-
-#: crates/bigiris/src/gui.rs:5098
-msgid "Espelhando"
-msgstr "翻轉"
-
-#: crates/bigiris/src/gui.rs:5126
+#: crates/bigiris/src/gui/dialogs/adjust.rs:20
 msgid "Ajustar cores — Prisma"
 msgstr "调整颜色 — Prisma"
 
-#: crates/bigiris/src/gui.rs:5141
+#: crates/bigiris/src/gui/dialogs/adjust.rs:35
 #: crates/bigimage-integrations/src/action.rs:91
 #: data/nautilus/bigiris-menu.py:153
 msgid "Ajustar cores"
 msgstr "调整颜色"
 
-#: crates/bigiris/src/gui.rs:5144
+#: crates/bigiris/src/gui/dialogs/adjust.rs:38
 msgid "Brilho"
 msgstr "亮度"
 
-#: crates/bigiris/src/gui.rs:5145
+#: crates/bigiris/src/gui/dialogs/adjust.rs:39
 msgid "-100 escuro · 0 neutro · +100 claro"
 msgstr "-100 深色 · 0 中性 · +101 浅色"
 
-#: crates/bigiris/src/gui.rs:5149
+#: crates/bigiris/src/gui/dialogs/adjust.rs:43
 msgid "Contraste"
 msgstr "对比"
 
-#: crates/bigiris/src/gui.rs:5150
+#: crates/bigiris/src/gui/dialogs/adjust.rs:44
 msgid "-100 plano · 0 neutro · +100 agressivo"
 msgstr "-100 平均 · 0 中性 · +101 强烈"
 
-#: crates/bigiris/src/gui.rs:5154
+#: crates/bigiris/src/gui/dialogs/adjust.rs:48
 msgid "Saturação"
 msgstr "饱和度"
 
-#: crates/bigiris/src/gui.rs:5155
+#: crates/bigiris/src/gui/dialogs/adjust.rs:49
 msgid "-100 cinza · 0 neutro · +100 vibrante"
 msgstr "-100 灰色 · 0 中性 · +101 生动"
 
-#: crates/bigiris/src/gui.rs:5159
+#: crates/bigiris/src/gui/dialogs/adjust.rs:53
 msgid "Gamma"
 msgstr "伽玛射线"
 
-#: crates/bigiris/src/gui.rs:5161
+#: crates/bigiris/src/gui/dialogs/adjust.rs:55
 msgid "Abaixo de 1 clareia os meios-tons · 1 mantém · acima de 1 escurece"
 msgstr "1以下使中间色变浅,1以上使中間色变深"
 
-#: crates/bigiris/src/gui.rs:5189
+#: crates/bigiris/src/gui/dialogs/adjust.rs:64
+#: crates/bigiris/src/gui/dialogs/batch.rs:389
+#: crates/bigiris/src/gui/dialogs/convert.rs:39
+#: crates/bigiris/src/gui/dialogs/crop.rs:344
+#: crates/bigiris/src/gui/dialogs/extent.rs:92
+#: crates/bigiris/src/gui/dialogs/flip.rs:37
+#: crates/bigiris/src/gui/dialogs/resize.rs:128
+#: crates/bigiris/src/gui/dialogs/rotate.rs:42
+#: crates/bigiris/src/gui/dialogs/upscale.rs:68
+msgid "Arquivos selecionados"
+msgstr "选定的文件"
+
+#: crates/bigiris/src/gui/dialogs/adjust.rs:69
 msgid "Tom"
 msgstr "音調"
 
-#: crates/bigiris/src/gui.rs:5194
+#: crates/bigiris/src/gui/dialogs/adjust.rs:74
 msgid "Cor"
 msgstr "颜色"
 
-#: crates/bigiris/src/gui.rs:5197 crates/bigiris/src/gui.rs:6697
+#: crates/bigiris/src/gui/dialogs/adjust.rs:77
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:151
 msgid "Saída"
 msgstr "产出"
 
-#: crates/bigiris/src/gui.rs:5205
+#: crates/bigiris/src/gui/dialogs/adjust.rs:83
 msgid "Aplicar"
 msgstr "应用更改"
 
-#: crates/bigiris/src/gui.rs:5328
+#: crates/bigiris/src/gui/dialogs/adjust.rs:190
 msgid "Ajustando…"
 msgstr "调整…"
 
-#: crates/bigiris/src/gui.rs:5334
+#: crates/bigiris/src/gui/dialogs/adjust.rs:196
 msgid "Ajustando"
 msgstr "调整"
 
-#: crates/bigiris/src/gui.rs:5433
-msgid "Privacidade"
-msgstr "隐私"
-
-#: crates/bigiris/src/gui.rs:5509
-msgid "Imagem"
-msgstr "图像"
-
-#: crates/bigiris/src/gui.rs:5678
-msgid "Comparar imagens — Íris"
-msgstr "比较图像 — Iris"
-
-#: crates/bigiris/src/gui.rs:5713
-msgid "Arraste o divisor para comparar · Esc fecha"
-msgstr "拖动分隔符进行比较 · Esc 关闭"
-
-#: crates/bigiris/src/gui.rs:5874
-msgid "Prisma — Lote"
-msgstr "Prisma — 棱镜-批量"
-
-#: crates/bigiris/src/gui.rs:5878
-msgid "Conversão em lote"
-msgstr "批量转换"
-
-#: crates/bigiris/src/gui.rs:5888
-msgid "Arquivos"
-msgstr "档案"
-
-#: crates/bigiris/src/gui.rs:5892 crates/bigiris/src/gui.rs:6224
-msgid "Adicionar arquivos"
-msgstr "添加文件"
-
-#: crates/bigiris/src/gui.rs:5898
-msgid "Adicionar pasta (imagens)"
-msgstr "添加文件夹(图像)"
-
-#: crates/bigiris/src/gui.rs:5967
-msgid "Aguardando. Clique em Processar para iniciar."
-msgstr "单击\"处理\"以开始。"
-
-#: crates/bigiris/src/gui.rs:5978
-msgid "Processar"
-msgstr "过程图像"
-
-#: crates/bigiris/src/gui.rs:6102
-msgid "Adicione ao menos uma imagem para processar."
-msgstr "至少添加一个图像进行处理。"
-
-#: crates/bigiris/src/gui.rs:6112
-msgid "Iniciando…"
-msgstr "开始…"
-
-#: crates/bigiris/src/gui.rs:6113
-msgid "Processando…"
-msgstr "正在处理…"
-
-#: crates/bigiris/src/gui.rs:6175
-msgid "Cancelado"
-msgstr "取消"
-
-#: crates/bigiris/src/gui.rs:6177 crates/bigiris/src/gui.rs:6911
-msgid "Concluído"
-msgstr "完成"
-
-#: crates/bigiris/src/gui.rs:6268
-msgid "Adicionar pasta com imagens"
-msgstr "添加图像文件夹"
-
-#: crates/bigiris/src/gui.rs:6330
-msgid "Escolher pasta de saída"
-msgstr "选择输出文件夹"
-
-#: crates/bigiris/src/gui.rs:6362
+#: crates/bigiris/src/gui/dialogs/animate.rs:29
 msgid "Criar GIF animado — Prisma"
 msgstr "创建动画GIF — Prisma"
 
-#: crates/bigiris/src/gui.rs:6366
+#: crates/bigiris/src/gui/dialogs/animate.rs:33
 msgid "Criar GIF animado"
 msgstr "创建动画GIF"
 
-#: crates/bigiris/src/gui.rs:6380
+#: crates/bigiris/src/gui/dialogs/animate.rs:47
 msgid "Selecione pelo menos 2 imagens"
 msgstr "选择至少2张图片"
 
-#: crates/bigiris/src/gui.rs:6381
+#: crates/bigiris/src/gui/dialogs/animate.rs:48
 msgid "Informe vários arquivos de uma vez para montar a animação."
 msgstr "选择多个文件来构建动画。"
 
-#: crates/bigiris/src/gui.rs:6402
+#: crates/bigiris/src/gui/dialogs/animate.rs:66
 msgid "Atraso por quadro (ms)"
 msgstr "帧延迟(毫秒)"
 
-#: crates/bigiris/src/gui.rs:6403
+#: crates/bigiris/src/gui/dialogs/animate.rs:67
 msgid "100 ≈ 10 fps · 40 ≈ 25 fps · 1000 = 1 s"
 msgstr "100 = 1 秒 × 40 ≈ 25 帧 × 1,000"
 
-#: crates/bigiris/src/gui.rs:6408
+#: crates/bigiris/src/gui/dialogs/animate.rs:72
 msgid "Loop"
 msgstr "重复动画"
 
-#: crates/bigiris/src/gui.rs:6410
+#: crates/bigiris/src/gui/dialogs/animate.rs:74
 msgid "Infinito (padrão)"
 msgstr "无限(默认值)"
 
-#: crates/bigiris/src/gui.rs:6411
+#: crates/bigiris/src/gui/dialogs/animate.rs:75
 msgid "Uma vez"
 msgstr "一次"
 
-#: crates/bigiris/src/gui.rs:6412
+#: crates/bigiris/src/gui/dialogs/animate.rs:76
 msgid "2 vezes"
 msgstr "2次"
 
-#: crates/bigiris/src/gui.rs:6413
+#: crates/bigiris/src/gui/dialogs/animate.rs:77
 msgid "5 vezes"
 msgstr "5次"
 
-#: crates/bigiris/src/gui.rs:6414
+#: crates/bigiris/src/gui/dialogs/animate.rs:78
 msgid "10 vezes"
 msgstr "10次"
 
-#: crates/bigiris/src/gui.rs:6419
+#: crates/bigiris/src/gui/dialogs/animate.rs:83
 msgid "Velocidade do encoder"
 msgstr "编码器速度"
 
-#: crates/bigiris/src/gui.rs:6420
+#: crates/bigiris/src/gui/dialogs/animate.rs:84
 msgid "maior = mais rápido, paleta um pouco pior · padrão 10"
 msgstr "高 = 更快,调色板质量略低 · 默认值 10"
 
-#: crates/bigiris/src/gui.rs:6430
+#: crates/bigiris/src/gui/dialogs/animate.rs:94
 msgid "Arquivo de saída (.gif)"
 msgstr "输出文件 (. gif)"
 
-#: crates/bigiris/src/gui.rs:6436
+#: crates/bigiris/src/gui/dialogs/animate.rs:98
 msgid "Quadros"
 msgstr "框架"
 
-#: crates/bigiris/src/gui.rs:6453
+#: crates/bigiris/src/gui/dialogs/animate.rs:111
 msgid "Criar GIF"
 msgstr "创建GIF"
 
-#: crates/bigiris/src/gui.rs:6503
+#: crates/bigiris/src/gui/dialogs/animate.rs:184
+msgid "Substituir arquivo existente?"
+msgstr "替换现有文件？"
+
+#: crates/bigiris/src/gui/dialogs/animate.rs:188
+msgid "Substituir"
+msgstr "替换"
+
+#: crates/bigiris/src/gui/dialogs/animate.rs:206
+msgid "Informe o arquivo de saída."
+msgstr "请指定输出文件。"
+
+#: crates/bigiris/src/gui/dialogs/animate.rs:215
+msgid "O arquivo de saída não pode ser uma pasta."
+msgstr "输出文件不能是文件夹。"
+
+#: crates/bigiris/src/gui/dialogs/animate.rs:219
+msgid "O arquivo de saída não pode ser um dos quadros."
+msgstr "输出文件不能是其中一帧。"
+
+#: crates/bigiris/src/gui/dialogs/animate.rs:255
 msgid "Montando GIF…"
 msgstr "构建GIF…"
 
-#: crates/bigiris/src/gui.rs:6521
+#: crates/bigiris/src/gui/dialogs/animate.rs:297
+#: crates/bigiris/src/gui/dialogs/batch.rs:111
 msgid "Pronto"
 msgstr "就绪"
 
-#: crates/bigiris/src/gui.rs:6527
+#: crates/bigiris/src/gui/dialogs/animate.rs:302
+msgid "O arquivo {file} passou a existir e foi mantido; nada foi gravado."
+msgstr "文件 {file} 在此期间已出现并被保留；未写入任何内容。"
+
+#: crates/bigiris/src/gui/dialogs/animate.rs:309
 msgid "Falha"
 msgstr "失败"
 
-#: crates/bigiris/src/gui.rs:6608
+#: crates/bigiris/src/gui/dialogs/batch.rs:35
+msgid "Prisma — Lote"
+msgstr "Prisma — 棱镜-批量"
+
+#: crates/bigiris/src/gui/dialogs/batch.rs:39
+msgid "Conversão em lote"
+msgstr "批量转换"
+
+#: crates/bigiris/src/gui/dialogs/batch.rs:46
+msgid "Arquivos"
+msgstr "档案"
+
+#: crates/bigiris/src/gui/dialogs/batch.rs:50
+#: crates/bigiris/src/gui/dialogs/batch.rs:402
+msgid "Adicionar arquivos"
+msgstr "添加文件"
+
+#: crates/bigiris/src/gui/dialogs/batch.rs:56
+msgid "Adicionar pasta (imagens)"
+msgstr "添加文件夹(图像)"
+
+#: crates/bigiris/src/gui/dialogs/batch.rs:66
+#: crates/bigiris/src/gui/dialogs/convert.rs:62
+msgid "Conversão"
+msgstr "转换"
+
+#: crates/bigiris/src/gui/dialogs/batch.rs:72
+#: crates/bigiris/src/gui/dialogs/convert.rs:42
+msgid "Qualidade (JPEG/AVIF)"
+msgstr "质量(JPEG/AVIF)"
+
+#: crates/bigiris/src/gui/dialogs/batch.rs:73
+#: crates/bigiris/src/gui/dialogs/convert.rs:43
+msgid "1 menor qualidade · 85 equilíbrio · 100 maior qualidade"
+msgstr "1低质量 · 85平衡 · 100高质量"
+
+#: crates/bigiris/src/gui/dialogs/batch.rs:79
+#: crates/bigiris/src/gui/dialogs/convert.rs:48
+msgid "Otimizar tamanho"
+msgstr "优化尺寸"
+
+#: crates/bigiris/src/gui/dialogs/batch.rs:80
+#: crates/bigiris/src/gui/dialogs/convert.rs:49
+msgid "PNG com compressão máxima; AVIF mais lento; arquivo menor"
+msgstr "PNG 最大压缩；AVIF 更慢；文件更小"
+
+#: crates/bigiris/src/gui/dialogs/batch.rs:86
+#: crates/bigiris/src/gui/dialogs/convert.rs:69
+msgid "Destino"
+msgstr "目的地"
+
+#: crates/bigiris/src/gui/dialogs/batch.rs:93
+#: crates/bigiris/src/gui/dialogs/convert.rs:77
+msgid "Pasta de saída"
+msgstr "输出文件夹"
+
+#: crates/bigiris/src/gui/dialogs/batch.rs:94
+#: crates/bigiris/src/gui/dialogs/batch.rs:216
+#: crates/bigiris/src/gui/dialogs/convert.rs:78
+#: crates/bigiris/src/gui/dialogs/convert.rs:165
+msgid "Mesma pasta do arquivo de origem"
+msgstr "与源文件相同的文件夹"
+
+#: crates/bigiris/src/gui/dialogs/batch.rs:102
+#: crates/bigiris/src/gui/dialogs/convert.rs:86
+msgid "Usar a mesma pasta do arquivo de origem"
+msgstr "使用源文件文件夹"
+
+#: crates/bigiris/src/gui/dialogs/batch.rs:117
+msgid "Aguardando. Clique em Processar para iniciar."
+msgstr "单击\"处理\"以开始。"
+
+#: crates/bigiris/src/gui/dialogs/batch.rs:128
+msgid "Processar"
+msgstr "过程图像"
+
+#: crates/bigiris/src/gui/dialogs/batch.rs:259
+msgid "Adicione ao menos uma imagem para processar."
+msgstr "至少添加一个图像进行处理。"
+
+#: crates/bigiris/src/gui/dialogs/batch.rs:271
+msgid "Iniciando…"
+msgstr "开始…"
+
+#: crates/bigiris/src/gui/dialogs/batch.rs:272
+msgid "Processando…"
+msgstr "正在处理…"
+
+#: crates/bigiris/src/gui/dialogs/batch.rs:316
+msgid ""
+"Cancelado após {done}/{total} em {timing}. {ok} gravado(s), {skip} "
+"ignorado(s), {fail} falha(s)."
+msgstr ""
+"已在 {done}/{total} 后取消，用时 {timing}。已写入：{ok}，已跳过：{skip}，失"
+"败：{fail}。"
+
+#: crates/bigiris/src/gui/dialogs/batch.rs:318
+msgid ""
+"Concluído em {timing}. {ok} gravado(s), {skip} ignorado(s), {fail} falha(s)."
+msgstr "用时 {timing} 完成。已写入：{ok}，已跳过：{skip}，失败：{fail}。"
+
+#: crates/bigiris/src/gui/dialogs/batch.rs:338
+msgid ""
+"{before} → {after} ({delta}) · média por arquivo {avg_before} → {avg_after}"
+msgstr "{before} → {after}（{delta}）· 每个文件平均 {avg_before} → {avg_after}"
+
+#: crates/bigiris/src/gui/dialogs/batch.rs:354
+msgid "Cancelado"
+msgstr "取消"
+
+#: crates/bigiris/src/gui/dialogs/batch.rs:356
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:369
+msgid "Concluído"
+msgstr "完成"
+
+#: crates/bigiris/src/gui/dialogs/batch.rs:446
+msgid "Adicionar pasta com imagens"
+msgstr "添加图像文件夹"
+
+#: crates/bigiris/src/gui/dialogs/compare.rs:31
+msgid "Comparar imagens — Íris"
+msgstr "比较图像 — Iris"
+
+#: crates/bigiris/src/gui/dialogs/compare.rs:43
+msgid "Comparar imagens"
+msgstr "比较图像"
+
+#: crates/bigiris/src/gui/dialogs/compare.rs:45
+msgid "Antes: {before}  ·  Depois: {after}"
+msgstr "之前：{before}  ·  之后：{after}"
+
+#: crates/bigiris/src/gui/dialogs/compare.rs:69
+msgid "Arraste o divisor para comparar · Esc fecha"
+msgstr "拖动分隔符进行比较 · Esc 关闭"
+
+#: crates/bigiris/src/gui/dialogs/compare.rs:157
+msgid "Não foi possível abrir esta imagem"
+msgstr "无法打开此图像"
+
+#: crates/bigiris/src/gui/dialogs/convert.rs:20
+msgid "Converter imagens — Prisma"
+msgstr "转换图像 — Prisma"
+
+#: crates/bigiris/src/gui/dialogs/convert.rs:32
+#: crates/bigiris/src/gui/dialogs/convert.rs:96
+#: crates/bigimage-integrations/src/action.rs:75
+#: data/nautilus/bigiris-menu.py:100
+msgid "Converter"
+msgstr "转换图像"
+
+#: crates/bigiris/src/gui/dialogs/convert.rs:55
+msgid "Avançado"
+msgstr "高级"
+
+#: crates/bigiris/src/gui/dialogs/convert.rs:56
+msgid "Otimização do encoder"
+msgstr "编码器优化"
+
+#: crates/bigiris/src/gui/dialogs/convert.rs:102
+msgid ""
+"Esta imagem tem transparência — JPEG perde o canal alfa. Considere PNG ou "
+"WebP."
+msgstr "此图像具有透明度 — JPEG 丢失了 alpha 通道。 考虑 PNG 或 WebP。"
+
+#: crates/bigiris/src/gui/dialogs/convert.rs:123
+msgid ""
+"Esta imagem contém GPS (localização) no EXIF. Atenção ao compartilhar "
+"publicamente — nosso pipeline remove o EXIF automaticamente no re-encode."
+msgstr ""
+"此图像的 EXIF 中包含 GPS（位置）信息。公开分享时请注意 — 我们的处理流程会在重"
+"新编码时自动移除 EXIF。"
+
+#: crates/bigiris/src/gui/dialogs/convert.rs:217
+msgid "Convertendo…"
+msgstr "转换…"
+
+#: crates/bigiris/src/gui/dialogs/convert.rs:223
+msgid "Convertendo"
+msgstr "转换"
+
+#: crates/bigiris/src/gui/dialogs/crop.rs:284
+msgid ""
+"Arraste nos cantos para redimensionar · dentro do recorte para mover · fora "
+"dele para uma nova seleção."
+msgstr "拖动角点调整大小 · 拖动裁剪区域内部移动 · 在外部拖动新建选区。"
+
+#: crates/bigiris/src/gui/dialogs/crop.rs:309
+msgid "Recortar — Prisma"
+msgstr "Crop-棱镜 (Prisma)"
+
+#: crates/bigiris/src/gui/dialogs/crop.rs:321
+#: crates/bigiris/src/gui/dialogs/crop.rs:389
+msgid "Recortar"
+msgstr "裁剪图像"
+
+#: crates/bigiris/src/gui/dialogs/crop.rs:348
+#: crates/bigiris/src/gui/dialogs/extent.rs:96
+#: crates/bigiris/src/gui/dialogs/upscale.rs:72
+msgid "Tamanho original"
+msgstr "原始尺寸"
+
+#: crates/bigiris/src/gui/dialogs/crop.rs:349
+#: crates/bigiris/src/gui/dialogs/extent.rs:97
+#: crates/bigiris/src/gui/dialogs/upscale.rs:76
+msgid "Primeiro arquivo"
+msgstr "第一档案"
+
+#: crates/bigiris/src/gui/dialogs/crop.rs:355
+msgid "X (px)"
+msgstr "X(像素)"
+
+#: crates/bigiris/src/gui/dialogs/crop.rs:359
+msgid "Y (px)"
+msgstr "Y(像素)"
+
+#: crates/bigiris/src/gui/dialogs/crop.rs:363
+msgid "Largura (px)"
+msgstr "宽度(px)"
+
+#: crates/bigiris/src/gui/dialogs/crop.rs:367
+msgid "Altura (px)"
+msgstr "高度(px)"
+
+#: crates/bigiris/src/gui/dialogs/crop.rs:388
+msgid "Centro 50%"
+msgstr "中央 50%"
+
+#: crates/bigiris/src/gui/dialogs/crop.rs:449
+msgid "Recortando…"
+msgstr "裁剪…"
+
+#: crates/bigiris/src/gui/dialogs/crop.rs:455
+msgid "Recortando"
+msgstr "剪裁"
+
+#: crates/bigiris/src/gui/dialogs/extent.rs:12
+msgid "YouTube community (1:1)"
+msgstr "YouTube 社区 (1:1)"
+
+#: crates/bigiris/src/gui/dialogs/extent.rs:13
+msgid "Instagram feed (4:5)"
+msgstr "2016年04月25日 星期五 冲绳(4:5) (Instagram)"
+
+#: crates/bigiris/src/gui/dialogs/extent.rs:14
+msgid "Stories / Shorts (9:16)"
+msgstr "故事/短片(9:16)"
+
+#: crates/bigiris/src/gui/dialogs/extent.rs:15
+msgid "Widescreen (16:9)"
+msgstr "宽屏(16:9)"
+
+#: crates/bigiris/src/gui/dialogs/extent.rs:16
+msgid "Personalizado…"
+msgstr "定制…"
+
+#: crates/bigiris/src/gui/dialogs/extent.rs:22
+msgid "Preto suave (#0d0e12)"
+msgstr "软黑色 ( # 0d0e12)"
+
+#: crates/bigiris/src/gui/dialogs/extent.rs:23
+msgid "Preto puro (#000000)"
+msgstr "纯黑色 ( # 000,001)"
+
+#: crates/bigiris/src/gui/dialogs/extent.rs:24
+msgid "Branco (#ffffff)"
+msgstr "白色 (#ffffff)"
+
+#: crates/bigiris/src/gui/dialogs/extent.rs:25
+msgid "Transparente"
+msgstr "透明"
+
+#: crates/bigiris/src/gui/dialogs/extent.rs:26
+msgid "Personalizada (hex)"
+msgstr "自定义(十六进制)"
+
+#: crates/bigiris/src/gui/dialogs/extent.rs:33
+msgid "Centro"
+msgstr "中央"
+
+#: crates/bigiris/src/gui/dialogs/extent.rs:33
+msgid "Topo"
+msgstr "顶部边缘"
+
+#: crates/bigiris/src/gui/dialogs/extent.rs:33
+msgid "Base"
+msgstr "底部边缘"
+
+#: crates/bigiris/src/gui/dialogs/extent.rs:49
+msgid "Letterbox — Prisma"
+msgstr "邮箱 - 棱镜 (Prisma)"
+
+#: crates/bigiris/src/gui/dialogs/extent.rs:62
+msgid "Letterbox"
+msgstr "Letterbox"
+
+#: crates/bigiris/src/gui/dialogs/extent.rs:63
+msgid "Prisma · sem corte"
+msgstr "Prisma · 不裁剪"
+
+#: crates/bigiris/src/gui/dialogs/extent.rs:85
+msgid ""
+"Estende a tela em volta da imagem para encaixá-la num formato fixo (post de "
+"YouTube, feed do Instagram, Stories…) sem cortar nenhum pixel. A imagem "
+"original é centralizada e o resto é preenchido com a cor escolhida."
+msgstr ""
+"将画布扩展到图像周围,以适应固定格式(YouTube 帖子、Instagram 源、故事 ), 而不"
+"裁剪任何像素。 原始图像处于中心位置,剩余区域用所选颜色填充。"
+
+#: crates/bigiris/src/gui/dialogs/extent.rs:104
+msgid "Proporção alvo"
+msgstr "目标宽高比"
+
+#: crates/bigiris/src/gui/dialogs/extent.rs:111
+msgid "Razão W"
+msgstr "宽度比"
+
+#: crates/bigiris/src/gui/dialogs/extent.rs:114
+msgid "Razão H"
+msgstr "高度比"
+
+#: crates/bigiris/src/gui/dialogs/extent.rs:124
+msgid "Cor de fundo"
+msgstr "背景颜色"
+
+#: crates/bigiris/src/gui/dialogs/extent.rs:130
+msgid "Hex (#RRGGBB)"
+msgstr "十六进制"
+
+#: crates/bigiris/src/gui/dialogs/extent.rs:138
+msgid "Posição da imagem"
+msgstr "图像位置"
+
+#: crates/bigiris/src/gui/dialogs/extent.rs:144
+#: crates/bigiris/src/gui/dialogs/upscale.rs:89
+msgid "Destino previsto"
+msgstr "预测目的地"
+
+#: crates/bigiris/src/gui/dialogs/extent.rs:171
+msgid "Estender"
+msgstr "延长"
+
+#: crates/bigiris/src/gui/dialogs/extent.rs:240
+msgid "—"
+msgstr "—"
+
+#: crates/bigiris/src/gui/dialogs/extent.rs:326
+msgid "Estendendo…"
+msgstr "延长…"
+
+#: crates/bigiris/src/gui/dialogs/extent.rs:332
+msgid "Estendendo"
+msgstr "延长"
+
+#: crates/bigiris/src/gui/dialogs/flip.rs:20
+msgid "Espelhar imagens — Prisma"
+msgstr "翻转图像 — Prisma"
+
+#: crates/bigiris/src/gui/dialogs/flip.rs:24
+#: crates/bigiris/src/gui/dialogs/flip.rs:47
+#: crates/bigimage-integrations/src/action.rs:87
+#: data/nautilus/bigiris-menu.py:142
+msgid "Espelhar"
+msgstr "翻轉圖像"
+
+#: crates/bigiris/src/gui/dialogs/flip.rs:26
+msgid "Horizontal (esquerda ↔ direita)"
+msgstr "水平(左→右)"
+
+#: crates/bigiris/src/gui/dialogs/flip.rs:26
+msgid "Vertical (cima ↔ baixo)"
+msgstr "垂直(顶部↔底部)"
+
+#: crates/bigiris/src/gui/dialogs/flip.rs:29
+msgid "Eixo"
+msgstr "轴"
+
+#: crates/bigiris/src/gui/dialogs/flip.rs:87
+msgid "Espelhando…"
+msgstr "翻转…"
+
+#: crates/bigiris/src/gui/dialogs/flip.rs:93
+msgid "Espelhando"
+msgstr "翻轉"
+
+#: crates/bigiris/src/gui/dialogs/mod.rs:64
+#: crates/bigimage-integrations/src/action.rs:150
+#: data/nautilus/bigiris-menu.py:104
+msgid "PNG"
+msgstr "PNG"
+
+#: crates/bigiris/src/gui/dialogs/mod.rs:65
+msgid "JPG (JPEG)"
+msgstr "JPG (JPEG)"
+
+#: crates/bigiris/src/gui/dialogs/mod.rs:66
+#: crates/bigimage-integrations/src/action.rs:166
+#: data/nautilus/bigiris-menu.py:106
+msgid "WebP"
+msgstr "WebP"
+
+#: crates/bigiris/src/gui/dialogs/mod.rs:67
+#: crates/bigimage-integrations/src/action.rs:174
+#: data/nautilus/bigiris-menu.py:107
+msgid "AVIF"
+msgstr "AVIF"
+
+#: crates/bigiris/src/gui/dialogs/mod.rs:68
+#: crates/bigimage-integrations/src/action.rs:182
+#: data/nautilus/bigiris-menu.py:108
+msgid "TIFF"
+msgstr "TIFF"
+
+#: crates/bigiris/src/gui/dialogs/mod.rs:69
+msgid "BMP"
+msgstr "BMP"
+
+#: crates/bigiris/src/gui/dialogs/mod.rs:70
+msgid "GIF"
+msgstr "GIF"
+
+#: crates/bigiris/src/gui/dialogs/mod.rs:71
+msgid "ICO (até 256 × 256)"
+msgstr "ICO(最多256×255)"
+
+#: crates/bigiris/src/gui/dialogs/mod.rs:72
+msgid "PNM (Netpbm)"
+msgstr "PNM (Netpbm)"
+
+#: crates/bigiris/src/gui/dialogs/mod.rs:73
+msgid "TGA"
+msgstr "TGA"
+
+#: crates/bigiris/src/gui/dialogs/mod.rs:74
+msgid "QOI"
+msgstr "QOI"
+
+#: crates/bigiris/src/gui/dialogs/mod.rs:75
+msgid "HDR"
+msgstr "HDR"
+
+#: crates/bigiris/src/gui/dialogs/mod.rs:76
+msgid "OpenEXR"
+msgstr "OpenEXR"
+
+#: crates/bigiris/src/gui/dialogs/mod.rs:100
+msgid "Pular se já existir"
+msgstr "跳过现有文件"
+
+#: crates/bigiris/src/gui/dialogs/mod.rs:101
+msgid "Sobrescrever o arquivo"
+msgstr "覆盖文件"
+
+#: crates/bigiris/src/gui/dialogs/mod.rs:102
+msgid "Incrementar (_1, _2, …)"
+msgstr "添加一个后缀 ( _ 1, _ 2, …)"
+
+#: crates/bigiris/src/gui/dialogs/mod.rs:123
+#: crates/bigiris/src/gui/dialogs/mod.rs:138
+msgid "Formato de destino"
+msgstr "目标格式"
+
+#: crates/bigiris/src/gui/dialogs/mod.rs:134
+msgid "Manter o formato original"
+msgstr "保留原始格式"
+
+#: crates/bigiris/src/gui/dialogs/mod.rs:156
+msgid "Se o arquivo de saída existir"
+msgstr "如果输出文件存在"
+
+#: crates/bigiris/src/gui/dialogs/mod.rs:216
+msgid "{first} e mais {count}"
+msgstr "{first} 及另外 {count} 个"
+
+#: crates/bigiris/src/gui/dialogs/mod.rs:231
+msgid "Escolher pasta de saída"
+msgstr "选择输出文件夹"
+
+#: crates/bigiris/src/gui/dialogs/properties.rs:60
+msgid "Não foi possível ler as informações do arquivo"
+msgstr "无法读取文件信息"
+
+#: crates/bigiris/src/gui/dialogs/properties.rs:90
+msgid "Privacidade"
+msgstr "隐私"
+
+#: crates/bigiris/src/gui/dialogs/properties.rs:94
+msgid "Coordenadas GPS presentes"
+msgstr "包含 GPS 坐标"
+
+#: crates/bigiris/src/gui/dialogs/properties.rs:96
+msgid "Identificação de câmera/software presente"
+msgstr "包含相机/软件标识"
+
+#: crates/bigiris/src/gui/dialogs/properties.rs:98
+msgid "Remova antes de publicar se for sensível."
+msgstr "如属敏感信息，请在发布前移除。"
+
+#: crates/bigiris/src/gui/dialogs/properties.rs:126
+msgid "Nome"
+msgstr "名称"
+
+#: crates/bigiris/src/gui/dialogs/properties.rs:131
+msgid "Pasta"
+msgstr "文件夹"
+
+#: crates/bigiris/src/gui/dialogs/properties.rs:149
+#: crates/bigiris/src/gui/dialogs/properties.rs:156
+#: crates/bigiris/src/gui/dialogs/properties.rs:157
+msgid "Formato"
+msgstr "格式"
+
+#: crates/bigiris/src/gui/dialogs/properties.rs:151
+msgid "{format} (extensão: {extension})"
+msgstr "{format}（扩展名：{extension}）"
+
+#: crates/bigiris/src/gui/dialogs/properties.rs:163
+#: crates/bigiris/src/gui/dialogs/properties.rs:170
+msgid "Tamanho"
+msgstr "大小"
+
+#: crates/bigiris/src/gui/dialogs/properties.rs:165
+msgid "Modificado"
+msgstr "修改时间"
+
+#: crates/bigiris/src/gui/dialogs/properties.rs:171
+msgid "(indisponível: {error})"
+msgstr "（不可用：{error}）"
+
+#: crates/bigiris/src/gui/dialogs/properties.rs:180
+msgid "Imagem"
+msgstr "图像"
+
+#: crates/bigiris/src/gui/dialogs/properties.rs:197
+#: crates/bigiris/src/gui/dialogs/properties.rs:214
+msgid "Dimensões"
+msgstr "尺寸"
+
+#: crates/bigiris/src/gui/dialogs/properties.rs:201
+msgid "Megapixels"
+msgstr "百万像素"
+
+#: crates/bigiris/src/gui/dialogs/properties.rs:205
+msgid "Razão de aspecto"
+msgstr "宽高比"
+
+#: crates/bigiris/src/gui/dialogs/properties.rs:208
+msgid "Modo de cor"
+msgstr "色彩模式"
+
+#: crates/bigiris/src/gui/dialogs/properties.rs:209
+msgid "Bits por canal"
+msgstr "每通道位数"
+
+#: crates/bigiris/src/gui/dialogs/properties.rs:215
+msgid "(falha: não foi possível identificar o formato pelo conteúdo)"
+msgstr "（失败：无法根据内容识别格式）"
+
+#: crates/bigiris/src/gui/dialogs/properties.rs:225
+msgid "Orientação EXIF"
+msgstr "EXIF 方向"
+
+#: crates/bigiris/src/gui/dialogs/properties.rs:227
+msgid "{orientation} · use Girar ▸ Automático pra corrigir"
+msgstr "{orientation} · 使用 旋转图像 ▸ 自动 进行修正"
+
+#: crates/bigiris/src/gui/dialogs/properties.rs:242
+msgid "Tons de cinza"
+msgstr "灰度"
+
+#: crates/bigiris/src/gui/dialogs/properties.rs:243
+msgid "Tons de cinza + alfa"
+msgstr "灰度 + Alpha"
+
+#: crates/bigiris/src/gui/dialogs/properties.rs:280
+msgid "Campos presentes: {count}"
+msgstr "存在的字段：{count}"
+
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:25
+msgid "Não foi possível ler a imagem: {error}"
+msgstr "无法读取图像：{error}"
+
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:38
+msgid "Não foi possível gravar o resultado: {error}"
+msgstr "无法写入结果：{error}"
+
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:72
 msgid "Remover fundo — Prisma"
 msgstr "删除背景 — Prisma"
 
-#: crates/bigiris/src/gui.rs:6613 crates/bigiris/src/gui.rs:6726
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:77
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:177
 msgid "Remover fundo"
 msgstr "删除背景"
 
-#: crates/bigiris/src/gui.rs:6630
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:78
+msgid "Prisma · BiRefNet-lite"
+msgstr "Prisma · BiRefNet-lite"
+
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:94
+#: crates/bigiris/src/gui/previews.rs:223
 msgid "Nenhuma imagem selecionada"
 msgstr "没有图片"
 
-#: crates/bigiris/src/gui.rs:6631
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:95
 msgid "Informe um ou mais arquivos ao abrir o diálogo."
 msgstr "打开对话框时选择一个或多个文件。"
 
-#: crates/bigiris/src/gui.rs:6668
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:116
+msgid ""
+"Esta build não inclui IA. Recompile com `cargo build --features ai` e "
+"instale `onnxruntime` (Arch: `pacman -S onnxruntime`)."
+msgstr ""
+"此构建不包含 AI。请使用 `cargo build --features ai` 重新编译并安装 "
+"`onnxruntime`（Arch：`pacman -S onnxruntime`）。"
+
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:126
 msgid ""
 "Remoção de fundo: requer 8 GiB de RAM livre para iniciar. Este recurso é "
 "opcional."
 msgstr "背景删除需要 8 GiB 可用 RAM 才能启动。 此功能是可选的。"
 
-#: crates/bigiris/src/gui.rs:6686
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:140
 msgid "Modelo"
 msgstr "人工智能模型"
 
-#: crates/bigiris/src/gui.rs:6704
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:141
+msgid "BiRefNet-lite (MIT) · roda offline no seu computador"
+msgstr "BiRefNet-lite (MIT) · 在您的计算机上离线运行"
+
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:153
+msgid ""
+"«origem»_nobg.png · PNG com alfa, sem sobrescrever (_1, _2… se já existir)"
+msgstr "“源文件名”_nobg.png · 带 Alpha 的 PNG，不覆盖（如已存在则为 _1、_2…）"
+
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:160
 msgid "Remover fundo com IA local"
 msgstr "使用本地 AI 删除背景"
 
-#: crates/bigiris/src/gui.rs:6780
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:161
+msgid ""
+"O modelo roda inteiramente no seu computador. Nenhuma imagem sai do disco — "
+"sem upload, sem conta, sem API externa."
+msgstr ""
+"模型完全在您的计算机上运行。任何图像都不会离开磁盘 — 无需上传、无需账户、无外"
+"部 API。"
+
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:235
 msgid "Preparando…"
 msgstr "正在准备…"
 
-#: crates/bigiris/src/gui.rs:6910 crates/bigiris/src/gui.rs:6933
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:276
+msgid "Falha ao carregar o modelo: {error}"
+msgstr "加载模型失败：{error}"
+
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:368
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:388
 msgid "Imagens gravadas"
 msgstr "保存的图像"
 
-#: crates/bigiris/src/gui.rs:6934
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:389
 msgid "Falhas"
 msgstr "失败"
 
-#: crates/bigiris/src/gui.rs:6936
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:391
 msgid "Com erros"
 msgstr "有错误"
+
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:412
+msgid "Baixando modelo (uma vez só): {done} / {total}"
+msgstr "正在下载模型（仅一次）：{done} / {total}"
+
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:420
+msgid "Processando {current}/{total} — {file}"
+msgstr "正在处理 {current}/{total} — {file}"
+
+#: crates/bigiris/src/gui/dialogs/resize.rs:8
+msgid "Lanczos3 (padrão)"
+msgstr "(默认值) (Lanczos3)"
+
+#: crates/bigiris/src/gui/dialogs/resize.rs:9
+msgid "Mitchell"
+msgstr "Mitchell"
+
+#: crates/bigiris/src/gui/dialogs/resize.rs:10
+msgid "CatmullRom"
+msgstr "CatmullRom"
+
+#: crates/bigiris/src/gui/dialogs/resize.rs:11
+msgid "Bilinear"
+msgstr "Bilinear"
+
+#: crates/bigiris/src/gui/dialogs/resize.rs:12
+msgid "Nearest (sem anti-aliasing)"
+msgstr "最近(无抗锯齿)"
+
+#: crates/bigiris/src/gui/dialogs/resize.rs:29
+msgid "Redimensionar imagens — Prisma"
+msgstr "调整图像大小 — Prisma"
+
+#: crates/bigiris/src/gui/dialogs/resize.rs:41
+#: crates/bigiris/src/gui/dialogs/resize.rs:144
+#: crates/bigiris/src/gui/dialogs/resize.rs:372
+#: crates/bigimage-integrations/src/action.rs:79
+#: data/nautilus/bigiris-menu.py:115
+msgid "Redimensionar"
+msgstr "调整图像大小"
+
+#: crates/bigiris/src/gui/dialogs/resize.rs:47
+#: crates/bigiris/src/gui/dialogs/resize.rs:61
+msgid "Aresta máxima"
+msgstr "最大边界"
+
+#: crates/bigiris/src/gui/dialogs/resize.rs:48
+msgid "Escala (%)"
+msgstr "比额表(%)"
+
+#: crates/bigiris/src/gui/dialogs/resize.rs:49
+msgid "Dimensão exata (WxH)"
+msgstr "确切尺寸(WxH)"
+
+#: crates/bigiris/src/gui/dialogs/resize.rs:50
+msgid "Encaixar em (WxH)"
+msgstr "适合范围(WxH)"
+
+#: crates/bigiris/src/gui/dialogs/resize.rs:54
+msgid "Modo"
+msgstr "模式"
+
+#: crates/bigiris/src/gui/dialogs/resize.rs:62
+msgid "pixels (lado maior)"
+msgstr "像素(最长边)"
+
+#: crates/bigiris/src/gui/dialogs/resize.rs:66
+msgid "Porcentagem"
+msgstr "百分比"
+
+#: crates/bigiris/src/gui/dialogs/resize.rs:67
+msgid "100 = tamanho original"
+msgstr "100 = 原始大小"
+
+#: crates/bigiris/src/gui/dialogs/resize.rs:71
+msgid "Largura"
+msgstr "宽度"
+
+#: crates/bigiris/src/gui/dialogs/resize.rs:74
+msgid "Altura"
+msgstr "高度"
+
+#: crates/bigiris/src/gui/dialogs/resize.rs:78
+msgid "Largura máxima"
+msgstr "最大宽度"
+
+#: crates/bigiris/src/gui/dialogs/resize.rs:81
+msgid "Altura máxima"
+msgstr "最大高度"
+
+#: crates/bigiris/src/gui/dialogs/resize.rs:120
+msgid "Kernel de interpolação"
+msgstr "插值内核"
+
+#: crates/bigiris/src/gui/dialogs/resize.rs:134
+msgid "Modo de redimensionamento"
+msgstr "调整大小模式"
+
+#: crates/bigiris/src/gui/dialogs/resize.rs:137
+msgid "Opções"
+msgstr "备选方案"
+
+#: crates/bigiris/src/gui/dialogs/resize.rs:292
+msgid "Redimensionando…"
+msgstr "调整大小…"
+
+#: crates/bigiris/src/gui/dialogs/resize.rs:298
+msgid "Redimensionando"
+msgstr "调整大小"
+
+#: crates/bigiris/src/gui/dialogs/rotate.rs:25
+msgid "Girar imagens — Prisma"
+msgstr "旋转图像 — Prisma"
+
+#: crates/bigiris/src/gui/dialogs/rotate.rs:29
+#: crates/bigiris/src/gui/dialogs/rotate.rs:52
+#: crates/bigimage-integrations/src/action.rs:83
+#: data/nautilus/bigiris-menu.py:129
+msgid "Girar"
+msgstr "旋转图像"
+
+#: crates/bigiris/src/gui/dialogs/rotate.rs:31
+msgid "90° (horário)"
+msgstr "90°(顺时针方向)"
+
+#: crates/bigiris/src/gui/dialogs/rotate.rs:31
+#: crates/bigimage-integrations/src/action.rs:259
+#: data/nautilus/bigiris-menu.py:134
+msgid "180°"
+msgstr "180°"
+
+#: crates/bigiris/src/gui/dialogs/rotate.rs:31
+msgid "270° (anti-horário)"
+msgstr "270°(逆时针方向)"
+
+#: crates/bigiris/src/gui/dialogs/rotate.rs:34
+msgid "Rotação"
+msgstr "轮换"
+
+#: crates/bigiris/src/gui/dialogs/rotate.rs:93
+msgid "Girando…"
+msgstr "旋转…"
+
+#: crates/bigiris/src/gui/dialogs/rotate.rs:99
+msgid "Girando"
+msgstr "旋转"
+
+#: crates/bigiris/src/gui/dialogs/upscale.rs:26
+msgid "Aumentar resolução — Prisma"
+msgstr "高档 — 棱镜 (Prisma)"
+
+#: crates/bigiris/src/gui/dialogs/upscale.rs:39
+msgid "Aumentar resolução"
+msgstr "升级图像"
+
+#: crates/bigiris/src/gui/dialogs/upscale.rs:62
+msgid ""
+"Motor: Lanczos3 (CPU). O modo IA (Real-ESRGAN) será habilitado "
+"automaticamente quando um modelo ONNX FOSS estiver disponível."
+msgstr ""
+"引擎：Lanczos3 (CPU)。当有可用的 FOSS ONNX 模型时，将自动启用 AI 模式 (Real-"
+"ESRGAN)。"
+
+#: crates/bigiris/src/gui/dialogs/upscale.rs:83
+msgid "Fator"
+msgstr "因子"
+
+#: crates/bigiris/src/gui/dialogs/upscale.rs:98
+msgid "× {factor} (tamanho indisponível)"
+msgstr "× {factor}（大小不可用）"
+
+#: crates/bigiris/src/gui/dialogs/upscale.rs:128
+msgid "Aumentar"
+msgstr "升级图像"
+
+#: crates/bigiris/src/gui/dialogs/upscale.rs:182
+msgid "Aumentando…"
+msgstr "升级…"
+
+#: crates/bigiris/src/gui/dialogs/upscale.rs:191
+msgid "Aumentando"
+msgstr "升级"
+
+#: crates/bigiris/src/gui/previews.rs:32
+msgid "Pré-visualização"
+msgstr "预览"
+
+#: crates/bigiris/src/gui/previews.rs:38
+msgid "Original: {width}×{height} px"
+msgstr "原始：{width}×{height} px"
+
+#: crates/bigiris/src/gui/previews.rs:201
+msgid "Preparando pré-visualização…"
+msgstr "正在准备预览…"
+
+#: crates/bigiris/src/gui/previews.rs:249
+msgid "A preparação foi interrompida"
+msgstr "准备已中断"
 
 #: crates/bigiris/src/gui/transfers.rs:86
 msgid "A seleção é muito grande. Abra menos arquivos por vez."

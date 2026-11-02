@@ -66,6 +66,13 @@ def languages():
 def catalogs():
     return {lang: read_po(PO / f'{lang}.po') for lang in languages()}
 
+# Machine translation sometimes returns escaped markup such as "& # 160; …"
+# (a mangled &#160;) instead of the character itself. GTK, desktop files and
+# Thunar's XML show that text literally, so reject numeric entities and the
+# common named ones (e.g. "d &apos; interpolation") in any spacing variant.
+HTML_ENTITY_DEBRIS = re.compile(
+    r'&\s*(?:#\s*(?:[0-9]+|[xX][0-9a-fA-F]+)|(?:amp|apos|quot|lt|gt|nbsp|hellip)\s*;)')
+
 def check():
     expected = set(read_po(PO / 'bigiris.pot', allow_fuzzy=True)) - {''}
     for lang, entries in catalogs().items():
@@ -77,6 +84,8 @@ def check():
             translated = entries[source]
             if not translated.strip() or '\x00' in translated:
                 raise ValueError(f'{lang}: empty or NUL translation: {source!r}')
+            if HTML_ENTITY_DEBRIS.search(translated) and not HTML_ENTITY_DEBRIS.search(source):
+                raise ValueError(f'{lang}: HTML entity debris in translation of {source!r}: {translated!r}')
             placeholders = lambda s: sorted(re.findall(r'\{[A-Za-z_][A-Za-z_0-9]*(?::[^{}]+)?\}', s))
             if placeholders(source) != placeholders(translated):
                 raise ValueError(f'{lang}: changed format arguments: {source!r}')

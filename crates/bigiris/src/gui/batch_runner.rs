@@ -27,6 +27,7 @@ use std::sync::{mpsc, Arc};
 use std::time::{Duration, Instant};
 
 use bigimage_core::ConvertOutcome;
+use gettextrs::gettext;
 use gtk4 as gtk;
 use gtk4::prelude::*;
 use libadwaita as adw;
@@ -78,12 +79,88 @@ pub(super) fn format_size_delta(bytes_in: u64, bytes_out: u64) -> String {
     let ratio = (bytes_out as f64) / (bytes_in as f64);
     let pct = (ratio - 1.0) * 100.0;
     if pct.abs() < 0.5 {
-        "≈ mesmo tamanho".to_string()
+        gettext("≈ mesmo tamanho")
     } else if pct < 0.0 {
         format!("−{:.0}%", pct.abs())
     } else {
         format!("+{:.0}%", pct)
     }
+}
+
+/// A pending auto-close: the window (weakly), its timer and the
+/// `unrealize` handler that drops the timer with the window.
+type PendingClose = (
+    gtk4::glib::WeakRef<adw::ApplicationWindow>,
+    gtk4::glib::SourceId,
+    gtk4::glib::SignalHandlerId,
+);
+
+thread_local! {
+    /// Auto-close timers armed by [`arm_auto_close`], per window. A new run
+    /// disarms them so a quick second Apply is not closed mid-batch.
+    static PENDING_CLOSE: std::cell::RefCell<Vec<PendingClose>> =
+        const { std::cell::RefCell::new(Vec::new()) };
+}
+
+/// Cancel a pending auto-close for `window`. Every dialog calls this when a
+/// new run starts; unrealizing the window does it too.
+pub(super) fn disarm_auto_close(window: &adw::ApplicationWindow) {
+    let mine: Vec<_> = PENDING_CLOSE.with(|pending| {
+        let mut pending = pending.borrow_mut();
+        let (mine, others): (Vec<_>, Vec<_>) = std::mem::take(&mut *pending)
+            .into_iter()
+            .partition(|(weak, _, _)| weak.upgrade().as_ref() == Some(window));
+        // Entries of finalized windows: their timers can only no-op now.
+        *pending = others.into_iter().filter(|(weak, _, _)| weak.upgrade().is_some()).collect();
+        mine
+    });
+    for (_, id, handler) in mine {
+        id.remove();
+        window.disconnect(handler);
+    }
+}
+
+/// Whether `window` has an auto-close armed.
+#[cfg(test)]
+pub(super) fn auto_close_armed(window: &adw::ApplicationWindow) -> bool {
+    PENDING_CLOSE.with(|pending| {
+        pending.borrow().iter().any(|(weak, _, _)| weak.upgrade().as_ref() == Some(window))
+    })
+}
+
+/// Close `window` after `seconds` unless [`disarm_auto_close`] runs first
+/// (a new run, or the window going away). The timer holds only a weak
+/// reference, so it never keeps the dialog alive. Shared by every dialog.
+pub(super) fn arm_auto_close(window: &adw::ApplicationWindow, seconds: u32) {
+    disarm_auto_close(window);
+    let weak = window.downgrade();
+    let id = gtk4::glib::timeout_add_seconds_local_once(seconds, move || {
+        let Some(window) = weak.upgrade() else { return };
+        // The source has fired: forget it instead of removing it again.
+        let fired: Vec<_> = PENDING_CLOSE.with(|pending| {
+            let mut pending = pending.borrow_mut();
+            let (fired, others): (Vec<_>, Vec<_>) = std::mem::take(&mut *pending)
+                .into_iter()
+                .partition(|(other, _, _)| other.upgrade().as_ref() == Some(&window));
+            *pending = others;
+            fired
+        });
+        for (_, _, handler) in fired {
+            window.disconnect(handler);
+        }
+        window.close();
+    });
+    let handler = window.connect_unrealize(disarm_auto_close);
+    PENDING_CLOSE.with(|pending| pending.borrow_mut().push((window.downgrade(), id, handler)));
+}
+
+/// Summary counts. The catalog validator has no plural support, so a single
+/// message with named placeholders keeps the counts translatable.
+pub(super) fn format_counts(ok: usize, skip: usize, fail: usize) -> String {
+    gettext("{written} gravado(s), {skipped} ignorado(s), {failed} falha(s)")
+        .replace("{written}", &ok.to_string())
+        .replace("{skipped}", &skip.to_string())
+        .replace("{failed}", &fail.to_string())
 }
 
 /// Render the final state of a Prisma dialog after a batch finishes.
@@ -108,20 +185,24 @@ pub(super) fn finish_dialog(
     // Headline: counts + elapsed. Size delta on the next line when we
     // have both totals (skipped files contribute to bytes_in but not
     // bytes_out, so the comparison is fair only when ok > 0).
-    let counts = format!("{ok} gravado(s), {skip} ignorado(s), {fail} falha(s)");
+    let counts = format_counts(ok, skip, fail);
     let timing = format_duration(elapsed);
-    let mut msg = format!("Concluído em {timing} · {counts}");
+    let mut msg = gettext("Concluído em {time} · {counts}")
+        .replace("{time}", &timing)
+        .replace("{counts}", &counts);
     if ok > 0 && bytes_in > 0 && bytes_out > 0 {
         let delta = format_size_delta(bytes_in, bytes_out);
         let avg_in = bytes_in / (ok as u64).max(1);
         let avg_out = bytes_out / (ok as u64).max(1);
-        msg.push_str(&format!(
-            "\n{} → {} ({delta}) · média por arquivo {} → {}",
-            format_size(bytes_in),
-            format_size(bytes_out),
-            format_size(avg_in),
-            format_size(avg_out),
-        ));
+        msg.push('\n');
+        msg.push_str(
+            &gettext("{before} → {after} ({delta}) · média por arquivo {average_before} → {average_after}")
+                .replace("{before}", &format_size(bytes_in))
+                .replace("{after}", &format_size(bytes_out))
+                .replace("{delta}", &delta)
+                .replace("{average_before}", &format_size(avg_in))
+                .replace("{average_after}", &format_size(avg_out)),
+        );
     }
     if let Some(err) = first_err {
         msg.push('\n');
@@ -131,9 +212,16 @@ pub(super) fn finish_dialog(
     apply_btn.set_sensitive(true);
     cancel_btn.set_sensitive(true);
     if fail == 0 {
-        let window = window.clone();
-        gtk4::glib::timeout_add_seconds_local_once(2, move || window.close());
+        arm_auto_close(window, 2);
     }
+}
+
+/// The worker pool vanished without its summary: say so and let the user
+/// retry or close instead of leaving both buttons disabled forever.
+fn abort_dialog(status: &gtk::Label, apply_btn: &gtk::Button, cancel_btn: &gtk::Button) {
+    status.set_text(&gettext("O processamento terminou inesperadamente. Tente novamente."));
+    apply_btn.set_sensitive(true);
+    cancel_btn.set_sensitive(true);
 }
 
 /// Progress message sent from the worker pool to the UI poll.
@@ -213,13 +301,16 @@ where
                             .map(|n| n.to_string_lossy().into_owned())
                             .unwrap_or_default();
                         let input_bytes = std::fs::metadata(path).map(|m| m.len()).unwrap_or(0);
-                        let result =
-                            std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| work(path)))
-                                .unwrap_or_else(|_| {
-                                    Err(bigimage_core::BigImageError::Other(
-                                        "falha inesperada no worker".to_string(),
-                                    ))
-                                });
+                        // Scoped cancel lets closing the window stop an
+                        // isolated codec run instead of waiting up to 60 s.
+                        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                            crate::codec::with_cancel(cancelled.clone(), || work(path))
+                        }))
+                        .unwrap_or_else(|_| {
+                            Err(bigimage_core::BigImageError::Other(gettext(
+                                "falha inesperada no worker",
+                            )))
+                        });
                         match result {
                             Ok(ConvertOutcome::Written { output }) => {
                                 ok += 1;
@@ -265,8 +356,7 @@ where
                 }
                 Err(_) => {
                     fail += 1;
-                    first_err
-                        .get_or_insert_with(|| "um worker terminou inesperadamente".to_string());
+                    first_err.get_or_insert_with(|| gettext("um worker terminou inesperadamente"));
                 }
             }
         }
@@ -295,9 +385,10 @@ where
 /// touched inside the timeout closure, which runs locally.
 ///
 /// Cancellation: closing the window flips an atomic flag the workers
-/// check between files. The current file in each worker finishes (the
-/// encoder isn't interruptible mid-flight today), but the rest of the
-/// batch is skipped cleanly.
+/// check between files and that aborts an in-flight isolated codec run.
+/// An encode already in progress finishes and publishes atomically. The
+/// application is held until every worker has exited, so closing the last
+/// window never kills a worker mid-write and strands `.part` files.
 #[allow(clippy::too_many_arguments)]
 pub(super) fn run_batch_async<W>(
     files: Vec<PathBuf>,
@@ -311,18 +402,44 @@ pub(super) fn run_batch_async<W>(
     W: Fn(&Path) -> bigimage_core::Result<ConvertOutcome> + Send + Sync + 'static,
 {
     let cancelled = Arc::new(AtomicBool::new(false));
+    disarm_auto_close(&window);
 
-    {
+    // Disconnected when this run ends: every Apply connects its own, and a
+    // stale handler would keep the finished run's flag (and closure) alive.
+    let mut close_handler = Some({
         let cancelled = cancelled.clone();
         window.connect_close_request(move |_| {
-            cancelled.store(true, Ordering::Relaxed);
+            cancelled.store(true, Ordering::Release);
             gtk4::glib::Propagation::Proceed
-        });
-    }
+        })
+    });
 
     let rx = spawn_batch_workers(files, work, cancelled);
+    // Released with the poll closure, i.e. only after the pool reported back.
+    let hold = window.application().map(|app| app.hold());
 
-    gtk4::glib::timeout_add_local(std::time::Duration::from_millis(50), move || loop {
+    gtk4::glib::timeout_add_local(std::time::Duration::from_millis(50), move || {
+        let _hold = &hold;
+        let flow = poll_batch(&rx, &busy_label, &status, &apply_btn, &cancel_btn, &window);
+        if flow.is_break() {
+            if let Some(handler) = close_handler.take() {
+                window.disconnect(handler);
+            }
+        }
+        flow
+    });
+}
+
+/// Drain pending batch events; `Break` once the run is over.
+fn poll_batch(
+    rx: &mpsc::Receiver<AsyncBatchEvent>,
+    busy_label: &str,
+    status: &gtk::Label,
+    apply_btn: &gtk::Button,
+    cancel_btn: &gtk::Button,
+    window: &adw::ApplicationWindow,
+) -> gtk4::glib::ControlFlow {
+    loop {
         match rx.try_recv() {
             Ok(AsyncBatchEvent::Progress { done, total, file }) => {
                 status.set_text(&format!("{busy_label} {done}/{total} — {file}"));
@@ -335,27 +452,26 @@ pub(super) fn run_batch_async<W>(
                 elapsed,
                 bytes_in,
                 bytes_out,
+                cancelled,
                 ..
             }) => {
+                // Closed mid-run: nothing left to show or to auto-close.
+                if cancelled && !window.is_visible() {
+                    return gtk4::glib::ControlFlow::Break;
+                }
                 finish_dialog(
-                    &status,
-                    &apply_btn,
-                    &cancel_btn,
-                    &window,
-                    ok,
-                    skip,
-                    fail,
-                    first_err,
-                    elapsed,
-                    bytes_in,
-                    bytes_out,
+                    status, apply_btn, cancel_btn, window, ok, skip, fail, first_err, elapsed,
+                    bytes_in, bytes_out,
                 );
                 return gtk4::glib::ControlFlow::Break;
             }
             Err(mpsc::TryRecvError::Empty) => return gtk4::glib::ControlFlow::Continue,
-            Err(mpsc::TryRecvError::Disconnected) => return gtk4::glib::ControlFlow::Break,
+            Err(mpsc::TryRecvError::Disconnected) => {
+                abort_dialog(status, apply_btn, cancel_btn);
+                return gtk4::glib::ControlFlow::Break;
+            }
         }
-    });
+    }
 }
 
 #[cfg(test)]
@@ -380,6 +496,29 @@ mod worker_tests {
             cancelled,
         );
         assert!(matches!(summary(rx), AsyncBatchEvent::Done { done: 0, cancelled: true, .. }));
+    }
+
+    #[test]
+    fn closing_mid_run_reaches_the_isolated_codec() {
+        let cancelled = Arc::new(AtomicBool::new(false));
+        let trigger = cancelled.clone();
+        let rx = spawn_batch_workers(
+            vec![PathBuf::from("first.png")],
+            move |path| {
+                assert!(!crate::codec::cancelled());
+                trigger.store(true, Ordering::Release);
+                // The codec observes the same flag mid-file, not only between files.
+                assert!(crate::codec::cancelled());
+                Ok(ConvertOutcome::Skipped { output: path.to_path_buf() })
+            },
+            cancelled,
+        );
+        assert!(matches!(summary(rx), AsyncBatchEvent::Done { skip: 1, cancelled: true, .. }));
+    }
+
+    #[test]
+    fn counts_fill_every_placeholder() {
+        assert_eq!(format_counts(1, 0, 2), "1 gravado(s), 0 ignorado(s), 2 falha(s)");
     }
 
     #[test]

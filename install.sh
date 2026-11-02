@@ -2,17 +2,25 @@
 # install.sh — build + instala o BigIris para o usuário atual (~/.local), sem root.
 #
 # Espelha o que o PKGBUILD faz system-wide, mas com prefixo do usuário:
-#   binário, .desktop, ícone, gschema, traduções e service menus dos
-#   gerenciadores de arquivos. Compila SEMPRE com `--features "gui ai"`
-#   (visualizador GTK4 + remover-fundo por IA), que é o ponto fácil de errar
-#   ao rodar `cargo build` na mão.
+#   binário, gschema e traduções em $PREFIX; .desktop, ícone, metainfo e
+#   service menus dos gerenciadores de arquivos via
+#   `bigiris install-integrations --user`. Compila SEMPRE com
+#   `--features "gui ai"` (visualizador GTK4 + remover-fundo por IA), que é o
+#   ponto fácil de errar ao rodar `cargo build` na mão.
 #
 # Uso:
 #   ./install.sh                 # build + instala em ~/.local
 #   PREFIX=~/.local ./install.sh # idem (prefixo customizável)
 #   ./install.sh --no-build      # pula o cargo build; instala o target já compilado
 #   ./install.sh --bin-only      # só o binário (sem .desktop/ícone/integrações)
+#   ./install.sh --uninstall     # remove o que este script instalou em $PREFIX
 #   ./install.sh --help
+#
+# .desktop, ícone e metainfo vão sempre para $XDG_DATA_HOME (~/.local/share),
+# onde os ambientes gráficos procuram, mesmo com PREFIX customizado: quem
+# os grava é `install-integrations --user`, que também os pula quando o
+# pacote da distribuição já os fornece e os remove em
+# `bigiris uninstall-integrations`.
 #
 # Para instalação system-wide, use o pacote da distribuição (há receitas
 # para OpenMandriva e Arch em packaging/ e pkgbuild/).
@@ -24,11 +32,14 @@ SRC="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PREFIX="${PREFIX:-$HOME/.local}"
 BUILD=1
 BIN_ONLY=0
+UNINSTALL=0
+INTEGRATIONS_FAILED=0
 
 for arg in "$@"; do
     case "$arg" in
         --no-build) BUILD=0 ;;
         --bin-only) BIN_ONLY=1 ;;
+        --uninstall) UNINSTALL=1 ;;
         -h|--help)
             sed -n '2,/^set -euo/p' "$0" | sed 's/^# \{0,1\}//; /^set -euo/d'
             exit 0 ;;
@@ -40,6 +51,45 @@ say()  { printf '\033[1;36m▸ %s\033[0m\n' "$*"; }
 ok()   { printf '\033[1;32m✓ %s\033[0m\n' "$*"; }
 warn() { printf '\033[1;33m! %s\033[0m\n' "$*" >&2; }
 die()  { printf '\033[1;31m✗ %s\033[0m\n' "$*" >&2; exit 1; }
+
+# ── Desinstalação ─────────────────────────────────────────────────────────────
+if [ "$UNINSTALL" -eq 1 ]; then
+    SHARE="$PREFIX/share"
+    if [ -x "$PREFIX/bin/bigiris" ]; then
+        say "Removendo integrações dos gerenciadores de arquivos, .desktop, ícone e metainfo"
+        "$PREFIX/bin/bigiris" uninstall-integrations \
+            || warn "uninstall-integrations falhou (veja as mensagens acima)"
+    fi
+    # Cópias literais que versões antigas deste script gravavam em
+    # $PREFIX/share; só removidas se idênticas ao arquivo do repositório.
+    for f in applications/com.biglinux.Iris.desktop metainfo/com.biglinux.Iris.metainfo.xml \
+        icons/hicolor/scalable/apps/com.biglinux.Iris.svg; do
+        src="$SRC/data/${f##*/}"
+        case "$f" in icons/*) src="$SRC/data/$f" ;; esac
+        if [ -f "$SHARE/$f" ] && cmp -s "$src" "$SHARE/$f"; then
+            rm -f -- "$SHARE/$f"
+        fi
+    done
+    rm -f -- "$SHARE/glib-2.0/schemas/com.biglinux.Iris.gschema.xml"
+    if compgen -G "$SHARE/glib-2.0/schemas/*.xml" >/dev/null; then
+        if command -v glib-compile-schemas >/dev/null; then
+            glib-compile-schemas "$SHARE/glib-2.0/schemas" || warn "glib-compile-schemas falhou"
+        fi
+    else
+        # Sem nenhum schema, o cache compilado só guardaria o nosso, já removido.
+        rm -f -- "$SHARE/glib-2.0/schemas/gschemas.compiled"
+    fi
+    if [ -f "$SRC/data/po/LINGUAS" ]; then
+        while read -r lang; do
+            [ -z "$lang" ] && continue
+            case "$lang" in \#*) continue ;; esac
+            rm -f -- "$SHARE/locale/${lang}/LC_MESSAGES/bigiris.mo"
+        done < "$SRC/data/po/LINGUAS"
+    fi
+    rm -f -- "$PREFIX/bin/bigiris"
+    ok "BigIris removido de $PREFIX"
+    exit 0
+fi
 
 # ── Pré-requisitos ────────────────────────────────────────────────────────────
 say "Verificando dependências"
@@ -111,18 +161,16 @@ if [ "$BIN_ONLY" -eq 0 ]; then
     DATA="$SRC/data"
     SHARE="$PREFIX/share"
 
-    # .desktop, metainfo, ícone
-    say "Instalando .desktop, metainfo e ícone"
-    install -Dm644 "$DATA/com.biglinux.Iris.desktop"      "$SHARE/applications/com.biglinux.Iris.desktop"
-    install -Dm644 "$DATA/com.biglinux.Iris.metainfo.xml" "$SHARE/metainfo/com.biglinux.Iris.metainfo.xml"
-    install -Dm644 "$DATA/icons/hicolor/scalable/apps/com.biglinux.Iris.svg" \
-        "$SHARE/icons/hicolor/scalable/apps/com.biglinux.Iris.svg"
-
     # GSettings schema (necessário para o app GUI ler/gravar preferências)
     say "Instalando e compilando gschema"
     install -Dm644 "$DATA/com.biglinux.Iris.gschema.xml" "$SHARE/glib-2.0/schemas/com.biglinux.Iris.gschema.xml"
     if command -v glib-compile-schemas >/dev/null; then
-        glib-compile-schemas "$SHARE/glib-2.0/schemas" && ok "schemas compilados"
+        # `cmd && ok` dentro de um if não dispara o set -e: a falha sumiria.
+        if glib-compile-schemas "$SHARE/glib-2.0/schemas"; then
+            ok "schemas compilados"
+        else
+            warn "glib-compile-schemas falhou — o app pode reclamar de schema na 1ª execução"
+        fi
     else
         warn "glib-compile-schemas ausente — o app pode reclamar de schema na 1ª execução"
     fi
@@ -143,17 +191,18 @@ if [ "$BIN_ONLY" -eq 0 ]; then
         done < "$DATA/po/LINGUAS"
     fi
 
-    # Service menus dos gerenciadores de arquivos (Nautilus, Dolphin, Nemo, etc.)
+    # .desktop, ícone, metainfo e service menus dos gerenciadores de arquivos
+    # (pula o que o pacote da distro já fornece e atualiza os caches XDG).
     say "Instalando integrações dos gerenciadores de arquivos (--user)"
-    "$PREFIX/bin/bigiris" install-integrations --user && ok "integrações instaladas"
-
-    # Atualiza caches do desktop (best-effort)
-    command -v update-desktop-database >/dev/null && \
-        update-desktop-database "$SHARE/applications" >/dev/null 2>&1 || true
-    command -v gtk4-update-icon-cache >/dev/null && \
-        gtk4-update-icon-cache -q -f --ignore-theme-index "$SHARE/icons/hicolor" >/dev/null 2>&1 || true
-    command -v kbuildsycoca6 >/dev/null && \
-        kbuildsycoca6 --noincremental >/dev/null 2>&1 || true
+    # Uma falha aqui deixa menus de contexto ausentes ou desatualizados, mas
+    # o binário já está instalado: o self-test e a dica de PATH ainda rodam,
+    # e o script termina com erro no fim.
+    if "$PREFIX/bin/bigiris" install-integrations --user; then
+        ok "integrações instaladas"
+    else
+        INTEGRATIONS_FAILED=1
+        warn "install-integrations --user falhou (veja as mensagens acima)"
+    fi
 fi
 
 # ── Verificação final ─────────────────────────────────────────────────────────
@@ -166,3 +215,6 @@ case ":$PATH:" in
     *":$PREFIX/bin:"*) : ;;
     *) warn "$PREFIX/bin não está no PATH — adicione: export PATH=\"$PREFIX/bin:\$PATH\"" ;;
 esac
+if [ "$INTEGRATIONS_FAILED" -eq 1 ]; then
+    die "Integrações incompletas: corrija o erro acima e rode \"$PREFIX/bin/bigiris install-integrations --user\""
+fi

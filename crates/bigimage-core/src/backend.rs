@@ -22,6 +22,22 @@ pub struct Backend {
     pub metadata: fn(&Path) -> crate::Result<crate::Metadata>,
 }
 static BACKEND: OnceLock<Backend> = OnceLock::new();
+
+/// Upright pixels in the *source* colour space (no sRGB conversion), the
+/// detected format and the raw EXIF/ICC blobs, for in-place re-saves.
+pub type ResaveDecoded = (DynamicImage, Option<Format>, crate::metadata::SourceMetadata);
+static RESAVE: OnceLock<fn(&Path) -> ImageResult<ResaveDecoded>> = OnceLock::new();
+
+/// Install the process-boundary decoder used by
+/// [`crate::open_image_for_resave`]. Without it, a configured [`Backend`]
+/// still decodes (sRGB-normalised, via [`Backend::decode`]) but the source
+/// metadata cannot be recovered, so it is not re-attached.
+pub fn configure_resave(decode: fn(&Path) -> ImageResult<ResaveDecoded>) -> bool {
+    RESAVE.set(decode).is_ok()
+}
+pub(crate) fn configured_resave() -> Option<fn(&Path) -> ImageResult<ResaveDecoded>> {
+    RESAVE.get().copied()
+}
 /// Configure the backend once at executable startup, before processing files.
 pub fn configure(backend: Backend) -> bool {
     BACKEND.set(backend).is_ok()
@@ -33,6 +49,11 @@ pub(crate) fn configured() -> Option<&'static Backend> {
 /// standalone library consumers. Never calls the configured backend.
 pub fn decode_in_process(path: &Path) -> ImageResult<Decoded> {
     crate::pipeline::decode_local(path)
+}
+/// Resave decoding inside the isolated codec process (see
+/// [`configure_resave`]). Never calls the configured backend.
+pub fn decode_for_resave_in_process(path: &Path) -> ImageResult<ResaveDecoded> {
+    crate::pipeline::decode_local_with(path, false)
 }
 /// Header inspection inside the isolated codec process.
 pub fn dimensions_in_process(path: &Path) -> ImageResult<(u32, u32)> {

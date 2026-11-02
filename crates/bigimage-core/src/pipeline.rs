@@ -99,6 +99,17 @@ pub(crate) fn decode_image(input: &Path) -> image::ImageResult<(DynamicImage, Op
 }
 
 pub(crate) fn decode_local(input: &Path) -> image::ImageResult<(DynamicImage, Option<Format>)> {
+    decode_local_with(input, true).map(|(image, format, _)| (image, format))
+}
+
+/// Decode upright pixels. With `normalize`, ICC-tagged pixels are converted
+/// to sRGB and no metadata is returned; without it, pixels stay in the
+/// source colour space and the raw EXIF/ICC blobs are returned so an
+/// in-place save can re-attach them.
+pub(crate) fn decode_local_with(
+    input: &Path,
+    normalize: bool,
+) -> image::ImageResult<(DynamicImage, Option<Format>, crate::metadata::SourceMetadata)> {
     use image::ImageDecoder;
     let mut reader = bounded_reader(input)?;
     let format = reader.format().and_then(Format::from_image_format);
@@ -112,6 +123,15 @@ pub(crate) fn decode_local(input: &Path) -> image::ImageResult<(DynamicImage, Op
         reader = ImageReader::with_format(data, image::ImageFormat::Gif);
         reader.limits(limits.clone());
     }
+    let mut avif_transform = crate::container_bounds::ItemTransform::default();
+    if format == Some(Format::Avif) {
+        use std::io::{Seek, SeekFrom};
+        let mut data = reader.into_inner();
+        avif_transform = crate::container_bounds::primary_item_transform(&mut data)?;
+        data.seek(SeekFrom::Start(0))?;
+        reader = ImageReader::with_format(data, image::ImageFormat::Avif);
+        reader.limits(limits.clone());
+    }
     let mut decoder = reader.into_decoder()?;
     let (w, h) = decoder.dimensions();
     if w == 0 || h == 0 || u64::from(w) * u64::from(h) > MAX_PIXELS {
@@ -119,14 +139,20 @@ pub(crate) fn decode_local(input: &Path) -> image::ImageResult<(DynamicImage, Op
     }
     limits.reserve(decoder.total_bytes())?;
     decoder.set_limits(limits)?;
+    let exif = if normalize { None } else { decoder.exif_metadata().ok().flatten() };
     let orientation = decoder.orientation().unwrap_or(image::metadata::Orientation::NoTransforms);
-    let icc = decoder.icc_profile()?;
+    let icc = decoder.icc_profile()?.filter(|profile| !profile.is_empty());
     let mut image = DynamicImage::from_decoder(decoder)?;
     image.apply_orientation(orientation);
-    if let Some(icc) = icc.filter(|profile| !profile.is_empty()) {
-        crate::color::normalize_srgb(&mut image, &icc)?;
+    image = avif_transform.apply(image);
+    if normalize {
+        if let Some(icc) = icc {
+            crate::color::normalize_srgb(&mut image, &icc)?;
+        }
+        return Ok((image, format, crate::metadata::SourceMetadata::default()));
     }
-    Ok((image, format))
+    let exif = exif.filter(|exif| !exif.is_empty());
+    Ok((image, format, crate::metadata::SourceMetadata { exif, icc }))
 }
 
 /// Open and decode an upright image with shared resource bounds.
@@ -141,6 +167,115 @@ pub(crate) fn decode_with_source_format(input: &Path) -> Result<(DynamicImage, F
         ))
     })?;
     Ok((img, format))
+}
+
+/// Source format from magic bytes (extension as fallback) without running
+/// any decoder — the same answer `decode_with_source_format` reports.
+pub(crate) fn sniff_format(input: &Path) -> Option<Format> {
+    use std::io::Read;
+    use std::os::unix::fs::OpenOptionsExt;
+    let file = std::fs::OpenOptions::new()
+        .read(true)
+        .custom_flags(rustix::fs::OFlags::NONBLOCK.bits() as i32)
+        .open(input)
+        .ok()?;
+    if !file.metadata().ok()?.is_file() {
+        return None;
+    }
+    let mut head = Vec::with_capacity(64);
+    file.take(64).read_to_end(&mut head).ok()?;
+    image::guess_format(&head)
+        .ok()
+        .or_else(|| input.extension().and_then(image::ImageFormat::from_extension))
+        .and_then(Format::from_image_format)
+}
+
+/// `Skip` short-circuit before decoding: when the destination name can be
+/// computed from the path and header alone and already exists, return the
+/// skip outcome without paying for a full decode.
+///
+/// The operation is still validated first (see [`skip_existing`]), so an
+/// invalid request fails the same way whether or not the output exists.
+pub(crate) fn skip_before_decode(
+    input: &Path,
+    suffix: &str,
+    target: Option<Format>,
+    policy: OverwritePolicy,
+    validate: impl Fn(u32, u32) -> Result<()>,
+) -> Result<Option<crate::ConvertOutcome>> {
+    if !matches!(policy, OverwritePolicy::Skip) {
+        return Ok(None);
+    }
+    let Some(target) = target.or_else(|| sniff_format(input)) else {
+        return Ok(None);
+    };
+    let Ok(output) = resolve_output(input, Some(suffix), target, policy) else {
+        return Ok(None);
+    };
+    skip_existing(input, output, target, validate)
+}
+
+/// Skip outcome for an `output` that already exists, after the cheap checks
+/// a full run would fail on: the input must be a static image (no animation
+/// or extra pages) and `validate` must accept its header dimensions.
+///
+/// The header reports stored dimensions, before EXIF/AVIF orientation is
+/// applied; the operation is rejected only when it is invalid for both the
+/// stored and the transposed size, so a rotated photo is never refused
+/// wrongly (the post-decode check stays authoritative).
+///
+/// PNM outputs are never skipped here: their extension depends on the
+/// pixels (see [`content_output`]), so the decision waits for the decode.
+pub(crate) fn skip_existing(
+    input: &Path,
+    output: PathBuf,
+    target: Format,
+    validate: impl Fn(u32, u32) -> Result<()>,
+) -> Result<Option<crate::ConvertOutcome>> {
+    if target == Format::Pnm || output.symlink_metadata().is_err() {
+        return Ok(None);
+    }
+    crate::content::ensure_static(input)?;
+    let (w, h) = crate::image_dimensions(input)
+        .map_err(|source| BigImageError::Decode { path: input.to_path_buf(), source })?;
+    validate(w, h).or_else(|error| validate(h, w).map_err(|_| error))?;
+    tracing::debug!(?output, "skipping existing output before decoding");
+    Ok(Some(crate::ConvertOutcome::Skipped { output }))
+}
+
+/// Post-decode `Skip` check for a planned `output`. Always `false` for PNM,
+/// whose final name is only known once the pixels are (see
+/// [`content_output`]); publication still never overwrites under `Skip`.
+pub(crate) fn existing_output(output: &Path, target: Format, policy: OverwritePolicy) -> bool {
+    matches!(policy, OverwritePolicy::Skip) && target != Format::Pnm && output.exists()
+}
+
+/// Final output path for `image`: the planned one, except that a PNM
+/// target takes the extension of what is actually written — `.pgm` for
+/// gray, `.ppm` for colour ([`Format::extension_for`]).
+pub(crate) fn content_output(output: PathBuf, target: Format, image: &DynamicImage) -> PathBuf {
+    if target != Format::Pnm {
+        return output;
+    }
+    output.with_extension(target.extension_for(image.color()))
+}
+
+/// [`encode_and_cleanup`] to the [`content_output`] path, for pipelines
+/// that name their own outputs.
+pub(crate) fn encode_output(
+    img: DynamicImage,
+    output: PathBuf,
+    target: Format,
+    opts: &EncodeOptions,
+    policy: OverwritePolicy,
+) -> Result<crate::ConvertOutcome> {
+    let output = content_output(output, target, &img);
+    encode_and_cleanup(img, output, target, opts, policy)
+}
+
+/// Accept-everything validator for operations valid on any static image.
+pub(crate) fn any_size(_: u32, _: u32) -> Result<()> {
+    Ok(())
 }
 
 /// Compute the output path.
@@ -188,15 +323,45 @@ pub(crate) fn resolve_output_to(
     Ok(naive)
 }
 
+/// Existing regular file a `Replace` publication will overwrite.
+fn replaced_file(output: &Path, policy: OverwritePolicy) -> Option<std::fs::Metadata> {
+    matches!(policy, OverwritePolicy::Replace)
+        .then(|| std::fs::symlink_metadata(output).ok())
+        .flatten()
+        .filter(std::fs::Metadata::is_file)
+}
+
 /// A unique sibling temporary file, cleaned up on every error path.
-pub(crate) fn output_temp(output: &Path) -> Result<tempfile::NamedTempFile> {
+///
+/// The file is created with the mode a plain `open(2)` would use (`0o666`,
+/// or the permission bits of the file a `Replace` will overwrite), so the
+/// kernel applies the umask and any default ACL at creation. No `chmod` is
+/// needed for new outputs, which keeps writes working on FUSE/gvfs/SMB
+/// mounts that refuse `chmod`.
+pub(crate) fn output_temp(
+    output: &Path,
+    policy: OverwritePolicy,
+) -> Result<tempfile::NamedTempFile> {
+    use std::os::unix::fs::PermissionsExt;
     let parent = output.parent().filter(|p| !p.as_os_str().is_empty()).unwrap_or(Path::new("."));
     std::fs::create_dir_all(parent).map_err(BigImageError::Io)?;
+    let mode =
+        replaced_file(output, policy).map_or(0o666, |meta| meta.permissions().mode() & 0o777);
     tempfile::Builder::new()
         .prefix(".bigiris-")
         .suffix(".part")
+        .permissions(std::fs::Permissions::from_mode(mode))
         .tempfile_in(parent)
         .map_err(BigImageError::Io)
+}
+
+/// Make the rename itself durable. Best-effort: the file is already in
+/// place, so a failure here is logged rather than reported as a failed write.
+fn sync_parent(output: &Path) {
+    let parent = output.parent().filter(|p| !p.as_os_str().is_empty()).unwrap_or(Path::new("."));
+    if let Err(error) = std::fs::File::open(parent).and_then(|dir| dir.sync_all()) {
+        tracing::warn!(?parent, %error, "fsync do diretório de saída falhou");
+    }
 }
 
 /// Publish a complete file atomically. Skip/Increment never overwrite an
@@ -206,14 +371,27 @@ pub(crate) fn publish_temp(
     output: PathBuf,
     policy: OverwritePolicy,
 ) -> Result<crate::ConvertOutcome> {
-    temp.as_file().sync_all().map_err(BigImageError::Io)?;
-    if matches!(policy, OverwritePolicy::Replace) {
-        if let Ok(meta) = std::fs::symlink_metadata(&output) {
-            if meta.is_file() {
-                temp.as_file().set_permissions(meta.permissions()).map_err(BigImageError::Io)?;
+    use std::os::unix::fs::PermissionsExt;
+    // New outputs already got `0o666 & !umask` (and default ACLs) at
+    // creation, see `output_temp`. A replaced file keeps its exact
+    // permission bits: the umask may have narrowed them at creation, so copy
+    // them again — best-effort, since some mounts refuse chmod and the
+    // creation mode can only be narrower than the original, never wider.
+    if let Some(meta) = replaced_file(&output, policy) {
+        let wanted = meta.permissions().mode() & 0o777;
+        let current = temp.as_file().metadata().map(|m| m.permissions().mode() & 0o777).ok();
+        if current != Some(wanted) {
+            if let Err(error) =
+                temp.as_file().set_permissions(std::fs::Permissions::from_mode(wanted))
+            {
+                tracing::warn!(?output, %error, "permissões do arquivo substituído não copiadas");
             }
         }
+    }
+    temp.as_file().sync_all().map_err(BigImageError::Io)?;
+    if matches!(policy, OverwritePolicy::Replace) {
         temp.persist(&output).map_err(|e| BigImageError::Io(e.error))?;
+        sync_parent(&output);
         return Ok(crate::ConvertOutcome::Written { output });
     }
     let mut temp = temp;
@@ -229,7 +407,10 @@ pub(crate) fn publish_temp(
             candidate = output.with_file_name(name);
         }
         match temp.persist_noclobber(&candidate) {
-            Ok(_) => return Ok(crate::ConvertOutcome::Written { output: candidate }),
+            Ok(_) => {
+                sync_parent(&candidate);
+                return Ok(crate::ConvertOutcome::Written { output: candidate });
+            }
             Err(e) if e.error.kind() == std::io::ErrorKind::AlreadyExists => {
                 if matches!(policy, OverwritePolicy::Skip) {
                     return Ok(crate::ConvertOutcome::Skipped { output });
@@ -242,6 +423,16 @@ pub(crate) fn publish_temp(
     Err(BigImageError::Other(format!("muitos arquivos com o mesmo nome: {}", output.display())))
 }
 
+/// Metadata written by the encoder in addition to the pixels.
+#[derive(Debug, Default)]
+pub(crate) struct Extras {
+    /// Raw TIFF-structured EXIF (no `Exif\0\0` prefix).
+    pub(crate) exif: Option<Vec<u8>>,
+    /// ICC profile describing the pixels; `None` means sRGB, for which the
+    /// generated canonical profile is embedded where supported.
+    pub(crate) icc: Option<Vec<u8>>,
+}
+
 /// Encode into a unique sibling and publish only after encode, flush and sync.
 pub(crate) fn encode_and_cleanup(
     img: DynamicImage,
@@ -249,6 +440,18 @@ pub(crate) fn encode_and_cleanup(
     target: Format,
     opts: &EncodeOptions,
     policy: OverwritePolicy,
+) -> Result<crate::ConvertOutcome> {
+    encode_and_cleanup_with(img, output, target, opts, policy, &Extras::default())
+}
+
+/// [`encode_and_cleanup`] with extra metadata for the encoder.
+pub(crate) fn encode_and_cleanup_with(
+    img: DynamicImage,
+    output: PathBuf,
+    target: Format,
+    opts: &EncodeOptions,
+    policy: OverwritePolicy,
+    extras: &Extras,
 ) -> Result<crate::ConvertOutcome> {
     use std::io::Write;
     let destination_bpp = match target {
@@ -258,10 +461,10 @@ pub(crate) fn encode_and_cleanup(
     };
     check_dimensions(img.width(), img.height(), destination_bpp)?;
     let prepared = crate::convert::prepare_for_target(img, target);
-    let mut temp = output_temp(&output)?;
+    let mut temp = output_temp(&output, policy)?;
     {
         let mut writer = std::io::BufWriter::new(temp.as_file_mut());
-        encode_to_writer(&prepared, &mut writer, target, opts)
+        encode_to_writer(&prepared, &mut writer, target, opts, extras)
             .map_err(|source| BigImageError::Encode { path: output.clone(), source })?;
         writer.flush().map_err(BigImageError::Io)?;
     }
@@ -273,15 +476,23 @@ fn encode_to_writer(
     writer: &mut (impl std::io::Write + std::io::Seek),
     target: Format,
     opts: &EncodeOptions,
+    extras: &Extras,
 ) -> image::ImageResult<()> {
     use image::ImageEncoder;
+    let icc = || match &extras.icc {
+        Some(icc) => Ok(icc.clone()),
+        None => crate::color::srgb_profile(),
+    };
+    let exif = |encoder: &mut dyn FnMut(Vec<u8>) -> image::ImageResult<()>| match &extras.exif {
+        Some(exif) => encoder(exif.clone()),
+        None => Ok(()),
+    };
     match target {
         Format::Jpeg => {
             let mut encoder =
                 image::codecs::jpeg::JpegEncoder::new_with_quality(writer, opts.jpeg_quality());
-            encoder
-                .set_icc_profile(crate::color::srgb_profile()?)
-                .map_err(image::ImageError::Unsupported)?;
+            encoder.set_icc_profile(icc()?).map_err(image::ImageError::Unsupported)?;
+            exif(&mut |e| encoder.set_exif_metadata(e).map_err(image::ImageError::Unsupported))?;
             let rgb = img.to_rgb8();
             encoder.write_image(
                 rgb.as_raw(),
@@ -301,6 +512,8 @@ fn encode_to_writer(
                     .map(|n| n.get().saturating_sub(1).clamp(1, 2))
                     .unwrap_or(1),
             ));
+            let mut encoder = encoder;
+            exif(&mut |e| encoder.set_exif_metadata(e).map_err(image::ImageError::Unsupported))?;
             let rgba = img.to_rgba8();
             encoder.write_image(
                 rgba.as_raw(),
@@ -316,19 +529,76 @@ fn encode_to_writer(
             } else {
                 PngEncoder::new(writer)
             };
-            if matches!(
-                img.color(),
-                image::ColorType::Rgb8
-                    | image::ColorType::Rgba8
-                    | image::ColorType::Rgb16
-                    | image::ColorType::Rgba16
-            ) {
-                encoder
-                    .set_icc_profile(crate::color::srgb_profile()?)
-                    .map_err(image::ImageError::Unsupported)?;
+            // A custom profile was matched to the pixel layout by the caller;
+            // the generated sRGB one only describes RGB pixels.
+            if extras.icc.is_some()
+                || matches!(
+                    img.color(),
+                    image::ColorType::Rgb8
+                        | image::ColorType::Rgba8
+                        | image::ColorType::Rgb16
+                        | image::ColorType::Rgba16
+                )
+            {
+                encoder.set_icc_profile(icc()?).map_err(image::ImageError::Unsupported)?;
             }
+            exif(&mut |e| encoder.set_exif_metadata(e).map_err(image::ImageError::Unsupported))?;
             encoder.write_image(img.as_bytes(), img.width(), img.height(), img.color().into())
         }
+        Format::WebP if extras.icc.is_some() || extras.exif.is_some() => {
+            let mut encoder = image::codecs::webp::WebPEncoder::new_lossless(writer);
+            if let Some(icc) = &extras.icc {
+                encoder.set_icc_profile(icc.clone()).map_err(image::ImageError::Unsupported)?;
+            }
+            exif(&mut |e| encoder.set_exif_metadata(e).map_err(image::ImageError::Unsupported))?;
+            encoder.write_image(img.as_bytes(), img.width(), img.height(), img.color().into())
+        }
+        Format::Tiff if extras.icc.is_some() => {
+            let mut encoder = image::codecs::tiff::TiffEncoder::new(writer);
+            encoder.set_icc_profile(icc()?).map_err(image::ImageError::Unsupported)?;
+            encoder.write_image(img.as_bytes(), img.width(), img.height(), img.color().into())
+        }
+        Format::Pnm => write_pnm(img, writer),
         _ => img.write_to(writer, target.to_image_format()),
     }
+}
+
+/// Binary PGM (P5) or PPM (P6) at the prepared depth. The vendored PNM
+/// encoder writes PAM (P7) by default — which many viewers cannot open and
+/// which contradicts the `.pgm`/`.ppm` name — and its P5/P6 headers only
+/// take 8-bit samples. Netpbm stores 16-bit samples big-endian.
+fn write_pnm(img: &DynamicImage, writer: &mut impl std::io::Write) -> image::ImageResult<()> {
+    use image::ColorType;
+    let rgb8;
+    let img = match img.color() {
+        ColorType::L8 | ColorType::L16 | ColorType::Rgb8 | ColorType::Rgb16 => img,
+        // prepare_for_target never produces these; stay total anyway.
+        _ => {
+            rgb8 = DynamicImage::ImageRgb8(img.to_rgb8());
+            &rgb8
+        }
+    };
+    let (magic, maxval) = match img.color() {
+        ColorType::L8 => ("P5", 255),
+        ColorType::L16 => ("P5", 65535),
+        ColorType::Rgb16 => ("P6", 65535),
+        _ => ("P6", 255),
+    };
+    write!(writer, "{magic}\n{} {}\n{maxval}\n", img.width(), img.height())?;
+    match img {
+        DynamicImage::ImageLuma16(b) => write_be16(b.as_raw(), writer)?,
+        DynamicImage::ImageRgb16(b) => write_be16(b.as_raw(), writer)?,
+        other => writer.write_all(other.as_bytes())?,
+    }
+    Ok(())
+}
+
+fn write_be16(samples: &[u16], writer: &mut impl std::io::Write) -> std::io::Result<()> {
+    let mut chunk = Vec::with_capacity(64 * 1024);
+    for part in samples.chunks(32 * 1024) {
+        chunk.clear();
+        chunk.extend(part.iter().flat_map(|v| v.to_be_bytes()));
+        writer.write_all(&chunk)?;
+    }
+    Ok(())
 }

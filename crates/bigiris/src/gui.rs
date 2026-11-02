@@ -14,7 +14,7 @@ use std::cell::{Cell, RefCell};
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{mpsc, Arc, Condvar, Mutex};
+use std::sync::{Arc, Condvar, Mutex};
 
 use adw::prelude::*;
 use gettextrs::gettext;
@@ -24,6 +24,7 @@ use libadwaita as adw;
 
 mod previews;
 mod transfers;
+mod viewer;
 mod zoom;
 use previews::{
     build_preview_column, dynamic_image_to_texture, prepare_dialog, refresh_preview,
@@ -46,6 +47,8 @@ const BOTTOM_EDGE_PX: f64 = 110.0;
 const DEFAULT_EDGE_HIDE_MS: u64 = 1500;
 /// OSD pill visible duration after a nav/zoom pulse, mpv-style.
 const OSD_PULSE_MS: u64 = 1200;
+/// How long a save notice about dropped metadata stays on screen.
+const OSD_NOTICE_MS: u64 = 6000;
 /// Idle time before the cursor itself blinks out (mouse still, no key).
 const CURSOR_HIDE_MS: u64 = 2000;
 /// Slideshow step between auto-advances (Space toggles).
@@ -58,20 +61,27 @@ const THEATER_CSS: &str = "
 .theater, .theater scrolledwindow, .theater scrolledwindow > viewport {
     background-color: #101216;
 }
-.film-strip { padding: 4px 8px; }
-.film-strip button { padding: 2px; min-height: 0; min-width: 0; }
-.film-strip button.active-thumb {
-    outline: 2px solid @accent_color;
-    outline-offset: -2px;
+.film-strip-bar { border-radius: 14px; background-color: rgba(0, 0, 0, 0.6); }
+.film-strip { padding: 6px; }
+.film-strip button {
+    padding: 0; min-height: 0; min-width: 0;
+    border-radius: 8px; opacity: 0.6; transition: opacity 150ms ease-out;
 }
+.film-strip button:hover, .film-strip button:focus-visible { opacity: 1; }
+.film-strip button.active-thumb {
+    opacity: 1;
+    outline: 2px solid @accent_color;
+    outline-offset: 2px;
+}
+.histogram-overlay { border-radius: 12px; }
 .viewer-loading { padding: 12px; border-radius: 8px; background: @window_bg_color; color: @window_fg_color; }
 .plasma headerbar button { border-radius: 6px; }
 .plasma .suggested-action { border-radius: 6px; }
 .plasma .viewer-osd { border-radius: 8px; }
 ";
 
-/// Pixel size of each thumbnail in the film strip (longest edge).
-const THUMB_EDGE: u32 = 80;
+/// Side of each square film-strip cell, in logical pixels.
+const THUMB_EDGE: u32 = 64;
 
 const fn n_(text: &'static str) -> &'static str {
     text
@@ -98,48 +108,40 @@ pub fn run_viewer(files: Vec<PathBuf>) -> i32 {
         .flags(gio::ApplicationFlags::NON_UNIQUE)
         .build();
 
-    let files = Rc::new(files);
+    // Abrir precisa parecer instantâneo: a decodificação da imagem pedida
+    // começa antes do GTK iniciar e corre em paralelo com a criação da
+    // janela, e a varredura da pasta (setas, film strip) acontece em
+    // segundo plano. Nenhuma janela intermediária aparece antes da foto.
+    let preload = files.first().map(|first| {
+        let loader = ViewerLoader::new();
+        loader.request(LoadRequest {
+            generation: 1,
+            path: first.clone(),
+            ops: Vec::new(),
+            max_pixels: None,
+        });
+        loader
+    });
+    let folder = (files.len() == 1).then(|| {
+        let input = files.clone();
+        let cancel = Arc::new(AtomicBool::new(false));
+        let worker_cancel = cancel.clone();
+        let scan = gio::spawn_blocking(move || expand_to_folder_cancellable(input, &worker_cancel));
+        (scan, cancel)
+    });
+    let startup = RefCell::new(Some((files, preload, folder)));
     app.connect_activate(move |app| {
         install_theater_css();
-        if files.is_empty() {
-            build_window(app, Rc::new(Vec::new()), 0).present();
-            return;
-        }
-        let waiting = adw::ApplicationWindow::builder()
-            .application(app)
-            .title(gettext("BigIris — abrindo imagens"))
-            .default_width(640)
-            .default_height(480)
-            .build();
-        let spinner = gtk::Spinner::new();
-        spinner.start();
-        waiting.set_content(Some(&spinner));
-        waiting.present();
-        let input = files.as_ref().clone();
-        let cancel = Arc::new(AtomicBool::new(false));
-        let closing = cancel.clone();
-        waiting.connect_unrealize(move |_| closing.store(true, Ordering::Release));
-        let (tx, rx) = mpsc::sync_channel(1);
-        std::thread::spawn(move || {
-            let _ = tx.send(expand_to_folder_cancellable(input, &cancel));
-        });
-        let weak = waiting.downgrade();
-        let weak_app = app.downgrade();
-        glib::timeout_add_local(Duration::from_millis(16), move || {
-            let Some(waiting) = weak.upgrade() else { return glib::ControlFlow::Break };
-            if !waiting.is_visible() {
-                return glib::ControlFlow::Break;
-            }
-            match rx.try_recv() {
-                Ok((files, index)) => {
-                    if let Some(app) = weak_app.upgrade() {
-                        build_window(&app, Rc::new(files), index).present();
-                    }
-                    waiting.close();
-                    glib::ControlFlow::Break
-                }
-                Err(mpsc::TryRecvError::Empty) => glib::ControlFlow::Continue,
-                Err(mpsc::TryRecvError::Disconnected) => glib::ControlFlow::Break,
+        let Some((files, preload, folder)) = startup.borrow_mut().take() else { return };
+        let (window, state) = build_window_preloaded(app, Rc::new(files), 0, preload);
+        window.present();
+        let Some((scan, cancel)) = folder else { return };
+        window.connect_unrealize(move |_| cancel.store(true, Ordering::Release));
+        // Awaited instead of polled: nothing wakes the loop until the scan ends.
+        glib::MainContext::default().spawn_local(async move {
+            let Ok((files, index)) = scan.await else { return };
+            if let Some(state) = state.upgrade() {
+                adopt_folder(&state, files, index);
             }
         });
     });
@@ -341,6 +343,9 @@ struct ViewerState {
     /// One button per file so we can flip `.active-thumb` on navigation.
     film_strip_buttons: Vec<gtk::Button>,
     film_strip_start: usize,
+    /// Index the strip last highlighted and centred, so repeated refreshes
+    /// for the same image (zoom steps, edge reveals) do no work.
+    film_strip_active: Option<usize>,
     film_strip_box: gtk::Box,
     thumbnail_cancel: Arc<AtomicBool>,
     /// When true (accessibility override), chrome stays pinned visible.
@@ -356,6 +361,11 @@ struct ViewerState {
     bottom_hide_source: Option<glib::SourceId>,
     osd_hide_source: Option<glib::SourceId>,
     cursor_hide_source: Option<glib::SourceId>,
+    /// Last pointer motion. The cursor timer is armed once and, when it
+    /// fires early, re-arms for the remaining time, instead of being
+    /// destroyed and recreated on every motion event.
+    last_motion: std::time::Instant,
+    cursor_hidden: bool,
     /// Slideshow auto-advance tick (Space toggles). `None` = stopped.
     slideshow_source: Option<glib::SourceId>,
     /// DrawingArea com o overlay de histograma (canto inferior-direito).
@@ -364,14 +374,46 @@ struct ViewerState {
     /// Histograma RGB da imagem atual: `[0..256]=R, [256..512]=G, [512..768]=B`.
     /// Recalculado em cada `update_display`.
     histogram: [u32; 768],
+    /// Current zoom level shown in the header, e.g. "23%".
+    zoom_level: gtk::Label,
+    /// Switches between the start page, the picture and the error page.
+    stack: gtk::Stack,
+    error_page: adw::StatusPage,
+    /// Invisible pixels that keep the neighbours uploaded to the GPU.
+    warm_slots: [gtk::Image; 2],
     /// Decode and edit rendering happen away from GTK's main loop. A
     /// generation token makes rapid navigation discard stale results.
     loader: ViewerLoader,
     load_generation: u64,
-    loading_spinner: gtk::Spinner,
+    /// Decodes the previous and next files while the current one is on
+    /// screen, so arrow keys switch without waiting for a decode.
+    prefetcher: ViewerLoader,
+    /// File the prefetcher is decoding right now.
+    prefetching: Option<PathBuf>,
+    /// The current file and its neighbours, ready to show.
+    frame_cache: Vec<CachedFrame>,
+    /// Files too large to keep in memory ahead of time.
+    prefetch_skip: Vec<PathBuf>,
+    /// False while the current file is still being decoded; prefetching
+    /// waits so it never competes with the image the user asked for.
+    current_ready: bool,
+    /// File whose unedited pixels `texture` holds. The film strip reuses
+    /// the texture for the current cell only when it matches: `texture`
+    /// still shows the previous image while the next one is decoding.
+    shown_path: Option<PathBuf>,
+    /// The current file is the one the prefetcher is already decoding, so
+    /// its result is shown instead of decoding the same file twice.
+    awaiting_prefetch: bool,
+    /// Thumbnails wait for the first image so they never compete with it.
+    first_frame_shown: bool,
+    deferred_thumbnails: Option<Box<dyn FnOnce()>>,
+    /// Only shown while edits are written to disk; loading shows nothing.
+    loading_spinner: adw::Spinner,
     /// Dialog de propriedades atualmente aberto, se houver. Evita que
     /// cliques repetidos no botão `i` empilhem janelas.
-    props_dialog: Option<adw::ApplicationWindow>,
+    /// The modification time is part of the key: after an in-place save
+    /// the same path describes different pixels and metadata.
+    props_dialog: Option<(adw::ApplicationWindow, PathBuf, Option<std::time::SystemTime>)>,
     /// Edições pendentes (rotate/flip) aplicadas in-memory sobre a
     /// imagem decodificada. Vazio = arquivo "limpo". `Ctrl+S` grava e
     /// limpa; a navegação é bloqueada enquanto houver alterações.
@@ -401,13 +443,45 @@ struct LoadRequest {
     generation: u64,
     path: PathBuf,
     ops: Vec<EditOp>,
+    /// Skip files whose header reports more pixels than this.
+    max_pixels: Option<u64>,
 }
 
 #[derive(Debug)]
 struct DecodedFrame {
     generation: u64,
     path: PathBuf,
+    /// Modification time read before decoding, to spot later changes.
+    modified: Option<std::time::SystemTime>,
+    /// Pixels include in-memory edits, so they do not match the file.
+    edited: bool,
     pixels: Result<RawFrame, String>,
+}
+
+/// A decoded file kept ready on the GTK side.
+#[derive(Clone)]
+struct CachedFrame {
+    path: PathBuf,
+    modified: Option<std::time::SystemTime>,
+    texture: gdk::Texture,
+    natural: (u32, u32),
+    histogram: Histogram,
+}
+
+/// Neighbours above this size are not decoded ahead: three of them would
+/// hold more than half a gigabyte of RGBA pixels.
+const PREFETCH_MAX_PIXELS: u64 = 40_000_000;
+
+/// Pixel count from the file header, without decoding. `None` for formats
+/// the `image` crate cannot probe (RAW, HEIF…); those are decoded anyway.
+fn header_pixels(path: &Path) -> Option<u64> {
+    let (w, h) =
+        image::ImageReader::open(path).ok()?.with_guessed_format().ok()?.into_dimensions().ok()?;
+    Some(u64::from(w) * u64::from(h))
+}
+
+fn file_modified(path: &Path) -> Option<std::time::SystemTime> {
+    std::fs::metadata(path).and_then(|meta| meta.modified()).ok()
 }
 
 /// One coalescing decode worker per viewer. When the user holds an arrow
@@ -417,6 +491,8 @@ struct ViewerLoader {
     pending: Arc<(Mutex<Option<LoadRequest>>, Condvar)>,
     results: Arc<Mutex<Option<DecodedFrame>>>,
     stopped: Arc<AtomicBool>,
+    /// Signalled for every published result; closed when the worker stops.
+    wake: viewer::Wake,
 }
 
 impl ViewerLoader {
@@ -427,6 +503,8 @@ impl ViewerLoader {
         let worker_pending = pending.clone();
         let worker_results = results.clone();
         let worker_stopped = stopped.clone();
+        let wake = viewer::Wake::default();
+        let worker_wake = wake.clone();
         std::thread::Builder::new()
             .name("bigiris-viewer-decode".to_string())
             .spawn(move || loop {
@@ -441,10 +519,19 @@ impl ViewerLoader {
                     }
                     slot.take().expect("request checked above")
                 };
-                let pixels = crate::codec::with_cancel(worker_stopped.clone(), || {
-                    decode_frame(&request.path, &request.ops)
-                })
-                .map_err(|e| e.to_string());
+                let modified = file_modified(&request.path);
+                let edited = !request.ops.is_empty();
+                let oversized = request.max_pixels.is_some_and(|max| {
+                    header_pixels(&request.path).is_some_and(|pixels| pixels > max)
+                });
+                let pixels = if oversized {
+                    Err("image too large to prefetch".to_string())
+                } else {
+                    crate::codec::with_cancel(worker_stopped.clone(), || {
+                        decode_frame(&request.path, &request.ops)
+                    })
+                    .map_err(|e| e.to_string())
+                };
                 if worker_stopped.load(Ordering::Relaxed) {
                     break;
                 }
@@ -452,11 +539,14 @@ impl ViewerLoader {
                 *worker_results.lock().expect("viewer result slot poisoned") = Some(DecodedFrame {
                     generation: request.generation,
                     path: request.path,
+                    modified,
+                    edited,
                     pixels,
                 });
+                worker_wake.notify();
             })
             .expect("could not start viewer decoder");
-        Self { pending, results, stopped }
+        Self { pending, results, stopped, wake }
     }
 
     fn request(&self, request: LoadRequest) {
@@ -476,6 +566,7 @@ impl ViewerLoader {
         self.stopped.store(true, Ordering::Relaxed);
         *slot = None;
         ready.notify_one();
+        self.wake.close();
     }
 }
 
@@ -506,30 +597,36 @@ impl ViewerState {
     }
 }
 
-fn build_window(
-    app: &adw::Application,
-    files: Rc<Vec<PathBuf>>,
-    start_idx: usize,
-) -> adw::ApplicationWindow {
-    build_window_tracked(app, files, start_idx).0
-}
-
+#[cfg(test)]
 fn build_window_tracked(
     app: &adw::Application,
     files: Rc<Vec<PathBuf>>,
     start_idx: usize,
 ) -> (adw::ApplicationWindow, std::rc::Weak<RefCell<ViewerState>>) {
+    build_window_preloaded(app, files, start_idx, None)
+}
+
+/// `preload` is a loader that already received generation 1 for
+/// `files[start_idx]`, so the first frame is not requested twice.
+fn build_window_preloaded(
+    app: &adw::Application,
+    files: Rc<Vec<PathBuf>>,
+    start_idx: usize,
+    preload: Option<ViewerLoader>,
+) -> (adw::ApplicationWindow, std::rc::Weak<RefCell<ViewerState>>) {
+    let preloaded = preload.is_some();
     let settings = app_settings();
     let has_images = !files.is_empty();
     let window_width = if has_images {
         settings.as_ref().map_or(1280, |s| s.int("window-width")).max(480)
     } else {
-        420
+        // Same start-page size as GNOME's image viewer (Loupe).
+        600
     };
     let window_height = if has_images {
         settings.as_ref().map_or(800, |s| s.int("window-height")).max(360)
     } else {
-        360
+        498
     };
     let start_maximized =
         has_images && settings.as_ref().is_some_and(|s| s.boolean("window-maximized"));
@@ -579,6 +676,13 @@ fn build_window_tracked(
     let stack = gtk::Stack::new();
     stack.add_named(&status, Some("empty"));
     stack.add_named(&scroller, Some("picture"));
+    // Stays on screen when the current file cannot be read, so a missing or
+    // broken file never leaves a silent black window.
+    let error_page = adw::StatusPage::builder()
+        .icon_name("image-missing-symbolic")
+        .title(gettext("Não foi possível abrir a imagem"))
+        .build();
+    stack.add_named(&error_page, Some("error"));
 
     // OSD pill (mpv-style): filename · index · zoom. Hidden by default,
     // pulses on nav/zoom. Crossfade in, slide-down on hide so it feels
@@ -586,6 +690,11 @@ fn build_window_tracked(
     let osd_label = gtk::Label::builder()
         .label("")
         .css_classes(["osd", "title-4"])
+        // Long notices (dropped metadata after a save) wrap instead of
+        // widening the pill past the window.
+        .wrap(true)
+        .max_width_chars(60)
+        .justify(gtk::Justification::Center)
         .margin_start(12)
         .margin_end(12)
         .margin_top(6)
@@ -610,14 +719,44 @@ fn build_window_tracked(
     // Film strip: horizontal row of thumbnail buttons, revealed only when
     // the cursor touches the bottom edge zone. Thumbs are built up lazily
     // (one per idle tick) so huge selections don't stall startup.
-    let film_strip_box = gtk::Box::new(gtk::Orientation::Horizontal, 4);
+    let film_strip_box = gtk::Box::new(gtk::Orientation::Horizontal, 8);
     film_strip_box.add_css_class("film-strip");
+    // A rounded bar that hugs the thumbnails and scrolls when they do not
+    // fit, centred like the OSD controls of GNOME's media apps.
     let film_strip_scroll = gtk::ScrolledWindow::builder()
         .hscrollbar_policy(gtk::PolicyType::Automatic)
         .vscrollbar_policy(gtk::PolicyType::Never)
+        .propagate_natural_width(true)
+        .overflow(gtk::Overflow::Hidden)
         .child(&film_strip_box)
-        .height_request(96)
         .build();
+    film_strip_scroll.add_css_class("film-strip-bar");
+    // A horizontal-only ScrolledWindow ignores vertical wheel steps, and
+    // most mice only have those: map them onto the horizontal axis.
+    // Capture phase: the ScrolledWindow's own controller would otherwise
+    // claim the event first and drop the vertical part.
+    let strip_wheel = gtk::EventControllerScroll::new(gtk::EventControllerScrollFlags::VERTICAL);
+    strip_wheel.set_propagation_phase(gtk::PropagationPhase::Capture);
+    {
+        let strip = film_strip_scroll.downgrade();
+        strip_wheel.connect_scroll(move |controller, _dx, dy| {
+            let Some(strip) = strip.upgrade() else { return glib::Propagation::Proceed };
+            if dy == 0.0 {
+                return glib::Propagation::Proceed;
+            }
+            let adjustment = strip.hadjustment();
+            // Same step GTK uses for discrete wheel clicks.
+            let step = if controller.unit() == gdk::ScrollUnit::Surface {
+                dy
+            } else {
+                dy * adjustment.page_size().powf(2.0 / 3.0)
+            };
+            let max = (adjustment.upper() - adjustment.page_size()).max(adjustment.lower());
+            adjustment.set_value((adjustment.value() + step).clamp(adjustment.lower(), max));
+            glib::Propagation::Stop
+        });
+    }
+    film_strip_scroll.add_controller(strip_wheel);
 
     let film_strip_buttons = Vec::new();
 
@@ -626,7 +765,10 @@ fn build_window_tracked(
         .transition_duration(220)
         .reveal_child(false)
         .valign(gtk::Align::End)
-        .halign(gtk::Align::Fill)
+        .halign(gtk::Align::Center)
+        .margin_start(12)
+        .margin_end(12)
+        .margin_bottom(12)
         .child(&film_strip_scroll)
         .build();
     // If there are fewer than two files the strip is meaningless — keep
@@ -640,17 +782,18 @@ fn build_window_tracked(
     // tecla `G` alterna. Tamanho fixo porque o frame sempre renderiza
     // 256 bins — deixar o widget esticar distorceria as colunas.
     let histogram_area = gtk::DrawingArea::builder()
-        .width_request(260)
-        .height_request(104)
+        .width_request(276)
+        .height_request(120)
         .halign(gtk::Align::End)
         .valign(gtk::Align::Start)
-        .margin_top(8)
-        .margin_end(8)
+        .margin_top(12)
+        .margin_end(12)
         .visible(false)
         .build();
+    histogram_area.add_css_class("osd");
     histogram_area.add_css_class("histogram-overlay");
 
-    let loading_spinner = gtk::Spinner::builder()
+    let loading_spinner = adw::Spinner::builder()
         .halign(gtk::Align::Center)
         .valign(gtk::Align::Center)
         .visible(false)
@@ -663,6 +806,19 @@ fn build_window_tracked(
     overlay.add_overlay(&strip_revealer);
     overlay.add_overlay(&histogram_area);
     overlay.add_overlay(&loading_spinner);
+    // One-pixel, nearly transparent copies of the neighbours. Drawing them
+    // in the normal frame makes the renderer upload them to the GPU ahead
+    // of time without blocking, so an arrow key only swaps textures.
+    let warm_slots = [gtk::Image::new(), gtk::Image::new()];
+    for slot in &warm_slots {
+        slot.set_pixel_size(1);
+        slot.set_halign(gtk::Align::Start);
+        slot.set_valign(gtk::Align::Start);
+        slot.set_opacity(0.01);
+        slot.set_can_target(false);
+        slot.set_accessible_role(gtk::AccessibleRole::Presentation);
+        overlay.add_overlay(slot);
+    }
 
     let toolbar_view = adw::ToolbarView::new();
     toolbar_view.add_top_bar(&header);
@@ -701,6 +857,7 @@ fn build_window_tracked(
         film_strip_scroll: film_strip_scroll.clone(),
         film_strip_buttons: film_strip_buttons.clone(),
         film_strip_start: 0,
+        film_strip_active: None,
         film_strip_box: film_strip_box.clone(),
         thumbnail_cancel: Arc::new(AtomicBool::new(false)),
         ui_pinned: false,
@@ -712,11 +869,31 @@ fn build_window_tracked(
         bottom_hide_source: None,
         osd_hide_source: None,
         cursor_hide_source: None,
+        last_motion: std::time::Instant::now(),
+        cursor_hidden: false,
         slideshow_source: None,
         histogram_area: histogram_area.clone(),
+        zoom_level: {
+            let label = gtk::Label::new(None);
+            label.set_width_chars(5);
+            label.add_css_class("numeric");
+            label
+        },
+        stack: stack.clone(),
+        error_page,
+        warm_slots,
         histogram: [0u32; 768],
-        loader: ViewerLoader::new(),
-        load_generation: 0,
+        loader: preload.unwrap_or_else(ViewerLoader::new),
+        load_generation: u64::from(preloaded),
+        prefetcher: ViewerLoader::new(),
+        prefetching: None,
+        frame_cache: Vec::new(),
+        prefetch_skip: Vec::new(),
+        current_ready: false,
+        shown_path: None,
+        awaiting_prefetch: false,
+        first_frame_shown: false,
+        deferred_thumbnails: None,
         loading_spinner: loading_spinner.clone(),
         props_dialog: None,
         pending_ops: Vec::new(),
@@ -782,6 +959,8 @@ fn build_window_tracked(
             if let Some(state) = state.upgrade() {
                 let mut s = state.borrow_mut();
                 s.loader.stop();
+                s.prefetcher.stop();
+                s.frame_cache.clear();
                 for source in [
                     s.top_hide_source.take(),
                     s.bottom_hide_source.take(),
@@ -816,33 +995,32 @@ fn build_window_tracked(
     // Quick-buttons do header (esquerda) e menu hamburger (direita).
     // Registrados aqui porque todos fecham sobre `state`.
     install_viewer_actions(app, &window, &state);
-    let open_btn = gtk::Button::from_icon_name("document-open-symbolic");
-    open_btn.set_tooltip_text(Some(&gettext("Abrir imagens (Ctrl+O)")));
-    open_btn.set_action_name(Some("win.open"));
-    header.pack_start(&open_btn);
+    // Header layout follows GNOME's image viewer: navigation as one linked
+    // pair on the left; zoom as one control that shows the current level,
+    // then fullscreen, properties and the main menu on the right. Opening
+    // files lives in the menu (Ctrl+O), so no two buttons share an icon.
+    let has_files = !state.borrow().files.is_empty();
+    let navigation = gtk::Box::new(gtk::Orientation::Horizontal, 0);
+    navigation.add_css_class("linked");
+    navigation.set_visible(has_files);
+    for (icon, tooltip, action) in [
+        ("go-previous-symbolic", gettext("Imagem anterior"), "win.previous"),
+        ("go-next-symbolic", gettext("Próxima imagem"), "win.next"),
+    ] {
+        let button = gtk::Button::from_icon_name(icon);
+        button.set_tooltip_text(Some(&tooltip));
+        button.set_action_name(Some(action));
+        navigation.append(&button);
+    }
+    header.pack_start(&navigation);
 
-    let previous_btn = gtk::Button::from_icon_name("go-previous-symbolic");
-    previous_btn.set_tooltip_text(Some(&gettext("Imagem anterior")));
-    previous_btn.set_action_name(Some("win.previous"));
-    previous_btn.set_visible(!files.is_empty());
-    header.pack_start(&previous_btn);
-
-    let next_btn = gtk::Button::from_icon_name("go-next-symbolic");
-    next_btn.set_tooltip_text(Some(&gettext("Próxima imagem")));
-    next_btn.set_action_name(Some("win.next"));
-    next_btn.set_visible(!files.is_empty());
-    header.pack_start(&next_btn);
+    header.pack_end(&build_header_menu_button(&state));
 
     let info_btn = gtk::Button::from_icon_name("dialog-information-symbolic");
     info_btn.set_tooltip_text(Some(&gettext("Propriedades da imagem (Ctrl+I)")));
     info_btn.set_action_name(Some("win.info"));
-    // Só faz sentido com imagem carregada — na dashboard fica escondido.
-    // Fullscreen fica como F11 e double-click, sem botão dedicado no header
-    // A barra já mantém os controles de janela no lado direito.
-    let has_files = !state.borrow().files.is_empty();
     info_btn.set_visible(has_files);
-    header.pack_start(&info_btn);
-    header.pack_end(&build_header_menu_button(&state));
+    header.pack_end(&info_btn);
 
     let fullscreen_btn = gtk::Button::from_icon_name("view-fullscreen-symbolic");
     fullscreen_btn.set_tooltip_text(Some(&gettext("Tela cheia (F11)")));
@@ -850,44 +1028,83 @@ fn build_window_tracked(
     fullscreen_btn.set_visible(has_files);
     header.pack_end(&fullscreen_btn);
 
-    let zoom_in_btn = gtk::Button::from_icon_name("zoom-in-symbolic");
-    zoom_in_btn.set_tooltip_text(Some(&gettext("Aproximar")));
-    zoom_in_btn.set_action_name(Some("win.zoom-in"));
-    zoom_in_btn.set_visible(has_files);
-    header.pack_end(&zoom_in_btn);
-
-    let fit_btn = gtk::Button::from_icon_name("zoom-fit-best-symbolic");
-    fit_btn.set_tooltip_text(Some(&gettext("Ajustar à janela")));
-    fit_btn.set_action_name(Some("win.zoom-fit"));
-    fit_btn.set_visible(has_files);
-    header.pack_end(&fit_btn);
-
+    let zoom_group = gtk::Box::new(gtk::Orientation::Horizontal, 0);
+    zoom_group.add_css_class("linked");
+    zoom_group.set_visible(has_files);
     let zoom_out_btn = gtk::Button::from_icon_name("zoom-out-symbolic");
     zoom_out_btn.set_tooltip_text(Some(&gettext("Afastar")));
     zoom_out_btn.set_action_name(Some("win.zoom-out"));
-    zoom_out_btn.set_visible(has_files);
-    header.pack_end(&zoom_out_btn);
-
-    // Poll decoded frames without blocking GTK. At most the newest valid
-    // generation is painted, so fast directory navigation remains smooth.
+    zoom_group.append(&zoom_out_btn);
+    let zoom_menu = gio::Menu::new();
+    zoom_menu.append(Some(&gettext("Ajustar à janela")), Some("win.zoom-fit"));
+    for (label, scale) in [(gettext("Tamanho real (100%)"), 1.0), ("200%".to_string(), 2.0)] {
+        let item = gio::MenuItem::new(Some(&label), None);
+        item.set_action_and_target_value(Some("win.zoom-to"), Some(&scale.to_variant()));
+        zoom_menu.append_item(&item);
+    }
+    let zoom_level = state.borrow().zoom_level.clone();
+    let zoom_btn = gtk::MenuButton::builder()
+        .child(&zoom_level)
+        .menu_model(&zoom_menu)
+        .tooltip_text(gettext("Zoom"))
+        .build();
+    zoom_group.append(&zoom_btn);
+    let zoom_in_btn = gtk::Button::from_icon_name("zoom-in-symbolic");
+    zoom_in_btn.set_tooltip_text(Some(&gettext("Aproximar")));
+    zoom_in_btn.set_action_name(Some("win.zoom-in"));
+    zoom_group.append(&zoom_in_btn);
+    header.pack_end(&zoom_group);
     {
-        let state = state.clone();
-        glib::timeout_add_local(std::time::Duration::from_millis(16), move || {
-            if state.borrow().window_weak.upgrade().is_none_or(|window| !window.is_visible()) {
-                state.borrow().loader.stop();
-                return glib::ControlFlow::Break;
+        // The fitted level changes with the window size.
+        let scroller = state.borrow().scroller.clone();
+        let state = Rc::downgrade(&state);
+        scroller.hadjustment().connect_changed(move |_| {
+            if let Some(Ok(s)) = state.upgrade().as_ref().map(|state| state.try_borrow()) {
+                s.zoom_level.set_label(&zoom_percent_label(&s));
             }
-            let frame = state.borrow().loader.take_result();
-            if let Some(frame) = frame {
-                apply_decoded_frame(&state, frame);
+        });
+    }
+
+    // Decoded frames are applied when the worker signals one, without
+    // blocking GTK or waking it on a timer. At most the newest valid
+    // generation is painted, so fast directory navigation remains smooth.
+    // The tasks hold the state weakly and end when the loaders stop.
+    for prefetch in [false, true] {
+        let wake = {
+            let s = state.borrow();
+            if prefetch {
+                s.prefetcher.wake.clone()
+            } else {
+                s.loader.wake.clone()
             }
-            glib::ControlFlow::Continue
+        };
+        let weak = Rc::downgrade(&state);
+        glib::MainContext::default().spawn_local(async move {
+            while wake.wait().await {
+                let Some(state) = weak.upgrade() else { break };
+                if prefetch {
+                    let frame = state.borrow().prefetcher.take_result();
+                    if let Some(frame) = frame {
+                        apply_prefetched_frame(&state, frame);
+                    }
+                } else {
+                    let frame = state.borrow().loader.take_result();
+                    if let Some(frame) = frame {
+                        apply_decoded_frame(&state, frame);
+                    }
+                }
+            }
         });
     }
 
     if has_files {
         stack.set_visible_child_name("picture");
-        update_display(&state);
+        if preloaded {
+            sync_edit_actions(&state);
+            refresh_title(&state);
+        } else {
+            update_display(&state);
+        }
     } else {
         stack.set_visible_child_name("empty");
         title.set_title("BigIris");
@@ -921,16 +1138,39 @@ fn build_window_tracked(
             let Some(scroller) = scroller.upgrade() else {
                 return glib::Propagation::Proceed;
             };
+            // Without an image (start page, error page) or with an in-window
+            // dialog open, the wheel must scroll that content instead.
+            {
+                let s = state.borrow();
+                if s.texture.is_none()
+                    || s.stack.visible_child_name().as_deref() != Some("picture")
+                    || s.window().visible_dialog().is_some()
+                {
+                    return glib::Propagation::Proceed;
+                }
+            }
+            // Over the revealed film strip the wheel scrolls the strip; the
+            // strip's own controller turns vertical steps into horizontal.
+            let position = controller.current_event().and_then(|e| e.position());
+            if let Some((wx, wy)) = position {
+                let s = state.borrow();
+                let over_strip = s
+                    .window()
+                    .pick(wx, wy, gtk::PickFlags::DEFAULT)
+                    .is_some_and(|widget| widget.is_ancestor(&s.strip_revealer));
+                if over_strip {
+                    return glib::Propagation::Proceed;
+                }
+            }
             // The scroll controller lives on the window, so event.position()
             // is in window-root coords. Convert to scroller-local coords so
             // adjust_zoom can anchor the re-scroll on the pixel under the
             // pointer: root.compute_point(&scroller, pt) — NOT the reverse.
-            let cursor =
-                controller.current_event().and_then(|e| e.position()).and_then(|(wx, wy)| {
-                    let root = scroller.root()?;
-                    let pt = graphene::Point::new(wx as f32, wy as f32);
-                    root.compute_point(&scroller, &pt).map(|p| (f64::from(p.x()), f64::from(p.y())))
-                });
+            let cursor = position.and_then(|(wx, wy)| {
+                let root = scroller.root()?;
+                let pt = graphene::Point::new(wx as f32, wy as f32);
+                root.compute_point(&scroller, &pt).map(|p| (f64::from(p.x()), f64::from(p.y())))
+            });
             let surface = controller.unit() == gdk::ScrollUnit::Surface;
             if let Some(factor) = zoom::scroll_factor(dy, surface) {
                 adjust_zoom(&state, factor, cursor);
@@ -1046,43 +1286,65 @@ fn build_window_tracked(
     (window, Rc::downgrade(&state))
 }
 
-/// Decode a small film-strip frame off the GTK thread. The source codec may
-/// still need to read the full image, but only the downscaled RGBA buffer is
-/// handed to GDK/GPU memory.
+/// The picture inside a film-strip cell.
+fn thumb_picture(button: &gtk::Button) -> Option<gtk::Picture> {
+    button.child().and_downcast::<gtk::Overlay>()?.last_child().and_downcast::<gtk::Picture>()
+}
+
+/// Decode a small film-strip frame off the GTK thread. A valid entry of the
+/// shared freedesktop thumbnail cache is used when another application
+/// already made one; otherwise the source codec may still need to read the
+/// full image. Both go through `open_image`, i.e. the sandboxed decoder:
+/// cache files are written by other programs and are untrusted too. Only
+/// the downscaled RGBA buffer is handed to GDK/GPU memory.
 fn decode_thumbnail(path: &Path) -> Result<(Vec<u8>, u32, u32), Box<dyn std::error::Error>> {
-    let img = bigimage_core::open_image(path)?;
-    let thumb = img.thumbnail(THUMB_EDGE, THUMB_EDGE).to_rgba8();
+    let cached = viewer::cached_thumbnail(path).and_then(|entry| {
+        bigimage_core::open_image(&entry)
+            .inspect_err(|error| tracing::debug!(?entry, %error, "miniatura em cache ilegível"))
+            .ok()
+    });
+    let img = match cached {
+        Some(img) => img,
+        None => bigimage_core::open_image(path)?,
+    };
+    // Cells crop to a square, so the short side must cover the cell; twice
+    // the cell keeps thumbnails sharp on HiDPI screens. Never upscale and
+    // cap the long side: extreme aspect ratios must not allocate gigabytes.
+    let (width, height) = viewer::thumbnail_dimensions(img.width(), img.height(), THUMB_EDGE * 2);
+    let thumb = bigimage_core::into_srgb_rgba8(img.thumbnail(width, height));
     let (w, h) = thumb.dimensions();
     Ok((thumb.into_raw(), w, h))
 }
 
-/// Only 41 widgets and thumbnail requests exist, independently of folder size.
+/// Only [`viewer::FILM_STRIP_PAGE`] widgets and thumbnail requests exist,
+/// independently of folder size; the window is centred on the current file.
 fn rebuild_film_strip(state: &Rc<RefCell<ViewerState>>) {
-    const PAGE: usize = 41;
-    let (container, files, start, cancel, window) = {
+    const PAGE: usize = viewer::FILM_STRIP_PAGE;
+    let (container, files, start, cancel) = {
         let mut s = state.borrow_mut();
         s.thumbnail_cancel.store(true, Ordering::Release);
         s.thumbnail_cancel = Arc::new(AtomicBool::new(false));
-        s.film_strip_start = s.idx / PAGE * PAGE;
+        s.film_strip_start = viewer::film_strip_start(s.files.len(), s.idx, PAGE);
+        s.film_strip_active = None;
         let container = s.film_strip_box.clone();
         s.film_strip_buttons.clear();
-        (
-            container,
-            s.files.clone(),
-            s.film_strip_start,
-            s.thumbnail_cancel.clone(),
-            s.window().downgrade(),
-        )
+        (container, s.files.clone(), s.film_strip_start, s.thumbnail_cancel.clone())
     };
     while let Some(child) = container.first_child() {
         container.remove(&child);
     }
     let mut buttons = Vec::new();
     for (offset, path) in files.iter().skip(start).take(PAGE).enumerate() {
+        // The cell's size comes from a fixed square; the picture is an overlay
+        // on it, so wide or tall images are cropped instead of widening it.
         let picture = gtk::Picture::new();
-        picture.set_content_fit(gtk::ContentFit::Contain);
-        picture.set_size_request(THUMB_EDGE as i32, THUMB_EDGE as i32);
-        let button = gtk::Button::builder().child(&picture).build();
+        picture.set_content_fit(gtk::ContentFit::Cover);
+        let cell = gtk::Overlay::new();
+        let square = gtk::Box::new(gtk::Orientation::Horizontal, 0);
+        square.set_size_request(THUMB_EDGE as i32, THUMB_EDGE as i32);
+        cell.set_child(Some(&square));
+        cell.add_overlay(&picture);
+        let button = gtk::Button::builder().child(&cell).overflow(gtk::Overflow::Hidden).build();
         let name = path.file_name().unwrap_or_default().to_string_lossy();
         button.set_tooltip_text(Some(&name));
         button.update_property(&[gtk::accessible::Property::Label(&name)]);
@@ -1107,72 +1369,155 @@ fn rebuild_film_strip(state: &Rc<RefCell<ViewerState>>) {
     let weak_buttons: Vec<_> = buttons.iter().map(|b| b.downgrade()).collect();
     state.borrow_mut().film_strip_buttons = buttons;
     let paths: Vec<_> = files.iter().skip(start).take(PAGE).cloned().collect();
-    let (tx, rx) = mpsc::sync_channel(2);
-    std::thread::spawn(move || {
-        crate::codec::with_cancel(cancel.clone(), || {
-            for (index, path) in paths.iter().enumerate() {
-                if cancel.load(Ordering::Acquire) {
-                    break;
-                }
-                if let Ok((raw, w, h)) = decode_thumbnail(path) {
-                    if tx.send((index, raw, w, h)).is_err() {
-                        break;
-                    }
+    // The image on screen is already decoded: its thumbnail reuses the
+    // texture instead of decoding the same file a second time.
+    let current = state.borrow().idx.checked_sub(start).filter(|offset| *offset < paths.len());
+    let weak_state = Rc::downgrade(state);
+    let begin = move || {
+        // Navigation rebuilds the strip before the new frame is decoded, so
+        // `texture` may still be the previous image: reuse it only when it
+        // is known to be this file, otherwise decode the cell like the rest.
+        // A frame that arrives later paints the cell itself (show_frame).
+        let mut skip = None;
+        if let (Some(state), Some(offset)) = (weak_state.upgrade(), current) {
+            let s = state.borrow();
+            let button = weak_buttons.get(offset).and_then(|w| w.upgrade());
+            let matches = s.current_ready && s.shown_path.as_ref() == paths.get(offset);
+            if let (true, Some(texture), Some(button)) = (matches, s.texture.as_ref(), button) {
+                if let Some(picture) = thumb_picture(&button) {
+                    picture.set_paintable(Some(texture));
+                    skip = Some(offset);
                 }
             }
-        })
-    });
-    glib::timeout_add_local(Duration::from_millis(32), move || {
-        if window.upgrade().is_none_or(|w| !w.is_visible()) {
-            return glib::ControlFlow::Break;
         }
-        loop {
-            match rx.try_recv() {
-                Ok((index, raw, w, h)) => {
-                    if let Some(button) = weak_buttons.get(index).and_then(|w| w.upgrade()) {
-                        if let Some(picture) = button.child().and_downcast::<gtk::Picture>() {
-                            picture.set_paintable(Some(&texture_from_rgba(raw, w, h)));
-                        }
-                    }
+        start_thumbnail_decoding(paths, skip, cancel, weak_buttons);
+    };
+    let mut s = state.borrow_mut();
+    if s.first_frame_shown {
+        drop(s);
+        begin();
+    } else {
+        s.deferred_thumbnails = Some(Box::new(begin));
+    }
+}
+
+/// Paint the current file's strip cell with the frame just shown, so the
+/// strip never keeps a thumbnail of what the file looked like before.
+fn paint_current_thumb(s: &ViewerState, texture: &gdk::Texture) {
+    let button = s.idx.checked_sub(s.film_strip_start).and_then(|o| s.film_strip_buttons.get(o));
+    if let Some(picture) = button.and_then(thumb_picture) {
+        picture.set_paintable(Some(texture));
+    }
+}
+
+fn start_thumbnail_decoding(
+    paths: Vec<PathBuf>,
+    skip: Option<usize>,
+    cancel: Arc<AtomicBool>,
+    weak_buttons: Vec<glib::WeakRef<gtk::Button>>,
+) {
+    // One thumbnail at a time on GIO's worker pool, awaited from the GTK
+    // loop: no timer runs while waiting. `cancel` is raised when the strip
+    // is rebuilt or the window goes away.
+    glib::MainContext::default().spawn_local(async move {
+        for (index, path) in paths.into_iter().enumerate() {
+            if cancel.load(Ordering::Acquire) {
+                break;
+            }
+            if Some(index) == skip {
+                continue;
+            }
+            let worker_cancel = cancel.clone();
+            let decoded = gio::spawn_blocking(move || {
+                crate::codec::with_cancel(worker_cancel, || decode_thumbnail(&path).ok())
+            })
+            .await;
+            if cancel.load(Ordering::Acquire) {
+                break;
+            }
+            let Ok(Some((raw, w, h))) = decoded else { continue };
+            if let Some(button) = weak_buttons.get(index).and_then(|w| w.upgrade()) {
+                if let Some(picture) = thumb_picture(&button) {
+                    picture.set_paintable(Some(&texture_from_rgba(raw, w, h)));
                 }
-                Err(mpsc::TryRecvError::Empty) => return glib::ControlFlow::Continue,
-                Err(mpsc::TryRecvError::Disconnected) => return glib::ControlFlow::Break,
             }
         }
     });
 }
 
-/// Toggle `.active-thumb` so the film strip mirrors the current selection.
-/// Also autoscrolls the strip so the active thumb stays in view; uses the
-/// button's computed bounds (allocation() was deprecated in GTK 4.12).
+/// Toggle `.active-thumb` so the film strip mirrors the current selection,
+/// and scroll the active thumb into the middle when the selection changed.
+/// Zoom steps and pointer motion call this often; when the index is the
+/// same it returns at once, so the strip keeps any manual scroll position.
 fn refresh_film_strip_active(state: &Rc<RefCell<ViewerState>>) {
     let needs_rebuild = {
         let s = state.borrow();
-        s.idx < s.film_strip_start || s.idx >= s.film_strip_start + s.film_strip_buttons.len()
+        !s.files.is_empty()
+            && (s.idx < s.film_strip_start
+                || s.idx >= s.film_strip_start + s.film_strip_buttons.len())
     };
     if needs_rebuild {
         rebuild_film_strip(state);
     }
-    let s = state.borrow();
-    let strip = &s.film_strip_scroll;
-    let viewport_w = strip.width() as f64;
-    for (i, btn) in s.film_strip_buttons.iter().enumerate() {
-        if i + s.film_strip_start == s.idx {
-            btn.add_css_class("active-thumb");
-            // compute_bounds returns coords in the parent (the HBox inside
-            // the scroll's viewport); that's what hadjustment speaks.
-            if let Some(parent) = btn.parent() {
-                if let Some(rect) = btn.compute_bounds(&parent) {
-                    if rect.width() > 0.0 {
-                        let target = rect.x() as f64 - (viewport_w - rect.width() as f64) / 2.0;
-                        strip.hadjustment().set_value(target.max(0.0));
-                    }
-                }
+    {
+        let mut s = state.borrow_mut();
+        if s.film_strip_active == Some(s.idx) {
+            return;
+        }
+        s.film_strip_active = Some(s.idx);
+        let active = s.idx.checked_sub(s.film_strip_start);
+        for (i, btn) in s.film_strip_buttons.iter().enumerate() {
+            if Some(i) == active {
+                btn.add_css_class("active-thumb");
+            } else {
+                btn.remove_css_class("active-thumb");
             }
-        } else {
-            btn.remove_css_class("active-thumb");
         }
     }
+    if !centre_film_strip(state) {
+        schedule_centre_film_strip(state);
+    }
+}
+
+/// Centre once the strip has a layout: a freshly built or just revealed
+/// strip reports zero widths until the next frame.
+fn schedule_centre_film_strip(state: &Rc<RefCell<ViewerState>>) {
+    let strip = state.borrow().film_strip_scroll.clone();
+    let weak = Rc::downgrade(state);
+    let frames = Cell::new(0u32);
+    strip.add_tick_callback(move |_, _| {
+        frames.set(frames.get() + 1);
+        let done = weak.upgrade().is_none_or(|state| centre_film_strip(&state));
+        if done || frames.get() > 30 {
+            glib::ControlFlow::Break
+        } else {
+            glib::ControlFlow::Continue
+        }
+    });
+}
+
+/// Scroll the active thumbnail to the middle of the strip; uses the
+/// button's computed bounds (allocation() was deprecated in GTK 4.12).
+/// Returns false while the strip is not allocated yet.
+fn centre_film_strip(state: &Rc<RefCell<ViewerState>>) -> bool {
+    let s = state.borrow();
+    let Some(btn) = s.idx.checked_sub(s.film_strip_start).and_then(|i| s.film_strip_buttons.get(i))
+    else {
+        return false;
+    };
+    let strip = &s.film_strip_scroll;
+    let viewport_w = strip.width() as f64;
+    // compute_bounds returns coords in the parent (the HBox inside the
+    // scroll's viewport); that's what hadjustment speaks.
+    let Some(rect) = btn.parent().and_then(|parent| btn.compute_bounds(&parent)) else {
+        return false;
+    };
+    if rect.width() <= 0.0 || viewport_w <= 0.0 {
+        return false;
+    }
+    let target = rect.x() as f64 - (viewport_w - rect.width() as f64) / 2.0;
+    strip.hadjustment().set_value(target.max(0.0));
+    true
 }
 
 /// Register a CssProvider carrying [`THEATER_CSS`] on the default display.
@@ -1207,7 +1552,7 @@ fn app_settings() -> Option<gio::Settings> {
 /// Manual film-strip reveal (F key). Just forwards to [`reveal_bottom`]
 /// so it follows the same edge-hide timing as the hover path.
 fn toggle_film_strip(state: &Rc<RefCell<ViewerState>>) {
-    if state.borrow().film_strip_buttons.len() < 2 {
+    if state.borrow().files.len() < 2 {
         return;
     }
     let currently_revealed = state.borrow().strip_revealer.reveals_child();
@@ -1245,11 +1590,7 @@ fn osd_text(state: &Rc<RefCell<ViewerState>>) -> String {
         .file_name()
         .map(|n| n.to_string_lossy().into_owned())
         .unwrap_or_else(|| path.display().to_string());
-    let zoom = match zoom::requested_zoom(&s) {
-        ZoomState::Fit => "Ajustar".to_string(),
-        ZoomState::Scale(x) => format!("{}%", (x * 100.0).round() as i32),
-    };
-    format!("{} · {}/{} · {}", name, s.idx + 1, s.files.len(), zoom)
+    format!("{} · {}/{} · {}", name, s.idx + 1, s.files.len(), zoom_percent_label(&s))
 }
 
 /// Sync the OSD label to the current file/zoom without touching visibility.
@@ -1263,13 +1604,20 @@ fn refresh_osd(state: &Rc<RefCell<ViewerState>>) {
 /// Pointer moved — route to the appropriate zone. Called on every motion
 /// event, so keep the work cheap: it's mostly math + timer juggling.
 fn on_pointer_motion(state: &Rc<RefCell<ViewerState>>, y: f64) {
-    // Always restore the cursor and restart its own idle timer.
-    {
-        let s = state.borrow();
-        s.window().set_cursor(None);
+    // Restore the cursor and push its idle deadline back. The pending
+    // timer, if any, notices the newer motion and re-arms itself.
+    let armed = {
+        let mut s = state.borrow_mut();
+        s.last_motion = std::time::Instant::now();
+        if s.cursor_hidden {
+            s.cursor_hidden = false;
+            s.window().set_cursor(None);
+        }
+        s.cursor_hide_source.is_some()
+    };
+    if !armed {
+        schedule_cursor_hide(state);
     }
-    cancel_cursor_hide(state);
-    schedule_cursor_hide(state);
 
     let (window_h, pinned) = {
         let s = state.borrow();
@@ -1298,9 +1646,13 @@ fn reveal_top(state: &Rc<RefCell<ViewerState>>) {
         return;
     }
     let delay = state.borrow().autohide_delay_ms;
-    let clone = state.clone();
+    let weak = Rc::downgrade(state);
     let id = glib::timeout_add_local_once(std::time::Duration::from_millis(delay), move || {
-        hide_top(&clone)
+        if let Some(state) = weak.upgrade() {
+            // This source is the one firing: forget it instead of removing it.
+            state.borrow_mut().top_hide_source = None;
+            hide_top(&state);
+        }
     });
     state.borrow_mut().top_hide_source = Some(id);
 }
@@ -1308,7 +1660,7 @@ fn reveal_top(state: &Rc<RefCell<ViewerState>>) {
 fn hide_top(state: &Rc<RefCell<ViewerState>>) {
     let mut s = state.borrow_mut();
     s.top_hide_source = None;
-    let window = s.window();
+    let Some(window) = s.window_weak.upgrade() else { return };
     let keyboard_in_header = gtk::prelude::GtkWindowExt::focus(&window).is_some_and(|widget| {
         !widget.is_ancestor(&s.scroller) && !widget.is_ancestor(&s.film_strip_scroll)
     });
@@ -1326,39 +1678,49 @@ fn cancel_top_hide(state: &Rc<RefCell<ViewerState>>) {
 /// Slide the film strip into view (skips the motion when files < 2) and
 /// (re)arm its hide timer.
 fn reveal_bottom(state: &Rc<RefCell<ViewerState>>) {
-    {
+    let first_reveal = {
         let s = state.borrow();
-        if s.film_strip_buttons.len() < 2 {
+        if s.files.len() < 2 {
             return;
         }
+        let hidden = !s.strip_revealer.reveals_child();
         s.strip_revealer.set_reveal_child(true);
-    }
+        hidden
+    };
     // A faixa nasce rolada no começo. Como o visualizador agora pode abrir
     // no meio da pasta (clique num arquivo qualquer), a miniatura ativa
     // ficaria fora de vista na primeira vez que o strip aparece. Recentrar
     // fica para o idle seguinte porque, enquanto o revealer não alocou a
     // faixa, `compute_bounds` devolve largura zero e a conta de centragem
-    // não teria em que se apoiar.
-    {
-        let clone = state.clone();
-        glib::idle_add_local_once(move || refresh_film_strip_active(&clone));
+    // não teria em que se apoiar. Só na revelação: cada movimento do
+    // ponteiro na borda de baixo passa por aqui, e recentrar a cada evento
+    // impediria rolar a faixa à mão.
+    if first_reveal {
+        schedule_centre_film_strip(state);
     }
     cancel_bottom_hide(state);
     if state.borrow().ui_pinned || !state.borrow().autohide_ui {
         return;
     }
     let delay = state.borrow().autohide_delay_ms;
-    let clone = state.clone();
+    let weak = Rc::downgrade(state);
     let id = glib::timeout_add_local_once(std::time::Duration::from_millis(delay), move || {
-        hide_bottom(&clone)
+        if let Some(state) = weak.upgrade() {
+            // This source is the one firing: forget it instead of removing it.
+            state.borrow_mut().bottom_hide_source = None;
+            hide_bottom(&state);
+        }
     });
     state.borrow_mut().bottom_hide_source = Some(id);
 }
 
 fn hide_bottom(state: &Rc<RefCell<ViewerState>>) {
-    let mut s = state.borrow_mut();
-    s.bottom_hide_source = None;
-    let keyboard_in_strip = gtk::prelude::GtkWindowExt::focus(&s.window())
+    // The F key hides the strip directly: drop the pending timer too, or it
+    // would outlive a window closed right after and touch freed state.
+    cancel_bottom_hide(state);
+    let s = state.borrow();
+    let Some(window) = s.window_weak.upgrade() else { return };
+    let keyboard_in_strip = gtk::prelude::GtkWindowExt::focus(&window)
         .is_some_and(|widget| widget.is_ancestor(&s.film_strip_scroll));
     if !keyboard_in_strip && !adw::StyleManager::default().is_high_contrast() {
         s.strip_revealer.set_reveal_child(false);
@@ -1375,6 +1737,11 @@ fn cancel_bottom_hide(state: &Rc<RefCell<ViewerState>>) {
 /// is bottom-centered above the strip area so it's visible without any
 /// chrome taking over.
 fn pulse_osd(state: &Rc<RefCell<ViewerState>>) {
+    pulse_osd_for(state, OSD_PULSE_MS);
+}
+
+/// [`pulse_osd`] for `millis`, for notices that take longer to read.
+fn pulse_osd_for(state: &Rc<RefCell<ViewerState>>, millis: u64) {
     {
         let s = state.borrow();
         if s.osd_label.label().is_empty() {
@@ -1386,11 +1753,13 @@ fn pulse_osd(state: &Rc<RefCell<ViewerState>>) {
     if state.borrow().ui_pinned {
         return;
     }
-    let clone = state.clone();
-    let id =
-        glib::timeout_add_local_once(std::time::Duration::from_millis(OSD_PULSE_MS), move || {
-            hide_osd(&clone)
-        });
+    let weak = Rc::downgrade(state);
+    let id = glib::timeout_add_local_once(std::time::Duration::from_millis(millis), move || {
+        if let Some(state) = weak.upgrade() {
+            state.borrow_mut().osd_hide_source = None;
+            hide_osd(&state);
+        }
+    });
     state.borrow_mut().osd_hide_source = Some(id);
 }
 
@@ -1407,6 +1776,11 @@ fn cancel_osd_hide(state: &Rc<RefCell<ViewerState>>) {
 }
 
 fn schedule_cursor_hide(state: &Rc<RefCell<ViewerState>>) {
+    let delay = std::time::Duration::from_millis(CURSOR_HIDE_MS);
+    arm_cursor_hide(state, delay);
+}
+
+fn arm_cursor_hide(state: &Rc<RefCell<ViewerState>>, delay: std::time::Duration) {
     let s = state.borrow();
     if s.ui_pinned || !s.autohide_ui || adw::StyleManager::default().is_high_contrast() {
         return;
@@ -1420,23 +1794,32 @@ fn schedule_cursor_hide(state: &Rc<RefCell<ViewerState>>) {
         return;
     }
     drop(s);
-    let clone = state.clone();
-    let id =
-        glib::timeout_add_local_once(std::time::Duration::from_millis(CURSOR_HIDE_MS), move || {
-            // Double-check na hora do disparo: user pode ter aberto um
-            // diálogo nos últimos CURSOR_HIDE_MS ms.
-            let s = clone.borrow_mut();
-            if s.window().visible_dialog().is_some() {
-                drop(s);
-                clone.borrow_mut().cursor_hide_source = None;
-                return;
-            }
-            let cursor = gdk::Cursor::from_name("none", None);
-            s.window().set_cursor(cursor.as_ref());
+    let weak = Rc::downgrade(state);
+    let id = glib::timeout_add_local_once(delay, move || {
+        let Some(state) = weak.upgrade() else { return };
+        let mut s = state.borrow_mut();
+        s.cursor_hide_source = None;
+        // The pointer moved since this timer was armed: wait the rest.
+        let idle = s.last_motion.elapsed();
+        let full = std::time::Duration::from_millis(CURSOR_HIDE_MS);
+        if idle < full {
             drop(s);
-            clone.borrow_mut().cursor_hide_source = None;
-        });
-    state.borrow_mut().cursor_hide_source = Some(id);
+            arm_cursor_hide(&state, full - idle);
+            return;
+        }
+        // Double-check na hora do disparo: user pode ter aberto um
+        // diálogo nos últimos CURSOR_HIDE_MS ms.
+        let window = s.window();
+        if window.visible_dialog().is_some() {
+            return;
+        }
+        let cursor = gdk::Cursor::from_name("none", None);
+        window.set_cursor(cursor.as_ref());
+        s.cursor_hidden = true;
+    });
+    if let Some(old) = state.borrow_mut().cursor_hide_source.replace(id) {
+        old.remove();
+    }
 }
 
 fn cancel_cursor_hide(state: &Rc<RefCell<ViewerState>>) {
@@ -1461,7 +1844,7 @@ fn toggle_ui_pin(state: &Rc<RefCell<ViewerState>>) {
         cancel_cursor_hide(state);
         let s = state.borrow();
         s.toolbar_view.set_reveal_top_bars(true);
-        if s.film_strip_buttons.len() >= 2 {
+        if s.files.len() >= 2 {
             s.strip_revealer.set_reveal_child(true);
         }
         if !s.osd_label.label().is_empty() {
@@ -1472,7 +1855,7 @@ fn toggle_ui_pin(state: &Rc<RefCell<ViewerState>>) {
         let s = state.borrow();
         if !s.autohide_ui {
             s.toolbar_view.set_reveal_top_bars(true);
-            if s.film_strip_buttons.len() >= 2 {
+            if s.files.len() >= 2 {
                 s.strip_revealer.set_reveal_child(true);
             }
             s.window().set_cursor(None);
@@ -1497,7 +1880,14 @@ fn handle_key(
 
     match key {
         Key::Escape => {
-            state.borrow().window().close();
+            // Like GNOME's image viewer: Esc first leaves fullscreen and
+            // only closes the window when it is not fullscreen.
+            let window = state.borrow().window();
+            if window.is_fullscreen() {
+                window.unfullscreen();
+            } else {
+                window.close();
+            }
             return glib::Propagation::Stop;
         }
         Key::F11 => {
@@ -1662,7 +2052,9 @@ fn toggle_slideshow(state: &Rc<RefCell<ViewerState>>) {
     });
     state.borrow_mut().slideshow_source = Some(id);
     let s = state.borrow();
-    s.osd_label.set_text(&format!("Slideshow: {interval}s"));
+    s.osd_label.set_text(
+        &gettext("Slideshow: a cada {interval} s").replace("{interval}", &interval.to_string()),
+    );
     drop(s);
     pulse_osd(state);
 }
@@ -1682,10 +2074,10 @@ fn toggle_histogram(state: &Rc<RefCell<ViewerState>>) {
     };
     {
         let s = state.borrow();
-        s.osd_label.set_text(if now_visible {
-            "Histograma: ligado"
+        s.osd_label.set_text(&if now_visible {
+            gettext("Histograma ligado")
         } else {
-            "Histograma: desligado"
+            gettext("Histograma desligado")
         });
     }
     pulse_osd(state);
@@ -1698,17 +2090,12 @@ fn toggle_histogram(state: &Rc<RefCell<ViewerState>>) {
 /// menores que 256 não perdem picos isolados.
 fn draw_histogram(state: &Rc<RefCell<ViewerState>>, cr: &gtk::cairo::Context, w: i32, h: i32) {
     let hist = state.borrow().histogram;
-    let w = w as f64;
-    let h = h as f64;
-
-    // Fundo — preto translúcido + borda sutil, legível sobre qualquer foto.
-    cr.set_source_rgba(0.0, 0.0, 0.0, 0.55);
-    cr.rectangle(0.0, 0.0, w, h);
-    let _ = cr.fill();
-    cr.set_source_rgba(1.0, 1.0, 1.0, 0.15);
-    cr.set_line_width(1.0);
-    cr.rectangle(0.5, 0.5, w - 1.0, h - 1.0);
-    let _ = cr.stroke();
+    // The rounded OSD background comes from CSS; bars sit inside a margin
+    // so they never touch the corners.
+    const INSET: f64 = 8.0;
+    cr.translate(INSET, INSET);
+    let w = (w as f64 - 2.0 * INSET).max(1.0);
+    let h = (h as f64 - 2.0 * INSET).max(1.0);
 
     // Colapsa os 256 bins pra largura do widget. Se w < 256, cada coluna
     // representa um intervalo; somamos os bins pra não perder picos.
@@ -1725,7 +2112,7 @@ fn draw_histogram(state: &Rc<RefCell<ViewerState>>, cr: &gtk::cairo::Context, w:
         bars.iter().map(|b| b[1]).max().unwrap_or(1).max(1),
         bars.iter().map(|b| b[2]).max().unwrap_or(1).max(1),
     ];
-    let inner_h = h - 2.0;
+    let inner_h = h;
     // Canais em ordem B, G, R — fica mais parecido com Photoshop (R mais
     // destacado no topo dos overlaps aditivos).
     let channels: [(usize, (f64, f64, f64)); 3] =
@@ -1735,7 +2122,7 @@ fn draw_histogram(state: &Rc<RefCell<ViewerState>>, cr: &gtk::cairo::Context, w:
         for (i, bucket) in bars.iter().enumerate() {
             let v = bucket[idx] as f64 / max_per_channel[idx] as f64;
             let bar_h = v * inner_h;
-            cr.rectangle((i as f64) + 0.5, h - 1.0 - bar_h, 1.0, bar_h);
+            cr.rectangle(i as f64, h - bar_h, 1.0, bar_h);
         }
         let _ = cr.fill();
     }
@@ -1806,7 +2193,9 @@ fn sync_edit_actions(state: &Rc<RefCell<ViewerState>>) {
             simple.set_enabled(!s.redo_ops.is_empty() && idle);
         }
     }
-    for name in ["rotate-cw", "rotate-ccw", "rotate-180", "flip-h", "flip-v"] {
+    // Trashing during a save would let the save's final rename bring the
+    // file back from the trash.
+    for name in ["rotate-cw", "rotate-ccw", "rotate-180", "flip-h", "flip-v", "trash"] {
         if let Some(action) = s.window().lookup_action(name) {
             if let Some(simple) = action.downcast_ref::<gio::SimpleAction>() {
                 simple.set_enabled(idle && !s.files.is_empty());
@@ -1857,6 +2246,12 @@ fn save_edits(state: &Rc<RefCell<ViewerState>>) {
         }
         (s.window().clone(), s.files[s.idx].clone(), s.pending_ops.clone())
     };
+    // Known before asking for confirmation: no point in a dialog that can
+    // only end in a failure.
+    if save_format(&path).is_none() {
+        present_save_failure(state, &SaveFailure::NoEncoder);
+        return;
+    }
     let name = path
         .file_name()
         .map(|n| n.to_string_lossy().into_owned())
@@ -1866,11 +2261,17 @@ fn save_edits(state: &Rc<RefCell<ViewerState>>) {
         .and_then(|e| e.to_str())
         .map(|s| matches!(s.to_ascii_lowercase().as_str(), "jpg" | "jpeg"))
         .unwrap_or(false);
-    let body = if is_jpeg {
+    let mut body = if is_jpeg {
         format!("\"{name}\"\n\n{}", gettext("O arquivo será sobrescrito. JPEG é recodificado a cada gravação; isso pode reduzir a qualidade."))
     } else {
         format!("\"{name}\"\n\n{}", gettext("O arquivo será sobrescrito."))
     };
+    let keeps_metadata = save_format(&path)
+        .is_some_and(|format| bigimage_core::metadata::preserved_by(format).is_complete());
+    if !keeps_metadata {
+        body.push_str("\n\n");
+        body.push_str(&gettext("Este formato não guarda todos os metadados da foto (data, câmera, perfil de cor); o que ele não suportar será removido ou convertido."));
+    }
     let alert =
         adw::AlertDialog::builder().heading(gettext("Salvar alterações?")).body(body).build();
     alert.add_response("cancel", &gettext("Cancelar"));
@@ -1885,58 +2286,51 @@ fn save_edits(state: &Rc<RefCell<ViewerState>>) {
             let mut s = state.borrow_mut();
             s.saving = true;
             s.loading_spinner.set_visible(true);
-            s.loading_spinner.start();
         }
         sync_edit_actions(&state);
 
-        let (tx, rx) = mpsc::channel();
         let worker_path = path.clone();
         let worker_ops = ops.clone();
-        std::thread::Builder::new()
-            .name("bigiris-save".to_string())
-            .spawn(move || {
-                let result =
-                    write_edits_to_disk(&worker_path, &worker_ops).map_err(|e| e.to_string());
-                let _ = tx.send(result);
-            })
-            .expect("could not start save worker");
+        let job = gio::spawn_blocking(move || write_edits_to_disk(&worker_path, &worker_ops));
 
+        // Awaited on the GTK loop instead of polled on a timer.
         let state = state.clone();
         let path = path.clone();
-        glib::timeout_add_local(std::time::Duration::from_millis(32), move || {
-            match rx.try_recv() {
-                Ok(result) => {
-                    {
-                        let mut s = state.borrow_mut();
-                        s.saving = false;
-                        s.loading_spinner.stop();
-                        s.loading_spinner.set_visible(false);
-                        if result.is_ok() {
-                            s.pending_ops.clear();
-                            s.redo_ops.clear();
-                        }
-                    }
-                    refresh_title(&state);
-                    sync_edit_actions(&state);
-                    match result {
-                        Ok(()) => state.borrow().osd_label.set_text(&gettext("Salvo")),
-                        Err(error) => {
-                            tracing::error!(?path, %error, "save: falha ao gravar edições");
-                            state.borrow().osd_label.set_text(&gettext("Falha ao salvar"));
-                        }
-                    }
-                    pulse_osd(&state);
-                    glib::ControlFlow::Break
+        glib::MainContext::default().spawn_local(async move {
+            // A panicking encoder ends the save as a failure.
+            let result = job
+                .await
+                .unwrap_or_else(|_| Err(SaveFailure::Other("save worker panicked".to_string())));
+            let dropped = result.as_ref().ok().cloned().unwrap_or_default();
+            {
+                let mut s = state.borrow_mut();
+                s.saving = false;
+                s.loading_spinner.set_visible(false);
+                if result.is_ok() {
+                    s.pending_ops.clear();
+                    s.redo_ops.clear();
                 }
-                Err(mpsc::TryRecvError::Empty) => glib::ControlFlow::Continue,
-                Err(mpsc::TryRecvError::Disconnected) => {
-                    let mut s = state.borrow_mut();
-                    s.saving = false;
-                    s.loading_spinner.stop();
-                    s.loading_spinner.set_visible(false);
-                    drop(s);
-                    sync_edit_actions(&state);
-                    glib::ControlFlow::Break
+            }
+            refresh_title(&state);
+            sync_edit_actions(&state);
+            match result {
+                Ok(_) => {
+                    adopt_saved_frame(&state, &path);
+                    match metadata_loss_notice(&dropped) {
+                        Some(notice) => {
+                            tracing::info!(?path, ?dropped, "save: metadados descartados");
+                            state.borrow().osd_label.set_text(&notice);
+                            pulse_osd_for(&state, OSD_NOTICE_MS);
+                        }
+                        None => {
+                            state.borrow().osd_label.set_text(&gettext("Salvo"));
+                            pulse_osd(&state);
+                        }
+                    }
+                }
+                Err(failure) => {
+                    tracing::error!(?path, ?failure, "save: falha ao gravar edições");
+                    present_save_failure(&state, &failure);
                 }
             }
         });
@@ -1944,28 +2338,214 @@ fn save_edits(state: &Rc<RefCell<ViewerState>>) {
     alert.present(Some(&window));
 }
 
+/// The texture on screen is now what the file holds: cache it under the
+/// new modification time, show it in the film strip and resume the
+/// neighbour prefetch that pending edits had paused.
+fn adopt_saved_frame(state: &Rc<RefCell<ViewerState>>, path: &Path) {
+    {
+        let mut s = state.borrow_mut();
+        let current = s.files.get(s.idx).is_some_and(|p| p == path);
+        if let (true, Some(texture)) = (current, s.texture.clone()) {
+            s.shown_path = Some(path.to_path_buf());
+            paint_current_thumb(&s, &texture);
+            let frame = CachedFrame {
+                path: path.to_path_buf(),
+                modified: file_modified(path),
+                texture,
+                natural: s.natural,
+                histogram: s.histogram,
+            };
+            remember_frame(&mut s, frame);
+        }
+    }
+    schedule_prefetch(state);
+}
+
+/// Why an in-place save did not happen, in terms the user can act on.
+#[derive(Debug)]
+enum SaveFailure {
+    /// Animated or multi-page file (or one that cannot be inspected):
+    /// re-encoding a single frame would destroy the rest.
+    NotStatic,
+    /// No encoder for this extension.
+    NoEncoder,
+    PermissionDenied,
+    Other(String),
+}
+
+impl SaveFailure {
+    fn from_core(error: bigimage_core::BigImageError) -> Self {
+        match &error {
+            bigimage_core::BigImageError::Io(io)
+                if io.kind() == std::io::ErrorKind::PermissionDenied =>
+            {
+                Self::PermissionDenied
+            }
+            _ => Self::Other(error.to_string()),
+        }
+    }
+
+    fn from_image(error: image::ImageError) -> Self {
+        match error {
+            image::ImageError::IoError(io) => Self::from_io(io),
+            other => Self::Other(other.to_string()),
+        }
+    }
+
+    fn from_io(error: std::io::Error) -> Self {
+        if error.kind() == std::io::ErrorKind::PermissionDenied {
+            Self::PermissionDenied
+        } else {
+            Self::Other(error.to_string())
+        }
+    }
+
+    fn message(&self) -> String {
+        match self {
+            Self::NotStatic => gettext("Este arquivo é animado, tem várias páginas ou não pôde ser verificado. Girar ou espelhar e salvar descartaria os outros quadros, então ele não foi alterado."),
+            Self::NoEncoder => gettext("O BigIris não sabe gravar este formato. As alterações não podem ser salvas no próprio arquivo."),
+            Self::PermissionDenied => gettext("Sem permissão para alterar este arquivo ou a pasta dele."),
+            Self::Other(detail) => fill(
+                &gettext("O arquivo não foi alterado. Detalhes: {detail}"),
+                &[("detail", detail)],
+            ),
+        }
+    }
+}
+
+/// Explain a failed save and offer a way out: navigation stays blocked
+/// while edits are pending, so the user can discard them from here.
+fn present_save_failure(state: &Rc<RefCell<ViewerState>>, failure: &SaveFailure) {
+    let window = state.borrow().window();
+    let alert = adw::AlertDialog::builder()
+        .heading(gettext("Não foi possível salvar"))
+        .body(failure.message())
+        .build();
+    alert.add_response("keep", &gettext("Manter alterações"));
+    alert.add_response("discard", &gettext("Descartar alterações"));
+    alert.set_response_appearance("discard", adw::ResponseAppearance::Destructive);
+    alert.set_default_response(Some("keep"));
+    alert.set_close_response("keep");
+    let weak = Rc::downgrade(state);
+    alert.connect_response(Some("discard"), move |_, _| {
+        if let Some(state) = weak.upgrade() {
+            discard_edits(&state);
+        }
+    });
+    alert.present(Some(&window));
+}
+
+/// Drop every pending edit and show the file as it is on disk.
+fn discard_edits(state: &Rc<RefCell<ViewerState>>) {
+    let path = {
+        let mut s = state.borrow_mut();
+        if s.saving || s.files.is_empty() {
+            return;
+        }
+        s.pending_ops.clear();
+        s.redo_ops.clear();
+        s.files[s.idx].clone()
+    };
+    rebuild_edited_texture(state, &path);
+    refresh_title(state);
+    sync_edit_actions(state);
+}
+
 /// Grava em arquivo temporário no mesmo diretório, sincroniza e só então
 /// renomeia por cima do destino. Assim, queda de energia ou falha do encoder
-/// deixa o original intacto. Permissões existentes são preservadas.
-fn write_edits_to_disk(path: &Path, ops: &[EditOp]) -> Result<(), Box<dyn std::error::Error>> {
-    let target = if path.symlink_metadata()?.file_type().is_symlink() {
-        path.canonicalize()?
+/// deixa o original intacto. Permissões existentes são preservadas, assim
+/// como EXIF (com orientação zerada) e o perfil de cor original quando o
+/// formato os suporta — as edições são só geométricas. JPEG é regravado na
+/// qualidade estimada do original (não no padrão 75), para que cada Ctrl+S
+/// não degrade a foto. Devolve os metadados que não puderam ser mantidos.
+fn write_edits_to_disk(
+    path: &Path,
+    ops: &[EditOp],
+) -> Result<Vec<bigimage_core::MetadataLoss>, SaveFailure> {
+    let target = if path.symlink_metadata().map_err(SaveFailure::from_io)?.file_type().is_symlink()
+    {
+        path.canonicalize().map_err(SaveFailure::from_io)?
     } else {
         path.to_path_buf()
     };
-    bigimage_core::content::ensure_static(&target)?;
-    let img = bigimage_core::open_image(&target)?;
+    let format = save_format(&target).ok_or(SaveFailure::NoEncoder)?;
+    // The confined decoder reports animation as a generic decode error,
+    // so any failure here is presented as "not a static image".
+    bigimage_core::content::ensure_static(&target).map_err(|error| {
+        tracing::warn!(%error, "save: arquivo não é estático");
+        SaveFailure::NotStatic
+    })?;
+    let (img, source, quality) =
+        crate::codec::open_for_resave(&target).map_err(SaveFailure::from_image)?;
     let edited = ops.iter().fold(img, |acc, op| apply_op_to_image(acc, *op));
-    let format = Format::from_image_format(image::ImageFormat::from_path(&target)?)
-        .ok_or("formato sem encoder suportado")?;
-    bigimage_core::save_image(
+    let report = bigimage_core::save_image_preserving_metadata_report(
         edited,
         target,
         format,
-        &EncodeOptions::default(),
+        &resave_options(format, quality),
         OverwritePolicy::Replace,
-    )?;
-    Ok(())
+        &source,
+    )
+    .map_err(SaveFailure::from_core)?;
+    Ok(report.dropped)
+}
+
+/// Encoder options for an in-place save: a JPEG keeps the quality its
+/// source was estimated at; everything else uses the defaults.
+fn resave_options(format: Format, source_quality: Option<u8>) -> EncodeOptions {
+    let default = EncodeOptions::default();
+    match format {
+        Format::Jpeg => EncodeOptions { quality: source_quality.or(default.quality), ..default },
+        _ => default,
+    }
+}
+
+/// OSD notice after a save that could not keep some source metadata, or
+/// `None` when everything survived.
+fn metadata_loss_notice(dropped: &[bigimage_core::MetadataLoss]) -> Option<String> {
+    use bigimage_core::MetadataLoss;
+    let mut reasons: Vec<String> = Vec::new();
+    for loss in dropped {
+        let reason = match loss {
+            MetadataLoss::ExifUnsupported => gettext("o formato não guarda EXIF"),
+            MetadataLoss::ExifTooLarge => gettext("EXIF grande demais para JPEG"),
+            MetadataLoss::ExifInvalid => gettext("EXIF inválido"),
+            MetadataLoss::IccUnsupported
+            | MetadataLoss::IccTooLarge
+            | MetadataLoss::IccMismatched => gettext("perfil de cor convertido para sRGB"),
+            MetadataLoss::IccDiscarded => gettext("perfil de cor inválido ignorado"),
+            _ => gettext("metadados não suportados"),
+        };
+        if !reasons.contains(&reason) {
+            reasons.push(reason);
+        }
+    }
+    if reasons.is_empty() {
+        return None;
+    }
+    Some(fill(
+        &gettext("Salvo. Alguns metadados não puderam ser mantidos: {list}"),
+        &[("list", &reasons.join("; "))],
+    ))
+}
+
+/// Encoder for an in-place save of `path`, chosen by its extension.
+fn save_format(path: &Path) -> Option<Format> {
+    image::ImageFormat::from_path(path).ok().and_then(Format::from_image_format)
+}
+
+/// Zoom level as the user sees it. Fitting shows the actual percentage,
+/// like GNOME's image viewer, instead of a mode name.
+fn zoom_percent_label(s: &ViewerState) -> String {
+    if s.texture.is_none() {
+        return "—".to_string();
+    }
+    let viewport = (
+        s.scroller.hadjustment().page_size().max(f64::from(s.scroller.width())) as i32,
+        s.scroller.vadjustment().page_size().max(f64::from(s.scroller.height())) as i32,
+    );
+    let scale = effective_scale(zoom::requested_zoom(s), s.natural, viewport);
+    format!("{}%", (scale * 100.0).round() as i32)
 }
 
 /// Effective on-screen scale factor — used to anchor zoom-in from `Fit` at
@@ -1994,8 +2574,208 @@ fn update_display(state: &Rc<RefCell<ViewerState>>) {
     // (after undoing back to the original) must not leak into the next image.
     state.borrow_mut().redo_ops.clear();
     sync_edit_actions(state);
-    request_frame(state, path, Vec::new());
+    if !show_cached_frame(state, &path) {
+        let in_flight = state.borrow().prefetching.as_ref() == Some(&path);
+        if in_flight {
+            let mut s = state.borrow_mut();
+            zoom::cancel_pending(&mut s);
+            // Drop any older decode still running for the previous file.
+            s.load_generation = s.load_generation.wrapping_add(1);
+            s.current_ready = false;
+            s.awaiting_prefetch = true;
+        } else {
+            request_frame(state, path, Vec::new());
+        }
+    }
     refresh_title(state);
+}
+
+/// Show `path` from the prefetch cache. Returns false when it is not
+/// there or the file changed on disk since it was decoded.
+fn show_cached_frame(state: &Rc<RefCell<ViewerState>>, path: &Path) -> bool {
+    let modified = file_modified(path);
+    {
+        let mut s = state.borrow_mut();
+        let Some(pos) = s.frame_cache.iter().position(|frame| frame.path == path) else {
+            return false;
+        };
+        if modified.is_none() || s.frame_cache[pos].modified != modified {
+            s.frame_cache.remove(pos);
+            return false;
+        }
+        let frame = s.frame_cache[pos].clone();
+        zoom::cancel_pending(&mut s);
+        s.load_generation = s.load_generation.wrapping_add(1);
+        s.awaiting_prefetch = false;
+        s.current_ready = true;
+        show_frame(&mut s, frame.texture, frame.natural, frame.histogram, Some(path));
+    }
+    schedule_prefetch(state);
+    true
+}
+
+/// `clean` names the file when `texture` holds its unedited pixels; edited
+/// previews pass `None` so the film strip never shows unsaved edits.
+fn show_frame(
+    s: &mut ViewerState,
+    texture: gdk::Texture,
+    natural: (u32, u32),
+    histogram: Histogram,
+    clean: Option<&Path>,
+) {
+    s.natural = natural;
+    s.histogram = histogram;
+    s.shown_path = clean.map(Path::to_path_buf);
+    if clean.is_some() {
+        paint_current_thumb(s, &texture);
+    }
+    s.texture = Some(texture);
+    s.stack.set_visible_child_name("picture");
+    apply_zoom(s);
+    s.zoom_level.set_label(&zoom_percent_label(s));
+    s.histogram_area.queue_draw();
+}
+
+/// Keep the cached neighbours drawn in the invisible warm-up slots.
+fn refresh_warm_slots(s: &ViewerState) {
+    let neighbours = neighbour_paths(s);
+    for (i, slot) in s.warm_slots.iter().enumerate() {
+        let texture = neighbours
+            .get(i)
+            .and_then(|path| s.frame_cache.iter().find(|frame| &frame.path == path))
+            .map(|frame| frame.texture.clone());
+        slot.set_paintable(texture.as_ref());
+    }
+}
+
+fn remember_frame(s: &mut ViewerState, frame: CachedFrame) {
+    if u64::from(frame.natural.0) * u64::from(frame.natural.1) > PREFETCH_MAX_PIXELS {
+        return;
+    }
+    s.frame_cache.retain(|cached| cached.path != frame.path);
+    s.frame_cache.push(frame);
+}
+
+/// Previous and next files, nearest first, without the current one.
+fn neighbour_paths(s: &ViewerState) -> Vec<PathBuf> {
+    let total = s.files.len();
+    if total < 2 {
+        return Vec::new();
+    }
+    let next = (s.idx + 1) % total;
+    let previous = (s.idx + total - 1) % total;
+    let mut paths = vec![s.files[next].clone()];
+    if previous != next {
+        paths.push(s.files[previous].clone());
+    }
+    paths
+}
+
+/// Decode the next missing neighbour, one at a time, once the current
+/// image is on screen. Frames that are no longer neighbours are freed.
+fn schedule_prefetch(state: &Rc<RefCell<ViewerState>>) {
+    let mut s = state.borrow_mut();
+    let wanted = neighbour_paths(&s);
+    let current = s.files.get(s.idx).cloned();
+    s.frame_cache
+        .retain(|frame| current.as_ref() == Some(&frame.path) || wanted.contains(&frame.path));
+    refresh_warm_slots(&s);
+    if !s.current_ready || s.prefetching.is_some() || !s.pending_ops.is_empty() {
+        return;
+    }
+    let missing = wanted.into_iter().find(|path| {
+        !s.frame_cache.iter().any(|frame| &frame.path == path) && !s.prefetch_skip.contains(path)
+    });
+    if let Some(path) = missing {
+        s.prefetching = Some(path.clone());
+        s.prefetcher.request(LoadRequest {
+            generation: 0,
+            path,
+            ops: Vec::new(),
+            max_pixels: Some(PREFETCH_MAX_PIXELS),
+        });
+    }
+}
+
+fn apply_prefetched_frame(state: &Rc<RefCell<ViewerState>>, frame: DecodedFrame) {
+    let fallback = {
+        let mut s = state.borrow_mut();
+        s.prefetching = None;
+        let is_current = s.awaiting_prefetch
+            && s.pending_ops.is_empty()
+            && s.files.get(s.idx).is_some_and(|path| path == &frame.path);
+        match frame.pixels {
+            Ok((raw, w, h, histogram)) => {
+                let too_large = u64::from(w) * u64::from(h) > PREFETCH_MAX_PIXELS;
+                if too_large {
+                    s.prefetch_skip.push(frame.path.clone());
+                }
+                if is_current || (!too_large && neighbour_paths(&s).contains(&frame.path)) {
+                    let texture = texture_from_rgba(raw, w, h);
+                    remember_frame(
+                        &mut s,
+                        CachedFrame {
+                            path: frame.path.clone(),
+                            modified: frame.modified,
+                            texture: texture.clone(),
+                            natural: (w, h),
+                            histogram,
+                        },
+                    );
+                    if is_current {
+                        zoom::cancel_pending(&mut s);
+                        s.awaiting_prefetch = false;
+                        s.current_ready = true;
+                        show_frame(&mut s, texture, (w, h), histogram, Some(&frame.path));
+                    }
+                }
+                None
+            }
+            // Let the regular loader report the error for the current file.
+            Err(_) if is_current => {
+                s.awaiting_prefetch = false;
+                Some(frame.path)
+            }
+            Err(_) => {
+                s.prefetch_skip.push(frame.path);
+                None
+            }
+        }
+    };
+    match fallback {
+        Some(path) => request_frame(state, path, Vec::new()),
+        None => schedule_prefetch(state),
+    }
+}
+
+/// Splice the sibling list found in the background into a viewer that was
+/// opened with only the requested file. The visible image stays as it is.
+fn adopt_folder(state: &Rc<RefCell<ViewerState>>, mut files: Vec<PathBuf>, index: usize) {
+    {
+        let mut s = state.borrow_mut();
+        if files.len() < 2 || s.files.len() != 1 || index >= files.len() {
+            return;
+        }
+        // Keep the exact path of the frame already requested, so a decode
+        // still in flight is not discarded as stale.
+        files[index] = s.files[0].clone();
+        s.files = Rc::new(files);
+        s.idx = index;
+        if app_settings().is_none_or(|settings| settings.boolean("filmstrip-visible")) {
+            s.strip_revealer.set_visible(true);
+            s.strip_revealer.set_can_target(true);
+        }
+    }
+    let window = state.borrow().window();
+    for name in ["previous", "next"] {
+        if let Some(action) = window.lookup_action(name).and_downcast::<gio::SimpleAction>() {
+            action.set_enabled(true);
+        }
+    }
+    rebuild_film_strip(state);
+    refresh_title(state);
+    refresh_film_strip_active(state);
+    schedule_prefetch(state);
 }
 
 /// Never discard edits as a side effect of navigation. The user can save or
@@ -2013,9 +2793,9 @@ fn request_frame(state: &Rc<RefCell<ViewerState>>, path: PathBuf, ops: Vec<EditO
     let mut s = state.borrow_mut();
     zoom::cancel_pending(&mut s);
     s.load_generation = s.load_generation.wrapping_add(1);
-    s.loading_spinner.set_visible(true);
-    s.loading_spinner.start();
-    s.loader.request(LoadRequest { generation: s.load_generation, path, ops });
+    s.current_ready = false;
+    s.awaiting_prefetch = false;
+    s.loader.request(LoadRequest { generation: s.load_generation, path, ops, max_pixels: None });
 }
 
 fn apply_decoded_frame(state: &Rc<RefCell<ViewerState>>, frame: DecodedFrame) {
@@ -2030,28 +2810,51 @@ fn apply_decoded_frame(state: &Rc<RefCell<ViewerState>>, frame: DecodedFrame) {
 
     let mut s = state.borrow_mut();
     if !s.saving {
-        s.loading_spinner.stop();
         s.loading_spinner.set_visible(false);
     }
+    if !s.first_frame_shown {
+        s.first_frame_shown = true;
+        if let Some(begin) = s.deferred_thumbnails.take() {
+            glib::idle_add_local_once(begin);
+        }
+    }
     zoom::cancel_pending(&mut s);
+    s.current_ready = true;
     match frame.pixels {
         Ok((raw, w, h, histogram)) => {
             let texture = texture_from_rgba(raw, w, h);
-            s.natural = (w, h);
-            s.histogram = histogram;
-            s.texture = Some(texture);
-            apply_zoom(&s);
-            s.histogram_area.queue_draw();
+            if !frame.edited {
+                remember_frame(
+                    &mut s,
+                    CachedFrame {
+                        path: frame.path.clone(),
+                        modified: frame.modified,
+                        texture: texture.clone(),
+                        natural: (w, h),
+                        histogram,
+                    },
+                );
+            }
+            let clean = (!frame.edited).then_some(frame.path.as_path());
+            show_frame(&mut s, texture, (w, h), histogram, clean);
+            drop(s);
         }
         Err(error) => {
             tracing::error!(path = ?frame.path, %error, "falha ao carregar imagem");
             s.texture = None;
+            s.shown_path = None;
             s.picture.set_paintable(gdk::Paintable::NONE);
-            s.osd_label.set_text(&gettext("Não foi possível abrir a imagem"));
+            let name = frame.path.file_name().map_or_else(
+                || frame.path.display().to_string(),
+                |name| name.to_string_lossy().into_owned(),
+            );
+            s.error_page.set_description(Some(&glib::markup_escape_text(&name)));
+            s.stack.set_visible_child_name("error");
+            s.zoom_level.set_label(&zoom_percent_label(&s));
             drop(s);
-            pulse_osd(state);
         }
     }
+    schedule_prefetch(state);
 }
 
 /// Constrói um menu curto para as funções menos frequentes. A navegação e
@@ -2227,6 +3030,20 @@ fn install_viewer_actions(
         });
     }
     window.add_action(&zoom_fit);
+    let zoom_to = gio::SimpleAction::new("zoom-to", Some(glib::VariantTy::DOUBLE));
+    zoom_to.set_enabled(has_files);
+    {
+        let state = Rc::downgrade(state);
+        zoom_to.connect_activate(move |_, scale| {
+            let (Some(state), Some(scale)) = (state.upgrade(), scale.and_then(|v| v.get::<f64>()))
+            else {
+                return;
+            };
+            set_zoom(&state, ZoomState::Scale(scale));
+            pulse_osd(&state);
+        });
+    }
+    window.add_action(&zoom_to);
 
     // win.copy — copia a textura atual pro clipboard. Qualquer app (Slack,
     // Ctrl+V num chat) consegue colar.
@@ -2354,16 +3171,13 @@ fn install_viewer_actions(
             let Some(state) = state.upgrade() else {
                 return;
             };
-            let path = {
-                let s = state.borrow();
-                if s.files.is_empty() {
-                    return;
-                }
-                s.files[s.idx].clone()
-            };
-            if let Ok(exe) = std::env::current_exe() {
-                let _ = std::process::Command::new(exe).arg("--dialog=crop").arg(path).spawn();
-            }
+            let Some(path) = path_for_external_tool(&state) else { return };
+            // `--` keeps a file named like `-x.png` from being read as a flag.
+            let _ = transfers::spawn_bigiris([
+                std::ffi::OsStr::new("--dialog=crop"),
+                std::ffi::OsStr::new("--"),
+                path.as_os_str(),
+            ]);
         });
     }
     window.add_action(&crop);
@@ -2379,26 +3193,19 @@ fn install_viewer_actions(
             let Some(state) = state.upgrade() else {
                 return;
             };
-            let path = {
-                let s = state.borrow();
-                if s.files.is_empty() {
-                    return;
-                }
-                s.files[s.idx].clone()
-            };
-            if let Ok(exe) = std::env::current_exe() {
-                let _ = std::process::Command::new(exe)
-                    .arg(format!("--dialog={dialog}"))
-                    .arg(path)
-                    .spawn();
-            }
+            let Some(path) = path_for_external_tool(&state) else { return };
+            let flag = std::ffi::OsString::from(format!("--dialog={dialog}"));
+            let _ = transfers::spawn_bigiris([
+                flag.as_os_str(),
+                std::ffi::OsStr::new("--"),
+                path.as_os_str(),
+            ]);
         });
         window.add_action(&action);
     }
 
-    // win.trash — confirma e joga o arquivo na lixeira do XDG. Como o
-    // state guarda files como Rc<Vec>, depois de deletar fechamos a
-    // janela em vez de tentar mutar a lista (o usuário reabre o próximo).
+    // win.trash — confirma e joga o arquivo na lixeira do XDG, depois mostra
+    // a imagem vizinha. Desligada enquanto um salvamento está em curso.
     let trash = gio::SimpleAction::new("trash", None);
     trash.set_enabled(has_files);
     {
@@ -2443,6 +3250,29 @@ fn install_viewer_actions(
     app.set_accels_for_action("app.about", &["F1"]);
 }
 
+/// File for the crop / remove-background / upscale dialogs. They run in
+/// another process and read the file from disk, so unsaved in-memory edits
+/// would silently be ignored, and a save in progress may replace the file
+/// under them: ask the user to save or undo first, like navigation does.
+fn path_for_external_tool(state: &Rc<RefCell<ViewerState>>) -> Option<PathBuf> {
+    let message = {
+        let s = state.borrow();
+        if s.files.is_empty() {
+            return None;
+        }
+        if s.saving {
+            gettext("Aguarde o salvamento terminar")
+        } else if !s.pending_ops.is_empty() {
+            gettext("Salve ou desfaça as alterações antes de usar esta ferramenta")
+        } else {
+            return Some(s.files[s.idx].clone());
+        }
+    };
+    state.borrow().osd_label.set_text(&message);
+    pulse_osd(state);
+    None
+}
+
 /// Apresenta um FileDialog de seleção múltipla com filtro de imagens.
 /// Abre cada seleção numa nova janela via `std::process::Command` pra
 /// preservar o histórico da janela atual (e porque a `files` no state
@@ -2462,19 +3292,15 @@ fn open_file_chooser(window: &adw::ApplicationWindow) {
 
     dialog.open_multiple(Some(window), gio::Cancellable::NONE, move |result| {
         let Ok(list) = result else { return };
-        let mut paths: Vec<String> = Vec::new();
-        for i in 0..list.n_items() {
-            if let Some(file) = list.item(i).and_downcast::<gio::File>() {
-                if let Some(p) = file.path() {
-                    paths.push(p.to_string_lossy().into_owned());
-                }
-            }
-        }
+        let paths: Vec<std::ffi::OsString> = (0..list.n_items())
+            .filter_map(|i| list.item(i).and_downcast::<gio::File>()?.path())
+            .map(PathBuf::into_os_string)
+            .collect();
         if paths.is_empty() {
             return;
         }
-        let exe = std::env::current_exe().unwrap_or_else(|_| PathBuf::from("bigiris"));
-        let _ = std::process::Command::new(exe).args(&paths).spawn();
+        // "--" keeps a file named like an option from being parsed as one.
+        let _ = transfers::spawn_bigiris(std::iter::once("--".into()).chain(paths));
     });
 }
 
@@ -2498,46 +3324,47 @@ fn copy_current_to_clipboard(state: &Rc<RefCell<ViewerState>>) {
 /// Renderiza a imagem com cairo numa única página, escalada pra
 /// caber com aspect ratio preservado (Contain).
 fn print_current(state: &Rc<RefCell<ViewerState>>) {
-    let (window, path) = {
+    let (window, path, edited) = {
         let s = state.borrow();
         if s.files.is_empty() {
             return;
         }
-        (s.window().clone(), s.files[s.idx].clone())
+        // With unsaved rotate/flip the page must match the screen, not the
+        // file on disk: print the edited texture already in memory.
+        let edited = s.texture.clone().filter(|_| !s.pending_ops.is_empty());
+        (s.window().clone(), s.files[s.idx].clone(), edited)
     };
+    if let Some(texture) = edited {
+        match cairo_surface_from_texture(&texture) {
+            Some(surface) => present_print_dialog(&window, &path, surface),
+            None => show_print_error(&window, &gettext("Não foi possível preparar a página")),
+        }
+        return;
+    }
     let cancel = Arc::new(AtomicBool::new(false));
     let closing = cancel.clone();
     let closing_handler = window.connect_unrealize(move |_| closing.store(true, Ordering::Release));
     let input = path.clone();
-    let (tx, rx) = mpsc::sync_channel(1);
     window.set_cursor_from_name(Some("wait"));
-    std::thread::spawn(move || {
+    let job = gio::spawn_blocking(move || {
         crate::codec::with_cancel(cancel, || {
-            let result = bigimage_core::open_image(input)
+            bigimage_core::open_image(input)
                 .map(|image| {
-                    let rgba = image.to_rgba8();
+                    let rgba = bigimage_core::into_srgb_rgba8(image);
                     let size = rgba.dimensions();
                     (premultiply_for_cairo(rgba.into_raw()), size)
                 })
-                .map_err(|e| e.to_string());
-            let _ = tx.send(result);
-        });
+                .map_err(|e| e.to_string())
+        })
     });
     let weak = window.downgrade();
-    let mut closing_handler = Some(closing_handler);
-    glib::timeout_add_local(Duration::from_millis(16), move || {
-        let Some(window) = weak.upgrade() else { return glib::ControlFlow::Break };
+    glib::MainContext::default().spawn_local(async move {
+        let result = job.await.unwrap_or_else(|_| Err(gettext("O preparo da impressão falhou")));
+        let Some(window) = weak.upgrade() else { return };
         if !window.is_visible() {
-            return glib::ControlFlow::Break;
+            return;
         }
-        let result = match rx.try_recv() {
-            Ok(result) => result,
-            Err(mpsc::TryRecvError::Empty) => return glib::ControlFlow::Continue,
-            Err(mpsc::TryRecvError::Disconnected) => Err("O preparo da impressão falhou".into()),
-        };
-        if let Some(handler) = closing_handler.take() {
-            window.disconnect(handler);
-        }
+        window.disconnect(closing_handler);
         window.set_cursor(None);
         match result {
             Ok((pixels, (width, height))) => {
@@ -2550,13 +3377,29 @@ fn print_current(state: &Rc<RefCell<ViewerState>>) {
                 ) {
                     present_print_dialog(&window, &path, surface);
                 } else {
-                    show_print_error(&window, "Não foi possível preparar a página");
+                    show_print_error(&window, &gettext("Não foi possível preparar a página"));
                 }
             }
             Err(error) => show_print_error(&window, &error),
         }
-        glib::ControlFlow::Break
     });
+}
+
+/// GDK's default download format is premultiplied BGRA/ARGB in native
+/// order, i.e. exactly cairo's ARGB32.
+fn cairo_surface_from_texture(texture: &gdk::Texture) -> Option<gtk::cairo::ImageSurface> {
+    let (width, height) = (texture.width(), texture.height());
+    let stride = gtk::cairo::Format::ARgb32.stride_for_width(u32::try_from(width).ok()?).ok()?;
+    let mut pixels = vec![0u8; usize::try_from(stride).ok()? * usize::try_from(height).ok()?];
+    texture.download(&mut pixels, usize::try_from(stride).ok()?);
+    gtk::cairo::ImageSurface::create_for_data(
+        pixels,
+        gtk::cairo::Format::ARgb32,
+        width,
+        height,
+        stride,
+    )
+    .ok()
 }
 
 /// Cairo ARGB32 stores premultiplied components in native byte order.
@@ -2613,11 +3456,6 @@ fn present_print_dialog(
 /// Reusa o dialog de metadados existente com os arquivos do viewer.
 /// Spawna nova janela (o dialog é uma AppWindow independente).
 fn show_metadata_for_current(state: &Rc<RefCell<ViewerState>>) {
-    // Se já existe uma janela aberta, traz pra frente em vez de empilhar.
-    if let Some(existing) = state.borrow().props_dialog.clone() {
-        existing.present();
-        return;
-    }
     let (window, path) = {
         let s = state.borrow();
         if s.files.is_empty() {
@@ -2625,29 +3463,51 @@ fn show_metadata_for_current(state: &Rc<RefCell<ViewerState>>) {
         }
         (s.window().clone(), s.files[s.idx].clone())
     };
+    // Se já existe uma janela aberta para esta imagem, traz pra frente em
+    // vez de empilhar. Depois de navegar, ela descreveria a imagem errada:
+    // fecha e monta uma nova.
+    // An in-place save keeps the path but changes the file, so the
+    // modification time is compared too.
+    let modified = file_modified(&path);
+    let existing = state.borrow_mut().props_dialog.take();
+    if let Some((dialog, shown, shown_modified)) = existing {
+        if shown == path && shown_modified == modified {
+            dialog.present();
+            state.borrow_mut().props_dialog = Some((dialog, shown, shown_modified));
+            return;
+        }
+        dialog.destroy();
+    }
     let Some(app) = window.application().and_downcast::<adw::Application>() else { return };
     let dialog = build_properties_window(&app, &path);
+    // Attached to the viewer: GTK then drops minimize/maximize, as for any
+    // dialog, and the window closes with its parent.
+    dialog.set_transient_for(Some(&window));
+    dialog.set_destroy_with_parent(true);
     // Quando o user fecha, soltamos a referência — próximo clique abre fresco.
     {
         let state = Rc::downgrade(state);
-        dialog.connect_close_request(move |_| {
+        dialog.connect_close_request(move |closing| {
             if let Some(state) = state.upgrade() {
-                state.borrow_mut().props_dialog = None;
+                let mut s = state.borrow_mut();
+                if s.props_dialog.as_ref().is_some_and(|(open, ..)| open == closing) {
+                    s.props_dialog = None;
+                }
             }
             glib::Propagation::Proceed
         });
     }
-    state.borrow_mut().props_dialog = Some(dialog.clone());
+    state.borrow_mut().props_dialog = Some((dialog.clone(), path, modified));
     dialog.present();
 }
 
 /// Confirma com AdwAlertDialog e move o arquivo corrente pra lixeira
-/// via `gio::File::trash`. Depois fecha a janela — a `files` do state
-/// é imutável (Rc<Vec>), então remover elemento exigiria refactor.
+/// via `gio::File::trash`. Depois segue para a próxima imagem da pasta
+/// (ou a anterior, se era a última); só fecha quando não sobra nenhuma.
 fn trash_current(state: &Rc<RefCell<ViewerState>>) {
     let (window, path) = {
         let s = state.borrow();
-        if s.files.is_empty() {
+        if s.files.is_empty() || s.saving {
             return;
         }
         (s.window().clone(), s.files[s.idx].clone())
@@ -2671,18 +3531,77 @@ fn trash_current(state: &Rc<RefCell<ViewerState>>) {
     alert.set_default_response(Some("cancel"));
     alert.set_close_response("cancel");
 
-    let window_for_close = window.clone();
+    let weak = Rc::downgrade(state);
     alert.connect_response(Some("trash"), move |_, _| {
+        let Some(state) = weak.upgrade() else { return };
+        // A save may have started while the dialog was open.
+        if state.borrow().saving {
+            return;
+        }
         let file = gio::File::for_path(&path);
         match file.trash(gio::Cancellable::NONE) {
-            Ok(_) => {
+            Ok(()) => {
                 tracing::info!(?path, "trash ok");
-                window_for_close.close();
+                remove_current_file(&state, &path);
             }
-            Err(e) => tracing::warn!(?path, error = %e, "trash falhou"),
+            Err(error) => {
+                tracing::warn!(?path, %error, "trash falhou");
+                let window = state.borrow().window();
+                let alert = adw::AlertDialog::builder()
+                    .heading(gettext("Não foi possível mover para a lixeira"))
+                    .body(format!("\"{name}\"\n\n{}", error.message()))
+                    .build();
+                alert.add_response("close", &gettext("Fechar"));
+                alert.present(Some(&window));
+            }
         }
     });
     alert.present(Some(&window));
+}
+
+/// Drop `path` (the file on screen) from the list after it went to the
+/// trash and show its neighbour: the next one, or the previous when it was
+/// the last. The window closes only when the list becomes empty.
+fn remove_current_file(state: &Rc<RefCell<ViewerState>>, path: &Path) {
+    let remaining = {
+        let mut s = state.borrow_mut();
+        let Some(position) = s.files.iter().position(|p| p == path) else { return };
+        let mut files = s.files.as_ref().clone();
+        files.remove(position);
+        // The edits belonged to the file that is gone.
+        s.pending_ops.clear();
+        s.redo_ops.clear();
+        s.frame_cache.retain(|frame| frame.path != path);
+        s.prefetch_skip.retain(|p| p != path);
+        s.idx = position.min(files.len().saturating_sub(1));
+        s.zoom = ZoomState::Fit;
+        s.files = Rc::new(files);
+        s.files.len()
+    };
+    if remaining == 0 {
+        let window = state.borrow().window();
+        window.close();
+        return;
+    }
+    if remaining < 2 {
+        let s = state.borrow();
+        s.strip_revealer.set_reveal_child(false);
+        s.strip_revealer.set_visible(false);
+        s.strip_revealer.set_can_target(false);
+        let window = s.window();
+        drop(s);
+        for name in ["previous", "next"] {
+            if let Some(action) = window.lookup_action(name).and_downcast::<gio::SimpleAction>() {
+                action.set_enabled(false);
+            }
+        }
+        if let Some(id) = state.borrow_mut().slideshow_source.take() {
+            id.remove();
+        }
+    }
+    rebuild_film_strip(state);
+    update_display(state);
+    pulse_osd(state);
 }
 
 /// Compact keyboard reference using widgets supported by GTK 4.12 / Adwaita 1.5.
@@ -2714,7 +3633,7 @@ fn present_shortcuts_dialog(parent: &adw::ApplicationWindow) {
                 ("F", gettext("Fita de miniaturas")),
                 ("G", gettext("Histograma RGB")),
                 ("H", gettext("Fixar barras visíveis")),
-                ("Escape", gettext("Fechar")),
+                ("Escape", gettext("Sair da tela cheia ou fechar")),
             ],
         ),
         (
@@ -2746,26 +3665,12 @@ fn present_shortcuts_dialog(parent: &adw::ApplicationWindow) {
             vec![("<ctrl>question", gettext("Este diálogo")), ("F1", gettext("Sobre"))],
         ),
     ];
-    let names: Vec<_> = shortcuts.iter().map(|(name, _)| name.as_str()).collect();
-    let categories = gtk::StringList::new(&names);
-    let selector = gtk::DropDown::builder()
-        .model(&categories)
-        .tooltip_text(gettext("Categoria dos atalhos"))
-        .hexpand(true)
-        .build();
-    let pages = gtk::Stack::builder().vhomogeneous(false).hhomogeneous(false).build();
-    for (index, (_, entries)) in shortcuts.into_iter().enumerate() {
-        let list = gtk::ListBox::builder().selection_mode(gtk::SelectionMode::None).build();
-        list.add_css_class("boxed-list");
-        list.set_valign(gtk::Align::Start);
+    // One scrolling page with a group per category, like GNOME's own
+    // shortcut windows: everything is visible without picking a category.
+    let page = adw::PreferencesPage::new();
+    for (name, entries) in shortcuts {
+        let group = adw::PreferencesGroup::builder().title(name).build();
         for (accel, desc) in entries {
-            let row = gtk::Box::new(gtk::Orientation::Horizontal, 12);
-            row.set_margin_start(12);
-            row.set_margin_end(12);
-            row.set_margin_top(8);
-            row.set_margin_bottom(8);
-            let title =
-                gtk::Label::builder().label(desc).xalign(0.0).hexpand(true).wrap(true).build();
             let key_text = if accel == "scroll_wheel" {
                 gettext("Roda do mouse")
             } else {
@@ -2782,45 +3687,22 @@ fn present_shortcuts_dialog(parent: &adw::ApplicationWindow) {
                     .collect::<Vec<_>>()
                     .join(" / ")
             };
-            let keys = gtk::Label::builder().label(key_text).build();
+            let keys = gtk::Label::builder().label(key_text).valign(gtk::Align::Center).build();
             keys.add_css_class("dim-label");
-            row.append(&title);
-            row.append(&keys);
-            let list_row =
-                gtk::ListBoxRow::builder().activatable(false).selectable(false).child(&row).build();
-            list.append(&list_row);
+            keys.add_css_class("numeric");
+            let row = adw::ActionRow::builder().title(desc).use_markup(false).build();
+            row.add_suffix(&keys);
+            group.add(&row);
         }
-        pages.add_named(&list, Some(&index.to_string()));
+        page.add(&group);
     }
-    pages.set_visible_child_name("0");
-    {
-        let pages = pages.downgrade();
-        selector.connect_selected_notify(move |selector| {
-            if let Some(pages) = pages.upgrade() {
-                pages.set_visible_child_name(&selector.selected().to_string());
-            }
-        });
-    }
-    let scroller = gtk::ScrolledWindow::builder()
-        .hscrollbar_policy(gtk::PolicyType::Never)
-        .vscrollbar_policy(gtk::PolicyType::Automatic)
-        .vexpand(true)
-        .child(&pages)
-        .build();
-    let content = gtk::Box::new(gtk::Orientation::Vertical, 12);
-    content.set_margin_start(16);
-    content.set_margin_end(16);
-    content.set_margin_top(12);
-    content.set_margin_bottom(16);
-    content.append(&selector);
-    content.append(&scroller);
     let layout = adw::ToolbarView::new();
     layout.add_top_bar(&adw::HeaderBar::new());
-    layout.set_content(Some(&content));
+    layout.set_content(Some(&page));
     let dialog = adw::Dialog::builder()
         .title(gettext("Atalhos de teclado"))
-        .content_width(420)
-        .content_height(320)
+        .content_width(440)
+        .content_height(520)
         .child(&layout)
         .build();
     dialog.present(Some(parent));
@@ -2862,17 +3744,23 @@ fn present_about_dialog(parent: &adw::ApplicationWindow) -> adw::AboutDialog {
 
 /// Compact start page with two actions and file-manager drop/paste support.
 fn build_dashboard(window: &adw::ApplicationWindow) -> gtk::Widget {
-    let content = gtk::Box::new(gtk::Orientation::Vertical, 12);
+    let content = gtk::Box::new(gtk::Orientation::Vertical, 18);
     content.set_valign(gtk::Align::Center);
     content.set_margin_top(16);
     content.set_margin_bottom(16);
     content.set_margin_start(20);
     content.set_margin_end(20);
     let icon = gtk::Image::from_icon_name(APP_ID);
-    icon.set_pixel_size(56);
+    icon.set_pixel_size(128);
     content.append(&icon);
+    // Short windows get a smaller icon so the actions stay in view.
+    if let Ok(condition) = adw::BreakpointCondition::parse("max-height: 440px") {
+        let compact = adw::Breakpoint::new(condition);
+        compact.add_setter(&icon, "pixel-size", Some(&64.to_value()));
+        window.add_breakpoint(compact);
+    }
     let title = gtk::Label::new(Some(&gettext("Abra suas imagens")));
-    title.add_css_class("title-2");
+    title.add_css_class("title-1");
     title.set_wrap(true);
     content.append(&title);
     let hint =
@@ -2882,7 +3770,8 @@ fn build_dashboard(window: &adw::ApplicationWindow) -> gtk::Widget {
     hint.set_justify(gtk::Justification::Center);
     hint.set_max_width_chars(38);
     content.append(&hint);
-    let actions = gtk::Box::new(gtk::Orientation::Vertical, 8);
+    let actions = gtk::Box::new(gtk::Orientation::Vertical, 10);
+    actions.set_margin_top(12);
     let open_btn = gtk::Button::builder()
         .label(gettext("Abrir imagens…"))
         .css_classes(["pill", "suggested-action"])
@@ -2926,8 +3815,9 @@ fn open_batch_folder_dialog(window: &adw::ApplicationWindow) {
     dialog.select_folder(Some(&parent), gio::Cancellable::NONE, move |result| {
         let Ok(folder) = result else { return };
         let Some(path) = folder.path() else { return };
-        let Ok(exe) = std::env::current_exe() else { return };
-        if std::process::Command::new(exe).arg("--dialog=batch").arg(path).spawn().is_ok() {
+        let args =
+            [std::ffi::OsStr::new("--dialog=batch"), std::ffi::OsStr::new("--"), path.as_os_str()];
+        if transfers::spawn_bigiris(args).is_ok() {
             window.close();
         }
     });
@@ -2985,13 +3875,12 @@ fn refresh_title(state: &Rc<RefCell<ViewerState>>) {
         .unwrap_or_else(|| path.display().to_string());
     // `•` à esquerda sinaliza edições pendentes. Convenção Loupe/TextEditor.
     let name = if s.pending_ops.is_empty() { base_name } else { format!("• {base_name}") };
-    let zoom_desc = match zoom::requested_zoom(&s) {
-        ZoomState::Fit => "Ajustar".to_string(),
-        ZoomState::Scale(x) => format!("{}%", (x * 100.0).round() as i32),
-    };
-    let subtitle = format!("{} de {} · {}", s.idx + 1, s.files.len(), zoom_desc);
+    let subtitle = gettext("{current} de {total}")
+        .replace("{current}", &(s.idx + 1).to_string())
+        .replace("{total}", &s.files.len().to_string());
     s.title.set_title(&name);
     s.title.set_subtitle(&subtitle);
+    s.zoom_level.set_label(&zoom_percent_label(&s));
     drop(s);
     refresh_osd(state);
     refresh_film_strip_active(state);
@@ -3003,10 +3892,11 @@ type RawFrame = (Vec<u8>, u32, u32, Histogram);
 fn decode_frame(path: &Path, ops: &[EditOp]) -> Result<RawFrame, Box<dyn std::error::Error>> {
     let img = bigimage_core::open_image(path)?;
     let edited = ops.iter().fold(img, |acc, op| apply_op_to_image(acc, *op));
-    let rgba = edited.to_rgba8();
+    // Float (EXR/HDR) pixels are linear: encode them to sRGB for display.
+    let rgba = bigimage_core::into_srgb_rgba8(edited);
     let (w, h) = rgba.dimensions();
     let raw = rgba.into_raw();
-    let histogram = compute_histogram(&raw);
+    let histogram = sampled_histogram(&raw);
     Ok((raw, w, h, histogram))
 }
 
@@ -3017,13 +3907,14 @@ fn texture_from_rgba(raw: Vec<u8>, w: u32, h: u32) -> gdk::Texture {
         .upcast()
 }
 
-/// Conta ocorrências de cada byte (0..256) por canal em um buffer RGBA
-/// contíguo. Ignora alpha — pro histograma do viewer o que importa é a
-/// distribuição de luminância por canal. Retorna `[R..256, G..256, B..256]`
-/// concatenado pra o rendering ficar com `.chunks(256)`.
-fn compute_histogram(rgba: &[u8]) -> [u32; 768] {
+/// The overlay draws each channel relative to its own peak, so a regular
+/// sample of about a million pixels gives the same shape as a full count
+/// at a fraction of the cost on large photos.
+fn sampled_histogram(rgba: &[u8]) -> Histogram {
+    let pixels = rgba.as_chunks::<4>().0;
+    let step = (pixels.len() / 1_000_000).max(1);
     let mut h = [0u32; 768];
-    for px in rgba.as_chunks::<4>().0 {
+    for px in pixels.iter().step_by(step) {
         h[px[0] as usize] += 1;
         h[256 + px[1] as usize] += 1;
         h[512 + px[2] as usize] += 1;
@@ -3036,3927 +3927,17 @@ fn compute_histogram(rgba: &[u8]) -> [u32; 768] {
 // --------------------------------------------------------------------------
 
 use bigimage_core::{
-    adjust_file, convert_file_to, crop_file, extent_file, flip_file, make_gif, metadata,
-    resize_file, rotate_file, AdjustOps, AnimateOptions, CropRect, EncodeOptions, ExtentOptions,
-    ExtentSize, Filter, FlipAxis, Format, Gravity, LoopMode, OverwritePolicy, PreviewOp,
-    PreviewSession, ResizeMode, Rotation,
+    adjust_file, convert_file_to, crop_file, extent_file, flip_file, metadata, resize_file,
+    rotate_file, AdjustOps, AnimateOptions, CropRect, EncodeOptions, ExtentOptions, ExtentSize,
+    Filter, FlipAxis, Format, Gravity, LoopMode, OverwritePolicy, PreviewOp, PreviewSession,
+    ResizeMode, Rotation,
 };
 use image::DynamicImage;
 use std::time::Duration;
 
-/// Dialog signals capture related widgets for the duration of the dialog.
-/// Disconnect when the surface is released, before object finalization:
-/// a strong callback cycle would prevent `destroy` from being emitted.
-fn disconnect_with_window(
-    window: &adw::ApplicationWindow,
-    object: &impl IsA<glib::Object>,
-    handler: glib::SignalHandlerId,
-) {
-    let object = object.as_ref().downgrade();
-    let handler = RefCell::new(Some(handler));
-    window.connect_unrealize(move |_| {
-        if let (Some(object), Some(handler)) = (object.upgrade(), handler.borrow_mut().take()) {
-            object.disconnect(handler);
-        }
-    });
-}
-
-macro_rules! dialog_signal {
-    ($window:expr, $object:expr, $method:ident, $callback:expr) => {{
-        let owner = $window.clone();
-        let object = $object.clone();
-        let handler = object.$method($callback);
-        disconnect_with_window(&owner, &object, handler);
-    }};
-}
-
-/// Target formats shared by Prisma dialogs; keep common formats first.
-const CONVERT_FORMATS: &[(&str, Format)] = &[
-    (n_("PNG"), Format::Png),
-    (n_("JPG (JPEG)"), Format::Jpeg),
-    (n_("WebP"), Format::WebP),
-    (n_("AVIF"), Format::Avif),
-    (n_("TIFF"), Format::Tiff),
-    (n_("BMP"), Format::Bmp),
-    (n_("GIF"), Format::Gif),
-    (n_("ICO (até 256 × 256)"), Format::Ico),
-    (n_("PNM (Netpbm)"), Format::Pnm),
-    (n_("TGA"), Format::Tga),
-    (n_("QOI"), Format::Qoi),
-    (n_("HDR"), Format::Hdr),
-    (n_("OpenEXR"), Format::OpenExr),
-];
-
-/// Enable only the controls honored by the selected encoder.
-fn bind_encode_controls(
-    window: &adw::ApplicationWindow,
-    format_row: &adw::ComboRow,
-    quality: &adw::SpinRow,
-    optimize: &adw::SwitchRow,
-) {
-    let selected = format_row.clone();
-    let quality = quality.clone();
-    let optimize = optimize.clone();
-    let update = move || {
-        let format = CONVERT_FORMATS[selected.selected() as usize].1;
-        quality.set_sensitive(matches!(format, Format::Jpeg | Format::Avif));
-        optimize.set_sensitive(matches!(format, Format::Png | Format::Avif));
-    };
-    update();
-    dialog_signal!(window, format_row, connect_selected_notify, move |_| update());
-}
-
-/// Overwrite choices shared by convert and resize dialogs.
-const OVERWRITE_CHOICES: &[(&str, OverwritePolicy)] = &[
-    (n_("Pular se já existir"), OverwritePolicy::Skip),
-    (n_("Sobrescrever o arquivo"), OverwritePolicy::Replace),
-    (n_("Incrementar (_1, _2, …)"), OverwritePolicy::Increment),
-];
-
-/// Interpolation filters for the resize dialog.
-const RESIZE_FILTERS: &[(&str, Filter)] = &[
-    (n_("Lanczos3 (padrão)"), Filter::Lanczos3),
-    (n_("Mitchell"), Filter::Mitchell),
-    (n_("CatmullRom"), Filter::CatmullRom),
-    (n_("Bilinear"), Filter::Bilinear),
-    (n_("Nearest (sem anti-aliasing)"), Filter::Nearest),
-];
-
-/// Run the "Converter" modal. Returns GTK's exit code.
-pub fn run_convert_dialog(files: Vec<PathBuf>) -> i32 {
-    let app = adw::Application::builder().application_id(APP_ID).build();
-    let files = Rc::new(files);
-    app.connect_activate(move |app| {
-        build_convert_dialog(app, files.clone()).present();
-    });
-    let code = app.run_with_args::<&str>(&[]);
-    i32::from(u8::from(code))
-}
-
-fn build_convert_dialog(app: &adw::Application, files: Rc<Vec<PathBuf>>) -> adw::ApplicationWindow {
-    let window = adw::ApplicationWindow::builder()
-        .application(app)
-        .default_width(880)
-        .default_height(500)
-        .title(gettext("Converter imagens — Prisma"))
-        .build();
-    prepare_dialog(&window, files, fill_convert_dialog);
-    window
-}
-
-fn fill_convert_dialog(
-    window: adw::ApplicationWindow,
-    files: Rc<Vec<PathBuf>>,
-    preview_session: Option<Rc<PreviewSession>>,
-) -> adw::ApplicationWindow {
-    let header = adw::HeaderBar::new();
-    let title = adw::WindowTitle::new(&gettext("Converter"), "Prisma");
-    header.set_title_widget(Some(&title));
-
-    let format_names: Vec<&str> = CONVERT_FORMATS.iter().map(|(n, _)| *n).collect();
-    let format_row = adw::ComboRow::builder()
-        .use_markup(false)
-        .title(gettext("Formato de destino"))
-        .model(&translated_strings(&format_names))
-        .build();
-
-    let overwrite_names: Vec<&str> = OVERWRITE_CHOICES.iter().map(|(n, _)| *n).collect();
-    let overwrite_row = adw::ComboRow::builder()
-        .use_markup(false)
-        .title(gettext("Se o arquivo de saída existir"))
-        .model(&translated_strings(&overwrite_names))
-        .build();
-
-    let files_row = adw::ActionRow::builder()
-        .use_markup(false)
-        .title(format!("{}: {}", gettext("Arquivos selecionados"), files.len()))
-        .build();
-    files_row.set_subtitle(&files_subtitle(&files));
-
-    let quality_spin = adw::SpinRow::with_range(1.0, 100.0, 1.0);
-    quality_spin.set_title(&gettext("Qualidade (JPEG/AVIF)"));
-    quality_spin.set_subtitle(&gettext("1 menor qualidade · 85 equilíbrio · 100 maior qualidade"));
-    quality_spin.set_value(85.0);
-
-    let optimize_switch = adw::SwitchRow::builder()
-        .use_markup(false)
-        .title(gettext("Otimizar tamanho"))
-        .subtitle("PNG com compressão máxima; AVIF mais lento; arquivo menor")
-        .active(false)
-        .build();
-
-    // Keep encoder tuning outside the primary conversion workflow.
-    let advanced_expander = adw::ExpanderRow::builder()
-        .title(gettext("Avançado"))
-        .subtitle(gettext("Otimização do encoder"))
-        .build();
-    advanced_expander.add_row(&optimize_switch);
-    bind_encode_controls(&window, &format_row, &quality_spin, &optimize_switch);
-
-    // ── Conversão group ───────────────────────────────────────────────
-    let conv_group = adw::PreferencesGroup::builder().title(gettext("Conversão")).build();
-    conv_group.add(&files_row);
-    conv_group.add(&format_row);
-    conv_group.add(&quality_spin);
-    conv_group.add(&advanced_expander);
-
-    // ── Destino group: overwrite policy + optional output folder ──────
-    let dest_group = adw::PreferencesGroup::builder().title(gettext("Destino")).build();
-    dest_group.add(&overwrite_row);
-
-    // Pasta de saída picker (mirror do Batch dialog) — None = mesma
-    // pasta do arquivo de origem (comportamento histórico).
-    let output_dir: Rc<RefCell<Option<PathBuf>>> = Rc::new(RefCell::new(None));
-    let folder_row = adw::ActionRow::builder()
-        .use_markup(false)
-        .title(gettext("Pasta de saída"))
-        .subtitle(gettext("Mesma pasta do arquivo de origem"))
-        .activatable(true)
-        .build();
-    let folder_icon = gtk::Image::from_icon_name("folder-open-symbolic");
-    folder_icon.add_css_class("dim-label");
-    folder_row.add_suffix(&folder_icon);
-    let clear_folder_btn = gtk::Button::builder()
-        .icon_name("edit-clear-symbolic")
-        .tooltip_text(gettext("Usar a mesma pasta do arquivo de origem"))
-        .css_classes(["flat"])
-        .valign(gtk::Align::Center)
-        .visible(false)
-        .build();
-    folder_row.add_suffix(&clear_folder_btn);
-    dest_group.add(&folder_row);
-
-    let status = gtk::Label::builder().label("").wrap(true).xalign(0.0).build();
-    status.add_css_class("dim-label");
-
-    let cancel_btn = gtk::Button::with_label(&gettext("Cancelar"));
-    let apply_btn = gtk::Button::builder().label(gettext("Converter")).build();
-    apply_btn.add_css_class("suggested-action");
-    apply_btn.add_css_class("pill");
-
-    let actions = gtk::Box::builder()
-        .orientation(gtk::Orientation::Horizontal)
-        .spacing(8)
-        .halign(gtk::Align::End)
-        .build();
-    actions.append(&cancel_btn);
-    actions.append(&apply_btn);
-
-    // Smart prompt: if the source image has an alpha channel and the user
-    // picks JPEG, warn that transparency will be flattened.
-    let alpha_banner = adw::Banner::builder()
-        .title(gettext(
-            "Esta imagem tem transparência — JPEG perde o canal alfa. Considere PNG ou WebP.",
-        ))
-        .revealed(false)
-        .build();
-    if let Some(sess) = preview_session.as_ref() {
-        if sess.has_alpha_channel() {
-            let format_row_clone = format_row.clone();
-            let banner = alpha_banner.clone();
-            let update = move || {
-                let fmt = CONVERT_FORMATS[format_row_clone.selected() as usize].1;
-                let warn = matches!(fmt, Format::Jpeg);
-                banner.set_revealed(warn);
-            };
-            update();
-            dialog_signal!(window, format_row, connect_selected_notify, move |_| update());
-        }
-    }
-
-    // Smart prompt: LGPD / privacidade — se a imagem tem coordenadas GPS
-    // no EXIF, avisa que o upload pode vazar a localização.
-    let gps_banner = adw::Banner::builder()
-        .title(
-            "Esta imagem contém GPS (localização) no EXIF. Atenção ao compartilhar \
-             publicamente — nosso pipeline remove o EXIF automaticamente no re-encode.",
-        )
-        .revealed(false)
-        .build();
-    gps_banner.add_css_class("warning");
-    if let Some(sess) = preview_session.as_ref() {
-        if sess.source_has_gps() {
-            gps_banner.set_revealed(true);
-        }
-    }
-
-    let content = gtk::Box::builder()
-        .orientation(gtk::Orientation::Vertical)
-        .spacing(16)
-        .margin_top(16)
-        .margin_bottom(16)
-        .margin_start(16)
-        .margin_end(16)
-        .build();
-    content.append(&gps_banner);
-    content.append(&alpha_banner);
-    content.append(&conv_group);
-    content.append(&dest_group);
-    content.append(&status);
-    content.append(&actions);
-    content.set_size_request(420, -1);
-
-    // Wire up the output-folder picker + reset button.
-    {
-        let output_dir = output_dir.clone();
-        let folder_row_for_pick = folder_row.clone();
-        let clear_btn = clear_folder_btn.clone();
-        let window = window.clone();
-        dialog_signal!(window, folder_row.clone(), connect_activated, move |_| {
-            pick_output_folder(&window, &output_dir, &folder_row_for_pick, &clear_btn);
-        });
-    }
-    {
-        let output_dir = output_dir.clone();
-        let folder_row = folder_row.clone();
-        let clear_btn = clear_folder_btn.clone();
-        dialog_signal!(window, clear_folder_btn, connect_clicked, move |_| {
-            *output_dir.borrow_mut() = None;
-            folder_row.set_subtitle(&gettext("Mesma pasta do arquivo de origem"));
-            clear_btn.set_visible(false);
-        });
-    }
-
-    let main_box =
-        gtk::Box::builder().orientation(gtk::Orientation::Horizontal).spacing(16).build();
-    main_box.append(&content);
-    if let Some(sess) = preview_session.as_ref() {
-        let (_picture, column) = build_preview_column(sess);
-        column.set_margin_top(16);
-        column.set_margin_bottom(16);
-        column.set_margin_end(16);
-        main_box.append(&column);
-        // Convert is format-level — visual preview is just the source
-        // thumbnail (pixels don't change meaningfully between PNG/JPG/WebP
-        // at default quality). No refresh wiring needed.
-    }
-
-    let toolbar_view = adw::ToolbarView::new();
-    toolbar_view.add_top_bar(&header);
-    toolbar_view.set_content(Some(&main_box));
-    window.set_content(Some(&toolbar_view));
-
-    {
-        let window = window.clone();
-        dialog_signal!(window, cancel_btn, connect_clicked, move |_| window.close());
-    }
-
-    {
-        let files = files.clone();
-        let format_row = format_row.clone();
-        let overwrite_row = overwrite_row.clone();
-        let quality_spin = quality_spin.clone();
-        let optimize_switch = optimize_switch.clone();
-        let status = status.clone();
-        let apply_btn = apply_btn.clone();
-        let cancel_btn = cancel_btn.clone();
-        let window = window.clone();
-        let output_dir = output_dir.clone();
-        dialog_signal!(window, apply_btn.clone(), connect_clicked, move |_| {
-            let fmt_idx = format_row.selected() as usize;
-            let policy_idx = overwrite_row.selected() as usize;
-            let fmt = CONVERT_FORMATS[fmt_idx].1;
-            let policy = OVERWRITE_CHOICES[policy_idx].1;
-            let opts = EncodeOptions {
-                quality: Some(quality_spin.value() as u8),
-                optimize: optimize_switch.is_active(),
-                ..EncodeOptions::default()
-            };
-            // Snapshot the chosen folder once at submit time — the
-            // picker can change while the worker is running and the
-            // worker thread mustn't peek into Rc<RefCell<...>>.
-            let out_dir_snapshot = output_dir.borrow().clone();
-
-            apply_btn.set_sensitive(false);
-            cancel_btn.set_sensitive(false);
-            status.set_text(&gettext("Convertendo…"));
-
-            let work_files: Vec<PathBuf> = (*files).clone();
-            run_batch_async(
-                work_files,
-                move |f| convert_file_to(f, out_dir_snapshot.as_deref(), fmt, &opts, policy),
-                gettext("Convertendo"),
-                status.clone(),
-                apply_btn.clone(),
-                cancel_btn.clone(),
-                window.clone(),
-            );
-        });
-    }
-
-    window
-}
-
-/// Run the "Redimensionar" modal.
-pub fn run_resize_dialog(files: Vec<PathBuf>) -> i32 {
-    let app = adw::Application::builder().application_id(APP_ID).build();
-    let files = Rc::new(files);
-    app.connect_activate(move |app| {
-        build_resize_dialog(app, files.clone()).present();
-    });
-    let code = app.run_with_args::<&str>(&[]);
-    i32::from(u8::from(code))
-}
-
-fn build_resize_dialog(app: &adw::Application, files: Rc<Vec<PathBuf>>) -> adw::ApplicationWindow {
-    let window = adw::ApplicationWindow::builder()
-        .application(app)
-        .default_width(900)
-        .default_height(640)
-        .title(gettext("Redimensionar imagens — Prisma"))
-        .build();
-    prepare_dialog(&window, files, fill_resize_dialog);
-    window
-}
-
-fn fill_resize_dialog(
-    window: adw::ApplicationWindow,
-    files: Rc<Vec<PathBuf>>,
-    preview_session: Option<Rc<PreviewSession>>,
-) -> adw::ApplicationWindow {
-    let header = adw::HeaderBar::new();
-    let title = adw::WindowTitle::new(&gettext("Redimensionar"), "Prisma");
-    header.set_title_widget(Some(&title));
-
-    // ---- Mode selector ------------------------------------------------------
-
-    let mode_names = [
-        n_("Aresta máxima"),
-        n_("Escala (%)"),
-        n_("Dimensão exata (WxH)"),
-        n_("Encaixar em (WxH)"),
-    ];
-    let mode_row = adw::ComboRow::builder()
-        .use_markup(false)
-        .title(gettext("Modo"))
-        .model(&translated_strings(&mode_names))
-        .build();
-
-    // Per-mode parameter pages live inside a Stack; switching the combo swaps
-    // the page. Each page owns its own SpinRows so we can read values back.
-    let max_edge_spin = adw::SpinRow::with_range(1.0, 16384.0, 1.0);
-    max_edge_spin.set_title(&gettext("Aresta máxima"));
-    max_edge_spin.set_subtitle(&gettext("pixels (lado maior)"));
-    max_edge_spin.set_value(1920.0);
-
-    let percent_spin = adw::SpinRow::with_range(1.0, 1000.0, 1.0);
-    percent_spin.set_title(&gettext("Porcentagem"));
-    percent_spin.set_subtitle(&gettext("100 = tamanho original"));
-    percent_spin.set_value(50.0);
-
-    let exact_w = adw::SpinRow::with_range(1.0, 16384.0, 1.0);
-    exact_w.set_title(&gettext("Largura"));
-    exact_w.set_value(1920.0);
-    let exact_h = adw::SpinRow::with_range(1.0, 16384.0, 1.0);
-    exact_h.set_title(&gettext("Altura"));
-    exact_h.set_value(1080.0);
-
-    let fit_w = adw::SpinRow::with_range(1.0, 16384.0, 1.0);
-    fit_w.set_title(&gettext("Largura máxima"));
-    fit_w.set_value(1920.0);
-    let fit_h = adw::SpinRow::with_range(1.0, 16384.0, 1.0);
-    fit_h.set_title(&gettext("Altura máxima"));
-    fit_h.set_value(1080.0);
-
-    let page_max_edge = adw::PreferencesGroup::new();
-    page_max_edge.add(&max_edge_spin);
-    let page_percent = adw::PreferencesGroup::new();
-    page_percent.add(&percent_spin);
-    let page_exact = adw::PreferencesGroup::new();
-    page_exact.add(&exact_w);
-    page_exact.add(&exact_h);
-    let page_fit = adw::PreferencesGroup::new();
-    page_fit.add(&fit_w);
-    page_fit.add(&fit_h);
-
-    let stack = gtk::Stack::new();
-    stack.add_named(&page_max_edge, Some("max-edge"));
-    stack.add_named(&page_percent, Some("percent"));
-    stack.add_named(&page_exact, Some("exact"));
-    stack.add_named(&page_fit, Some("fit"));
-    stack.set_visible_child_name("max-edge");
-
-    {
-        let stack = stack.clone();
-        dialog_signal!(window, mode_row, connect_selected_notify, move |combo| {
-            let name = match combo.selected() {
-                0 => "max-edge",
-                1 => "percent",
-                2 => "exact",
-                _ => "fit",
-            };
-            stack.set_visible_child_name(name);
-        });
-    }
-
-    // ---- Filter + format + overwrite ---------------------------------------
-
-    let filter_names: Vec<&str> = RESIZE_FILTERS.iter().map(|(n, _)| *n).collect();
-    let filter_row = adw::ComboRow::builder()
-        .use_markup(false)
-        .title(gettext("Kernel de interpolação"))
-        .model(&translated_strings(&filter_names))
-        .build();
-
-    let mut target_names = vec!["Manter o formato original"];
-    target_names.extend(CONVERT_FORMATS.iter().map(|(n, _)| *n));
-    let target_row = adw::ComboRow::builder()
-        .use_markup(false)
-        .title(gettext("Formato de destino"))
-        .model(&translated_strings(&target_names))
-        .build();
-
-    let overwrite_names: Vec<&str> = OVERWRITE_CHOICES.iter().map(|(n, _)| *n).collect();
-    let overwrite_row = adw::ComboRow::builder()
-        .use_markup(false)
-        .title(gettext("Se o arquivo de saída existir"))
-        .model(&translated_strings(&overwrite_names))
-        .build();
-
-    let files_row = adw::ActionRow::builder()
-        .use_markup(false)
-        .title(format!("{}: {}", gettext("Arquivos selecionados"), files.len()))
-        .build();
-    files_row.set_subtitle(&files_subtitle(&files));
-
-    let group_files = adw::PreferencesGroup::new();
-    group_files.add(&files_row);
-
-    let group_mode =
-        adw::PreferencesGroup::builder().title(gettext("Modo de redimensionamento")).build();
-    group_mode.add(&mode_row);
-
-    let group_options = adw::PreferencesGroup::builder().title(gettext("Opções")).build();
-    group_options.add(&filter_row);
-    group_options.add(&target_row);
-    group_options.add(&overwrite_row);
-
-    let status = gtk::Label::builder().label("").wrap(true).xalign(0.0).build();
-    status.add_css_class("dim-label");
-
-    let cancel_btn = gtk::Button::with_label(&gettext("Cancelar"));
-    let apply_btn = gtk::Button::builder().label(gettext("Redimensionar")).build();
-    apply_btn.add_css_class("suggested-action");
-    apply_btn.add_css_class("pill");
-
-    let actions = gtk::Box::builder()
-        .orientation(gtk::Orientation::Horizontal)
-        .spacing(8)
-        .halign(gtk::Align::End)
-        .build();
-    actions.append(&cancel_btn);
-    actions.append(&apply_btn);
-
-    let content = gtk::Box::builder()
-        .orientation(gtk::Orientation::Vertical)
-        .spacing(16)
-        .margin_top(16)
-        .margin_bottom(16)
-        .margin_start(16)
-        .margin_end(16)
-        .build();
-    content.append(&group_files);
-    content.append(&group_mode);
-    content.append(&stack);
-    content.append(&group_options);
-    content.append(&status);
-    content.append(&actions);
-
-    // Scroll the whole content in case the resize dialog overflows a small
-    // screen — it's taller than the convert dialog.
-    let scrolled = gtk::ScrolledWindow::builder()
-        .hexpand(true)
-        .vexpand(true)
-        .hscrollbar_policy(gtk::PolicyType::Never)
-        .vscrollbar_policy(gtk::PolicyType::Automatic)
-        .child(&content)
-        .build();
-    scrolled.set_size_request(420, -1);
-
-    let main_box =
-        gtk::Box::builder().orientation(gtk::Orientation::Horizontal).spacing(16).build();
-    main_box.append(&scrolled);
-    let preview_picture: Option<gtk::Picture> = if let Some(sess) = preview_session.as_ref() {
-        let (picture, column) = build_preview_column(sess);
-        column.set_margin_top(16);
-        column.set_margin_bottom(16);
-        column.set_margin_end(16);
-        main_box.append(&column);
-        Some(picture)
-    } else {
-        None
-    };
-
-    let toolbar_view = adw::ToolbarView::new();
-    toolbar_view.add_top_bar(&header);
-    toolbar_view.set_content(Some(&main_box));
-    window.set_content(Some(&toolbar_view));
-
-    // Live preview: any change in mode / filter / dimensions re-renders.
-    if let (Some(picture), Some(session)) = (preview_picture.as_ref(), preview_session.as_ref()) {
-        let debounce = PreviewDebounce::new();
-        let mode_row_clone = mode_row.clone();
-        let filter_row_clone = filter_row.clone();
-        let max_edge_clone = max_edge_spin.clone();
-        let percent_clone = percent_spin.clone();
-        let exact_w_clone = exact_w.clone();
-        let exact_h_clone = exact_h.clone();
-        let fit_w_clone = fit_w.clone();
-        let fit_h_clone = fit_h.clone();
-        let schedule = {
-            let debounce = debounce.clone();
-            let session = session.clone();
-            let picture = picture.clone();
-            let mode_row = mode_row_clone.clone();
-            let filter_row = filter_row_clone.clone();
-            let max_edge_spin = max_edge_clone.clone();
-            let percent_spin = percent_clone.clone();
-            let exact_w = exact_w_clone.clone();
-            let exact_h = exact_h_clone.clone();
-            let fit_w = fit_w_clone.clone();
-            let fit_h = fit_h_clone.clone();
-            Rc::new(move || {
-                let mode = match mode_row.selected() {
-                    0 => ResizeMode::MaxEdge(max_edge_spin.value() as u32),
-                    1 => ResizeMode::Percent(percent_spin.value() as f32),
-                    2 => ResizeMode::Exact {
-                        width: exact_w.value() as u32,
-                        height: exact_h.value() as u32,
-                    },
-                    _ => ResizeMode::Fit {
-                        width: fit_w.value() as u32,
-                        height: fit_h.value() as u32,
-                    },
-                };
-                let filter = RESIZE_FILTERS[filter_row.selected() as usize].1;
-                let session = session.clone();
-                let picture = picture.clone();
-                debounce.trigger(Duration::from_millis(120), move || {
-                    refresh_preview(&session, &picture, &PreviewOp::Resize { mode, filter });
-                });
-            })
-        };
-
-        // Mode / filter combo changes
-        {
-            let s = schedule.clone();
-            dialog_signal!(window, mode_row_clone, connect_selected_notify, move |_| s());
-        }
-        {
-            let s = schedule.clone();
-            dialog_signal!(window, filter_row_clone, connect_selected_notify, move |_| s());
-        }
-        // Spin changes in each mode page
-        for row in
-            &[max_edge_clone, percent_clone, exact_w_clone, exact_h_clone, fit_w_clone, fit_h_clone]
-        {
-            let s = schedule.clone();
-            dialog_signal!(window, row, connect_changed, move |_| s());
-        }
-    }
-
-    {
-        let window = window.clone();
-        dialog_signal!(window, cancel_btn, connect_clicked, move |_| window.close());
-    }
-
-    {
-        let files = files.clone();
-        let mode_row = mode_row.clone();
-        let filter_row = filter_row.clone();
-        let target_row = target_row.clone();
-        let overwrite_row = overwrite_row.clone();
-        let max_edge_spin = max_edge_spin.clone();
-        let percent_spin = percent_spin.clone();
-        let exact_w = exact_w.clone();
-        let exact_h = exact_h.clone();
-        let fit_w = fit_w.clone();
-        let fit_h = fit_h.clone();
-        let status = status.clone();
-        let apply_btn = apply_btn.clone();
-        let cancel_btn = cancel_btn.clone();
-        let window = window.clone();
-        dialog_signal!(window, apply_btn.clone(), connect_clicked, move |_| {
-            let mode = match mode_row.selected() {
-                0 => ResizeMode::MaxEdge(max_edge_spin.value() as u32),
-                1 => ResizeMode::Percent(percent_spin.value() as f32),
-                2 => ResizeMode::Exact {
-                    width: exact_w.value() as u32,
-                    height: exact_h.value() as u32,
-                },
-                _ => ResizeMode::Fit { width: fit_w.value() as u32, height: fit_h.value() as u32 },
-            };
-            let filter = RESIZE_FILTERS[filter_row.selected() as usize].1;
-            let target: Option<Format> = match target_row.selected() {
-                0 => None,
-                n => Some(CONVERT_FORMATS[(n as usize) - 1].1),
-            };
-            let policy = OVERWRITE_CHOICES[overwrite_row.selected() as usize].1;
-            // Resize dialog doesn't expose quality today — uses defaults.
-            // Users who need quality control go through Convert ▸ Personalizar…
-            // or chain via CLI.
-            let opts = EncodeOptions::default();
-
-            apply_btn.set_sensitive(false);
-            cancel_btn.set_sensitive(false);
-            status.set_text(&gettext("Redimensionando…"));
-
-            let work_files: Vec<PathBuf> = (*files).clone();
-            run_batch_async(
-                work_files,
-                move |f| resize_file(f, mode, filter, target, &opts, policy),
-                gettext("Redimensionando"),
-                status.clone(),
-                apply_btn.clone(),
-                cancel_btn.clone(),
-                window.clone(),
-            );
-        });
-    }
-
-    window
-}
-
-fn files_subtitle(files: &[PathBuf]) -> String {
-    if files.is_empty() {
-        return "—".to_string();
-    }
-    let first = files[0].file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
-    if files.len() == 1 {
-        first
-    } else {
-        format!("{first} +{} outros", files.len() - 1)
-    }
-}
-
 mod batch_runner;
-use batch_runner::run_batch_async;
-
-// ---------------------------------------------------------------------------
-// Rotate / Flip / Adjust dialogs — built on top of the same run_*_batch +
-// finish_dialog primitives used by convert/resize, just with different forms.
-// ---------------------------------------------------------------------------
-
-/// Rotate modal: pick 90 / 180 / 270 and an optional target format.
-pub fn run_rotate_dialog(files: Vec<PathBuf>) -> i32 {
-    let app = adw::Application::builder().application_id(APP_ID).build();
-    let files = Rc::new(files);
-    app.connect_activate(move |app| {
-        build_rotate_dialog(app, files.clone()).present();
-    });
-    let code = app.run_with_args::<&str>(&[]);
-    i32::from(u8::from(code))
-}
-
-fn build_rotate_dialog(app: &adw::Application, files: Rc<Vec<PathBuf>>) -> adw::ApplicationWindow {
-    let window = adw::ApplicationWindow::builder()
-        .application(app)
-        .default_width(440)
-        .default_height(340)
-        .title(gettext("Girar imagens — Prisma"))
-        .build();
-
-    let header = adw::HeaderBar::new();
-    header.set_title_widget(Some(&adw::WindowTitle::new(&gettext("Girar"), "Prisma")));
-
-    let rotations = [n_("90° (horário)"), n_("180°"), n_("270° (anti-horário)")];
-    let rotation_row = adw::ComboRow::builder()
-        .use_markup(false)
-        .title(gettext("Rotação"))
-        .model(&translated_strings(&rotations))
-        .build();
-
-    let mut target_names = vec!["Manter o formato original"];
-    target_names.extend(CONVERT_FORMATS.iter().map(|(n, _)| *n));
-    let target_row = adw::ComboRow::builder()
-        .use_markup(false)
-        .title(gettext("Formato de destino"))
-        .model(&translated_strings(&target_names))
-        .build();
-
-    let overwrite_row = adw::ComboRow::builder()
-        .use_markup(false)
-        .title(gettext("Se o arquivo de saída existir"))
-        .model(&translated_strings(&OVERWRITE_CHOICES.iter().map(|(n, _)| *n).collect::<Vec<_>>()))
-        .build();
-
-    let files_row = adw::ActionRow::builder()
-        .use_markup(false)
-        .title(format!("{}: {}", gettext("Arquivos selecionados"), files.len()))
-        .build();
-    files_row.set_subtitle(&files_subtitle(&files));
-
-    let group = adw::PreferencesGroup::new();
-    group.add(&files_row);
-    group.add(&rotation_row);
-    group.add(&target_row);
-    group.add(&overwrite_row);
-
-    let status = gtk::Label::builder().label("").wrap(true).xalign(0.0).build();
-    status.add_css_class("dim-label");
-
-    let cancel_btn = gtk::Button::with_label(&gettext("Cancelar"));
-    let apply_btn = gtk::Button::builder().label(gettext("Girar")).build();
-    apply_btn.add_css_class("suggested-action");
-    apply_btn.add_css_class("pill");
-
-    let actions = gtk::Box::builder()
-        .orientation(gtk::Orientation::Horizontal)
-        .spacing(8)
-        .halign(gtk::Align::End)
-        .build();
-    actions.append(&cancel_btn);
-    actions.append(&apply_btn);
-
-    let content = gtk::Box::builder()
-        .orientation(gtk::Orientation::Vertical)
-        .spacing(16)
-        .margin_top(16)
-        .margin_bottom(16)
-        .margin_start(16)
-        .margin_end(16)
-        .build();
-    content.append(&group);
-    content.append(&status);
-    content.append(&actions);
-
-    let toolbar_view = adw::ToolbarView::new();
-    toolbar_view.add_top_bar(&header);
-    toolbar_view.set_content(Some(&content));
-    window.set_content(Some(&toolbar_view));
-
-    {
-        let window = window.clone();
-        dialog_signal!(window, cancel_btn, connect_clicked, move |_| window.close());
-    }
-
-    {
-        let files = files.clone();
-        let rotation_row = rotation_row.clone();
-        let target_row = target_row.clone();
-        let overwrite_row = overwrite_row.clone();
-        let status = status.clone();
-        let apply_btn = apply_btn.clone();
-        let cancel_btn = cancel_btn.clone();
-        let window = window.clone();
-        dialog_signal!(window, apply_btn.clone(), connect_clicked, move |_| {
-            let rotation = match rotation_row.selected() {
-                0 => Rotation::Deg90,
-                1 => Rotation::Deg180,
-                _ => Rotation::Deg270,
-            };
-            let target: Option<Format> = match target_row.selected() {
-                0 => None,
-                n => Some(CONVERT_FORMATS[(n as usize) - 1].1),
-            };
-            let policy = OVERWRITE_CHOICES[overwrite_row.selected() as usize].1;
-
-            apply_btn.set_sensitive(false);
-            cancel_btn.set_sensitive(false);
-            status.set_text(&gettext("Girando…"));
-
-            let work_files: Vec<PathBuf> = (*files).clone();
-            run_batch_async(
-                work_files,
-                move |f| rotate_file(f, rotation, target, policy),
-                gettext("Girando"),
-                status.clone(),
-                apply_btn.clone(),
-                cancel_btn.clone(),
-                window.clone(),
-            );
-        });
-    }
-
-    window
-}
-
-/// Default crop: a centred 50% rectangle — a safe non-empty starting
-/// point for the UI that's unlikely to match the full image.
-fn default_crop(img_w: u32, img_h: u32) -> CropRect {
-    let w = (img_w / 2).max(1);
-    let h = (img_h / 2).max(1);
-    let x = (img_w.saturating_sub(w)) / 2;
-    let y = (img_h.saturating_sub(h)) / 2;
-    CropRect::new(x, y, w, h)
-}
-
-/// What the user is doing while the GestureDrag is active on the crop
-/// preview. Decided at `drag_begin` from the hit-test against the
-/// current rect; stays constant until drag ends.
-#[derive(Clone, Copy, Debug, PartialEq)]
-enum CropDragMode {
-    /// Click+drag outside the rect (or on an empty canvas) grows a new
-    /// rect starting at the click point.
-    NewSelection {
-        /// Click position in natural-image pixels.
-        anchor_nat: (f64, f64),
-    },
-    /// Click strictly inside the current rect → translate it; its size
-    /// is preserved. `rect0` is the rect at drag start (x, y, w, h),
-    /// `click_nat` the click point in natural pixels.
-    Move { rect0: (f64, f64, f64, f64), click_nat: (f64, f64) },
-    /// Click on a corner handle → resize anchored at the opposite
-    /// corner. `anchor_nat` is the fixed corner, `click_nat` the moving
-    /// one at drag start.
-    ResizeCorner { anchor_nat: (f64, f64), click_nat: (f64, f64) },
-}
-
-/// Widget-pixel tolerance for corner-handle hit-testing.
-const CROP_HANDLE_TOLERANCE_WIDGET_PX: f64 = 12.0;
-
-/// Decide the drag mode from the click's position relative to the
-/// current rect. `fit` is `(scale, ox, oy)` from [`contain_fit`];
-/// `rect` is the current crop in natural-image pixels.
-fn decide_drag_mode(
-    click_widget: (f64, f64),
-    rect: (f64, f64, f64, f64),
-    fit: (f64, f64, f64),
-    natural: (u32, u32),
-) -> CropDragMode {
-    let (sx, sy) = click_widget;
-    let (rx, ry, rw, rh) = rect;
-    let (scale, ox, oy) = fit;
-    let nat_w = natural.0 as f64;
-    let nat_h = natural.1 as f64;
-    let click_nat = (((sx - ox) / scale).clamp(0.0, nat_w), ((sy - oy) / scale).clamp(0.0, nat_h));
-
-    // Widget-space corners of the current rect.
-    let corners_nat = [
-        (rx, ry),           // 0: top-left      ↔ 3 bottom-right
-        (rx + rw, ry),      // 1: top-right     ↔ 2 bottom-left
-        (rx, ry + rh),      // 2: bottom-left   ↔ 1 top-right
-        (rx + rw, ry + rh), // 3: bottom-right  ↔ 0 top-left
-    ];
-    let corners_widget: [(f64, f64); 4] = core::array::from_fn(|i| {
-        let (nx, ny) = corners_nat[i];
-        (ox + nx * scale, oy + ny * scale)
-    });
-    let tol2 = CROP_HANDLE_TOLERANCE_WIDGET_PX * CROP_HANDLE_TOLERANCE_WIDGET_PX;
-    for (i, (cx, cy)) in corners_widget.iter().enumerate() {
-        let d2 = (sx - cx).powi(2) + (sy - cy).powi(2);
-        if d2 <= tol2 {
-            let anchor_nat = corners_nat[3 - i];
-            return CropDragMode::ResizeCorner { anchor_nat, click_nat: corners_nat[i] };
-        }
-    }
-
-    // Inside the rect (strict) → move.
-    let inside =
-        click_nat.0 > rx && click_nat.0 < rx + rw && click_nat.1 > ry && click_nat.1 < ry + rh;
-    if inside {
-        return CropDragMode::Move { rect0: rect, click_nat };
-    }
-
-    CropDragMode::NewSelection { anchor_nat: click_nat }
-}
-
-/// Apply a drag delta (already in *natural-pixel* units via `(dx/scale,
-/// dy/scale)`) to `mode` and return the resulting `(x, y, w, h)` in
-/// natural pixels, clamped to image bounds. Width/height never collapse
-/// below 1 so the rect stays visible.
-fn apply_drag(
-    mode: CropDragMode,
-    delta_nat: (f64, f64),
-    natural: (u32, u32),
-) -> (f64, f64, f64, f64) {
-    let nat_w = natural.0 as f64;
-    let nat_h = natural.1 as f64;
-    let (dx, dy) = delta_nat;
-    match mode {
-        CropDragMode::NewSelection { anchor_nat: (ax, ay) } => {
-            let cx = (ax + dx).clamp(0.0, nat_w);
-            let cy = (ay + dy).clamp(0.0, nat_h);
-            let x0 = ax.min(cx);
-            let y0 = ay.min(cy);
-            let w = (ax - cx).abs().max(1.0);
-            let h = (ay - cy).abs().max(1.0);
-            (x0, y0, w, h)
-        }
-        CropDragMode::Move { rect0: (rx, ry, rw, rh), click_nat: _ } => {
-            // Preserve size; translate within bounds.
-            let max_x = (nat_w - rw).max(0.0);
-            let max_y = (nat_h - rh).max(0.0);
-            let new_x = (rx + dx).clamp(0.0, max_x);
-            let new_y = (ry + dy).clamp(0.0, max_y);
-            (new_x, new_y, rw, rh)
-        }
-        CropDragMode::ResizeCorner { anchor_nat: (ax, ay), click_nat: (cx0, cy0) } => {
-            let cx = (cx0 + dx).clamp(0.0, nat_w);
-            let cy = (cy0 + dy).clamp(0.0, nat_h);
-            let x0 = ax.min(cx);
-            let y0 = ay.min(cy);
-            let w = (ax - cx).abs().max(1.0);
-            let h = (ay - cy).abs().max(1.0);
-            (x0, y0, w, h)
-        }
-    }
-}
-
-/// Layout math for a `gtk::Picture` with `ContentFit::Contain`: given
-/// the widget's allocated `(ww, wh)` and the displayed image's natural
-/// `(iw, ih)`, returns `(scale, ox, oy)` — the uniform scale factor and
-/// top-left offset of the rendered image inside the widget box.
-///
-/// Returns a safe identity transform when any input is non-positive so the
-/// caller can unconditionally multiply without a division guard.
-fn contain_fit(ww: f64, wh: f64, iw: f64, ih: f64) -> (f64, f64, f64) {
-    if ww <= 0.0 || wh <= 0.0 || iw <= 0.0 || ih <= 0.0 {
-        return (1.0, 0.0, 0.0);
-    }
-    let s = (ww / iw).min(wh / ih);
-    let disp_w = iw * s;
-    let disp_h = ih * s;
-    ((s), (ww - disp_w) / 2.0, (wh - disp_h) / 2.0)
-}
-
-/// Build the interactive preview column for the crop dialog: full
-/// thumbnail in a `gtk::Picture`, plus a `gtk::DrawingArea` overlay that
-/// strokes the selection rect. A `GestureDrag` on the overlay updates the
-/// spin rows (which remain authoritative); spin changes queue a redraw.
-fn build_crop_preview_column(
-    session: &Rc<PreviewSession>,
-    natural: (u32, u32),
-    x_spin: &adw::SpinRow,
-    y_spin: &adw::SpinRow,
-    w_spin: &adw::SpinRow,
-    h_spin: &adw::SpinRow,
-) -> gtk::Box {
-    let picture = gtk::Picture::new();
-    picture.set_content_fit(gtk::ContentFit::Contain);
-    picture.set_hexpand(true);
-    picture.set_vexpand(true);
-    picture.set_size_request(360, 360);
-    picture.set_paintable(Some(&dynamic_image_to_texture(session.thumbnail().clone())));
-
-    let selection_area = gtk::DrawingArea::builder().hexpand(true).vexpand(true).build();
-
-    // Draw: two-pass — shade the outside of the selection rect, then
-    // stroke the rect itself with a bright outline + corner handles.
-    {
-        let x_spin = x_spin.clone();
-        let y_spin = y_spin.clone();
-        let w_spin = w_spin.clone();
-        let h_spin = h_spin.clone();
-        selection_area.set_draw_func(move |_area, cr, ww, wh| {
-            let ww = ww as f64;
-            let wh = wh as f64;
-            let (scale, ox, oy) = contain_fit(ww, wh, natural.0 as f64, natural.1 as f64);
-            let rx = ox + x_spin.value() * scale;
-            let ry = oy + y_spin.value() * scale;
-            let rw = w_spin.value() * scale;
-            let rh = h_spin.value() * scale;
-
-            // Shade outside the rect (four bands) for clear selection focus.
-            cr.set_source_rgba(0.0, 0.0, 0.0, 0.45);
-            cr.rectangle(0.0, 0.0, ww, ry);
-            cr.rectangle(0.0, ry + rh, ww, wh - (ry + rh));
-            cr.rectangle(0.0, ry, rx, rh);
-            cr.rectangle(rx + rw, ry, ww - (rx + rw), rh);
-            let _ = cr.fill();
-
-            // Selection outline.
-            cr.set_source_rgba(1.0, 1.0, 1.0, 0.95);
-            cr.set_line_width(1.5);
-            cr.rectangle(rx + 0.5, ry + 0.5, rw - 1.0, rh - 1.0);
-            let _ = cr.stroke();
-
-            // Corner handles — small squares to hint "drag me".
-            cr.set_source_rgba(1.0, 1.0, 1.0, 1.0);
-            let k = 5.0;
-            for (cx, cy) in [(rx, ry), (rx + rw, ry), (rx, ry + rh), (rx + rw, ry + rh)] {
-                cr.rectangle(cx - k / 2.0, cy - k / 2.0, k, k);
-            }
-            let _ = cr.fill();
-        });
-    }
-
-    // Spin changes → queue redraw of the overlay.
-    for spin in [x_spin, y_spin, w_spin, h_spin] {
-        let area = selection_area.clone();
-        spin.connect_changed(move |_| area.queue_draw());
-    }
-
-    // Drag semantics — three modes, decided at drag_begin from the click
-    // point's position relative to the current rect:
-    //   - on a corner handle  → ResizeCorner (opposite corner anchors)
-    //   - strictly inside     → Move (rect translates, size preserved)
-    //   - outside             → NewSelection (classic draw-a-box)
-    let drag = gtk::GestureDrag::builder().button(1).build();
-    let drag_mode: Rc<Cell<CropDragMode>> =
-        Rc::new(Cell::new(CropDragMode::NewSelection { anchor_nat: (0.0, 0.0) }));
-    {
-        let area = selection_area.clone();
-        let mode = drag_mode.clone();
-        let x_spin = x_spin.clone();
-        let y_spin = y_spin.clone();
-        let w_spin = w_spin.clone();
-        let h_spin = h_spin.clone();
-        drag.connect_drag_begin(move |_, sx, sy| {
-            let (scale, ox, oy) = contain_fit(
-                area.width() as f64,
-                area.height() as f64,
-                natural.0 as f64,
-                natural.1 as f64,
-            );
-            if scale <= 0.0 {
-                return;
-            }
-            let rect = (x_spin.value(), y_spin.value(), w_spin.value(), h_spin.value());
-            let decided = decide_drag_mode((sx, sy), rect, (scale, ox, oy), natural);
-            mode.set(decided);
-            if let CropDragMode::NewSelection { anchor_nat } = decided {
-                // Seed a 1px rect anchored at the click so the overlay is
-                // visible immediately — update handler will expand it.
-                x_spin.set_value(anchor_nat.0);
-                y_spin.set_value(anchor_nat.1);
-                w_spin.set_value(1.0);
-                h_spin.set_value(1.0);
-            }
-        });
-    }
-    {
-        let area = selection_area.clone();
-        let mode = drag_mode.clone();
-        let x_spin = x_spin.clone();
-        let y_spin = y_spin.clone();
-        let w_spin = w_spin.clone();
-        let h_spin = h_spin.clone();
-        drag.connect_drag_update(move |_, dx, dy| {
-            let (scale, _ox, _oy) = contain_fit(
-                area.width() as f64,
-                area.height() as f64,
-                natural.0 as f64,
-                natural.1 as f64,
-            );
-            if scale <= 0.0 {
-                return;
-            }
-            let (x0, y0, w, h) = apply_drag(mode.get(), (dx / scale, dy / scale), natural);
-            x_spin.set_value(x0);
-            y_spin.set_value(y0);
-            w_spin.set_value(w);
-            h_spin.set_value(h);
-        });
-    }
-    selection_area.add_controller(drag);
-
-    let overlay = gtk::Overlay::new();
-    overlay.set_child(Some(&picture));
-    overlay.add_overlay(&selection_area);
-
-    let column = gtk::Box::builder().orientation(gtk::Orientation::Vertical).build();
-    column.append(&overlay);
-
-    let hint = gtk::Label::builder()
-        .label(
-            "Arraste nos cantos para redimensionar · dentro do recorte para mover · \
-             fora dele para uma nova seleção.",
-        )
-        .wrap(true)
-        .xalign(0.5)
-        .margin_top(6)
-        .build();
-    hint.add_css_class("dim-label");
-    column.append(&hint);
-
-    column
-}
-
-/// Crop modal: rectangular window by (x, y, w, h) with live preview.
-pub fn run_crop_dialog(files: Vec<PathBuf>) -> i32 {
-    let app = adw::Application::builder().application_id(APP_ID).build();
-    let files = Rc::new(files);
-    app.connect_activate(move |app| {
-        build_crop_dialog(app, files.clone()).present();
-    });
-    let code = app.run_with_args::<&str>(&[]);
-    i32::from(u8::from(code))
-}
-
-fn build_crop_dialog(app: &adw::Application, files: Rc<Vec<PathBuf>>) -> adw::ApplicationWindow {
-    let window = adw::ApplicationWindow::builder()
-        .application(app)
-        .default_width(900)
-        .default_height(560)
-        .title(gettext("Recortar — Prisma"))
-        .build();
-    prepare_dialog(&window, files, fill_crop_dialog);
-    window
-}
-
-fn fill_crop_dialog(
-    window: adw::ApplicationWindow,
-    files: Rc<Vec<PathBuf>>,
-    preview_session: Option<Rc<PreviewSession>>,
-) -> adw::ApplicationWindow {
-    let header = adw::HeaderBar::new();
-    header.set_title_widget(Some(&adw::WindowTitle::new(&gettext("Recortar"), "Prisma")));
-
-    let content_h = gtk::Box::builder()
-        .orientation(gtk::Orientation::Horizontal)
-        .spacing(16)
-        .margin_top(16)
-        .margin_bottom(16)
-        .margin_start(16)
-        .margin_end(16)
-        .build();
-
-    // Preview is keyed off the first file — multi-file dialogs share the
-    // rect and per-file validation catches out-of-bounds at apply time.
-    let natural = preview_session.as_ref().map(|s| s.natural_size()).unwrap_or((1, 1));
-    let initial = default_crop(natural.0, natural.1);
-
-    // Form column — native-width controls for coordinates and size.
-    let form_col = gtk::Box::builder()
-        .orientation(gtk::Orientation::Vertical)
-        .spacing(12)
-        .width_request(360)
-        .build();
-
-    let files_row = adw::ActionRow::builder()
-        .use_markup(false)
-        .title(format!("{}: {}", gettext("Arquivos selecionados"), files.len()))
-        .build();
-    files_row.set_subtitle(&files_subtitle(&files));
-
-    let natural_row = adw::ActionRow::builder()
-        .use_markup(false)
-        .title(gettext("Tamanho original"))
-        .subtitle(format!("{} × {} px ({})", natural.0, natural.1, gettext("Primeiro arquivo")))
-        .build();
-
-    // Ranges clamp to the first file's natural dims. For multi-file sets
-    // with different sizes, per-file validation handles the rest.
-    let x_spin = adw::SpinRow::with_range(0.0, (natural.0.saturating_sub(1)) as f64, 1.0);
-    x_spin.set_title(&gettext("X (px)"));
-    x_spin.set_value(initial.x as f64);
-
-    let y_spin = adw::SpinRow::with_range(0.0, (natural.1.saturating_sub(1)) as f64, 1.0);
-    y_spin.set_title(&gettext("Y (px)"));
-    y_spin.set_value(initial.y as f64);
-
-    let w_spin = adw::SpinRow::with_range(1.0, natural.0 as f64, 1.0);
-    w_spin.set_title(&gettext("Largura (px)"));
-    w_spin.set_value(initial.width as f64);
-
-    let h_spin = adw::SpinRow::with_range(1.0, natural.1 as f64, 1.0);
-    h_spin.set_title(&gettext("Altura (px)"));
-    h_spin.set_value(initial.height as f64);
-
-    let mut target_names = vec!["Manter o formato original"];
-    target_names.extend(CONVERT_FORMATS.iter().map(|(n, _)| *n));
-    let target_row = adw::ComboRow::builder()
-        .use_markup(false)
-        .title(gettext("Formato de destino"))
-        .model(&translated_strings(&target_names))
-        .build();
-
-    let overwrite_row = adw::ComboRow::builder()
-        .use_markup(false)
-        .title(gettext("Se o arquivo de saída existir"))
-        .model(&translated_strings(&OVERWRITE_CHOICES.iter().map(|(n, _)| *n).collect::<Vec<_>>()))
-        .build();
-
-    let group = adw::PreferencesGroup::new();
-    group.add(&files_row);
-    group.add(&natural_row);
-    group.add(&x_spin);
-    group.add(&y_spin);
-    group.add(&w_spin);
-    group.add(&h_spin);
-    group.add(&target_row);
-    group.add(&overwrite_row);
-    form_col.append(&group);
-
-    let status = gtk::Label::builder().label("").wrap(true).xalign(0.0).build();
-    status.add_css_class("dim-label");
-    form_col.append(&status);
-
-    let cancel_btn = gtk::Button::with_label(&gettext("Cancelar"));
-    let reset_btn = gtk::Button::with_label(&gettext("Centro 50%"));
-    let apply_btn = gtk::Button::builder().label(gettext("Recortar")).build();
-    apply_btn.add_css_class("suggested-action");
-    apply_btn.add_css_class("pill");
-
-    let actions = gtk::Box::builder()
-        .orientation(gtk::Orientation::Horizontal)
-        .spacing(8)
-        .halign(gtk::Align::End)
-        .build();
-    actions.append(&reset_btn);
-    actions.append(&cancel_btn);
-    actions.append(&apply_btn);
-    form_col.append(&actions);
-
-    content_h.append(&form_col);
-
-    // Interactive preview: full thumbnail + DrawingArea overlay that strokes
-    // the selection rect and shades the outside. Spin rows are the source of
-    // truth; drag gestures update them and the overlay redraws.
-    if let Some(sess) = preview_session.as_ref() {
-        let column = build_crop_preview_column(sess, natural, &x_spin, &y_spin, &w_spin, &h_spin);
-        content_h.append(&column);
-    }
-
-    let toolbar_view = adw::ToolbarView::new();
-    toolbar_view.add_top_bar(&header);
-    toolbar_view.set_content(Some(&content_h));
-    window.set_content(Some(&toolbar_view));
-
-    // Reset button → re-centre to 50% of the first image.
-    {
-        let x_spin = x_spin.clone();
-        let y_spin = y_spin.clone();
-        let w_spin = w_spin.clone();
-        let h_spin = h_spin.clone();
-        dialog_signal!(window, reset_btn, connect_clicked, move |_| {
-            let d = default_crop(natural.0, natural.1);
-            w_spin.set_value(d.width as f64);
-            h_spin.set_value(d.height as f64);
-            x_spin.set_value(d.x as f64);
-            y_spin.set_value(d.y as f64);
-        });
-    }
-
-    {
-        let window = window.clone();
-        dialog_signal!(window, cancel_btn, connect_clicked, move |_| window.close());
-    }
-
-    {
-        let files = files.clone();
-        let x_spin = x_spin.clone();
-        let y_spin = y_spin.clone();
-        let w_spin = w_spin.clone();
-        let h_spin = h_spin.clone();
-        let target_row = target_row.clone();
-        let overwrite_row = overwrite_row.clone();
-        let status = status.clone();
-        let apply_btn = apply_btn.clone();
-        let cancel_btn = cancel_btn.clone();
-        let window = window.clone();
-        dialog_signal!(window, apply_btn.clone(), connect_clicked, move |_| {
-            let rect = CropRect::new(
-                x_spin.value() as u32,
-                y_spin.value() as u32,
-                w_spin.value() as u32,
-                h_spin.value() as u32,
-            );
-            let target: Option<Format> = match target_row.selected() {
-                0 => None,
-                n => Some(CONVERT_FORMATS[(n as usize) - 1].1),
-            };
-            let policy = OVERWRITE_CHOICES[overwrite_row.selected() as usize].1;
-
-            apply_btn.set_sensitive(false);
-            cancel_btn.set_sensitive(false);
-            status.set_text(&gettext("Recortando…"));
-
-            let work_files: Vec<PathBuf> = (*files).clone();
-            run_batch_async(
-                work_files,
-                move |f| crop_file(f, rect, target, policy),
-                gettext("Recortando"),
-                status.clone(),
-                apply_btn.clone(),
-                cancel_btn.clone(),
-                window.clone(),
-            );
-        });
-    }
-
-    window
-}
-
-/// Aspect-ratio presets for the "Letterbox" (extent) dialog. Each preset
-/// is `(label, (w, h))` with `w:h` the target ratio. Order drives the
-/// default selection — YouTube community 1:1 sits first because it's the
-/// case that motivated the feature (post thumbnail forces square crop on
-/// 16:9 source).
-const EXTENT_RATIO_PRESETS: &[(&str, (u32, u32))] = &[
-    (n_("YouTube community (1:1)"), (1, 1)),
-    (n_("Instagram feed (4:5)"), (4, 5)),
-    (n_("Stories / Shorts (9:16)"), (9, 16)),
-    (n_("Widescreen (16:9)"), (16, 9)),
-    (n_("Personalizado…"), (0, 0)),
-];
-
-/// Background-colour presets for the "Letterbox" dialog. The first entry
-/// is the default. `Custom` (last) reveals the hex entry.
-const EXTENT_BG_PRESETS: &[(&str, [u8; 4])] = &[
-    (n_("Preto suave (#0d0e12)"), [0x0d, 0x0e, 0x12, 0xFF]),
-    (n_("Preto puro (#000000)"), [0, 0, 0, 0xFF]),
-    (n_("Branco (#ffffff)"), [0xFF, 0xFF, 0xFF, 0xFF]),
-    (n_("Transparente"), [0, 0, 0, 0]),
-    (n_("Personalizada (hex)"), [0, 0, 0, 0xFF]),
-];
-
-/// Gravity choices exposed in the Prisma dialog. Limited to centre +
-/// vertical pinning because horizontal letterbox use cases are rarer in
-/// social-media workflows; the CLI exposes all nine for completeness.
-const EXTENT_GRAVITIES: &[(&str, Gravity)] =
-    &[(n_("Centro"), Gravity::Center), (n_("Topo"), Gravity::North), (n_("Base"), Gravity::South)];
-
-/// Run the "Letterbox" modal. Returns GTK's exit code.
-pub fn run_extent_dialog(files: Vec<PathBuf>) -> i32 {
-    let app = adw::Application::builder().application_id(APP_ID).build();
-    let files = Rc::new(files);
-    app.connect_activate(move |app| {
-        build_extent_dialog(app, files.clone()).present();
-    });
-    let code = app.run_with_args::<&str>(&[]);
-    i32::from(u8::from(code))
-}
-
-fn build_extent_dialog(app: &adw::Application, files: Rc<Vec<PathBuf>>) -> adw::ApplicationWindow {
-    let window = adw::ApplicationWindow::builder()
-        .application(app)
-        .default_width(900)
-        .default_height(620)
-        .title(gettext("Letterbox — Prisma"))
-        .build();
-    prepare_dialog(&window, files, fill_extent_dialog);
-    window
-}
-
-fn fill_extent_dialog(
-    window: adw::ApplicationWindow,
-    files: Rc<Vec<PathBuf>>,
-    preview_session: Option<Rc<PreviewSession>>,
-) -> adw::ApplicationWindow {
-    let header = adw::HeaderBar::new();
-    header.set_title_widget(Some(&adw::WindowTitle::new(
-        &gettext("Letterbox"),
-        "Prisma · sem corte",
-    )));
-
-    let content_h = gtk::Box::builder()
-        .orientation(gtk::Orientation::Horizontal)
-        .spacing(16)
-        .margin_top(16)
-        .margin_bottom(16)
-        .margin_start(16)
-        .margin_end(16)
-        .build();
-
-    let natural = preview_session.as_ref().map(|s| s.natural_size()).unwrap_or((1, 1));
-
-    let form_col = gtk::Box::builder()
-        .orientation(gtk::Orientation::Vertical)
-        .spacing(12)
-        .width_request(380)
-        .build();
-
-    let intro = gtk::Label::builder()
-        .label(gettext(
-            "Estende a tela em volta da imagem para encaixá-la num formato fixo (post de YouTube, feed do Instagram, Stories…) sem cortar nenhum pixel. A imagem original é centralizada e o resto é preenchido com a cor escolhida.",
-        ))
-        .wrap(true)
-        .xalign(0.0)
-        .build();
-    intro.add_css_class("dim-label");
-
-    let files_row = adw::ActionRow::builder()
-        .use_markup(false)
-        .title(format!("{}: {}", gettext("Arquivos selecionados"), files.len()))
-        .build();
-    files_row.set_subtitle(&files_subtitle(&files));
-
-    let natural_row = adw::ActionRow::builder()
-        .use_markup(false)
-        .title(gettext("Tamanho original"))
-        .subtitle(format!("{} × {} px ({})", natural.0, natural.1, gettext("Primeiro arquivo")))
-        .build();
-
-    // Aspect preset combo.
-    let ratio_names: Vec<&str> = EXTENT_RATIO_PRESETS.iter().map(|(n, _)| *n).collect();
-    let ratio_row = adw::ComboRow::builder()
-        .use_markup(false)
-        .title(gettext("Proporção alvo"))
-        .model(&translated_strings(&ratio_names))
-        .build();
-
-    // Custom W:H entries — visible only when the "Personalizado…" preset is
-    // selected. Defaults to 1:1 so switching back and forth feels stable.
-    let custom_w_spin = adw::SpinRow::with_range(1.0, 99.0, 1.0);
-    custom_w_spin.set_title(&gettext("Razão W"));
-    custom_w_spin.set_value(1.0);
-    let custom_h_spin = adw::SpinRow::with_range(1.0, 99.0, 1.0);
-    custom_h_spin.set_title(&gettext("Razão H"));
-    custom_h_spin.set_value(1.0);
-    custom_w_spin.set_visible(false);
-    custom_h_spin.set_visible(false);
-
-    // Background colour combo + hex entry (entry shown when "Personalizada"
-    // is picked).
-    let bg_names: Vec<&str> = EXTENT_BG_PRESETS.iter().map(|(n, _)| *n).collect();
-    let bg_row = adw::ComboRow::builder()
-        .use_markup(false)
-        .title(gettext("Cor de fundo"))
-        .model(&translated_strings(&bg_names))
-        .build();
-
-    let bg_hex = adw::EntryRow::builder()
-        .use_markup(false)
-        .title(gettext("Hex (#RRGGBB)"))
-        .text("#0d0e12")
-        .build();
-    bg_hex.set_visible(false);
-
-    let gravity_names: Vec<&str> = EXTENT_GRAVITIES.iter().map(|(n, _)| *n).collect();
-    let gravity_row = adw::ComboRow::builder()
-        .use_markup(false)
-        .title(gettext("Posição da imagem"))
-        .model(&translated_strings(&gravity_names))
-        .build();
-
-    let predicted_row = adw::ActionRow::builder()
-        .use_markup(false)
-        .title(gettext("Destino previsto"))
-        .subtitle("—")
-        .build();
-
-    let mut target_names = vec!["Manter o formato original"];
-    target_names.extend(CONVERT_FORMATS.iter().map(|(n, _)| *n));
-    let target_row = adw::ComboRow::builder()
-        .use_markup(false)
-        .title(gettext("Formato de destino"))
-        .model(&translated_strings(&target_names))
-        .build();
-
-    let overwrite_row = adw::ComboRow::builder()
-        .use_markup(false)
-        .title(gettext("Se o arquivo de saída existir"))
-        .model(&translated_strings(&OVERWRITE_CHOICES.iter().map(|(n, _)| *n).collect::<Vec<_>>()))
-        .build();
-
-    let group = adw::PreferencesGroup::new();
-    group.add(&files_row);
-    group.add(&natural_row);
-    group.add(&ratio_row);
-    group.add(&custom_w_spin);
-    group.add(&custom_h_spin);
-    group.add(&bg_row);
-    group.add(&bg_hex);
-    group.add(&gravity_row);
-    group.add(&predicted_row);
-    group.add(&target_row);
-    group.add(&overwrite_row);
-
-    form_col.append(&intro);
-    form_col.append(&group);
-
-    let status = gtk::Label::builder().label("").wrap(true).xalign(0.0).build();
-    status.add_css_class("dim-label");
-    form_col.append(&status);
-
-    let cancel_btn = gtk::Button::with_label(&gettext("Cancelar"));
-    let apply_btn = gtk::Button::builder().label(gettext("Estender")).build();
-    apply_btn.add_css_class("suggested-action");
-    apply_btn.add_css_class("pill");
-
-    let actions = gtk::Box::builder()
-        .orientation(gtk::Orientation::Horizontal)
-        .spacing(8)
-        .halign(gtk::Align::End)
-        .build();
-    actions.append(&cancel_btn);
-    actions.append(&apply_btn);
-    form_col.append(&actions);
-
-    content_h.append(&form_col);
-
-    // Live preview on the right, driven by PreviewOp::Extent.
-    let picture_opt = if let Some(sess) = preview_session.as_ref() {
-        let (picture, column) = build_preview_column(sess);
-        content_h.append(&column);
-        Some(picture)
-    } else {
-        None
-    };
-
-    let toolbar_view = adw::ToolbarView::new();
-    toolbar_view.add_top_bar(&header);
-    toolbar_view.set_content(Some(&content_h));
-    window.set_content(Some(&toolbar_view));
-
-    // Shared closure that reads every control and produces an ExtentOptions
-    // (or None if the form is in an invalid state — e.g. malformed hex).
-    let build_opts = {
-        let ratio_row = ratio_row.clone();
-        let custom_w_spin = custom_w_spin.clone();
-        let custom_h_spin = custom_h_spin.clone();
-        let bg_row = bg_row.clone();
-        let bg_hex = bg_hex.clone();
-        let gravity_row = gravity_row.clone();
-        move || -> std::result::Result<ExtentOptions, String> {
-            let (rw, rh) = {
-                let idx = ratio_row.selected() as usize;
-                let preset = EXTENT_RATIO_PRESETS[idx].1;
-                if preset == (0, 0) {
-                    (custom_w_spin.value() as u32, custom_h_spin.value() as u32)
-                } else {
-                    preset
-                }
-            };
-            let size = ExtentSize::Aspect { w: rw, h: rh };
-
-            let background = {
-                let idx = bg_row.selected() as usize;
-                if idx == EXTENT_BG_PRESETS.len() - 1 {
-                    bigimage_core::parse_hex_color(&bg_hex.text())?
-                } else {
-                    EXTENT_BG_PRESETS[idx].1
-                }
-            };
-
-            let gravity = EXTENT_GRAVITIES[gravity_row.selected() as usize].1;
-
-            Ok(ExtentOptions { size, background, gravity })
-        }
-    };
-
-    // Refresh the predicted-size row and the preview painting on every
-    // control change. Errors (bad hex) surface in the status label.
-    let refresh = {
-        let session_opt = preview_session.clone();
-        let picture_opt = picture_opt.clone();
-        let predicted_row = predicted_row.clone();
-        let status = status.clone();
-        let build_opts = build_opts.clone();
-        move || match build_opts() {
-            Ok(opts) => {
-                let (nw, nh) = match opts.size.resolve(natural.0, natural.1) {
-                    Ok(d) => d,
-                    Err(e) => {
-                        status.set_text(&e.to_string());
-                        predicted_row.set_subtitle(&gettext("—"));
-                        return;
-                    }
-                };
-                predicted_row.set_subtitle(&format!("{nw} × {nh} px"));
-                status.set_text("");
-                if let (Some(sess), Some(picture)) = (session_opt.as_ref(), picture_opt.as_ref()) {
-                    refresh_preview(sess, picture, &PreviewOp::Extent(opts));
-                }
-            }
-            Err(e) => {
-                status.set_text(&e);
-            }
-        }
-    };
-
-    // Reveal Custom W:H spins when the "Personalizado…" preset is picked,
-    // and hide them again on every other selection.
-    {
-        let custom_w_spin = custom_w_spin.clone();
-        let custom_h_spin = custom_h_spin.clone();
-        let refresh = refresh.clone();
-        dialog_signal!(window, ratio_row, connect_selected_notify, move |row| {
-            let idx = row.selected() as usize;
-            let is_custom = EXTENT_RATIO_PRESETS[idx].1 == (0, 0);
-            custom_w_spin.set_visible(is_custom);
-            custom_h_spin.set_visible(is_custom);
-            refresh();
-        });
-    }
-
-    // Reveal the hex entry when "Personalizada" is selected.
-    {
-        let bg_hex = bg_hex.clone();
-        let refresh = refresh.clone();
-        dialog_signal!(window, bg_row, connect_selected_notify, move |row| {
-            let idx = row.selected() as usize;
-            bg_hex.set_visible(idx == EXTENT_BG_PRESETS.len() - 1);
-            refresh();
-        });
-    }
-
-    {
-        let refresh = refresh.clone();
-        dialog_signal!(window, custom_w_spin, connect_value_notify, move |_| refresh());
-    }
-    {
-        let refresh = refresh.clone();
-        dialog_signal!(window, custom_h_spin, connect_value_notify, move |_| refresh());
-    }
-    {
-        let refresh = refresh.clone();
-        dialog_signal!(window, bg_hex, connect_changed, move |_| refresh());
-    }
-    {
-        let refresh = refresh.clone();
-        dialog_signal!(window, gravity_row, connect_selected_notify, move |_| refresh());
-    }
-
-    // Initial paint.
-    refresh();
-
-    {
-        let window = window.clone();
-        dialog_signal!(window, cancel_btn, connect_clicked, move |_| window.close());
-    }
-
-    {
-        let files = files.clone();
-        let build_opts = build_opts.clone();
-        let target_row = target_row.clone();
-        let overwrite_row = overwrite_row.clone();
-        let status = status.clone();
-        let apply_btn = apply_btn.clone();
-        let cancel_btn = cancel_btn.clone();
-        let window = window.clone();
-        dialog_signal!(window, apply_btn.clone(), connect_clicked, move |_| {
-            let opts = match build_opts() {
-                Ok(opts) => opts,
-                Err(e) => {
-                    status.set_text(&e);
-                    return;
-                }
-            };
-            let target: Option<Format> = match target_row.selected() {
-                0 => None,
-                n => Some(CONVERT_FORMATS[(n as usize) - 1].1),
-            };
-            let policy = OVERWRITE_CHOICES[overwrite_row.selected() as usize].1;
-
-            apply_btn.set_sensitive(false);
-            cancel_btn.set_sensitive(false);
-            status.set_text(&gettext("Estendendo…"));
-
-            let work_files: Vec<PathBuf> = (*files).clone();
-            run_batch_async(
-                work_files,
-                move |f| extent_file(f, opts, target, policy),
-                gettext("Estendendo"),
-                status.clone(),
-                apply_btn.clone(),
-                cancel_btn.clone(),
-                window.clone(),
-            );
-        });
-    }
-
-    window
-}
-
-/// Upscale factors we expose in the dialog — matches the CLI `--factor` range
-/// (2..=4). Real-ESRGAN backend, when available, slots in without changing
-/// this list.
-const UPSCALE_FACTORS: &[(&str, u8)] = &[("2× (200%)", 2), ("3× (300%)", 3), ("4× (400%)", 4)];
-
-/// Upscale modal: pick an integer factor and run Lanczos3 resize.
-pub fn run_upscale_dialog(files: Vec<PathBuf>) -> i32 {
-    let app = adw::Application::builder().application_id(APP_ID).build();
-    let files = Rc::new(files);
-    app.connect_activate(move |app| {
-        build_upscale_dialog(app, files.clone()).present();
-    });
-    let code = app.run_with_args::<&str>(&[]);
-    i32::from(u8::from(code))
-}
-
-fn build_upscale_dialog(app: &adw::Application, files: Rc<Vec<PathBuf>>) -> adw::ApplicationWindow {
-    let window = adw::ApplicationWindow::builder()
-        .application(app)
-        .default_width(820)
-        .default_height(500)
-        .title(gettext("Aumentar resolução — Prisma"))
-        .build();
-    prepare_dialog(&window, files, fill_upscale_dialog);
-    window
-}
-
-fn fill_upscale_dialog(
-    window: adw::ApplicationWindow,
-    files: Rc<Vec<PathBuf>>,
-    preview_session: Option<Rc<PreviewSession>>,
-) -> adw::ApplicationWindow {
-    let header = adw::HeaderBar::new();
-    header.set_title_widget(Some(&adw::WindowTitle::new(
-        &gettext("Aumentar resolução"),
-        "Prisma · Lanczos3",
-    )));
-
-    let content_h = gtk::Box::builder()
-        .orientation(gtk::Orientation::Horizontal)
-        .spacing(16)
-        .margin_top(16)
-        .margin_bottom(16)
-        .margin_start(16)
-        .margin_end(16)
-        .build();
-
-    let natural = preview_session.as_ref().map(|s| s.natural_size()).unwrap_or((0, 0));
-
-    let form_col = gtk::Box::builder()
-        .orientation(gtk::Orientation::Vertical)
-        .spacing(12)
-        .width_request(340)
-        .build();
-
-    // Hook — shown when an IA backend lands. Today just an informative note.
-    let engine_note = gtk::Label::builder()
-        .label(
-            "Motor: Lanczos3 (CPU). O modo IA (Real-ESRGAN) será habilitado \
-             automaticamente quando um modelo ONNX FOSS estiver disponível.",
-        )
-        .wrap(true)
-        .xalign(0.0)
-        .build();
-    engine_note.add_css_class("dim-label");
-
-    let files_row = adw::ActionRow::builder()
-        .use_markup(false)
-        .title(format!("{}: {}", gettext("Arquivos selecionados"), files.len()))
-        .build();
-    files_row.set_subtitle(&files_subtitle(&files));
-
-    let natural_row = adw::ActionRow::builder()
-        .use_markup(false)
-        .title(gettext("Tamanho original"))
-        .subtitle(if natural == (0, 0) {
-            "—".to_string()
-        } else {
-            format!("{} × {} px ({})", natural.0, natural.1, gettext("Primeiro arquivo"))
-        })
-        .build();
-
-    let factor_names: Vec<&str> = UPSCALE_FACTORS.iter().map(|(n, _)| *n).collect();
-    let factor_row = adw::ComboRow::builder()
-        .use_markup(false)
-        .title(gettext("Fator"))
-        .model(&translated_strings(&factor_names))
-        .build();
-
-    let predicted_row = adw::ActionRow::builder()
-        .use_markup(false)
-        .title(gettext("Destino previsto"))
-        .subtitle("—")
-        .build();
-    {
-        let factor_row_c = factor_row.clone();
-        let predicted_row_c = predicted_row.clone();
-        let refresh_prediction = move || {
-            let f = UPSCALE_FACTORS[factor_row_c.selected() as usize].1;
-            let sub = if natural == (0, 0) {
-                format!("× {f} (tamanho indisponível)")
-            } else {
-                let w = (natural.0 as u64) * (f as u64);
-                let h = (natural.1 as u64) * (f as u64);
-                format!("≈ {w} × {h} px")
-            };
-            predicted_row_c.set_subtitle(&sub);
-        };
-        refresh_prediction();
-        dialog_signal!(window, factor_row, connect_selected_notify, move |_| refresh_prediction());
-    }
-
-    let mut target_names = vec!["Manter o formato original"];
-    target_names.extend(CONVERT_FORMATS.iter().map(|(n, _)| *n));
-    let target_row = adw::ComboRow::builder()
-        .use_markup(false)
-        .title(gettext("Formato de destino"))
-        .model(&translated_strings(&target_names))
-        .build();
-
-    let overwrite_row = adw::ComboRow::builder()
-        .use_markup(false)
-        .title(gettext("Se o arquivo de saída existir"))
-        .model(&translated_strings(&OVERWRITE_CHOICES.iter().map(|(n, _)| *n).collect::<Vec<_>>()))
-        .build();
-
-    let group = adw::PreferencesGroup::new();
-    group.add(&files_row);
-    group.add(&natural_row);
-    group.add(&factor_row);
-    group.add(&predicted_row);
-    group.add(&target_row);
-    group.add(&overwrite_row);
-
-    form_col.append(&engine_note);
-    form_col.append(&group);
-
-    let status = gtk::Label::builder().label("").wrap(true).xalign(0.0).build();
-    status.add_css_class("dim-label");
-    form_col.append(&status);
-
-    let cancel_btn = gtk::Button::with_label(&gettext("Cancelar"));
-    let apply_btn = gtk::Button::builder().label(gettext("Aumentar")).build();
-    apply_btn.add_css_class("suggested-action");
-    apply_btn.add_css_class("pill");
-
-    let actions = gtk::Box::builder()
-        .orientation(gtk::Orientation::Horizontal)
-        .spacing(8)
-        .halign(gtk::Align::End)
-        .build();
-    actions.append(&cancel_btn);
-    actions.append(&apply_btn);
-    form_col.append(&actions);
-
-    content_h.append(&form_col);
-
-    // Preview column shows an upscaled thumbnail of the first file as a
-    // sanity check — PreviewOp::Resize respects the Lanczos3 filter.
-    if let Some(sess) = preview_session.as_ref() {
-        let (picture, column) = build_preview_column(sess);
-        content_h.append(&column);
-
-        let refresh = {
-            let session = sess.clone();
-            let picture = picture.clone();
-            let factor_row = factor_row.clone();
-            move || {
-                let f = UPSCALE_FACTORS[factor_row.selected() as usize].1;
-                refresh_preview(
-                    &session,
-                    &picture,
-                    &PreviewOp::Resize {
-                        mode: ResizeMode::Percent(f32::from(f) * 100.0),
-                        filter: Filter::Lanczos3,
-                    },
-                );
-            }
-        };
-        refresh();
-        dialog_signal!(window, factor_row, connect_selected_notify, move |_| refresh());
-    }
-
-    let toolbar_view = adw::ToolbarView::new();
-    toolbar_view.add_top_bar(&header);
-    toolbar_view.set_content(Some(&content_h));
-    window.set_content(Some(&toolbar_view));
-
-    {
-        let window = window.clone();
-        dialog_signal!(window, cancel_btn, connect_clicked, move |_| window.close());
-    }
-
-    {
-        let files = files.clone();
-        let factor_row = factor_row.clone();
-        let target_row = target_row.clone();
-        let overwrite_row = overwrite_row.clone();
-        let status = status.clone();
-        let apply_btn = apply_btn.clone();
-        let cancel_btn = cancel_btn.clone();
-        let window = window.clone();
-        dialog_signal!(window, apply_btn.clone(), connect_clicked, move |_| {
-            let factor = UPSCALE_FACTORS[factor_row.selected() as usize].1;
-            let target: Option<Format> = match target_row.selected() {
-                0 => None,
-                n => Some(CONVERT_FORMATS[(n as usize) - 1].1),
-            };
-            let policy = OVERWRITE_CHOICES[overwrite_row.selected() as usize].1;
-
-            apply_btn.set_sensitive(false);
-            cancel_btn.set_sensitive(false);
-            status.set_text(&gettext("Aumentando…"));
-
-            // Upscale = Lanczos3 resize at factor * 100 %.
-            let work_files: Vec<PathBuf> = (*files).clone();
-            let mode = ResizeMode::Percent(f32::from(factor) * 100.0);
-            let opts = EncodeOptions::default();
-            run_batch_async(
-                work_files,
-                move |f| resize_file(f, mode, Filter::Lanczos3, target, &opts, policy),
-                gettext("Aumentando"),
-                status.clone(),
-                apply_btn.clone(),
-                cancel_btn.clone(),
-                window.clone(),
-            );
-        });
-    }
-
-    window
-}
-
-/// Flip modal: horizontal or vertical mirror.
-pub fn run_flip_dialog(files: Vec<PathBuf>) -> i32 {
-    let app = adw::Application::builder().application_id(APP_ID).build();
-    let files = Rc::new(files);
-    app.connect_activate(move |app| {
-        build_flip_dialog(app, files.clone()).present();
-    });
-    let code = app.run_with_args::<&str>(&[]);
-    i32::from(u8::from(code))
-}
-
-fn build_flip_dialog(app: &adw::Application, files: Rc<Vec<PathBuf>>) -> adw::ApplicationWindow {
-    let window = adw::ApplicationWindow::builder()
-        .application(app)
-        .default_width(440)
-        .default_height(340)
-        .title(gettext("Espelhar imagens — Prisma"))
-        .build();
-
-    let header = adw::HeaderBar::new();
-    header.set_title_widget(Some(&adw::WindowTitle::new(&gettext("Espelhar"), "Prisma")));
-
-    let axes = [n_("Horizontal (esquerda ↔ direita)"), n_("Vertical (cima ↔ baixo)")];
-    let axis_row = adw::ComboRow::builder()
-        .use_markup(false)
-        .title(gettext("Eixo"))
-        .model(&translated_strings(&axes))
-        .build();
-
-    let mut target_names = vec!["Manter o formato original"];
-    target_names.extend(CONVERT_FORMATS.iter().map(|(n, _)| *n));
-    let target_row = adw::ComboRow::builder()
-        .use_markup(false)
-        .title(gettext("Formato de destino"))
-        .model(&translated_strings(&target_names))
-        .build();
-
-    let overwrite_row = adw::ComboRow::builder()
-        .use_markup(false)
-        .title(gettext("Se o arquivo de saída existir"))
-        .model(&translated_strings(&OVERWRITE_CHOICES.iter().map(|(n, _)| *n).collect::<Vec<_>>()))
-        .build();
-
-    let files_row = adw::ActionRow::builder()
-        .use_markup(false)
-        .title(format!("{}: {}", gettext("Arquivos selecionados"), files.len()))
-        .build();
-    files_row.set_subtitle(&files_subtitle(&files));
-
-    let group = adw::PreferencesGroup::new();
-    group.add(&files_row);
-    group.add(&axis_row);
-    group.add(&target_row);
-    group.add(&overwrite_row);
-
-    let status = gtk::Label::builder().label("").wrap(true).xalign(0.0).build();
-    status.add_css_class("dim-label");
-
-    let cancel_btn = gtk::Button::with_label(&gettext("Cancelar"));
-    let apply_btn = gtk::Button::builder().label(gettext("Espelhar")).build();
-    apply_btn.add_css_class("suggested-action");
-    apply_btn.add_css_class("pill");
-
-    let actions = gtk::Box::builder()
-        .orientation(gtk::Orientation::Horizontal)
-        .spacing(8)
-        .halign(gtk::Align::End)
-        .build();
-    actions.append(&cancel_btn);
-    actions.append(&apply_btn);
-
-    let content = gtk::Box::builder()
-        .orientation(gtk::Orientation::Vertical)
-        .spacing(16)
-        .margin_top(16)
-        .margin_bottom(16)
-        .margin_start(16)
-        .margin_end(16)
-        .build();
-    content.append(&group);
-    content.append(&status);
-    content.append(&actions);
-
-    let toolbar_view = adw::ToolbarView::new();
-    toolbar_view.add_top_bar(&header);
-    toolbar_view.set_content(Some(&content));
-    window.set_content(Some(&toolbar_view));
-
-    {
-        let window = window.clone();
-        dialog_signal!(window, cancel_btn, connect_clicked, move |_| window.close());
-    }
-
-    {
-        let files = files.clone();
-        let axis_row = axis_row.clone();
-        let target_row = target_row.clone();
-        let overwrite_row = overwrite_row.clone();
-        let status = status.clone();
-        let apply_btn = apply_btn.clone();
-        let cancel_btn = cancel_btn.clone();
-        let window = window.clone();
-        dialog_signal!(window, apply_btn.clone(), connect_clicked, move |_| {
-            let axis = match axis_row.selected() {
-                0 => FlipAxis::Horizontal,
-                _ => FlipAxis::Vertical,
-            };
-            let target: Option<Format> = match target_row.selected() {
-                0 => None,
-                n => Some(CONVERT_FORMATS[(n as usize) - 1].1),
-            };
-            let policy = OVERWRITE_CHOICES[overwrite_row.selected() as usize].1;
-
-            apply_btn.set_sensitive(false);
-            cancel_btn.set_sensitive(false);
-            status.set_text(&gettext("Espelhando…"));
-
-            let work_files: Vec<PathBuf> = (*files).clone();
-            run_batch_async(
-                work_files,
-                move |f| flip_file(f, axis, target, policy),
-                gettext("Espelhando"),
-                status.clone(),
-                apply_btn.clone(),
-                cancel_btn.clone(),
-                window.clone(),
-            );
-        });
-    }
-
-    window
-}
-
-/// Adjust modal: brightness + contrast + saturation + gamma.
-pub fn run_adjust_dialog(files: Vec<PathBuf>) -> i32 {
-    let app = adw::Application::builder().application_id(APP_ID).build();
-    let files = Rc::new(files);
-    app.connect_activate(move |app| {
-        build_adjust_dialog(app, files.clone()).present();
-    });
-    let code = app.run_with_args::<&str>(&[]);
-    i32::from(u8::from(code))
-}
-
-fn build_adjust_dialog(app: &adw::Application, files: Rc<Vec<PathBuf>>) -> adw::ApplicationWindow {
-    let window = adw::ApplicationWindow::builder()
-        .application(app)
-        .default_width(880)
-        .default_height(640)
-        .title(gettext("Ajustar cores — Prisma"))
-        .build();
-    prepare_dialog(&window, files, fill_adjust_dialog);
-    window
-}
-
-fn fill_adjust_dialog(
-    window: adw::ApplicationWindow,
-    files: Rc<Vec<PathBuf>>,
-    preview_session: Option<Rc<PreviewSession>>,
-) -> adw::ApplicationWindow {
-    // Preview session — loaded from the first file. Multi-select still works
-    // (Aplicar opera em todos), mas o preview mostra o primeiro.
-
-    let header = adw::HeaderBar::new();
-    header.set_title_widget(Some(&adw::WindowTitle::new(&gettext("Ajustar cores"), "Prisma")));
-
-    let brightness = adw::SpinRow::with_range(-100.0, 100.0, 1.0);
-    brightness.set_title(&gettext("Brilho"));
-    brightness.set_subtitle(&gettext("-100 escuro · 0 neutro · +100 claro"));
-    brightness.set_value(0.0);
-
-    let contrast = adw::SpinRow::with_range(-100.0, 100.0, 1.0);
-    contrast.set_title(&gettext("Contraste"));
-    contrast.set_subtitle(&gettext("-100 plano · 0 neutro · +100 agressivo"));
-    contrast.set_value(0.0);
-
-    let saturation = adw::SpinRow::with_range(-100.0, 100.0, 1.0);
-    saturation.set_title(&gettext("Saturação"));
-    saturation.set_subtitle(&gettext("-100 cinza · 0 neutro · +100 vibrante"));
-    saturation.set_value(0.0);
-
-    let gamma = adw::SpinRow::with_range(0.1, 10.0, 0.05);
-    gamma.set_title(&gettext("Gamma"));
-    gamma.set_subtitle(&gettext(
-        "Abaixo de 1 clareia os meios-tons · 1 mantém · acima de 1 escurece",
-    ));
-    gamma.set_digits(2);
-    gamma.set_value(1.0);
-
-    let mut target_names = vec!["Manter o formato original"];
-    target_names.extend(CONVERT_FORMATS.iter().map(|(n, _)| *n));
-    let target_row = adw::ComboRow::builder()
-        .use_markup(false)
-        .title(gettext("Formato de destino"))
-        .model(&translated_strings(&target_names))
-        .build();
-
-    let overwrite_row = adw::ComboRow::builder()
-        .use_markup(false)
-        .title(gettext("Se o arquivo de saída existir"))
-        .model(&translated_strings(&OVERWRITE_CHOICES.iter().map(|(n, _)| *n).collect::<Vec<_>>()))
-        .build();
-
-    let files_row = adw::ActionRow::builder()
-        .use_markup(false)
-        .title(format!("{}: {}", gettext("Arquivos selecionados"), files.len()))
-        .build();
-    files_row.set_subtitle(&files_subtitle(&files));
-
-    let group_files = adw::PreferencesGroup::new();
-    group_files.add(&files_row);
-
-    let group_tone = adw::PreferencesGroup::builder().title(gettext("Tom")).build();
-    group_tone.add(&brightness);
-    group_tone.add(&contrast);
-    group_tone.add(&gamma);
-
-    let group_color = adw::PreferencesGroup::builder().title(gettext("Cor")).build();
-    group_color.add(&saturation);
-
-    let group_out = adw::PreferencesGroup::builder().title(gettext("Saída")).build();
-    group_out.add(&target_row);
-    group_out.add(&overwrite_row);
-
-    let status = gtk::Label::builder().label("").wrap(true).xalign(0.0).build();
-    status.add_css_class("dim-label");
-
-    let cancel_btn = gtk::Button::with_label(&gettext("Cancelar"));
-    let apply_btn = gtk::Button::builder().label(gettext("Aplicar")).build();
-    apply_btn.add_css_class("suggested-action");
-    apply_btn.add_css_class("pill");
-
-    let actions_box = gtk::Box::builder()
-        .orientation(gtk::Orientation::Horizontal)
-        .spacing(8)
-        .halign(gtk::Align::End)
-        .build();
-    actions_box.append(&cancel_btn);
-    actions_box.append(&apply_btn);
-
-    let content = gtk::Box::builder()
-        .orientation(gtk::Orientation::Vertical)
-        .spacing(16)
-        .margin_top(16)
-        .margin_bottom(16)
-        .margin_start(16)
-        .margin_end(16)
-        .build();
-    content.append(&group_files);
-    content.append(&group_tone);
-    content.append(&group_color);
-    content.append(&group_out);
-    content.append(&status);
-    content.append(&actions_box);
-
-    let scrolled = gtk::ScrolledWindow::builder()
-        .hexpand(true)
-        .vexpand(true)
-        .hscrollbar_policy(gtk::PolicyType::Never)
-        .vscrollbar_policy(gtk::PolicyType::Automatic)
-        .child(&content)
-        .build();
-    scrolled.set_size_request(420, -1);
-
-    // Two-column layout: scrollable form on the left, live preview column
-    // on the right (when a session is available).
-    let main_box = gtk::Box::builder()
-        .orientation(gtk::Orientation::Horizontal)
-        .spacing(16)
-        .margin_top(0)
-        .margin_bottom(0)
-        .build();
-    main_box.append(&scrolled);
-
-    let preview_picture: Option<gtk::Picture> = if let Some(sess) = preview_session.as_ref() {
-        let (picture, column) = build_preview_column(sess);
-        column.set_margin_top(16);
-        column.set_margin_bottom(16);
-        column.set_margin_end(16);
-        main_box.append(&column);
-        Some(picture)
-    } else {
-        None
-    };
-
-    let toolbar_view = adw::ToolbarView::new();
-    toolbar_view.add_top_bar(&header);
-    toolbar_view.set_content(Some(&main_box));
-    window.set_content(Some(&toolbar_view));
-
-    // Wire live preview on every slider / gamma change.
-    if let (Some(picture), Some(session)) = (preview_picture.as_ref(), preview_session.as_ref()) {
-        let debounce = PreviewDebounce::new();
-        let sliders: [adw::SpinRow; 4] =
-            [brightness.clone(), contrast.clone(), saturation.clone(), gamma.clone()];
-        for row in &sliders {
-            let debounce = debounce.clone();
-            let session = session.clone();
-            let picture = picture.clone();
-            let brightness = brightness.clone();
-            let contrast = contrast.clone();
-            let saturation = saturation.clone();
-            let gamma = gamma.clone();
-            dialog_signal!(window, row, connect_changed, move |_| {
-                let ops = AdjustOps {
-                    brightness: brightness.value() as i32,
-                    contrast: contrast.value() as f32,
-                    saturation: saturation.value() as f32,
-                    gamma: gamma.value() as f32,
-                };
-                let session = session.clone();
-                let picture = picture.clone();
-                debounce.trigger(Duration::from_millis(80), move || {
-                    refresh_preview(&session, &picture, &PreviewOp::Adjust(ops));
-                });
-            });
-        }
-    }
-
-    {
-        let window = window.clone();
-        dialog_signal!(window, cancel_btn, connect_clicked, move |_| window.close());
-    }
-
-    {
-        let files = files.clone();
-        let brightness = brightness.clone();
-        let contrast = contrast.clone();
-        let saturation = saturation.clone();
-        let gamma = gamma.clone();
-        let target_row = target_row.clone();
-        let overwrite_row = overwrite_row.clone();
-        let status = status.clone();
-        let apply_btn = apply_btn.clone();
-        let cancel_btn = cancel_btn.clone();
-        let window = window.clone();
-        dialog_signal!(window, apply_btn.clone(), connect_clicked, move |_| {
-            let ops = AdjustOps {
-                brightness: brightness.value() as i32,
-                contrast: contrast.value() as f32,
-                saturation: saturation.value() as f32,
-                gamma: gamma.value() as f32,
-            };
-            let target: Option<Format> = match target_row.selected() {
-                0 => None,
-                n => Some(CONVERT_FORMATS[(n as usize) - 1].1),
-            };
-            let policy = OVERWRITE_CHOICES[overwrite_row.selected() as usize].1;
-
-            apply_btn.set_sensitive(false);
-            cancel_btn.set_sensitive(false);
-            status.set_text(&gettext("Ajustando…"));
-
-            let work_files: Vec<PathBuf> = (*files).clone();
-            run_batch_async(
-                work_files,
-                move |f| adjust_file(f, ops, target, policy),
-                gettext("Ajustando"),
-                status.clone(),
-                apply_btn.clone(),
-                cancel_btn.clone(),
-                window.clone(),
-            );
-        });
-    }
-
-    window
-}
-
-// ---------------------------------------------------------------------------
-// Metadata viewer dialog — read-only. Loads EXIF via `bigimage_core::metadata`
-// and shows every tag as an AdwActionRow so users can scan + copy values.
-// ---------------------------------------------------------------------------
-
-/// Run the metadata viewer for `files[0]`. Multi-select still opens but
-/// only the first file is inspected — a "próximo" navegator fica para M3.
-pub fn run_metadata_dialog(files: Vec<PathBuf>) -> i32 {
-    let app = adw::Application::builder().application_id(APP_ID).build();
-    let files = Rc::new(files);
-    app.connect_activate(move |app| {
-        let Some(first) = files.first() else { return };
-        build_properties_window(app, first).present();
-    });
-    let code = app.run_with_args::<&str>(&[]);
-    i32::from(u8::from(code))
-}
-
-/// Janela de propriedades da imagem. Sempre traz as infos básicas do
-/// arquivo (nome, pasta, tamanho, modificado, dimensões) mesmo sem EXIF —
-/// é o que o usuário enxerga quando clica no "i". Se houver EXIF, uma
-/// seção extra aparece abaixo com os campos crus.
-fn build_properties_window(app: &adw::Application, path: &Path) -> adw::ApplicationWindow {
-    let filename = path
-        .file_name()
-        .map(|n| n.to_string_lossy().into_owned())
-        .unwrap_or_else(|| path.display().to_string());
-
-    let window = adw::ApplicationWindow::builder()
-        .application(app)
-        .default_width(520)
-        .default_height(640)
-        .title(format!("{} — {filename}", gettext("Propriedades")))
-        .build();
-    let input = path.to_path_buf();
-    let cancel = Arc::new(AtomicBool::new(false));
-    let closing = cancel.clone();
-    window.connect_unrealize(move |_| closing.store(true, Ordering::Release));
-    let (tx, rx) = std::sync::mpsc::sync_channel(1);
-    std::thread::spawn(move || {
-        let result = crate::codec::with_cancel(cancel, || {
-            let info = crate::codec::information(&input).ok();
-            let fsmeta = std::fs::metadata(&input).map_err(|e| e.to_string());
-            (info, fsmeta)
-        });
-        let _ = tx.send(result);
-    });
-    let spinner = gtk::Spinner::new();
-    spinner.start();
-    window.set_content(Some(&spinner));
-    let weak = window.downgrade();
-    let input = path.to_path_buf();
-    glib::timeout_add_local(Duration::from_millis(16), move || {
-        let Some(window) = weak.upgrade() else { return glib::ControlFlow::Break };
-        if !window.is_visible() {
-            return glib::ControlFlow::Break;
-        }
-        match rx.try_recv() {
-            Ok((info, fsmeta)) => {
-                fill_properties_window(window, &input, info.as_ref(), fsmeta.as_ref());
-            }
-            Err(std::sync::mpsc::TryRecvError::Empty) => return glib::ControlFlow::Continue,
-            Err(std::sync::mpsc::TryRecvError::Disconnected) => {}
-        }
-        glib::ControlFlow::Break
-    });
-    window
-}
-fn fill_properties_window(
-    window: adw::ApplicationWindow,
-    path: &Path,
-    info: Option<&crate::codec::Information>,
-    fsmeta: std::result::Result<&std::fs::Metadata, &String>,
-) -> adw::ApplicationWindow {
-    let filename = path.file_name().unwrap_or_default().to_string_lossy();
-
-    let header = adw::HeaderBar::new();
-    header.set_title_widget(Some(&adw::WindowTitle::new(&gettext("Propriedades"), &filename)));
-
-    let page = adw::PreferencesPage::new();
-    page.add(&build_properties_file_group(path, info, fsmeta));
-    page.add(&build_properties_image_group(info));
-
-    if let Some(meta) = info.and_then(|i| i.metadata.as_ref()) {
-        if !meta.is_empty() {
-            if meta.has_gps || meta.has_camera_info {
-                let warning =
-                    adw::PreferencesGroup::builder().title(gettext("Privacidade")).build();
-                let row = adw::ActionRow::builder()
-                    .use_markup(false)
-                    .title(if meta.has_gps {
-                        "Coordenadas GPS presentes"
-                    } else {
-                        "Identificação de câmera/software presente"
-                    })
-                    .subtitle("Remova antes de publicar se for sensível.")
-                    .build();
-                warning.add(&row);
-                page.add(&warning);
-            }
-            page.add(&build_properties_exif_group(meta));
-        }
-    }
-
-    let toolbar_view = adw::ToolbarView::new();
-    toolbar_view.add_top_bar(&header);
-    toolbar_view.set_content(Some(&page));
-    window.set_content(Some(&toolbar_view));
-
-    window
-}
-
-fn build_properties_file_group(
-    path: &Path,
-    info: Option<&crate::codec::Information>,
-    fsmeta: std::result::Result<&std::fs::Metadata, &String>,
-) -> adw::PreferencesGroup {
-    let group = adw::PreferencesGroup::builder().title(gettext("Arquivo")).build();
-
-    let filename = path
-        .file_name()
-        .map(|n| n.to_string_lossy().into_owned())
-        .unwrap_or_else(|| path.display().to_string());
-    group.add(&info_row("Nome", &filename));
-
-    if let Some(parent) = path.parent() {
-        let parent_str = parent.display().to_string();
-        if !parent_str.is_empty() {
-            group.add(&info_row("Pasta", &parent_str));
-        }
-    }
-
-    // Sniff format by magic bytes — `path.extension()` lies for partial-sync
-    // files (Nextcloud `.chunking-*`, browser `.part`/`.crdownload`, `.tmp`)
-    // even when the bytes are a valid PNG/JPEG/etc. Falls back to extension
-    // when sniffing fails (truly unknown / corrupt / non-image file).
-    let ext = path.extension().map(|e| e.to_string_lossy().to_uppercase());
-    let sniffed = info.and_then(|i| i.format.clone());
-    match (sniffed, ext) {
-        (Some(s), Some(e)) if s != e => {
-            group.add(&info_row("Formato", &format!("{s} (extensão: {e})")));
-        }
-        (Some(s), _) => group.add(&info_row("Formato", &s)),
-        (None, Some(e)) => group.add(&info_row("Formato", &e)),
-        (None, None) => {}
-    }
-
-    match fsmeta {
-        Ok(fsmeta) => {
-            group.add(&info_row("Tamanho", &format_bytes(fsmeta.len())));
-            if let Ok(mtime) = fsmeta.modified() {
-                group.add(&info_row("Modificado", &format_system_time(mtime)));
-            }
-        }
-        Err(e) => {
-            group.add(&info_row("Tamanho", &format!("(indisponível: {e})")));
-        }
-    }
-
-    group
-}
-
-fn build_properties_image_group(info: Option<&crate::codec::Information>) -> adw::PreferencesGroup {
-    let group = adw::PreferencesGroup::builder().title(gettext("Imagem")).build();
-
-    match info.and_then(|i| i.dimensions) {
-        Some((w, h)) => {
-            let color = info.and_then(|i| i.color).and_then(|id| match id {
-                1 => Some(image::ColorType::L8),
-                2 => Some(image::ColorType::La8),
-                3 => Some(image::ColorType::Rgb8),
-                4 => Some(image::ColorType::Rgba8),
-                5 => Some(image::ColorType::L16),
-                6 => Some(image::ColorType::La16),
-                7 => Some(image::ColorType::Rgb16),
-                8 => Some(image::ColorType::Rgba16),
-                9 => Some(image::ColorType::Rgb32F),
-                10 => Some(image::ColorType::Rgba32F),
-                _ => None,
-            });
-            group.add(&info_row("Dimensões", &format!("{w} × {h} px")));
-
-            let mp = (f64::from(w) * f64::from(h)) / 1_000_000.0;
-            if mp >= 0.1 {
-                group.add(&info_row("Megapixels", &format!("{mp:.1} MP")));
-            }
-            if w > 0 && h > 0 {
-                let (rw, rh) = simplify_ratio(w, h);
-                group.add(&info_row("Razão de aspecto", &format!("{rw}:{rh}")));
-            }
-            if let Some(color) = color {
-                group.add(&info_row("Modo de cor", color_type_label(color)));
-                group.add(&info_row("Bits por canal", color_type_bits(color)));
-            }
-        }
-        None => {
-            group.add(&info_row(
-                "Dimensões",
-                "(falha: não foi possível identificar o formato pelo conteúdo)",
-            ));
-        }
-    }
-
-    // Orientação EXIF — só aparece se houver tag e != 1 (1 = upright).
-    if let Some(meta) = info.and_then(|i| i.metadata.as_ref()) {
-        if let Some(o) = meta.orientation {
-            if o != 1 {
-                group.add(&info_row(
-                    "Orientação EXIF",
-                    &format!("{o} · use Girar ▸ Automático pra corrigir"),
-                ));
-            }
-        }
-    }
-    group
-}
-
-/// Friendly label for the decoded pixel layout, matching what the Convert
-/// dialog says when picking encoders.
-fn color_type_label(c: image::ColorType) -> &'static str {
-    use image::ColorType::*;
-    match c {
-        L8 | L16 => "Tons de cinza",
-        La8 | La16 => "Tons de cinza + alfa",
-        Rgb8 | Rgb16 | Rgb32F => "RGB",
-        Rgba8 | Rgba16 | Rgba32F => "RGBA",
-        _ => "—",
-    }
-}
-
-/// Bit depth per channel. 32F is reported as "32 (float)" so users don't
-/// confuse high-precision HDR with overkill integer depth.
-fn color_type_bits(c: image::ColorType) -> &'static str {
-    use image::ColorType::*;
-    match c {
-        L8 | La8 | Rgb8 | Rgba8 => "8",
-        L16 | La16 | Rgb16 | Rgba16 => "16",
-        Rgb32F | Rgba32F => "32 (float)",
-        _ => "—",
-    }
-}
-
-/// Reduce W:H to its smallest integer pair via gcd. Used in the Properties
-/// dialog so 1920×1080 shows as 16:9 instead of opaque pixel counts.
-fn simplify_ratio(w: u32, h: u32) -> (u32, u32) {
-    fn gcd(a: u32, b: u32) -> u32 {
-        if b == 0 {
-            a
-        } else {
-            gcd(b, a % b)
-        }
-    }
-    let d = gcd(w, h);
-    (w / d, h / d)
-}
-
-fn build_properties_exif_group(meta: &metadata::Metadata) -> adw::PreferencesGroup {
-    let group = adw::PreferencesGroup::builder()
-        .title("EXIF")
-        .description(format!("{} campo(s) presentes", meta.tags.len()))
-        .build();
-    for (name, value) in &meta.tags {
-        group.add(&info_row(name, value));
-    }
-    group
-}
-
-/// ActionRow só-leitura com título+valor. Padrão visual usado no dialog
-/// de propriedades pra cada campo.
-fn info_row(title: &str, value: &str) -> adw::ActionRow {
-    let row = adw::ActionRow::builder().use_markup(false).title(title).build();
-    row.set_subtitle(value);
-    row
-}
-
-/// Formata bytes pra uma escala humana (KB/MB/GB em base 1024).
-fn format_bytes(n: u64) -> String {
-    const UNITS: [&str; 4] = ["B", "KB", "MB", "GB"];
-    let mut v = n as f64;
-    let mut u = 0usize;
-    while v >= 1024.0 && u + 1 < UNITS.len() {
-        v /= 1024.0;
-        u += 1;
-    }
-    if u == 0 {
-        format!("{n} B")
-    } else {
-        format!("{v:.1} {} ({n} bytes)", UNITS[u])
-    }
-}
-
-/// Formata um SystemTime em `YYYY-MM-DD HH:MM` local. Usa apenas a API
-/// padrão (sem pegar `chrono`) — basta pra mostrar a data legível.
-fn format_system_time(t: std::time::SystemTime) -> String {
-    let secs = t.duration_since(std::time::UNIX_EPOCH).map(|d| d.as_secs() as i64).unwrap_or(0);
-    // glib::DateTime lida com timezone local automaticamente — usamos ela
-    // pra evitar reimplementar aritmética de calendário.
-    match glib::DateTime::from_unix_local(secs) {
-        Ok(dt) => {
-            dt.format("%Y-%m-%d %H:%M").map(|g| g.to_string()).unwrap_or_else(|_| format!("{secs}"))
-        }
-        Err(_) => format!("{secs}"),
-    }
-}
-
-// ---------------------------------------------------------------------------
-// Compare dialog — two images in a `gtk::Paned`, drag the divider to sweep
-// between "antes" and "depois". Requires exactly 2 files; the rest are
-// ignored (first two in the selection are used).
-// ---------------------------------------------------------------------------
-
-/// Open the "Compare two" window. Needs two files — if fewer are given
-/// we fall back to the viewer with whatever's there.
-pub fn run_compare_dialog(files: Vec<PathBuf>) -> i32 {
-    if files.len() < 2 {
-        tracing::warn!(count = files.len(), "compare needs two files; falling back to viewer");
-        return run_viewer(files);
-    }
-    let app = adw::Application::builder().application_id(APP_ID).build();
-    let files = Rc::new(files);
-    app.connect_activate(move |app| {
-        build_compare_dialog(app, files.clone()).present();
-    });
-    let code = app.run_with_args::<&str>(&[]);
-    i32::from(u8::from(code))
-}
-
-fn build_compare_dialog(app: &adw::Application, files: Rc<Vec<PathBuf>>) -> adw::ApplicationWindow {
-    let window = adw::ApplicationWindow::builder()
-        .application(app)
-        .default_width(1200)
-        .default_height(720)
-        .title(gettext("Comparar imagens — Íris"))
-        .build();
-
-    let left_path = &files[0];
-    let right_path = &files[1];
-
-    let header = adw::HeaderBar::new();
-    let left_name =
-        left_path.file_name().map(|s| s.to_string_lossy().into_owned()).unwrap_or_default();
-    let right_name =
-        right_path.file_name().map(|s| s.to_string_lossy().into_owned()).unwrap_or_default();
-    let title = adw::WindowTitle::new(
-        "Comparar imagens",
-        &format!("Antes: {left_name}  ·  Depois: {right_name}"),
-    );
-    header.set_title_widget(Some(&title));
-
-    // Captions gone — titlebar now carries the Antes/Depois info so the
-    // full vertical space goes to the pictures.
-    let left_picture = make_compare_side(left_path, &window);
-    let right_picture = make_compare_side(right_path, &window);
-
-    let paned = gtk::Paned::builder()
-        .orientation(gtk::Orientation::Horizontal)
-        .hexpand(true)
-        .vexpand(true)
-        .resize_start_child(true)
-        .resize_end_child(true)
-        .shrink_start_child(false)
-        .shrink_end_child(false)
-        .start_child(&left_picture)
-        .end_child(&right_picture)
-        .build();
-
-    let hint = gtk::Label::builder()
-        .label(gettext("Arraste o divisor para comparar · Esc fecha"))
-        .xalign(0.5)
-        .margin_top(6)
-        .margin_bottom(6)
-        .build();
-    hint.add_css_class("dim-label");
-
-    let content = gtk::Box::builder().orientation(gtk::Orientation::Vertical).spacing(0).build();
-    content.append(&paned);
-    content.append(&hint);
-
-    let toolbar_view = adw::ToolbarView::new();
-    toolbar_view.add_top_bar(&header);
-    toolbar_view.set_content(Some(&content));
-    window.set_content(Some(&toolbar_view));
-
-    // Position the divider at 50% once the window has real dimensions.
-    {
-        let paned = paned.clone();
-        let window = window.clone();
-        glib::idle_add_local_once(move || {
-            let w = window.default_width();
-            if w > 0 {
-                paned.set_position(w / 2);
-            }
-        });
-    }
-
-    // Keyboard: Esc closes.
-    let key = gtk::EventControllerKey::new();
-    {
-        let window = window.downgrade();
-        key.connect_key_pressed(move |_, k, _, _| {
-            let Some(window) = window.upgrade() else {
-                return glib::Propagation::Proceed;
-            };
-            if matches!(k, gdk::Key::Escape) {
-                window.close();
-                glib::Propagation::Stop
-            } else {
-                glib::Propagation::Proceed
-            }
-        });
-    }
-    window.add_controller(key);
-
-    window
-}
-
-fn make_compare_side(path: &Path, window: &adw::ApplicationWindow) -> gtk::Box {
-    let picture = gtk::Picture::new();
-    picture.set_content_fit(gtk::ContentFit::Contain);
-    picture.set_hexpand(true);
-    picture.set_vexpand(true);
-
-    let column = gtk::Box::builder()
-        .orientation(gtk::Orientation::Vertical)
-        .spacing(0)
-        .hexpand(true)
-        .vexpand(true)
-        .build();
-    column.append(&picture);
-    let spinner = gtk::Spinner::new();
-    spinner.start();
-    column.append(&spinner);
-    let cancel = Arc::new(AtomicBool::new(false));
-    let closing = cancel.clone();
-    window.connect_unrealize(move |_| closing.store(true, Ordering::Release));
-    let input = path.to_path_buf();
-    let (tx, rx) = mpsc::sync_channel(1);
-    std::thread::spawn(move || {
-        crate::codec::with_cancel(cancel, || {
-            let result = bigimage_core::open_image(input)
-                .map(|image| {
-                    let rgba = image.thumbnail(2048, 2048).to_rgba8();
-                    let size = rgba.dimensions();
-                    (rgba.into_raw(), size)
-                })
-                .map_err(|e| e.to_string());
-            let _ = tx.send(result);
-        })
-    });
-    let weak_picture = picture.downgrade();
-    let weak_column = column.downgrade();
-    let weak_spinner = spinner.downgrade();
-    let weak_window = window.downgrade();
-    glib::timeout_add_local(Duration::from_millis(16), move || {
-        if weak_window.upgrade().is_none_or(|w| !w.is_visible()) {
-            return glib::ControlFlow::Break;
-        }
-        match rx.try_recv() {
-            Ok(result) => {
-                if let (Some(column), Some(spinner)) =
-                    (weak_column.upgrade(), weak_spinner.upgrade())
-                {
-                    column.remove(&spinner);
-                }
-                match result {
-                    Ok((raw, (w, h))) => {
-                        if let Some(picture) = weak_picture.upgrade() {
-                            picture.set_paintable(Some(&texture_from_rgba(raw, w, h)));
-                        }
-                    }
-                    Err(error) => {
-                        if let Some(column) = weak_column.upgrade() {
-                            let label = gtk::Label::new(Some(&error));
-                            label.set_wrap(true);
-                            column.append(&label);
-                        }
-                    }
-                }
-            }
-            Err(mpsc::TryRecvError::Empty) => return glib::ControlFlow::Continue,
-            Err(mpsc::TryRecvError::Disconnected) => {}
-        }
-        glib::ControlFlow::Break
-    });
-    column
-}
-
-// ---------------------------------------------------------------------------
-// Animate dialog — pick a delay, a loop mode, an output path and build an
-// animated GIF from the selected frames. Minimal shape: every parameter
-// has a sensible default so the user can just hit "Criar GIF" and get
-// something playable.
-// ---------------------------------------------------------------------------
-
-/// Prisma Lote — converter em lote. Pega a lista de arquivos recebida via
-/// CLI, expande pastas e aplica a conversão no pool paralelo compartilhado.
-pub fn run_batch_dialog(files: Vec<PathBuf>) -> i32 {
-    let app = adw::Application::builder().application_id(APP_ID).build();
-    let files = Rc::new(RefCell::new(expand_batch_inputs(files)));
-    app.connect_activate(move |app| {
-        build_batch_dialog(app, files.clone()).present();
-    });
-    let code = app.run_with_args::<&str>(&[]);
-    i32::from(u8::from(code))
-}
-
-fn expand_batch_inputs(inputs: Vec<PathBuf>) -> Vec<PathBuf> {
-    let mut files = Vec::new();
-    for input in inputs {
-        if input.is_dir() {
-            files.extend(collect_images_in_dir(&input));
-        } else if input.is_file() && is_viewable(&input) {
-            files.push(input);
-        }
-    }
-    files.sort_by(|a, b| a.as_os_str().cmp(b.as_os_str()));
-    files.dedup();
-    files
-}
-
-fn build_batch_dialog(
-    app: &adw::Application,
-    files: Rc<RefCell<Vec<PathBuf>>>,
-) -> adw::ApplicationWindow {
-    let window = adw::ApplicationWindow::builder()
-        .application(app)
-        .default_width(640)
-        .default_height(640)
-        .title(gettext("Prisma — Lote"))
-        .build();
-
-    let header = adw::HeaderBar::new();
-    let title = adw::WindowTitle::new(&gettext("Conversão em lote"), "Prisma");
-    header.set_title_widget(Some(&title));
-
-    let format_names: Vec<&str> = CONVERT_FORMATS.iter().map(|(n, _)| *n).collect();
-    let overwrite_names: Vec<&str> = OVERWRITE_CHOICES.iter().map(|(n, _)| *n).collect();
-
-    // ── Grupo: arquivos ─────────────────────────────────────────────────
-    // Lista mutável (compartilhada via Rc<RefCell>) — suporta adicionar
-    // arquivos e pastas depois do diálogo aberto. `summary_row` é
-    // re-renderizada sempre que mudar a lista, via `refresh_files_row`.
-    let files_group = adw::PreferencesGroup::builder().title(gettext("Arquivos")).build();
-    let summary_row = adw::ActionRow::builder().use_markup(false).activatable(false).build();
-    let add_files_btn = gtk::Button::builder()
-        .icon_name("list-add-symbolic")
-        .tooltip_text(gettext("Adicionar arquivos"))
-        .css_classes(["flat"])
-        .valign(gtk::Align::Center)
-        .build();
-    let add_folder_btn = gtk::Button::builder()
-        .icon_name("folder-symbolic")
-        .tooltip_text(gettext("Adicionar pasta (imagens)"))
-        .css_classes(["flat"])
-        .valign(gtk::Align::Center)
-        .build();
-    summary_row.add_suffix(&add_files_btn);
-    summary_row.add_suffix(&add_folder_btn);
-    files_group.add(&summary_row);
-    refresh_files_row(&summary_row, &files.borrow());
-
-    // ── Grupo: conversão ────────────────────────────────────────────────
-    let convert_group = adw::PreferencesGroup::builder().title(gettext("Conversão")).build();
-
-    let format_row = adw::ComboRow::builder()
-        .use_markup(false)
-        .title(gettext("Formato de destino"))
-        .model(&translated_strings(&format_names))
-        .build();
-    convert_group.add(&format_row);
-
-    let quality_spin = adw::SpinRow::with_range(1.0, 100.0, 1.0);
-    quality_spin.set_title(&gettext("Qualidade (JPEG/AVIF)"));
-    quality_spin.set_subtitle(&gettext("1 menor qualidade · 85 equilíbrio · 100 maior qualidade"));
-    quality_spin.set_value(85.0);
-    convert_group.add(&quality_spin);
-
-    let optimize_switch = adw::SwitchRow::builder()
-        .use_markup(false)
-        .title(gettext("Otimizar tamanho"))
-        .subtitle("PNG com compressão máxima; AVIF mais lento; arquivo menor")
-        .build();
-    convert_group.add(&optimize_switch);
-    bind_encode_controls(&window, &format_row, &quality_spin, &optimize_switch);
-
-    // ── Grupo: destino ──────────────────────────────────────────────────
-    let dest_group = adw::PreferencesGroup::builder().title(gettext("Destino")).build();
-    let overwrite_row = adw::ComboRow::builder()
-        .use_markup(false)
-        .title(gettext("Se o arquivo de saída existir"))
-        .model(&translated_strings(&overwrite_names))
-        .build();
-    dest_group.add(&overwrite_row);
-    // Pasta de saída: None = mesma do original. Clicar abre FolderDialog.
-    let output_dir: Rc<RefCell<Option<PathBuf>>> = Rc::new(RefCell::new(None));
-    let folder_row = adw::ActionRow::builder()
-        .use_markup(false)
-        .title(gettext("Pasta de saída"))
-        .subtitle("Mesma pasta do arquivo de origem")
-        .activatable(true)
-        .build();
-    let folder_icon = gtk::Image::from_icon_name("folder-open-symbolic");
-    folder_icon.add_css_class("dim-label");
-    folder_row.add_suffix(&folder_icon);
-    let clear_folder_btn = gtk::Button::builder()
-        .icon_name("edit-clear-symbolic")
-        .tooltip_text(gettext("Usar a mesma pasta do arquivo de origem"))
-        .css_classes(["flat"])
-        .valign(gtk::Align::Center)
-        .visible(false)
-        .build();
-    folder_row.add_suffix(&clear_folder_btn);
-    dest_group.add(&folder_row);
-
-    // ── Rodapé: barra de progresso + status + botões ────────────────────
-    let progress = gtk::ProgressBar::builder().show_text(true).text("Pronto").build();
-    progress.set_margin_start(18);
-    progress.set_margin_end(18);
-    progress.set_margin_top(8);
-
-    let status = gtk::Label::builder()
-        .label(gettext("Aguardando. Clique em Processar para iniciar."))
-        .wrap(true)
-        .max_width_chars(64)
-        .css_classes(["dim-label"])
-        .margin_start(18)
-        .margin_end(18)
-        .margin_top(4)
-        .margin_bottom(4)
-        .build();
-
-    let apply_btn = gtk::Button::builder()
-        .label(gettext("Processar"))
-        .css_classes(["pill", "suggested-action"])
-        .build();
-    let cancel_btn = gtk::Button::builder().label(gettext("Cancelar")).build();
-    let btn_bar = gtk::Box::new(gtk::Orientation::Horizontal, 8);
-    btn_bar.set_halign(gtk::Align::Center);
-    btn_bar.set_margin_top(8);
-    btn_bar.set_margin_bottom(18);
-    btn_bar.append(&cancel_btn);
-    btn_bar.append(&apply_btn);
-
-    // ── Scroll wrapper (para listas longas no futuro) ───────────────────
-    let options_col = gtk::Box::new(gtk::Orientation::Vertical, 14);
-    options_col.set_margin_start(18);
-    options_col.set_margin_end(18);
-    options_col.set_margin_top(18);
-    options_col.append(&files_group);
-    options_col.append(&convert_group);
-    options_col.append(&dest_group);
-
-    let scroller = gtk::ScrolledWindow::builder()
-        .hscrollbar_policy(gtk::PolicyType::Never)
-        .vexpand(true)
-        .child(&options_col)
-        .build();
-
-    let main_col = gtk::Box::new(gtk::Orientation::Vertical, 0);
-    main_col.append(&scroller);
-    main_col.append(&progress);
-    main_col.append(&status);
-    main_col.append(&btn_bar);
-
-    let toolbar_view = adw::ToolbarView::new();
-    toolbar_view.add_top_bar(&header);
-    toolbar_view.set_content(Some(&main_col));
-    window.set_content(Some(&toolbar_view));
-
-    // Cancel signal shared with the worker thread — flipped by the
-    // Cancel button while a run is in flight, reset on each Apply.
-    let cancelled = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
-    // True while a worker is running. The Cancel button uses this to
-    // decide between "cancel the run" and "close the window".
-    let running = Rc::new(Cell::new(false));
-
-    // Handlers dos botões "Adicionar arquivos" e "Adicionar pasta".
-    {
-        let files = files.clone();
-        let summary_row = summary_row.clone();
-        let window = window.clone();
-        dialog_signal!(window, add_files_btn, connect_clicked, move |_| {
-            add_files_to_batch(&window, &files, &summary_row);
-        });
-    }
-    {
-        let files = files.clone();
-        let summary_row = summary_row.clone();
-        let window = window.clone();
-        dialog_signal!(window, add_folder_btn, connect_clicked, move |_| {
-            add_folder_to_batch(&window, &files, &summary_row);
-        });
-    }
-
-    // Pasta de saída: clicar na row abre FolderDialog; o botão vassoura
-    // reseta para None (mesma pasta do original).
-    {
-        let output_dir = output_dir.clone();
-        let folder_row = folder_row.clone();
-        let clear_btn = clear_folder_btn.clone();
-        let window = window.clone();
-        dialog_signal!(window, folder_row.clone(), connect_activated, move |_| {
-            pick_output_folder(&window, &output_dir, &folder_row, &clear_btn);
-        });
-    }
-    {
-        let output_dir = output_dir.clone();
-        let folder_row = folder_row.clone();
-        let clear_btn = clear_folder_btn.clone();
-        dialog_signal!(window, clear_folder_btn, connect_clicked, move |_| {
-            *output_dir.borrow_mut() = None;
-            folder_row.set_subtitle(&gettext("Mesma pasta do arquivo de origem"));
-            clear_btn.set_visible(false);
-        });
-    }
-
-    {
-        let cancelled = cancelled.clone();
-        let running = running.clone();
-        let window = window.clone();
-        dialog_signal!(window, cancel_btn, connect_clicked, move |_| {
-            if running.get() {
-                cancelled.store(true, std::sync::atomic::Ordering::Relaxed);
-            } else {
-                window.close();
-            }
-        });
-    }
-
-    {
-        let files = files.clone();
-        let format_row = format_row.clone();
-        let overwrite_row = overwrite_row.clone();
-        let quality_spin = quality_spin.clone();
-        let optimize_switch = optimize_switch.clone();
-        let progress = progress.clone();
-        let status = status.clone();
-        let apply_btn = apply_btn.clone();
-        let cancel_btn = cancel_btn.clone();
-        let window = window.clone();
-        let cancelled = cancelled.clone();
-        let running = running.clone();
-        let output_dir = output_dir.clone();
-        dialog_signal!(window, apply_btn.clone(), connect_clicked, move |_| {
-            let fmt_idx = format_row.selected() as usize;
-            let policy_idx = overwrite_row.selected() as usize;
-            let fmt = CONVERT_FORMATS[fmt_idx].1;
-            let policy = OVERWRITE_CHOICES[policy_idx].1;
-            let opts = EncodeOptions {
-                quality: Some(quality_spin.value() as u8),
-                optimize: optimize_switch.is_active(),
-                ..EncodeOptions::default()
-            };
-            let out_dir_snapshot = output_dir.borrow().clone();
-            let files_owned: Vec<PathBuf> = files.borrow().clone();
-            if files_owned.is_empty() {
-                status.set_text(&gettext("Adicione ao menos uma imagem para processar."));
-                return;
-            }
-
-            // Reset cancel for a re-run, mark a worker as live.
-            cancelled.store(false, std::sync::atomic::Ordering::Relaxed);
-            running.set(true);
-            apply_btn.set_sensitive(false);
-            cancel_btn.set_label(&gettext("Cancelar"));
-            progress.set_fraction(0.0);
-            progress.set_text(Some(&gettext("Iniciando…")));
-            status.set_text(&gettext("Processando…"));
-
-            let rx = batch_runner::spawn_batch_workers(
-                files_owned,
-                move |path| convert_file_to(path, out_dir_snapshot.as_deref(), fmt, &opts, policy),
-                cancelled.clone(),
-            );
-
-            let progress = progress.clone();
-            let status = status.clone();
-            let apply_btn = apply_btn.clone();
-            let cancel_btn = cancel_btn.clone();
-            let window = window.clone();
-            let running = running.clone();
-            glib::timeout_add_local(std::time::Duration::from_millis(50), move || loop {
-                match rx.try_recv() {
-                    Ok(batch_runner::AsyncBatchEvent::Progress { done, total, file }) => {
-                        progress.set_fraction(done as f64 / total.max(1) as f64);
-                        progress.set_text(Some(&format!("{done}/{total} · {file}")));
-                    }
-                    Ok(batch_runner::AsyncBatchEvent::Done {
-                        ok,
-                        skip,
-                        fail,
-                        first_err,
-                        done,
-                        total,
-                        cancelled,
-                        elapsed,
-                        bytes_in,
-                        bytes_out,
-                    }) => {
-                        running.set(false);
-                        let timing = batch_runner::format_duration(elapsed);
-                        let mut msg = if cancelled {
-                            format!(
-                                "Cancelado após {done}/{total} em {timing}. \
-                                 {ok} gravado(s), {skip} ignorado(s), {fail} falha(s)."
-                            )
-                        } else {
-                            format!(
-                                "Concluído em {timing}. \
-                                 {ok} gravado(s), {skip} ignorado(s), {fail} falha(s)."
-                            )
-                        };
-                        if ok > 0 && bytes_in > 0 && bytes_out > 0 {
-                            let delta = batch_runner::format_size_delta(bytes_in, bytes_out);
-                            let avg_in = bytes_in / (ok as u64).max(1);
-                            let avg_out = bytes_out / (ok as u64).max(1);
-                            msg.push_str(&format!(
-                                "\n{} → {} ({delta}) · média por arquivo {} → {}",
-                                batch_runner::format_size(bytes_in),
-                                batch_runner::format_size(bytes_out),
-                                batch_runner::format_size(avg_in),
-                                batch_runner::format_size(avg_out),
-                            ));
-                        }
-                        status.set_text(&msg);
-                        if let Some(err) = first_err {
-                            status.set_text(&format!("{msg}\n{err}"));
-                        }
-                        progress.set_text(Some(&gettext(if cancelled {
-                            n_("Cancelado")
-                        } else {
-                            n_("Concluído")
-                        })));
-                        apply_btn.set_sensitive(true);
-                        let cancel_label = if !cancelled && done == total {
-                            gettext("Fechar")
-                        } else {
-                            gettext("Cancelar")
-                        };
-                        cancel_btn.set_label(&cancel_label);
-                        if !cancelled && fail == 0 {
-                            let win = window.clone();
-                            glib::timeout_add_seconds_local_once(3, move || win.close());
-                        }
-                        return glib::ControlFlow::Break;
-                    }
-                    Err(std::sync::mpsc::TryRecvError::Empty) => {
-                        return glib::ControlFlow::Continue;
-                    }
-                    Err(std::sync::mpsc::TryRecvError::Disconnected) => {
-                        running.set(false);
-                        return glib::ControlFlow::Break;
-                    }
-                }
-            });
-        });
-    }
-
-    window
-}
-
-/// Atualiza a ActionRow de resumo do Prisma Lote com a contagem + peso
-/// total da lista atual de arquivos.
-fn refresh_files_row(row: &adw::ActionRow, files: &[PathBuf]) {
-    let total: u64 = files.iter().filter_map(|p| std::fs::metadata(p).ok().map(|m| m.len())).sum();
-    row.set_title(&format!("{}: {}", gettext("Arquivos selecionados"), files.len()));
-    row.set_subtitle(&format_size(total));
-}
-
-/// Abre um picker multi-arquivo e anexa os escolhidos à lista do batch,
-/// deduplicando pelas paths canônicas. Formatos filtrados pelos mesmos
-/// MIME types que o dashboard aceita.
-fn add_files_to_batch(
-    window: &adw::ApplicationWindow,
-    files: &Rc<RefCell<Vec<PathBuf>>>,
-    row: &adw::ActionRow,
-) {
-    let dialog =
-        gtk::FileDialog::builder().title(gettext("Adicionar arquivos")).modal(true).build();
-    let filter = gtk::FileFilter::new();
-    filter.set_name(Some(&gettext("Imagens")));
-    for mime in [
-        "image/jpeg",
-        "image/png",
-        "image/webp",
-        "image/avif",
-        "image/gif",
-        "image/tiff",
-        "image/bmp",
-    ] {
-        filter.add_mime_type(mime);
-    }
-    let filters = gio::ListStore::new::<gtk::FileFilter>();
-    filters.append(&filter);
-    dialog.set_filters(Some(&filters));
-
-    let parent = window.clone();
-    let files = files.clone();
-    let row = row.clone();
-    dialog.open_multiple(Some(&parent), None::<&gio::Cancellable>, move |result| {
-        let Ok(list) = result else { return };
-        let paths: Vec<PathBuf> = (0..list.n_items())
-            .filter_map(|i| list.item(i))
-            .filter_map(|o| o.downcast::<gio::File>().ok())
-            .filter_map(|f| f.path())
-            .collect();
-        if paths.is_empty() {
-            return;
-        }
-        append_unique(&files, paths);
-        refresh_files_row(&row, &files.borrow());
-    });
-}
-
-/// Abre um picker de pasta e varre (não-recursivo, um nível só) em busca
-/// de arquivos com extensão de imagem conhecida; anexa à lista do batch.
-fn add_folder_to_batch(
-    window: &adw::ApplicationWindow,
-    files: &Rc<RefCell<Vec<PathBuf>>>,
-    row: &adw::ActionRow,
-) {
-    let dialog = gtk::FileDialog::builder()
-        .title(gettext("Adicionar pasta com imagens"))
-        .modal(true)
-        .build();
-    let parent = window.clone();
-    let files = files.clone();
-    let row = row.clone();
-    dialog.select_folder(Some(&parent), None::<&gio::Cancellable>, move |result| {
-        let Ok(folder) = result else { return };
-        let Some(dir) = folder.path() else { return };
-        let found = collect_images_in_dir(&dir);
-        if found.is_empty() {
-            return;
-        }
-        append_unique(&files, found);
-        refresh_files_row(&row, &files.borrow());
-    });
-}
-
-/// Adiciona novos paths à lista, pulando os que já estavam lá
-/// (comparação por PathBuf canônica).
-fn append_unique(files: &Rc<RefCell<Vec<PathBuf>>>, new_paths: Vec<PathBuf>) {
-    let mut list = files.borrow_mut();
-    for p in new_paths {
-        if !list.iter().any(|existing| existing == &p) {
-            list.push(p);
-        }
-    }
-}
-
-/// Extensões que aceitamos numa varredura de pasta. Case-insensitive.
-const IMAGE_EXTENSIONS: &[&str] = &[
-    "jpg", "jpeg", "png", "webp", "avif", "gif", "tif", "tiff", "bmp", "ico", "pnm", "ppm", "pgm",
-    "pbm", "pam", "tga", "qoi", "hdr", "exr",
-];
-
-fn collect_images_in_dir(dir: &Path) -> Vec<PathBuf> {
-    let Ok(entries) = std::fs::read_dir(dir) else { return Vec::new() };
-    let mut out = Vec::new();
-    for entry in entries.flatten() {
-        let path = entry.path();
-        if !path.is_file() {
-            continue;
-        }
-        let Some(ext) = path.extension() else { continue };
-        let ext_lower = ext.to_string_lossy().to_ascii_lowercase();
-        if IMAGE_EXTENSIONS.iter().any(|e| *e == ext_lower) {
-            out.push(path);
-        }
-    }
-    out.sort();
-    out
-}
-
-/// Abre FolderDialog; ao confirmar, atualiza `output_dir` e o subtitle
-/// da row. Revela o botão "limpar" para o usuário voltar ao padrão.
-fn pick_output_folder(
-    window: &adw::ApplicationWindow,
-    output_dir: &Rc<RefCell<Option<PathBuf>>>,
-    row: &adw::ActionRow,
-    clear_btn: &gtk::Button,
-) {
-    let dialog =
-        gtk::FileDialog::builder().title(gettext("Escolher pasta de saída")).modal(true).build();
-    let parent = window.clone();
-    let output_dir = output_dir.clone();
-    let row = row.clone();
-    let clear_btn = clear_btn.clone();
-    dialog.select_folder(Some(&parent), None::<&gio::Cancellable>, move |result| {
-        let Ok(folder) = result else { return };
-        let Some(path) = folder.path() else { return };
-        row.set_subtitle(&path.display().to_string());
-        *output_dir.borrow_mut() = Some(path);
-        clear_btn.set_visible(true);
-    });
-}
-
-/// Humaniza um tamanho em bytes para algo como "2.3 GB" ou "842 KB".
-use batch_runner::format_size;
-
-pub fn run_animate_dialog(files: Vec<PathBuf>) -> i32 {
-    let app = adw::Application::builder().application_id(APP_ID).build();
-    let files = Rc::new(files);
-    app.connect_activate(move |app| {
-        build_animate_dialog(app, files.clone()).present();
-    });
-    let code = app.run_with_args::<&str>(&[]);
-    i32::from(u8::from(code))
-}
-
-fn build_animate_dialog(app: &adw::Application, files: Rc<Vec<PathBuf>>) -> adw::ApplicationWindow {
-    let window = adw::ApplicationWindow::builder()
-        .application(app)
-        .default_width(520)
-        .default_height(520)
-        .title(gettext("Criar GIF animado — Prisma"))
-        .build();
-
-    let header = adw::HeaderBar::new();
-    header.set_title_widget(Some(&adw::WindowTitle::new(&gettext("Criar GIF animado"), "Prisma")));
-
-    let content = gtk::Box::builder()
-        .orientation(gtk::Orientation::Vertical)
-        .spacing(16)
-        .margin_top(16)
-        .margin_bottom(16)
-        .margin_start(16)
-        .margin_end(16)
-        .build();
-
-    if files.len() < 2 {
-        let status = adw::StatusPage::builder()
-            .icon_name("dialog-warning-symbolic")
-            .title(gettext("Selecione pelo menos 2 imagens"))
-            .description(gettext("Informe vários arquivos de uma vez para montar a animação."))
-            .vexpand(true)
-            .build();
-        content.append(&status);
-
-        let close = gtk::Button::with_label(&gettext("Fechar"));
-        {
-            let window = window.clone();
-            dialog_signal!(window, close, connect_clicked, move |_| window.close());
-        }
-        content.append(&close);
-
-        let tv = adw::ToolbarView::new();
-        tv.add_top_bar(&header);
-        tv.set_content(Some(&content));
-        window.set_content(Some(&tv));
-        return window;
-    }
-
-    // Parametric rows.
-    let delay_spin = adw::SpinRow::with_range(10.0, 5000.0, 10.0);
-    delay_spin.set_title(&gettext("Atraso por quadro (ms)"));
-    delay_spin.set_subtitle(&gettext("100 ≈ 10 fps · 40 ≈ 25 fps · 1000 = 1 s"));
-    delay_spin.set_value(100.0);
-
-    let loop_row = adw::ComboRow::builder()
-        .use_markup(false)
-        .title(gettext("Loop"))
-        .model(&translated_strings(&[
-            n_("Infinito (padrão)"),
-            n_("Uma vez"),
-            n_("2 vezes"),
-            n_("5 vezes"),
-            n_("10 vezes"),
-        ]))
-        .build();
-
-    let speed_spin = adw::SpinRow::with_range(1.0, 30.0, 1.0);
-    speed_spin.set_title(&gettext("Velocidade do encoder"));
-    speed_spin.set_subtitle(&gettext("maior = mais rápido, paleta um pouco pior · padrão 10"));
-    speed_spin.set_value(10.0);
-
-    // Default output: next to the first frame, named "animated.gif".
-    let default_output: PathBuf = files[0]
-        .parent()
-        .map(|p| p.join("animated.gif"))
-        .unwrap_or_else(|| PathBuf::from("animated.gif"));
-    let output_row = adw::EntryRow::builder()
-        .use_markup(false)
-        .title(gettext("Arquivo de saída (.gif)"))
-        .build();
-    output_row.set_text(&default_output.to_string_lossy());
-
-    let files_row = adw::ActionRow::builder()
-        .use_markup(false)
-        .title(format!("{}: {}", gettext("Quadros"), files.len()))
-        .build();
-    files_row.set_subtitle(&files_subtitle(&files));
-
-    let group = adw::PreferencesGroup::new();
-    group.add(&files_row);
-    group.add(&delay_spin);
-    group.add(&loop_row);
-    group.add(&speed_spin);
-    group.add(&output_row);
-    content.append(&group);
-
-    let status = gtk::Label::builder().label("").wrap(true).xalign(0.0).build();
-    status.add_css_class("dim-label");
-    content.append(&status);
-
-    let cancel_btn = gtk::Button::with_label(&gettext("Cancelar"));
-    let apply_btn = gtk::Button::builder().label(gettext("Criar GIF")).build();
-    apply_btn.add_css_class("suggested-action");
-    apply_btn.add_css_class("pill");
-
-    let actions_box = gtk::Box::builder()
-        .orientation(gtk::Orientation::Horizontal)
-        .spacing(8)
-        .halign(gtk::Align::End)
-        .build();
-    actions_box.append(&cancel_btn);
-    actions_box.append(&apply_btn);
-    content.append(&actions_box);
-
-    let tv = adw::ToolbarView::new();
-    tv.add_top_bar(&header);
-    tv.set_content(Some(&content));
-    window.set_content(Some(&tv));
-
-    {
-        let window = window.clone();
-        dialog_signal!(window, cancel_btn, connect_clicked, move |_| window.close());
-    }
-
-    {
-        let files = files.clone();
-        let delay_spin = delay_spin.clone();
-        let loop_row = loop_row.clone();
-        let speed_spin = speed_spin.clone();
-        let output_row = output_row.clone();
-        let status = status.clone();
-        let apply_btn = apply_btn.clone();
-        let cancel_btn = cancel_btn.clone();
-        let window = window.clone();
-        dialog_signal!(window, apply_btn.clone(), connect_clicked, move |_| {
-            let loop_mode = match loop_row.selected() {
-                0 => LoopMode::Infinite,
-                1 => LoopMode::Once,
-                2 => LoopMode::Finite(2),
-                3 => LoopMode::Finite(5),
-                _ => LoopMode::Finite(10),
-            };
-            let opts = AnimateOptions {
-                delay_ms: delay_spin.value() as u32,
-                loop_mode,
-                speed: speed_spin.value() as i32,
-            };
-            let output: PathBuf = output_row.text().as_str().into();
-
-            apply_btn.set_sensitive(false);
-            cancel_btn.set_sensitive(false);
-            status.set_text(&gettext("Montando GIF…"));
-
-            // Worker thread runs make_gif (encoding 100 frames at 4K can
-            // take several seconds); main loop polls a oneshot channel
-            // for the result. Window stays responsive throughout.
-            let (tx, rx) = std::sync::mpsc::channel();
-            let files_owned: Vec<PathBuf> = (*files).clone();
-            std::thread::spawn(move || {
-                let _ = tx.send(make_gif(&files_owned, &output, opts));
-            });
-
-            let status = status.clone();
-            let window = window.clone();
-            let apply_btn = apply_btn.clone();
-            let cancel_btn = cancel_btn.clone();
-            glib::timeout_add_local(std::time::Duration::from_millis(80), move || {
-                match rx.try_recv() {
-                    Ok(Ok(path)) => {
-                        status.set_text(&format!("{}: {}", gettext("Pronto"), path.display()));
-                        let w = window.clone();
-                        glib::timeout_add_seconds_local_once(2, move || w.close());
-                        glib::ControlFlow::Break
-                    }
-                    Ok(Err(e)) => {
-                        status.set_text(&format!("{}: {e}", gettext("Falha")));
-                        apply_btn.set_sensitive(true);
-                        cancel_btn.set_sensitive(true);
-                        glib::ControlFlow::Break
-                    }
-                    Err(std::sync::mpsc::TryRecvError::Empty) => glib::ControlFlow::Continue,
-                    Err(std::sync::mpsc::TryRecvError::Disconnected) => glib::ControlFlow::Break,
-                }
-            });
-        });
-    }
-
-    window
-}
-
-/// Output path for `remove_background` — always PNG to preserve alpha.
-/// Sibling of the source, stem suffixed with `_nobg`.
-fn nobg_output_path(src: &Path) -> PathBuf {
-    let stem = src.file_stem().and_then(|s| s.to_str()).unwrap_or("output");
-    let parent = src.parent().unwrap_or_else(|| Path::new("."));
-    parent.join(format!("{stem}_nobg.png"))
-}
-
-/// Run one remove-bg pass over `src`: decode → BiRefNet → save PNG RGBA.
-/// Reuse-friendly remove-bg: takes a pre-loaded [`BgSession`] (~224 MB
-/// of weights stay resident across calls) and runs inference + saves
-/// the RGBA output. Used by the dialog batch loop so a 50-file batch
-/// loads BiRefNet **once**, not 50 times.
-fn remove_bg_one_with_session(
-    session: &mut bigimage_ai::background::BgSession,
-    src: &Path,
-) -> Result<PathBuf, String> {
-    bigimage_core::content::ensure_static(src).map_err(|e| e.to_string())?;
-    let img = bigimage_core::open_image(src).map_err(|e| format!("decode: {e}"))?;
-    let out = session.process(&img).map_err(|e| e.to_string())?;
-    let dest = nobg_output_path(src);
-    bigimage_core::save_image(
-        out,
-        &dest,
-        Format::Png,
-        &EncodeOptions::default(),
-        OverwritePolicy::Replace,
-    )
-    .map_err(|e| format!("encode: {e}"))?;
-    Ok(dest)
-}
-
-/// Worker-thread state for the remove-bg dialog. Shared via `Arc<Mutex>`
-/// with a `glib::timeout_add_local` on the UI thread, which polls every
-/// 100 ms and reflects the latest snapshot into the ProgressBar + label.
-#[derive(Clone, Debug)]
-enum BgUiState {
-    /// Worker hasn't started yet (apply not clicked).
-    Idle,
-    /// Downloading the BiRefNet weights. `done`/`total` in bytes.
-    Download { done: u64, total: u64 },
-    /// Running inference on file `idx` (0-based) of `total`.
-    Processing { idx: usize, total: usize, file: String },
-    /// Worker finished. `outputs` are per-input written paths (or None
-    /// for failed inputs — lines up with the originals by index).
-    Done { outputs: Vec<Option<PathBuf>>, first_err: Option<String> },
-}
-
-pub fn run_remove_bg_dialog(files: Vec<PathBuf>) -> i32 {
-    let app = adw::Application::builder().application_id(APP_ID).build();
-    let files = Rc::new(files);
-    app.connect_activate(move |app| {
-        build_remove_bg_dialog(app, files.clone()).present();
-    });
-    let code = app.run_with_args::<&str>(&[]);
-    i32::from(u8::from(code))
-}
-
-fn build_remove_bg_dialog(
-    app: &adw::Application,
-    files: Rc<Vec<PathBuf>>,
-) -> adw::ApplicationWindow {
-    let window = adw::ApplicationWindow::builder()
-        .application(app)
-        .default_width(520)
-        .default_height(420)
-        .title(gettext("Remover fundo — Prisma"))
-        .build();
-
-    let header = adw::HeaderBar::new();
-    header.set_title_widget(Some(&adw::WindowTitle::new(
-        &gettext("Remover fundo"),
-        "Prisma · BiRefNet-lite",
-    )));
-
-    let content = gtk::Box::builder()
-        .orientation(gtk::Orientation::Vertical)
-        .spacing(12)
-        .margin_top(16)
-        .margin_bottom(16)
-        .margin_start(16)
-        .margin_end(16)
-        .build();
-
-    // Empty input — fail closed with clear message.
-    if files.is_empty() {
-        let status = adw::StatusPage::builder()
-            .icon_name("dialog-warning-symbolic")
-            .title(gettext("Nenhuma imagem selecionada"))
-            .description(gettext("Informe um ou mais arquivos ao abrir o diálogo."))
-            .vexpand(true)
-            .build();
-        content.append(&status);
-
-        let close = gtk::Button::with_label(&gettext("Fechar"));
-        {
-            let window = window.clone();
-            dialog_signal!(window, close, connect_clicked, move |_| window.close());
-        }
-        content.append(&close);
-
-        let tv = adw::ToolbarView::new();
-        tv.add_top_bar(&header);
-        tv.set_content(Some(&content));
-        window.set_content(Some(&tv));
-        return window;
-    }
-
-    // Soft-fail build warning: if the `ai` feature is off, inference will
-    // refuse anyway — but tell the user upfront so they don't click and
-    // get a surprise error.
-    if !bigimage_ai::onnx_available() {
-        let banner = gtk::Label::builder()
-            .label(
-                "Esta build não inclui IA. Recompile com `cargo build --features ai` \
-                 e instale `onnxruntime` (Arch: `pacman -S onnxruntime`).",
-            )
-            .wrap(true)
-            .xalign(0.0)
-            .build();
-        banner.add_css_class("warning");
-        content.append(&banner);
-    }
-
-    let memory_row = gtk::Label::builder()
-        .label(gettext(
-            "Remoção de fundo: requer 8 GiB de RAM livre para iniciar. Este recurso é opcional.",
-        ))
-        .wrap(true)
-        .xalign(0.0)
-        .build();
-    memory_row.add_css_class("dim-label");
-    content.append(&memory_row);
-
-    let files_row = adw::ActionRow::builder()
-        .use_markup(false)
-        .title(format!("{}: {}", gettext("Imagens"), files.len()))
-        .build();
-    files_row.set_subtitle(&files_subtitle(&files));
-    let files_icon = gtk::Image::from_icon_name("image-x-generic-symbolic");
-    files_row.add_prefix(&files_icon);
-
-    let model_row = adw::ActionRow::builder()
-        .use_markup(false)
-        .title(gettext("Modelo"))
-        .subtitle("BiRefNet-lite (MIT) · roda offline no seu computador")
-        .build();
-    let model_icon = gtk::Image::from_icon_name("application-x-executable-symbolic");
-    model_row.add_prefix(&model_icon);
-
-    // Subtitle é Pango-markup em adw::ActionRow → angle-brackets ("<orig>")
-    // eram interpretados como tag malformada e a linha ficava vazia.
-    // Usar chevrons Unicode evita o parser sem escaping manual.
-    let output_row = adw::ActionRow::builder()
-        .use_markup(false)
-        .title(gettext("Saída"))
-        .subtitle("«origem»_nobg.png · PNG com alfa, sem sobrescrever")
-        .build();
-    let output_icon = gtk::Image::from_icon_name("document-save-symbolic");
-    output_row.add_prefix(&output_icon);
-
-    let group = adw::PreferencesGroup::builder()
-        .title(gettext("Remover fundo com IA local"))
-        .description(
-            "O modelo roda inteiramente no seu computador. \
-             Nenhuma imagem sai do disco — sem upload, sem conta, sem API externa.",
-        )
-        .build();
-    group.add(&files_row);
-    group.add(&model_row);
-    group.add(&output_row);
-    content.append(&group);
-
-    // Progress bar — hidden until the user clicks Remover fundo. Shows
-    // download bytes on first run, then per-file inference progress.
-    let progress_bar =
-        gtk::ProgressBar::builder().show_text(true).visible(false).margin_top(6).build();
-    content.append(&progress_bar);
-
-    let status = gtk::Label::builder().label("").wrap(true).xalign(0.0).build();
-    status.add_css_class("dim-label");
-    content.append(&status);
-
-    let cancel_btn = gtk::Button::with_label(&gettext("Cancelar"));
-    let apply_btn = gtk::Button::builder().label(gettext("Remover fundo")).build();
-    apply_btn.add_css_class("suggested-action");
-    apply_btn.add_css_class("pill");
-
-    let actions_box = gtk::Box::builder()
-        .orientation(gtk::Orientation::Horizontal)
-        .spacing(8)
-        .halign(gtk::Align::End)
-        .build();
-    actions_box.append(&cancel_btn);
-    actions_box.append(&apply_btn);
-    content.append(&actions_box);
-
-    let tv = adw::ToolbarView::new();
-    tv.add_top_bar(&header);
-    tv.set_content(Some(&content));
-    window.set_content(Some(&tv));
-
-    // Cancellation flag — shared between UI, worker thread, and the
-    // close_request handler so fechar a janela (X, Esc, botão Cancelar)
-    // efetivamente encerra a interação: o Compare pós-sucesso NÃO abre,
-    // e o worker para de processar arquivos restantes.
-    let cancelled = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
-
-    {
-        let cancelled = cancelled.clone();
-        window.connect_close_request(move |_| {
-            cancelled.store(true, std::sync::atomic::Ordering::Relaxed);
-            glib::Propagation::Proceed
-        });
-    }
-    {
-        let window = window.clone();
-        dialog_signal!(window, cancel_btn, connect_clicked, move |_| window.close());
-    }
-
-    {
-        let files_rc = files.clone();
-        let status = status.clone();
-        let progress_bar = progress_bar.clone();
-        let apply_btn = apply_btn.clone();
-        let cancel_btn = cancel_btn.clone();
-        let window = window.clone();
-        let cancelled = cancelled.clone();
-        dialog_signal!(window, apply_btn.clone(), connect_clicked, move |_| {
-            if let Err(error) = bigimage_ai::background::check_resources() {
-                status.set_text(&error.to_string());
-                return;
-            }
-            apply_btn.set_sensitive(false);
-            // Cancelar continua disponível — vira "abortar e fechar".
-            cancel_btn.set_label(&gettext("Cancelar"));
-            progress_bar.set_visible(true);
-            progress_bar.set_fraction(0.0);
-            progress_bar.set_text(Some(&gettext("Preparando…")));
-            status.set_text("");
-
-            // Rc<Vec<PathBuf>> não é Send — worker recebe um Vec próprio.
-            let files_owned: Vec<PathBuf> = (*files_rc).clone();
-            let shared: std::sync::Arc<std::sync::Mutex<BgUiState>> =
-                std::sync::Arc::new(std::sync::Mutex::new(BgUiState::Idle));
-
-            {
-                let shared = shared.clone();
-                let cancelled_w = cancelled.clone();
-                std::thread::spawn(move || {
-                    // Build a single BgSession for the whole batch — Download
-                    // progress streams once, then the loaded weights are
-                    // reused for every file. Previous code reloaded ~224 MB
-                    // per file (perf review I-ORT).
-                    let total = files_owned.len();
-                    let session_progress_shared = shared.clone();
-                    let session_result = bigimage_ai::background::BgSession::new(move |stage| {
-                        if let bigimage_ai::background::BgStage::Download { done, total } = stage {
-                            let mut st =
-                                session_progress_shared.lock().unwrap_or_else(|p| p.into_inner());
-                            *st = BgUiState::Download { done, total };
-                        }
-                    });
-                    let mut session = match session_result {
-                        Ok(s) => s,
-                        Err(e) => {
-                            let mut st = shared.lock().unwrap_or_else(|p| p.into_inner());
-                            *st = BgUiState::Done {
-                                outputs: vec![None; total],
-                                first_err: Some(format!("falha ao carregar modelo: {e}")),
-                            };
-                            return;
-                        }
-                    };
-
-                    let mut outputs: Vec<Option<PathBuf>> = Vec::with_capacity(total);
-                    let mut first_err: Option<String> = None;
-                    for (idx, path) in files_owned.iter().enumerate() {
-                        // Bail entre arquivos — não dá para interromper o
-                        // session.run() do ORT no meio, mas pelo menos o
-                        // próximo arquivo do lote não é tocado.
-                        if cancelled_w.load(std::sync::atomic::Ordering::Relaxed) {
-                            outputs.push(None);
-                            continue;
-                        }
-                        {
-                            // A poisoned mutex would normally panic the worker
-                            // and silently kill the GUI thread when the timeout
-                            // poll later tried to lock; into_inner() recovers
-                            // the inner state and lets the dialog finish with
-                            // a clean error instead.
-                            let mut st = shared.lock().unwrap_or_else(|p| p.into_inner());
-                            *st = BgUiState::Processing {
-                                idx,
-                                total,
-                                file: path
-                                    .file_name()
-                                    .map(|n| n.to_string_lossy().into_owned())
-                                    .unwrap_or_default(),
-                            };
-                        }
-                        match remove_bg_one_with_session(&mut session, path) {
-                            Ok(out) => outputs.push(Some(out)),
-                            Err(e) => {
-                                if first_err.is_none() {
-                                    first_err = Some(format!("{}: {e}", path.display()));
-                                }
-                                outputs.push(None);
-                            }
-                        }
-                    }
-                    let mut st = shared.lock().unwrap_or_else(|p| p.into_inner());
-                    *st = BgUiState::Done { outputs, first_err };
-                });
-            }
-
-            // UI poll @ 10 Hz. Se a janela já foi fechada (cancelled),
-            // cortamos o loop imediatamente — widgets podem estar mortos.
-            let progress_bar = progress_bar.clone();
-            let status = status.clone();
-            let apply_btn = apply_btn.clone();
-            let cancel_btn = cancel_btn.clone();
-            let window = window.clone();
-            let originals = files_rc.clone();
-            let cancelled_poll = cancelled.clone();
-            glib::timeout_add_local(std::time::Duration::from_millis(100), move || {
-                if cancelled_poll.load(std::sync::atomic::Ordering::Relaxed) {
-                    return glib::ControlFlow::Break;
-                }
-                let snapshot = shared.lock().unwrap_or_else(|p| p.into_inner()).clone();
-                match snapshot {
-                    BgUiState::Idle => glib::ControlFlow::Continue,
-                    BgUiState::Download { done, total } => {
-                        let frac = if total > 0 {
-                            (done as f64 / total as f64).clamp(0.0, 1.0)
-                        } else {
-                            0.0
-                        };
-                        progress_bar.set_fraction(frac);
-                        progress_bar.set_text(Some(&format!(
-                            "Baixando modelo (uma vez só): {} / {}",
-                            format_size(done),
-                            format_size(total),
-                        )));
-                        glib::ControlFlow::Continue
-                    }
-                    BgUiState::Processing { idx, total, file } => {
-                        let frac = (idx as f64 / total.max(1) as f64).clamp(0.0, 1.0);
-                        progress_bar.set_fraction(frac);
-                        progress_bar.set_text(Some(&format!(
-                            "Processando {}/{} — {}",
-                            idx + 1,
-                            total,
-                            file
-                        )));
-                        glib::ControlFlow::Continue
-                    }
-                    BgUiState::Done { outputs, first_err } => {
-                        // Checa cancelamento antes de qualquer side-effect:
-                        // se o usuário fechou a janela durante a inferência,
-                        // não queremos que o Compare apareça sozinho.
-                        if cancelled_poll.load(std::sync::atomic::Ordering::Relaxed) {
-                            return glib::ControlFlow::Break;
-                        }
-                        progress_bar.set_fraction(1.0);
-                        let ok = outputs.iter().filter(|o| o.is_some()).count();
-                        let fail = outputs.len() - ok;
-                        if fail == 0 {
-                            status.set_text(&format!("{}: {ok}", gettext("Imagens gravadas")));
-                            progress_bar.set_text(Some(&gettext("Concluído")));
-                            progress_bar.add_css_class("success");
-                            let single = originals.len() == 1;
-                            if single {
-                                if let (Some(orig), Some(Some(out))) =
-                                    (originals.first(), outputs.first())
-                                {
-                                    spawn_compare_viewer(orig, out);
-                                }
-                                // Single-file: fecha imediato enquanto o
-                                // Compare abre — evita janela dupla visível.
-                                window.close();
-                            } else {
-                                // Lote: segura 2 s pra o usuário conferir o
-                                // sumário antes de sumir.
-                                let w = window.clone();
-                                glib::timeout_add_seconds_local_once(2, move || w.close());
-                            }
-                        } else {
-                            let detail = first_err.unwrap_or_default();
-                            status.set_text(&format!(
-                                "{}: {ok} · {}: {fail}\n{detail}",
-                                gettext("Imagens gravadas"),
-                                gettext("Falhas")
-                            ));
-                            progress_bar.set_text(Some(&gettext("Com erros")));
-                            progress_bar.add_css_class("error");
-                            apply_btn.set_sensitive(true);
-                            cancel_btn.set_label(&gettext("Fechar"));
-                        }
-                        glib::ControlFlow::Break
-                    }
-                }
-            });
-        });
-    }
-
-    window
-}
-
-/// Launch the Compare dialog in a separate process so both windows can
-/// coexist (each `adw::Application` instance takes over the main loop).
-/// Called right after a successful single-file remove-bg so the user
-/// sees original vs. result side-by-side.
-fn spawn_compare_viewer(original: &Path, result: &Path) {
-    let Ok(exe) = std::env::current_exe() else { return };
-    let _ =
-        std::process::Command::new(exe).arg("--dialog=compare").arg(original).arg(result).spawn();
-}
+mod dialogs;
+pub use dialogs::*;
 
 #[cfg(test)]
 mod anchor_tests {
@@ -7057,8 +4038,36 @@ mod anchor_tests {
     }
 
     #[test]
+    fn in_place_jpeg_save_keeps_the_source_quality() {
+        use super::resave_options;
+        use bigimage_core::{EncodeOptions, Format};
+        assert_eq!(resave_options(Format::Jpeg, Some(92)).quality, Some(92));
+        assert_eq!(resave_options(Format::Jpeg, None).quality, EncodeOptions::default().quality);
+        // Only JPEG is lossy-by-quality here; others keep their defaults.
+        assert_eq!(resave_options(Format::Png, Some(92)).quality, EncodeOptions::default().quality);
+    }
+
+    #[test]
+    fn dropped_metadata_is_explained_once_per_reason() {
+        use super::metadata_loss_notice;
+        use bigimage_core::MetadataLoss;
+        assert_eq!(metadata_loss_notice(&[]), None);
+        let notice = metadata_loss_notice(&[
+            MetadataLoss::IccUnsupported,
+            MetadataLoss::IccMismatched,
+            MetadataLoss::ExifTooLarge,
+        ])
+        .unwrap();
+        assert_eq!(
+            notice,
+            "Salvo. Alguns metadados não puderam ser mantidos: \
+             perfil de cor convertido para sRGB; EXIF grande demais para JPEG"
+        );
+    }
+
+    #[test]
     fn histogram_counts_channels_and_ignores_alpha() {
-        use super::compute_histogram;
+        use super::sampled_histogram;
         // 3 pixels: puro vermelho, puro verde (com alpha zero), puro azul.
         // Alpha deve ser ignorado — só somamos R/G/B no ponto certo.
         let rgba = vec![
@@ -7066,7 +4075,7 @@ mod anchor_tests {
             0, 255, 0, 0, //
             0, 0, 255, 255,
         ];
-        let h = compute_histogram(&rgba);
+        let h = sampled_histogram(&rgba);
         // R: bin 255 += 1 (pixel 0); bin 0 += 2 (pixels 1, 2).
         assert_eq!(h[255], 1);
         assert_eq!(h[0], 2);
@@ -7630,6 +4639,7 @@ mod lifecycle_tests {
         anchored("100-percent", full_anchor);
         assert_eq!(state.borrow().picture.width(), 1600);
         assert_eq!(state.borrow().picture.height(), 1200);
+        assert_eq!(state.borrow().zoom_level.label(), "100%", "header zoom level is stale");
         capture_window(&window, "zoom-pointer-100pct");
         let reduced_anchor = image_point();
         window.settings().set_gtk_enable_animations(false);
@@ -7665,6 +4675,68 @@ mod lifecycle_tests {
         drop(state);
         drop(window);
         wait(&|| witness.upgrade().is_none());
+    }
+
+    fn exercise_prefetch(app: &adw::Application, directory: &Path) {
+        let files: Vec<_> = ["prefetch-a.png", "prefetch-b.png", "prefetch-c.png"]
+            .iter()
+            .enumerate()
+            .map(|(i, name)| {
+                let path = directory.join(name);
+                image::RgbImage::from_pixel(64, 48, image::Rgb([i as u8 * 100, 50, 50]))
+                    .save(&path)
+                    .unwrap();
+                path
+            })
+            .collect();
+        let (window, witness) = build_window_tracked(app, Rc::new(files.clone()), 0);
+        window.present();
+        let state = witness.upgrade().unwrap();
+        let context = glib::MainContext::default();
+        let wait = |what: &str, condition: &dyn Fn() -> bool| {
+            let deadline = std::time::Instant::now() + Duration::from_secs(5);
+            while !condition() {
+                while context.pending() {
+                    context.iteration(false);
+                }
+                assert!(std::time::Instant::now() < deadline, "prefetch: {what}");
+                std::thread::sleep(Duration::from_millis(5));
+            }
+        };
+        let cached = |path: &PathBuf| state.borrow().frame_cache.iter().any(|f| &f.path == path);
+        wait("neighbours were not decoded", &|| {
+            cached(&files[1]) && cached(&files[2]) && state.borrow().prefetching.is_none()
+        });
+        assert!(
+            state.borrow().warm_slots.iter().all(|slot| slot.paintable().is_some()),
+            "neighbours are not kept uploaded"
+        );
+
+        // The next image is on screen as soon as the key is handled.
+        let expected = state
+            .borrow()
+            .frame_cache
+            .iter()
+            .find(|f| f.path == files[1])
+            .map(|f| f.texture.clone())
+            .unwrap();
+        navigate_relative(&state, 1);
+        assert_eq!(state.borrow().texture.as_ref(), Some(&expected), "cached frame not shown");
+        assert!(state.borrow().current_ready);
+
+        // A neighbour rewritten after it was decoded is read again.
+        wait("new neighbours were not decoded", &|| {
+            cached(&files[2]) && cached(&files[0]) && state.borrow().prefetching.is_none()
+        });
+        std::thread::sleep(Duration::from_millis(20));
+        image::RgbImage::from_pixel(80, 60, image::Rgb([0, 200, 0])).save(&files[2]).unwrap();
+        navigate_relative(&state, 1);
+        wait("changed file was not reloaded", &|| state.borrow().natural == (80, 60));
+
+        window.destroy();
+        drop(state);
+        drop(window);
+        wait("viewer state leaked", &|| witness.upgrade().is_none());
     }
 
     fn find_widget(
@@ -7706,7 +4778,7 @@ mod lifecycle_tests {
         settle();
         assert!(!window.is_maximized(), "start page inherited viewer maximization");
         assert!(
-            window.width() <= 440 && window.height() <= 380,
+            window.width() <= 620 && window.height() <= 520,
             "start page grew to {}x{}",
             window.width(),
             window.height()
@@ -7791,15 +4863,11 @@ mod lifecycle_tests {
         present_shortcuts_dialog(&window);
         settle();
         let dialog = window.visible_dialog().unwrap();
-        assert!(dialog.child().unwrap().height() <= 340, "shortcuts exceeded compact height");
+        assert!(
+            dialog.child().unwrap().height() <= window.height(),
+            "shortcuts exceeded the window"
+        );
         capture_window(&window, "shortcuts");
-        let selector = find_widget(&dialog, &mut |widget| widget.is::<gtk::DropDown>())
-            .unwrap()
-            .downcast::<gtk::DropDown>()
-            .unwrap();
-        selector.set_selected(3);
-        settle();
-        capture_window(&window, "shortcuts-editing");
         dialog.close();
         settle();
         window.set_default_size(360, 420);
@@ -7814,7 +4882,6 @@ mod lifecycle_tests {
         capture_window(&window, "shortcuts-narrow");
         window.visible_dialog().unwrap().close();
         settle();
-        drop(selector);
         drop(dialog);
         drop(about_window);
         drop(about);
@@ -7906,6 +4973,32 @@ mod lifecycle_tests {
             );
         }
         exercise_pointer_zoom(&app, dir.path());
+        exercise_prefetch(&app, dir.path());
+
+        // A file that cannot be read keeps an error page on screen.
+        let missing = dir.path().join("missing <&>.jpg");
+        let (window, witness) = build_window_tracked(&app, Rc::new(vec![missing]), 0);
+        window.present();
+        let deadline = std::time::Instant::now() + Duration::from_secs(5);
+        while witness
+            .upgrade()
+            .is_some_and(|s| s.borrow().stack.visible_child_name().as_deref() != Some("error"))
+        {
+            while context.pending() {
+                context.iteration(false);
+            }
+            assert!(std::time::Instant::now() < deadline, "missing file left no error page");
+            std::thread::sleep(Duration::from_millis(5));
+        }
+        assert_eq!(
+            witness.upgrade().unwrap().borrow().error_page.description().as_deref(),
+            Some("missing &lt;&amp;&gt;.jpg")
+        );
+        window.destroy();
+        drop(window);
+        while context.pending() {
+            context.iteration(false);
+        }
 
         // A large collection creates only one page of GTK thumbnails.
         let (large, witness) =
@@ -7984,5 +5077,39 @@ mod print_pixel_tests {
         let values: Vec<_> =
             result.as_chunks::<4>().0.iter().map(|p| u32::from_ne_bytes(*p)).collect();
         assert_eq!(values, vec![0x80643219, 0x00000000, 0xff020304]);
+    }
+
+    /// Unsaved edits are printed from the texture: same layout as the
+    /// on-disk path above.
+    #[test]
+    fn edited_texture_becomes_a_premultiplied_cairo_surface() {
+        let texture = super::texture_from_rgba(vec![200, 100, 50, 128, 2, 3, 4, 255], 2, 1);
+        let mut surface = super::cairo_surface_from_texture(&texture).unwrap();
+        assert_eq!((surface.width(), surface.height()), (2, 1));
+        let data = surface.data().unwrap();
+        let values: Vec<_> =
+            data[..8].as_chunks::<4>().0.iter().map(|p| u32::from_ne_bytes(*p)).collect();
+        assert_eq!(values, vec![0x80643219, 0xff020304]);
+    }
+}
+
+#[cfg(test)]
+mod float_display_tests {
+    /// Linear 0.5 must reach the screen as sRGB ≈188, not as a bare 128.
+    #[test]
+    fn linear_float_images_display_in_srgb() {
+        let dir = tempfile::tempdir().unwrap();
+        let exr = dir.path().join("half.exr");
+        let linear = image::Rgba32FImage::from_pixel(4, 2, image::Rgba([0.5, 0.5, 0.5, 1.0]));
+        linear.save(&exr).unwrap();
+        let hdr = dir.path().join("half.hdr");
+        image::Rgb32FImage::from_pixel(4, 2, image::Rgb([0.5, 0.5, 0.5])).save(&hdr).unwrap();
+        for path in [exr, hdr] {
+            let (raw, w, h, _) = super::decode_frame(&path, &[]).unwrap();
+            assert_eq!((w, h), (4, 2));
+            let pixel = &raw[..4];
+            assert!(pixel[..3].iter().all(|v| v.abs_diff(188) <= 1), "{path:?}: {pixel:?}");
+            assert_eq!(pixel[3], 255);
+        }
     }
 }

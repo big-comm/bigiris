@@ -45,10 +45,35 @@ pub const BIREFNET_LITE: ModelSource = ModelSource {
 };
 
 /// Inference resolution the BiRefNet ONNX export expects.
-#[cfg(feature = "onnx")]
+#[cfg(any(feature = "onnx", test))]
 const INPUT_SIDE: usize = 1024;
-#[cfg(feature = "onnx")]
+#[cfg(any(feature = "onnx", test))]
 const INPUT_PIXELS: usize = INPUT_SIDE * INPUT_SIDE;
+
+/// Bytes [`BgSession::process`] allocates for an `width × height` input on
+/// top of the model's fixed tensor budget.
+///
+/// - Full-size buffers: RGBA copy of the source (4 B/px), RGBA output
+///   (4 B/px) and the upscaled mask (1 B/px).
+/// - `image::imageops::resize` samples vertically first into an `Rgba32F`
+///   buffer (16 B/px) of *source width × target height*, then horizontally.
+///   The input downscale therefore holds `width × 1024 × 16` bytes and the
+///   mask upscale `1024 × height × 16` bytes. For a 500×250000 strip that is
+///   ~4 GB the plain per-pixel estimate missed. Only one is alive at a
+///   time, so the larger side bounds both.
+/// - Fixed 1024² buffers: the resized input (up to `Rgba32F`, 16 B/px), its
+///   RGB8 copy (3 B/px) and the u8 mask (1 B/px).
+#[cfg(any(feature = "onnx", test))]
+fn process_workspace_bytes(width: u32, height: u32) -> u64 {
+    const RESIZE_INTERMEDIATE_BYTES_PER_PX: u64 = 16;
+    let side = INPUT_SIDE as u64;
+    let full = u64::from(width).saturating_mul(u64::from(height)).saturating_mul(9);
+    let intermediate = RESIZE_INTERMEDIATE_BYTES_PER_PX
+        .saturating_mul(side)
+        .saturating_mul(u64::from(width.max(height)));
+    let fixed = (INPUT_PIXELS as u64) * (16 + 3 + 1);
+    full.saturating_add(intermediate).saturating_add(fixed)
+}
 
 /// Progress signal emitted by [`remove_background_with_progress`]. The
 /// UI layer uses it to drive a `gtk::ProgressBar`; the CLI discards it.
@@ -196,12 +221,21 @@ impl BgSession {
                     "imagem excede o limite de saída RGBA de 512 MiB".into(),
                 ));
             }
-            // RGBA source/output plus the full-size mask, beyond the model's
-            // fixed tensor budget. Memory is rechecked for every input.
-            self.memory.check(u64::from(orig_w) * u64::from(orig_h) * 9)?;
-            let resized = input
-                .resize_exact(INPUT_SIDE as u32, INPUT_SIDE as u32, FilterType::Lanczos3)
-                .to_rgb8();
+            // Full-size buffers plus the resize intermediates, beyond the
+            // model's fixed tensor budget. Memory is rechecked per input.
+            self.memory.check(
+                process_workspace_bytes(orig_w, orig_h).saturating_add(float_copy_bytes(input)),
+            )?;
+            // Both the model input and the composited output are 8-bit
+            // sRGB: float (OpenEXR/HDR) sources are scene-linear and need
+            // the transfer function, or the cut-out comes back far too dark.
+            let src_rgba = display_rgba8(input);
+            let resized = image::imageops::resize(
+                &src_rgba,
+                INPUT_SIDE as u32,
+                INPUT_SIDE as u32,
+                FilterType::Lanczos3,
+            );
 
             // Preprocess: HWC u8 → CHW f32 normalised by ImageNet stats.
             // Walking each channel as a contiguous slice lets the inner
@@ -210,6 +244,7 @@ impl BgSession {
             let mean = [0.485f32, 0.456, 0.406];
             let std = [0.229f32, 0.224, 0.225];
             let raw: &[u8] = resized.as_raw();
+            const CHANNELS: usize = 4;
             let mut tensor = ndarray::Array4::<f32>::zeros((1, 3, INPUT_SIDE, INPUT_SIDE));
             {
                 let plane = INPUT_PIXELS;
@@ -219,7 +254,7 @@ impl BgSession {
                     let s = std[c];
                     let dst_chan = &mut dst[c * plane..(c + 1) * plane];
                     for (i, out) in dst_chan.iter_mut().enumerate() {
-                        let v = f32::from(raw[i * 3 + c]) / 255.0;
+                        let v = f32::from(raw[i * CHANNELS + c]) / 255.0;
                         *out = (v - m) / s;
                     }
                 }
@@ -250,7 +285,6 @@ impl BgSession {
 
             // Composite RGB src + mask alpha → RGBA dest. Both source
             // and dest are HWC; iterate as flat slices.
-            let src_rgba = input.to_rgba8();
             let src: &[u8] = src_rgba.as_raw();
             let mask_raw: &[u8] = mask_full.as_raw();
             let n = (orig_w as usize) * (orig_h as usize);
@@ -267,6 +301,30 @@ impl BgSession {
                     .expect("RGBA buffer matches dimensions");
             Ok(DynamicImage::ImageRgba8(out))
         }
+    }
+}
+
+/// 8-bit sRGB RGBA view of `input`, as written by the core encoders:
+/// float images go through [`bigimage_core::into_srgb_rgba8`] (sRGB
+/// transfer), integer ones are already sRGB-encoded.
+#[cfg(any(feature = "onnx", test))]
+fn display_rgba8(input: &DynamicImage) -> image::RgbaImage {
+    match input {
+        DynamicImage::ImageRgb32F(_) | DynamicImage::ImageRgba32F(_) => {
+            bigimage_core::into_srgb_rgba8(input.clone())
+        }
+        other => other.to_rgba8(),
+    }
+}
+
+/// Transient copy [`display_rgba8`] makes of a float source.
+#[cfg(any(feature = "onnx", test))]
+fn float_copy_bytes(input: &DynamicImage) -> u64 {
+    match input {
+        DynamicImage::ImageRgb32F(_) | DynamicImage::ImageRgba32F(_) => u64::from(input.width())
+            .saturating_mul(u64::from(input.height()))
+            .saturating_mul(u64::from(input.color().bytes_per_pixel())),
+        _ => 0,
     }
 }
 
@@ -345,6 +403,47 @@ mod tests {
         assert_eq!(logit_alpha(f32::NEG_INFINITY), 0);
         assert_eq!(logit_alpha(f32::INFINITY), 255);
         assert!(logit_alpha(-1.0) > 0 && logit_alpha(1.0) < 255);
+    }
+
+    #[test]
+    fn workspace_estimate_covers_resize_intermediates_for_extreme_aspect() {
+        // 500×250000 passes the 512 MiB RGBA cap, but resizing its
+        // 1024² mask back up goes through a 1024 × 250000 Rgba32F buffer.
+        let (w, h) = (500u32, 250_000u32);
+        let estimate = process_workspace_bytes(w, h);
+        let full_size = u64::from(w) * u64::from(h) * 9;
+        let mask_upscale_tmp = 1024 * u64::from(h) * 16;
+        assert!(estimate >= full_size + mask_upscale_tmp, "{estimate}");
+        assert!(estimate > 5_000_000_000, "{estimate}");
+        // The transposed strip needs the same input-downscale buffer.
+        assert_eq!(process_workspace_bytes(h, w), estimate);
+    }
+
+    #[test]
+    fn workspace_estimate_grows_with_the_long_side_not_only_the_area() {
+        // One pixel wide: the area term barely moves, the Rgba32F vertical
+        // pass (16 B × 1024 per source row) dominates.
+        let small = process_workspace_bytes(1, 1_000);
+        let large = process_workspace_bytes(1, 2_000);
+        assert_eq!(large - small, 16 * 1024 * 1_000 + 9 * 1_000);
+    }
+
+    #[test]
+    fn linear_float_sources_are_srgb_encoded_for_model_and_output() {
+        // Linear 0.5 is sRGB ~188; a bare quantisation would give 128.
+        let float = DynamicImage::ImageRgba32F(image::ImageBuffer::from_pixel(
+            2,
+            1,
+            image::Rgba([0.5f32, 0.0, 2.0, 1.0]),
+        ));
+        let px = display_rgba8(&float).get_pixel(0, 0).0;
+        assert!((187..=189).contains(&px[0]), "{px:?}");
+        assert_eq!(&px[1..], &[0, 255, 255]);
+        assert_eq!(float_copy_bytes(&float), 2 * 16);
+        let rgb =
+            DynamicImage::ImageRgb8(image::RgbImage::from_pixel(1, 1, image::Rgb([128, 7, 9])));
+        assert_eq!(display_rgba8(&rgb).get_pixel(0, 0).0, [128, 7, 9, 255]);
+        assert_eq!(float_copy_bytes(&rgb), 0);
     }
 
     #[test]

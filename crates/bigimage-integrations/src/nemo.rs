@@ -17,7 +17,7 @@ pub fn install(paths: &ScopePaths) -> io::Result<Vec<PathBuf>> {
     let mut written = Vec::new();
     for action in ACTIONS {
         let file = dir.join(format!("bigiris-{}.nemo_action", action.id));
-        safe_write(&file, render(action))?;
+        safe_write(&file, render(action), paths.scope)?;
         written.push(file);
     }
     Ok(written)
@@ -33,6 +33,7 @@ fn render(action: &Action) -> String {
     let mime_line: String = action.mime_types.iter().map(|m| format!("{m};")).collect();
     format!(
         "[Nemo Action]\n\
+         X-BigIris-Generated=true\n\
          Active=true\n\
          Name={label}\n{localized_name}\
          Comment=BigIris — {comment}\n{localized_comment}\

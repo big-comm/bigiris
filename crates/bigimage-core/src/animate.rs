@@ -10,7 +10,7 @@ use image::codecs::gif::{GifEncoder, Repeat};
 use image::{DynamicImage, Frame, RgbaImage};
 
 use crate::pipeline;
-use crate::{BigImageError, Result};
+use crate::{BigImageError, ConvertOutcome, OverwritePolicy, Result};
 
 /// Loop behaviour for an animated GIF.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -38,8 +38,9 @@ impl LoopMode {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct AnimateOptions {
     /// Delay shown for each frame, in milliseconds. `100` ≈ 10fps,
-    /// `40` ≈ 25fps. Capped internally to 10 ms to respect GIF's minimum
-    /// practical rate.
+    /// `40` ≈ 25fps. GIF stores delays in centiseconds and browsers replace
+    /// delays below 2 cs with 10 cs (making "fast" GIFs play *slower*), so
+    /// values below [`MIN_DELAY_MS`] are raised to it.
     pub delay_ms: u32,
     /// Loop behaviour (see [`LoopMode`]).
     pub loop_mode: LoopMode,
@@ -47,6 +48,10 @@ pub struct AnimateOptions {
     /// encode but worse colour quality. `10` is the balanced default.
     pub speed: i32,
 }
+
+/// Shortest frame delay written to a GIF (2 centiseconds, 50fps): the
+/// smallest value every major browser honours instead of clamping to 100 ms.
+pub const MIN_DELAY_MS: u32 = 20;
 
 impl Default for AnimateOptions {
     fn default() -> Self {
@@ -58,12 +63,31 @@ impl Default for AnimateOptions {
 /// frames are normalised to the first frame's dimensions (later frames
 /// shorter/narrower get letter-boxed transparent; larger frames get
 /// resized with Lanczos3 via `resize::apply_to`).
+///
+/// An existing `output` is replaced; see [`make_gif_with_policy`] to skip or
+/// pick a free name instead.
 pub fn make_gif(frames: &[PathBuf], output: &Path, opts: AnimateOptions) -> Result<PathBuf> {
+    make_gif_with_policy(frames, output, opts, OverwritePolicy::Replace)
+        .map(|outcome| outcome.path().to_path_buf())
+}
+
+/// Like [`make_gif`], honouring `policy` when `output` already exists:
+/// `Skip` returns [`ConvertOutcome::Skipped`] without decoding any frame,
+/// `Increment` publishes to `name_1.gif`, `name_2.gif`, … atomically.
+pub fn make_gif_with_policy(
+    frames: &[PathBuf],
+    output: &Path,
+    opts: AnimateOptions,
+    policy: OverwritePolicy,
+) -> Result<ConvertOutcome> {
     if frames.is_empty() {
         return Err(BigImageError::InvalidInput("nenhum quadro informado".to_string()));
     }
+    if matches!(policy, OverwritePolicy::Skip) && output.symlink_metadata().is_ok() {
+        return Ok(ConvertOutcome::Skipped { output: output.to_path_buf() });
+    }
 
-    let mut temp = pipeline::output_temp(output)?;
+    let mut temp = pipeline::output_temp(output, policy)?;
     let mut writer = std::io::BufWriter::new(temp.as_file_mut());
     let mut encoder = GifEncoder::new_with_speed(&mut writer, opts.speed.clamp(1, 30));
     encoder
@@ -73,7 +97,7 @@ pub fn make_gif(frames: &[PathBuf], output: &Path, opts: AnimateOptions) -> Resu
     // Decode first frame to lock canvas dimensions.
     let (first_img, _fmt) = pipeline::decode_with_source_format(&frames[0])?;
     let (w, h) = (first_img.width(), first_img.height());
-    let delay = image::Delay::from_numer_denom_ms(opts.delay_ms.max(10), 1);
+    let delay = image::Delay::from_numer_denom_ms(opts.delay_ms.max(MIN_DELAY_MS), 1);
 
     let mut push_frame = |img: DynamicImage| -> Result<()> {
         let rgba = normalise_frame(img, w, h)?;
@@ -92,9 +116,7 @@ pub fn make_gif(frames: &[PathBuf], output: &Path, opts: AnimateOptions) -> Resu
     drop(encoder);
     std::io::Write::flush(&mut writer).map_err(BigImageError::Io)?;
     drop(writer);
-    let outcome =
-        pipeline::publish_temp(temp, output.to_path_buf(), crate::OverwritePolicy::Replace)?;
-    Ok(outcome.path().to_path_buf())
+    pipeline::publish_temp(temp, output.to_path_buf(), policy)
 }
 
 /// Bring an arbitrarily-sized `img` to the canonical `w × h` canvas used
@@ -160,6 +182,42 @@ mod tests {
         let decoded = image::open(&out).unwrap();
         assert_eq!(decoded.width(), 120);
         assert_eq!(decoded.height(), 80);
+    }
+
+    #[test]
+    fn tiny_delays_are_raised_to_two_centiseconds() {
+        use image::AnimationDecoder;
+        let dir = TempDir::new().unwrap();
+        let f = fixture(dir.path(), "f.png", 8, 8, [9; 3]);
+        let out = dir.path().join("fast.gif");
+        let opts = AnimateOptions { delay_ms: 5, ..AnimateOptions::default() };
+        make_gif(&[f.clone(), f], &out, opts).unwrap();
+        let decoder = image::codecs::gif::GifDecoder::new(std::io::BufReader::new(
+            std::fs::File::open(&out).unwrap(),
+        ))
+        .unwrap();
+        for frame in decoder.into_frames().collect_frames().unwrap() {
+            let (numer, denom) = frame.delay().numer_denom_ms();
+            assert_eq!(numer / denom, MIN_DELAY_MS);
+        }
+    }
+
+    #[test]
+    fn policy_variant_skips_or_increments_existing_output() {
+        let dir = TempDir::new().unwrap();
+        let f = fixture(dir.path(), "f.png", 8, 8, [9; 3]);
+        let out = dir.path().join("anim.gif");
+        std::fs::write(&out, b"keep").unwrap();
+        let frames = [f];
+        let opts = AnimateOptions::default();
+        let skipped = make_gif_with_policy(&frames, &out, opts, OverwritePolicy::Skip).unwrap();
+        assert!(matches!(skipped, ConvertOutcome::Skipped { .. }));
+        let next = make_gif_with_policy(&frames, &out, opts, OverwritePolicy::Increment).unwrap();
+        assert_eq!(next.path(), dir.path().join("anim_1.gif"));
+        assert_eq!(std::fs::read(&out).unwrap(), b"keep");
+        let replaced = make_gif_with_policy(&frames, &out, opts, OverwritePolicy::Replace).unwrap();
+        assert_eq!(replaced.path(), out);
+        image::open(&out).unwrap();
     }
 
     #[test]

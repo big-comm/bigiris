@@ -89,6 +89,12 @@ class NautilusContract(unittest.TestCase):
             child = top.submenu.items[0]
             self.assertTrue(child.options["label"].startswith("localized "))
             self.assertNotIn("localized", child.options["name"])
+            # Every entry, including top-level actions such as "View in
+            # BigIris", is translated; menu item ids stay in the source text.
+            for entry in top.submenu.items:
+                self.assertTrue(entry.options["label"].startswith("localized "),
+                                entry.options["name"])
+                self.assertNotIn("localized", entry.options["name"])
             callback, args = folder_item.callback
             with patch.object(module.subprocess, "Popen") as popen:
                 callback(folder_item, *args)

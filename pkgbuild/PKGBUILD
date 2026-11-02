@@ -9,7 +9,7 @@ depends=(
   'gcc-libs'
   'glibc'
   'gtk4>=4.12'
-  'libadwaita>=1.5'
+  'libadwaita>=1.6'
   'dav1d'            # AVIF decoder
   'openssl'          # TLS for AI model downloads (ureq + native-tls)
   'onnxruntime'      # AI backend (BiRefNet), loaded dynamically
@@ -17,12 +17,6 @@ depends=(
 )
 optdepends=(
   'nautilus-python: Nautilus context menu integration'
-  'dolphin: Dolphin file manager integration (KDE)'
-  'nautilus: Nautilus file manager integration (GNOME)'
-  'nemo: Nemo file manager integration (Cinnamon)'
-  'thunar: Thunar file manager integration (XFCE)'
-  'pcmanfm-qt: PCManFM-Qt file manager integration (LXQt)'
-  'io.elementary.files: Files file manager integration (elementary)'
 )
 makedepends=('rust' 'cargo' 'git' 'pkgconf' 'gettext' 'python')
 # Disable LTO. Arch's default makepkg env appends `-flto=auto` to CFLAGS
@@ -109,8 +103,16 @@ package() {
 
   # Install file-manager integrations into the package staging directory.
   # The package provides the system-wide files; users do not need
-  # to register a second personal copy of the integrations.
+  # to register a second personal copy of the integrations, except for
+  # Thunar, whose only config file is owned by the thunar package.
   # Nautilus requires the optional nautilus-python package.
   "$srcdir/target/release/bigiris" install-integrations --system \
     --destdir="$pkgdir"
+  # /etc/xdg/Thunar/uca.xml belongs to the thunar package; shipping it too
+  # makes the two packages conflict. Thunar actions are per user
+  # ("bigiris install-integrations --user"), so refuse any regression.
+  if [[ -e "$pkgdir/etc/xdg/Thunar/uca.xml" ]]; then
+    echo 'error: package must not ship /etc/xdg/Thunar/uca.xml (owned by thunar)' >&2
+    return 1
+  fi
 }

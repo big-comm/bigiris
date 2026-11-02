@@ -9,8 +9,6 @@
 
 use std::path::Path;
 
-use image::imageops;
-
 use crate::convert::{ConvertOutcome, OverwritePolicy};
 use crate::{pipeline, Format, Result};
 
@@ -42,29 +40,49 @@ pub fn rotate_file(
     target: Option<Format>,
     policy: OverwritePolicy,
 ) -> Result<ConvertOutcome> {
+    rotate_file_with_options(input, rotation, target, &crate::EncodeOptions::default(), policy)
+}
+
+/// Like [`rotate_file`], with caller-supplied encoder options.
+pub fn rotate_file_with_options(
+    input: impl AsRef<Path>,
+    rotation: Rotation,
+    target: Option<Format>,
+    opts: &crate::EncodeOptions,
+    policy: OverwritePolicy,
+) -> Result<ConvertOutcome> {
     let input = input.as_ref();
+    if let Some(skipped) = pipeline::skip_before_decode(
+        input,
+        rotation.filename_suffix(),
+        target,
+        policy,
+        pipeline::any_size,
+    )? {
+        return Ok(skipped);
+    }
 
     let (src, src_format) = pipeline::decode_with_source_format(input)?;
     let target = target.unwrap_or(src_format);
 
     let output = pipeline::resolve_output(input, Some(rotation.filename_suffix()), target, policy)?;
 
-    if matches!(policy, OverwritePolicy::Skip) && output.exists() {
+    if pipeline::existing_output(&output, target, policy) {
         tracing::debug!(?output, "rotate: skipping existing output");
         return Ok(ConvertOutcome::Skipped { output });
     }
 
     tracing::debug!(?input, ?output, ?target, ?rotation, "rotate: computing");
     let rotated = apply_to(&src, rotation);
-    pipeline::encode_and_cleanup(rotated, output, target, &crate::EncodeOptions::default(), policy)
+    pipeline::encode_output(rotated, output, target, opts, policy)
 }
 
 /// Pure in-memory rotation — shared with preview pipeline.
 pub fn apply_to(src: &image::DynamicImage, rotation: Rotation) -> image::DynamicImage {
     match rotation {
-        Rotation::Deg90 => imageops::rotate90(src).into(),
-        Rotation::Deg180 => imageops::rotate180(src).into(),
-        Rotation::Deg270 => imageops::rotate270(src).into(),
+        Rotation::Deg90 => src.rotate90(),
+        Rotation::Deg180 => src.rotate180(),
+        Rotation::Deg270 => src.rotate270(),
     }
 }
 
@@ -111,7 +129,22 @@ pub fn rotate_file_auto(
     target: Option<crate::Format>,
     policy: OverwritePolicy,
 ) -> Result<ConvertOutcome> {
+    rotate_file_auto_with_options(input, target, &crate::EncodeOptions::default(), policy)
+}
+
+/// Like [`rotate_file_auto`], with caller-supplied encoder options.
+pub fn rotate_file_auto_with_options(
+    input: impl AsRef<Path>,
+    target: Option<crate::Format>,
+    opts: &crate::EncodeOptions,
+    policy: OverwritePolicy,
+) -> Result<ConvertOutcome> {
     let input = input.as_ref();
+    if let Some(skipped) =
+        pipeline::skip_before_decode(input, "_auto", target, policy, pipeline::any_size)?
+    {
+        return Ok(skipped);
+    }
 
     // `src` arrives already upright — decode_with_source_format honours the
     // orientation tag for every op. Re-applying it here would double-rotate.
@@ -119,16 +152,49 @@ pub fn rotate_file_auto(
     let target = target.unwrap_or(src_format);
 
     let output = crate::pipeline::resolve_output(input, Some("_auto"), target, policy)?;
-    if matches!(policy, OverwritePolicy::Skip) && output.exists() {
+    if pipeline::existing_output(&output, target, policy) {
         return Ok(ConvertOutcome::Skipped { output });
     }
 
     tracing::debug!(?input, ?output, "rotate: bake EXIF orientation");
-    pipeline::encode_and_cleanup(src, output, target, &crate::EncodeOptions::default(), policy)
+    pipeline::encode_output(src, output, target, opts, policy)
 }
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn rotate_and_flip_keep_sample_type() {
+        use image::DynamicImage;
+        let images = [
+            DynamicImage::ImageLuma8(image::ImageBuffer::from_pixel(3, 2, image::Luma([7u8]))),
+            DynamicImage::ImageLuma16(image::ImageBuffer::from_pixel(3, 2, image::Luma([4321u16]))),
+            DynamicImage::ImageRgb16(image::ImageBuffer::from_pixel(
+                3,
+                2,
+                image::Rgb([1u16, 2, 60000]),
+            )),
+            DynamicImage::ImageRgba32F(image::ImageBuffer::from_pixel(
+                3,
+                2,
+                image::Rgba([0.25f32, 2.0, 0.0, 0.5]),
+            )),
+        ];
+        for img in images {
+            for rotation in
+                [super::Rotation::Deg90, super::Rotation::Deg180, super::Rotation::Deg270]
+            {
+                let out = super::apply_to(&img, rotation);
+                assert_eq!(out.color(), img.color(), "{rotation:?}");
+                assert_eq!(out.as_bytes()[..6], img.as_bytes()[..6]);
+            }
+            for axis in [crate::FlipAxis::Horizontal, crate::FlipAxis::Vertical] {
+                let out = crate::flip::apply_to(&img, axis);
+                assert_eq!(out.color(), img.color(), "{axis:?}");
+                assert_eq!(out.as_bytes()[..6], img.as_bytes()[..6]);
+            }
+        }
+    }
+
     use super::*;
     use image::{Rgb, RgbImage};
     use std::path::PathBuf;

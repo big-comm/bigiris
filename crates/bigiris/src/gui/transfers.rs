@@ -101,6 +101,24 @@ fn show_error(window: &adw::ApplicationWindow, error: TransferError) {
     dialog.present(Some(window));
 }
 
+/// Start an independent BigIris process (viewer or Prisma dialog). After an
+/// upgrade the running image is "(deleted)"; the installed one is launched.
+/// The child is reaped when it exits, so no zombie is left per launch.
+pub(crate) fn spawn_bigiris<I, S>(args: I) -> std::io::Result<()>
+where
+    I: IntoIterator<Item = S>,
+    S: AsRef<std::ffi::OsStr>,
+{
+    let (exe, _) = crate::codec::installed_executable()?;
+    // The GUI holds non-CLOEXEC GPU descriptors; the new window must not.
+    let mut command = std::process::Command::new(exe);
+    let mut child = crate::codec::close_inherited_descriptors(&mut command).args(args).spawn()?;
+    std::thread::spawn(move || {
+        let _ = child.wait();
+    });
+    Ok(())
+}
+
 pub(super) fn open_files(
     window: &adw::ApplicationWindow,
     paths: Vec<PathBuf>,
@@ -109,10 +127,10 @@ pub(super) fn open_files(
     if paths.is_empty() {
         return false;
     }
-    let result = std::env::current_exe()
-        .and_then(|exe| std::process::Command::new(exe).arg("--").args(paths).spawn());
-    match result {
-        Ok(_) => {
+    let mut args = vec![std::ffi::OsString::from("--")];
+    args.extend(paths.into_iter().map(PathBuf::into_os_string));
+    match spawn_bigiris(args) {
+        Ok(()) => {
             if close_after_open {
                 window.close();
             }

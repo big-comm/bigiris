@@ -3,6 +3,22 @@
 # Convention: msgid is the source string in pt-BR (the project's primary
 # language); .po catalogs translate FROM pt-BR into other locales.
 crates/bigiris/src/gui.rs
+crates/bigiris/src/gui/batch_runner.rs
+crates/bigiris/src/gui/dialogs/adjust.rs
+crates/bigiris/src/gui/dialogs/animate.rs
+crates/bigiris/src/gui/dialogs/batch.rs
+crates/bigiris/src/gui/dialogs/compare.rs
+crates/bigiris/src/gui/dialogs/convert.rs
+crates/bigiris/src/gui/dialogs/crop.rs
+crates/bigiris/src/gui/dialogs/extent.rs
+crates/bigiris/src/gui/dialogs/flip.rs
+crates/bigiris/src/gui/dialogs/mod.rs
+crates/bigiris/src/gui/dialogs/properties.rs
+crates/bigiris/src/gui/dialogs/remove_bg.rs
+crates/bigiris/src/gui/dialogs/resize.rs
+crates/bigiris/src/gui/dialogs/rotate.rs
+crates/bigiris/src/gui/dialogs/upscale.rs
+crates/bigiris/src/gui/previews.rs
 crates/bigiris/src/gui/transfers.rs
 crates/bigiris/src/main.rs
 crates/bigimage-integrations/src/action.rs

@@ -30,7 +30,7 @@ impl CropRect {
         format!("_crop-{}x{}+{}+{}", self.width, self.height, self.x, self.y)
     }
 
-    fn validate_against(&self, img_w: u32, img_h: u32) -> Result<()> {
+    pub(crate) fn validate_against(&self, img_w: u32, img_h: u32) -> Result<()> {
         if self.width == 0 || self.height == 0 {
             return Err(BigImageError::InvalidInput(format!(
                 "recorte com dimensão zero: {}x{}",
@@ -66,7 +66,26 @@ pub fn crop_file(
     target: Option<Format>,
     policy: OverwritePolicy,
 ) -> Result<ConvertOutcome> {
+    crop_file_with_options(input, rect, target, &crate::EncodeOptions::default(), policy)
+}
+
+/// Like [`crop_file`], with caller-supplied encoder options (JPEG/AVIF
+/// quality, PNG optimisation…).
+pub fn crop_file_with_options(
+    input: impl AsRef<Path>,
+    rect: CropRect,
+    target: Option<Format>,
+    opts: &crate::EncodeOptions,
+    policy: OverwritePolicy,
+) -> Result<ConvertOutcome> {
     let input = input.as_ref();
+    if let Some(skipped) =
+        pipeline::skip_before_decode(input, &rect.filename_suffix(), target, policy, |w, h| {
+            rect.validate_against(w, h)
+        })?
+    {
+        return Ok(skipped);
+    }
 
     let (src, src_format) = pipeline::decode_with_source_format(input)?;
     let target = target.unwrap_or(src_format);
@@ -75,7 +94,7 @@ pub fn crop_file(
 
     let output = pipeline::resolve_output(input, Some(&rect.filename_suffix()), target, policy)?;
 
-    if matches!(policy, OverwritePolicy::Skip) && output.exists() {
+    if pipeline::existing_output(&output, target, policy) {
         tracing::debug!(?output, "crop: skipping existing output");
         return Ok(ConvertOutcome::Skipped { output });
     }
@@ -83,7 +102,7 @@ pub fn crop_file(
     tracing::debug!(?input, ?output, ?target, ?rect, "crop: computing");
     let cropped = apply_to(&src, rect)?;
 
-    pipeline::encode_and_cleanup(cropped, output, target, &crate::EncodeOptions::default(), policy)
+    pipeline::encode_output(cropped, output, target, opts, policy)
 }
 
 /// Pure in-memory crop — validates `rect` against the image then returns a

@@ -43,7 +43,8 @@ const PYTHON_EXTENSION: &str = include_str!("../../../data/nautilus/bigiris-menu
 /// **Detecção do system-wide:** se o pacote já instalou a extension em
 /// [`SYSTEM_EXTENSION_PATH`] e este install é user-scope (ou seja, o
 /// caminho de destino está sob o `$HOME`), pulamos a cópia user-scope
-/// para evitar o "BigIris ▸" duplicado. Limpa também `__pycache__` e
+/// para evitar o "BigIris ▸" duplicado. Limpa também o nosso bytecode em
+/// `__pycache__` (só `bigiris-menu.*.pyc`; o diretório é compartilhado) e
 /// qualquer `.py` órfão que ficou de uma instalação user antiga
 /// pré-pacote — `nautilus-python` carrega bytecode mesmo sem o `.py`
 /// correspondente, e isso ressuscitava a extensão após `uninstall`.
@@ -80,17 +81,14 @@ pub(crate) fn install_with_system_path(
         if stale_py.exists() {
             let _ = std::fs::remove_file(&stale_py);
         }
-        let pycache = ext_dir.join("__pycache__");
-        if pycache.exists() {
-            let _ = std::fs::remove_dir_all(&pycache);
-        }
+        remove_own_bytecode(&ext_dir);
         return Ok(written);
     }
 
     // nautilus-python extension: único ponto de entrada oficial.
     std::fs::create_dir_all(&ext_dir)?;
     let ext_file = ext_dir.join(PYTHON_EXTENSION_FILENAME);
-    crate::safe_fs::safe_write(&ext_file, PYTHON_EXTENSION)?;
+    crate::safe_fs::safe_write(&ext_file, PYTHON_EXTENSION, paths.scope)?;
     written.push(ext_file);
 
     Ok(written)
@@ -115,15 +113,37 @@ pub fn uninstall(paths: &ScopePaths) -> io::Result<Vec<PathBuf>> {
         std::fs::remove_file(&ext_file)?;
         removed.push(ext_file);
     }
-    let pycache = ext_dir.join("__pycache__");
-    if pycache.exists() {
-        // Best-effort: pyc deletion failure shouldn't abort the
-        // uninstall (the .py is already gone, which is what matters
-        // for nautilus's next scan).
-        let _ = std::fs::remove_dir_all(&pycache);
-    }
+    // Best-effort: pyc deletion failure shouldn't abort the uninstall (the
+    // .py is already gone, which is what matters for nautilus's next scan).
+    remove_own_bytecode(&ext_dir);
 
     Ok(removed)
+}
+
+/// Delete only our compiled bytecode (`__pycache__/bigiris-menu.<tag>.pyc`).
+/// The `__pycache__` directory is shared by every nautilus-python extension
+/// in the same directory; wiping it whole would also discard other
+/// extensions' caches. The directory itself is removed only when it ends up
+/// empty. Errors are ignored: this is cleanup, the next run retries.
+fn remove_own_bytecode(ext_dir: &Path) {
+    let pycache = ext_dir.join("__pycache__");
+    let Ok(entries) = std::fs::read_dir(&pycache) else {
+        return;
+    };
+    let stem = PYTHON_EXTENSION_FILENAME.trim_end_matches(".py");
+    for entry in entries.flatten() {
+        let name = entry.file_name();
+        let name = name.to_string_lossy();
+        let ours = name
+            .strip_prefix(stem)
+            .and_then(|rest| rest.strip_prefix('.'))
+            .is_some_and(|rest| rest.ends_with(".pyc"));
+        if ours && entry.file_type().is_ok_and(|t| t.is_file()) {
+            let _ = std::fs::remove_file(entry.path());
+        }
+    }
+    // Fails (and is ignored) unless the directory is now empty.
+    let _ = std::fs::remove_dir(&pycache);
 }
 
 fn collect_files(dir: &Path) -> io::Result<Vec<PathBuf>> {
@@ -229,6 +249,55 @@ mod tests {
         assert!(!removed.is_empty());
         assert!(!paths.nautilus_python_extensions().join(PYTHON_EXTENSION_FILENAME).exists());
         assert!(!stale.exists());
+    }
+
+    #[test]
+    fn uninstall_removes_only_our_bytecode_from_shared_pycache() {
+        let tmp = TempDir::new().unwrap();
+        let paths = ScopePaths::rooted_at(tmp.path());
+        install_with_system_path(&paths, Path::new("/nonexistent/system-path")).unwrap();
+        let pycache = paths.nautilus_python_extensions().join("__pycache__");
+        std::fs::create_dir_all(&pycache).unwrap();
+        let ours = pycache.join("bigiris-menu.cpython-313.pyc");
+        let ours_opt = pycache.join("bigiris-menu.cpython-313.opt-1.pyc");
+        let other = pycache.join("other-extension.cpython-313.pyc");
+        let lookalike = pycache.join("bigiris-menu-extra.cpython-313.pyc");
+        for f in [&ours, &ours_opt, &other, &lookalike] {
+            std::fs::write(f, b"pyc").unwrap();
+        }
+        uninstall(&paths).unwrap();
+        assert!(!ours.exists());
+        assert!(!ours_opt.exists());
+        assert!(other.exists(), "another extension's bytecode was deleted");
+        assert!(lookalike.exists());
+    }
+
+    #[test]
+    fn user_install_over_system_drops_only_our_bytecode() {
+        let tmp = TempDir::new().unwrap();
+        let host = tmp.path().join("host-extension.py");
+        std::fs::write(&host, "system copy").unwrap();
+        let paths = ScopePaths::rooted_at(tmp.path().join("user"));
+        let pycache = paths.nautilus_python_extensions().join("__pycache__");
+        std::fs::create_dir_all(&pycache).unwrap();
+        let ours = pycache.join("bigiris-menu.cpython-313.pyc");
+        let other = pycache.join("other-extension.cpython-313.pyc");
+        std::fs::write(&ours, b"pyc").unwrap();
+        std::fs::write(&other, b"pyc").unwrap();
+        install_with_system_path(&paths, &host).unwrap();
+        assert!(!ours.exists());
+        assert!(other.exists());
+    }
+
+    #[test]
+    fn uninstall_drops_pycache_dir_once_it_is_empty() {
+        let tmp = TempDir::new().unwrap();
+        let paths = ScopePaths::rooted_at(tmp.path());
+        let pycache = paths.nautilus_python_extensions().join("__pycache__");
+        std::fs::create_dir_all(&pycache).unwrap();
+        std::fs::write(pycache.join("bigiris-menu.cpython-313.pyc"), b"pyc").unwrap();
+        uninstall(&paths).unwrap();
+        assert!(!pycache.exists());
     }
 
     #[test]

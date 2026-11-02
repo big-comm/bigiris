@@ -12,6 +12,5 @@ repository.workspace = true
 thiserror.workspace = true
 tracing.workspace = true
 directories.workspace = true
-
-[dev-dependencies]
+# Atomic sibling temp files for crash-safe rewrites (see safe_fs).
 tempfile = "3"

@@ -201,6 +201,25 @@ BIGIRIS_LOCALE_DIR="$PWD/target/review-locale" LANGUAGE=fr ./target/release/bigi
   Não documente o que um nome bem escolhido já comunica.
 - **Errors**: `bigimage-core` define `BigImageError`; binário
   converte para `color_eyre::Result` na borda.
+- **Códigos de saída da CLI**: todo comando segue a mesma convenção
+  (`EXIT_CODES` em `crates/bigiris/src/main.rs`, exibida no `--help`):
+  `0` sucesso (arquivos ignorados por já existirem contam como sucesso),
+  `1` uso inválido ou erro fatal antes de gravar qualquer coisa, `2` um ou
+  mais arquivos de entrada falharam. Comandos novos que gravam arquivos
+  aceitam `--overwrite skip|replace|increment` com `skip` como padrão e são
+  cobertos em `crates/bigiris/tests/cli.rs`.
+- **Integrações do Thunar**: só existem no escopo do usuário
+  (`bigiris install-integrations --user` mescla em
+  `~/.config/Thunar/uca.xml`). Não empacote `/etc/xdg/Thunar/uca.xml`: ele
+  pertence ao pacote `thunar`, e os PKGBUILDs falham se ele aparecer. Um
+  `uca.xml` novo nasce como cópia do primeiro `Thunar/uca.xml` de
+  `$XDG_CONFIG_DIRS` (como o Thunar faz), e um arquivo sem `</actions>` é
+  recusado, nunca reescrito.
+- **Escopo do usuário com pacote instalado**: `install-integrations --user`
+  pula todo gerenciador cujos arquivos `bigiris-*` o pacote já instalou em
+  `/usr/share` e remove cópias pessoais antigas deles. Nos testes, use
+  `ScopePaths::rooted_at` (sem `package_data` nem `xdg_config_dirs`) para
+  nunca ler o `/usr/share` ou o `/etc/xdg` reais.
 - **No `unsafe`**: todos os crates têm `#![forbid(unsafe_code)]`.
 - **GPL-3.0-or-later**: todo arquivo `.rs`/`.py` começa com
   `// SPDX-License-Identifier: GPL-3.0-or-later`.

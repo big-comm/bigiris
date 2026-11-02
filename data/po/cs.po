@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: bigiris 0.1.0\n"
 "Report-Msgid-Bugs-To: https://github.com/big-comm/bigiris/issues\n"
-"POT-Creation-Date: 2026-10-14 01:35-0300\n"
+"POT-Creation-Date: 2026-11-02 18:04-0300\n"
 "PO-Revision-Date: 2026-10-14 01:35-0300\n"
 "Last-Translator: BigCommunity Team\n"
 "Language-Team: BigCommunity Team\n"
@@ -16,71 +16,87 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=3; plural=(n==1) ? 0 : (n>=2 && n<=4) ? 1 : 2;\n"
 
-#: crates/bigiris/src/gui.rs:110
-msgid "BigIris — abrindo imagens"
-msgstr "BigIris — otevírací obrázky"
-
-#: crates/bigiris/src/gui.rs:551
+#: crates/bigiris/src/gui.rs:648
 msgid "BigIris"
 msgstr "BigIris"
 
-#: crates/bigiris/src/gui.rs:746
+#: crates/bigiris/src/gui.rs:683 crates/bigiris/src/gui/previews.rs:240
+msgid "Não foi possível abrir a imagem"
+msgstr "Nelze otevřít obrázek"
+
+#: crates/bigiris/src/gui.rs:923 crates/bigiris/src/gui.rs:3264
 msgid "Aguarde o salvamento terminar"
 msgstr "Počkejte na dokončení uložení"
 
-#: crates/bigiris/src/gui.rs:757
+#: crates/bigiris/src/gui.rs:934
 msgid "Descartar alterações?"
 msgstr "Zahodit změny?"
 
-#: crates/bigiris/src/gui.rs:758
+#: crates/bigiris/src/gui.rs:935
 msgid "A imagem tem edições que ainda não foram salvas."
 msgstr "Obrázek obsahuje neuložené změny."
 
-#: crates/bigiris/src/gui.rs:760
+#: crates/bigiris/src/gui.rs:937
 msgid "Continuar editando"
 msgstr "Pokračovat v editaci"
 
-#: crates/bigiris/src/gui.rs:761
+#: crates/bigiris/src/gui.rs:938
 msgid "Descartar"
 msgstr "Zahodit změny"
 
-#: crates/bigiris/src/gui.rs:820
-msgid "Abrir imagens (Ctrl+O)"
-msgstr "Otevřít obrázky (Ctrl+O)"
-
-#: crates/bigiris/src/gui.rs:825
+#: crates/bigiris/src/gui.rs:1007
 msgid "Imagem anterior"
 msgstr "Předchozí obrázek »"
 
-#: crates/bigiris/src/gui.rs:831
+#: crates/bigiris/src/gui.rs:1008
 msgid "Próxima imagem"
 msgstr "Další obrázek »"
 
-#: crates/bigiris/src/gui.rs:837
+#: crates/bigiris/src/gui.rs:1020
 msgid "Propriedades da imagem (Ctrl+I)"
 msgstr "Vlastnosti obrázku (Ctrl+I)"
 
-#: crates/bigiris/src/gui.rs:848
+#: crates/bigiris/src/gui.rs:1026
 msgid "Tela cheia (F11)"
 msgstr "Celá obrazovka (F11)"
 
-#: crates/bigiris/src/gui.rs:854
-msgid "Aproximar"
-msgstr "Přiblížit"
-
-#: crates/bigiris/src/gui.rs:860 crates/bigiris/src/gui.rs:2704
-msgid "Ajustar à janela"
-msgstr "Přizpůsobit oknu"
-
-#: crates/bigiris/src/gui.rs:866
+#: crates/bigiris/src/gui.rs:1035
 msgid "Afastar"
 msgstr "Zoom out"
 
-#: crates/bigiris/src/gui.rs:1638
+#: crates/bigiris/src/gui.rs:1039 crates/bigiris/src/gui.rs:3623
+msgid "Ajustar à janela"
+msgstr "Přizpůsobit oknu"
+
+#: crates/bigiris/src/gui.rs:1040 crates/bigiris/src/gui.rs:3624
+msgid "Tamanho real (100%)"
+msgstr "Skutečná velikost (100%)"
+
+#: crates/bigiris/src/gui.rs:1049 crates/bigiris/src/gui.rs:3620
+msgid "Zoom"
+msgstr "Zoom"
+
+#: crates/bigiris/src/gui.rs:1053
+msgid "Aproximar"
+msgstr "Přiblížit"
+
+#: crates/bigiris/src/gui.rs:2028
 msgid "Slideshow: pausado"
 msgstr "Prezentace obrázků: pozastaveno"
 
-#: crates/bigiris/src/gui.rs:1870
+#: crates/bigiris/src/gui.rs:2056
+msgid "Slideshow: a cada {interval} s"
+msgstr "Prezentace: každých {interval} s"
+
+#: crates/bigiris/src/gui.rs:2078
+msgid "Histograma ligado"
+msgstr "Histogram zapnut"
+
+#: crates/bigiris/src/gui.rs:2080
+msgid "Histograma desligado"
+msgstr "Histogram vypnut"
+
+#: crates/bigiris/src/gui.rs:2265
 msgid ""
 "O arquivo será sobrescrito. JPEG é recodificado a cada gravação; isso pode "
 "reduzir a qualidade."
@@ -88,267 +104,345 @@ msgstr ""
 "Soubor bude přepsán. JPEG je překódován při každém uložení; to může snížit "
 "kvalitu."
 
-#: crates/bigiris/src/gui.rs:1872
+#: crates/bigiris/src/gui.rs:2267
 msgid "O arquivo será sobrescrito."
 msgstr "Soubor bude přepsán."
 
-#: crates/bigiris/src/gui.rs:1875
+#: crates/bigiris/src/gui.rs:2273
+msgid ""
+"Este formato não guarda todos os metadados da foto (data, câmera, perfil de "
+"cor); o que ele não suportar será removido ou convertido."
+msgstr ""
+"Tento formát neuchovává všechna metadata fotografie (datum, fotoaparát, "
+"barevný profil); co nepodporuje, bude odstraněno nebo převedeno."
+
+#: crates/bigiris/src/gui.rs:2276
 msgid "Salvar alterações?"
 msgstr "Uložit změny?"
 
-#: crates/bigiris/src/gui.rs:1876 crates/bigiris/src/gui.rs:2668
-#: crates/bigiris/src/gui.rs:3232 crates/bigiris/src/gui.rs:3537
-#: crates/bigiris/src/gui.rs:3798 crates/bigiris/src/gui.rs:4276
-#: crates/bigiris/src/gui.rs:4554 crates/bigiris/src/gui.rs:4885
-#: crates/bigiris/src/gui.rs:5035 crates/bigiris/src/gui.rs:5204
-#: crates/bigiris/src/gui.rs:5981 crates/bigiris/src/gui.rs:6110
-#: crates/bigiris/src/gui.rs:6183 crates/bigiris/src/gui.rs:6452
-#: crates/bigiris/src/gui.rs:6725 crates/bigiris/src/gui.rs:6777
+#: crates/bigiris/src/gui.rs:2277 crates/bigiris/src/gui.rs:3528
+#: crates/bigiris/src/gui/dialogs/animate.rs:187
+#: crates/bigiris/src/gui/dialogs/batch.rs:131
+#: crates/bigiris/src/gui/dialogs/batch.rs:269
+#: crates/bigiris/src/gui/dialogs/batch.rs:362
+#: crates/bigiris/src/gui/dialogs/mod.rs:184
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:230
+#: crates/bigiris/src/gui/previews.rs:202
 msgid "Cancelar"
 msgstr "Zrušit"
 
-#: crates/bigiris/src/gui.rs:1877
+#: crates/bigiris/src/gui.rs:2278
 msgid "Salvar"
 msgstr "Uložit"
 
-#: crates/bigiris/src/gui.rs:1922
+#: crates/bigiris/src/gui.rs:2326
 msgid "Salvo"
 msgstr "Soubor byl uložen."
 
-#: crates/bigiris/src/gui.rs:1925
-msgid "Falha ao salvar"
-msgstr "Uložení se nezdařilo"
+#: crates/bigiris/src/gui.rs:2405
+msgid ""
+"Este arquivo é animado, tem várias páginas ou não pôde ser verificado. Girar "
+"ou espelhar e salvar descartaria os outros quadros, então ele não foi "
+"alterado."
+msgstr ""
+"Tento soubor je animovaný, má více stránek nebo jej nelze ověřit. Otočení "
+"nebo zrcadlení a uložení by zahodilo ostatní snímky, proto nebyl změněn."
 
-#: crates/bigiris/src/gui.rs:2007
+#: crates/bigiris/src/gui.rs:2406
+msgid ""
+"O BigIris não sabe gravar este formato. As alterações não podem ser salvas "
+"no próprio arquivo."
+msgstr ""
+"BigIris neumí zapisovat tento formát. Změny nelze uložit přímo do souboru."
+
+#: crates/bigiris/src/gui.rs:2407
+msgid "Sem permissão para alterar este arquivo ou a pasta dele."
+msgstr "Chybí oprávnění ke změně tohoto souboru nebo jeho složky."
+
+#: crates/bigiris/src/gui.rs:2409
+msgid "O arquivo não foi alterado. Detalhes: {detail}"
+msgstr "Soubor nebyl změněn. Podrobnosti: {detail}"
+
+#: crates/bigiris/src/gui.rs:2421
+msgid "Não foi possível salvar"
+msgstr "Nelze uložit"
+
+#: crates/bigiris/src/gui.rs:2424
+msgid "Manter alterações"
+msgstr "Ponechat změny"
+
+#: crates/bigiris/src/gui.rs:2425
+msgid "Descartar alterações"
+msgstr "Zahodit změny"
+
+#: crates/bigiris/src/gui.rs:2510
+msgid "o formato não guarda EXIF"
+msgstr "formát neuchovává EXIF"
+
+#: crates/bigiris/src/gui.rs:2511
+msgid "EXIF grande demais para JPEG"
+msgstr "EXIF je pro JPEG příliš velký"
+
+#: crates/bigiris/src/gui.rs:2512
+msgid "EXIF inválido"
+msgstr "neplatný EXIF"
+
+#: crates/bigiris/src/gui.rs:2515
+msgid "perfil de cor convertido para sRGB"
+msgstr "barevný profil převeden na sRGB"
+
+#: crates/bigiris/src/gui.rs:2516
+msgid "perfil de cor inválido ignorado"
+msgstr "neplatný barevný profil ignorován"
+
+#: crates/bigiris/src/gui.rs:2517
+msgid "metadados não suportados"
+msgstr "nepodporovaná metadata"
+
+#: crates/bigiris/src/gui.rs:2527
+msgid "Salvo. Alguns metadados não puderam ser mantidos: {list}"
+msgstr "Uloženo. Některá metadata nebylo možné zachovat: {list}"
+
+#: crates/bigiris/src/gui.rs:2787
 msgid "Salve ou desfaça as alterações antes de navegar"
 msgstr "Uložení nebo vrácení změn zpět před navigací"
 
-#: crates/bigiris/src/gui.rs:2050
-msgid "Não foi possível abrir a imagem"
-msgstr "Nelze otevřít obrázek"
-
-#: crates/bigiris/src/gui.rs:2065 crates/bigiris/src/gui.rs:2887
-#: crates/bigiris/src/gui.rs:7714
+#: crates/bigiris/src/gui.rs:2868 crates/bigiris/src/gui.rs:3776
+#: crates/bigiris/src/gui.rs:4786 crates/bigiris/src/gui.rs:4921
 msgid "Abrir imagens…"
 msgstr "Otevřít obrázky…"
 
-#: crates/bigiris/src/gui.rs:2066 crates/bigiris/src/gui.rs:2738
+#: crates/bigiris/src/gui.rs:2869 crates/bigiris/src/gui.rs:3657
 msgid "Colar arquivos de imagem"
 msgstr "Vložit obrazové soubory"
 
-#: crates/bigiris/src/gui.rs:2068 crates/bigiris/src/gui.rs:2737
+#: crates/bigiris/src/gui.rs:2871 crates/bigiris/src/gui.rs:3656
 msgid "Copiar imagem"
 msgstr "Kopírovat obrázek »"
 
-#: crates/bigiris/src/gui.rs:2069
+#: crates/bigiris/src/gui.rs:2872
 msgid "Imprimir…"
 msgstr "Tisk…"
 
-#: crates/bigiris/src/gui.rs:2071 crates/bigiris/src/gui.rs:2899
-#: crates/bigiris/src/gui.rs:7714
+#: crates/bigiris/src/gui.rs:2874 crates/bigiris/src/gui.rs:3788
+#: crates/bigiris/src/gui.rs:4786
 msgid "Processar uma pasta…"
 msgstr "Zpracovat tuto složku…"
 
-#: crates/bigiris/src/gui.rs:2076 crates/bigiris/src/gui.rs:2723
+#: crates/bigiris/src/gui.rs:2879 crates/bigiris/src/gui.rs:3642
 msgid "Desfazer"
 msgstr "Zpět"
 
-#: crates/bigiris/src/gui.rs:2077 crates/bigiris/src/gui.rs:2724
+#: crates/bigiris/src/gui.rs:2880 crates/bigiris/src/gui.rs:3643
 msgid "Refazer"
 msgstr "Znovu"
 
-#: crates/bigiris/src/gui.rs:2079 crates/bigiris/src/gui.rs:2725
+#: crates/bigiris/src/gui.rs:2882 crates/bigiris/src/gui.rs:3644
 msgid "Girar à direita"
 msgstr "Otočit doprava"
 
-#: crates/bigiris/src/gui.rs:2080 crates/bigiris/src/gui.rs:2726
+#: crates/bigiris/src/gui.rs:2883 crates/bigiris/src/gui.rs:3645
 msgid "Girar à esquerda"
 msgstr "Otočit doleva"
 
-#: crates/bigiris/src/gui.rs:2081
+#: crates/bigiris/src/gui.rs:2884
 msgid "Girar 180°"
 msgstr "Otočit o 180°"
 
-#: crates/bigiris/src/gui.rs:2082
+#: crates/bigiris/src/gui.rs:2885
 msgid "Espelhar horizontal"
 msgstr "Flip horizontální"
 
-#: crates/bigiris/src/gui.rs:2083
+#: crates/bigiris/src/gui.rs:2886
 msgid "Espelhar vertical"
 msgstr "Vertikální překlopení"
 
-#: crates/bigiris/src/gui.rs:2084 crates/bigiris/src/gui.rs:2727
+#: crates/bigiris/src/gui.rs:2887 crates/bigiris/src/gui.rs:3646
 msgid "Recortar…"
 msgstr "Oříznout…"
 
-#: crates/bigiris/src/gui.rs:2086
+#: crates/bigiris/src/gui.rs:2889
 msgid "Editar imagem"
 msgstr "Upravit obrázek"
 
-#: crates/bigiris/src/gui.rs:2088 crates/bigiris/src/gui.rs:2728
+#: crates/bigiris/src/gui.rs:2891 crates/bigiris/src/gui.rs:3647
 msgid "Remover fundo (IA)…"
 msgstr "Odstranit pozadí (AI)…"
 
-#: crates/bigiris/src/gui.rs:2089 crates/bigiris/src/gui.rs:2729
+#: crates/bigiris/src/gui.rs:2892 crates/bigiris/src/gui.rs:3648
 msgid "Aumentar resolução…"
 msgstr "Upscale…"
 
-#: crates/bigiris/src/gui.rs:2090
+#: crates/bigiris/src/gui.rs:2893
 msgid "Ferramentas"
 msgstr "Nástroje"
 
-#: crates/bigiris/src/gui.rs:2092 crates/bigiris/src/gui.rs:2730
+#: crates/bigiris/src/gui.rs:2895 crates/bigiris/src/gui.rs:3649
 msgid "Salvar alterações"
 msgstr "Uložit změny"
 
-#: crates/bigiris/src/gui.rs:2093 crates/bigiris/src/gui.rs:2741
+#: crates/bigiris/src/gui.rs:2896 crates/bigiris/src/gui.rs:3660
 msgid "Mover para a lixeira"
 msgstr "Přesunout do koše"
 
-#: crates/bigiris/src/gui.rs:2097
+#: crates/bigiris/src/gui.rs:2900
 msgid "Atalhos do teclado"
 msgstr "Klávesové zkratky"
 
-#: crates/bigiris/src/gui.rs:2098
+#: crates/bigiris/src/gui.rs:2901
 msgid "Sobre o BigIris"
 msgstr "O společnosti BigIris"
 
-#: crates/bigiris/src/gui.rs:2103
+#: crates/bigiris/src/gui.rs:2906
 msgid "Menu principal"
 msgstr "Hlavní nabídka"
 
-#: crates/bigiris/src/gui.rs:2452 crates/bigiris/src/gui.rs:2944
-#: crates/bigiris/src/gui.rs:6226 crates/bigiris/src/gui.rs:6678
+#: crates/bigiris/src/gui.rs:3266
+msgid "Salve ou desfaça as alterações antes de usar esta ferramenta"
+msgstr "Před použitím tohoto nástroje změny uložte nebo vraťte zpět"
+
+#: crates/bigiris/src/gui.rs:3282 crates/bigiris/src/gui.rs:3834
+#: crates/bigiris/src/gui/dialogs/batch.rs:404
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:134
 msgid "Imagens"
 msgstr "Obrázky"
 
-#: crates/bigiris/src/gui.rs:2458 crates/bigiris/src/gui.rs:2736
+#: crates/bigiris/src/gui.rs:3288 crates/bigiris/src/gui.rs:3655
 msgid "Abrir imagens"
 msgstr "Otevřít obrázky"
 
-#: crates/bigiris/src/gui.rs:2576
+#: crates/bigiris/src/gui.rs:3340 crates/bigiris/src/gui.rs:3380
+msgid "Não foi possível preparar a página"
+msgstr "Stránku nelze připravit"
+
+#: crates/bigiris/src/gui.rs:3362
+msgid "O preparo da impressão falhou"
+msgstr "Příprava tisku selhala"
+
+#: crates/bigiris/src/gui.rs:3419
 msgid "Não foi possível imprimir"
 msgstr "Nelze tisknout"
 
-#: crates/bigiris/src/gui.rs:2579 crates/bigiris/src/gui.rs:2717
-#: crates/bigiris/src/gui.rs:6181 crates/bigiris/src/gui.rs:6386
-#: crates/bigiris/src/gui.rs:6636 crates/bigiris/src/gui.rs:6939
+#: crates/bigiris/src/gui.rs:3422 crates/bigiris/src/gui.rs:3554
+#: crates/bigiris/src/gui/dialogs/animate.rs:53
+#: crates/bigiris/src/gui/dialogs/batch.rs:360
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:100
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:352
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:394
 #: crates/bigiris/src/gui/transfers.rs:99
 msgid "Fechar"
 msgstr "Zavřít"
 
-#: crates/bigiris/src/gui.rs:2660
+#: crates/bigiris/src/gui.rs:3520
 msgid "Mover para a lixeira?"
 msgstr "Přesunout do koše?"
 
-#: crates/bigiris/src/gui.rs:2664
+#: crates/bigiris/src/gui.rs:3524
 msgid ""
 "O arquivo será movido para a lixeira do sistema. Você pode restaurá-lo "
 "depois."
 msgstr "Soubor se přesune do koše a můžete ho obnovit později."
 
-#: crates/bigiris/src/gui.rs:2669
+#: crates/bigiris/src/gui.rs:3529
 msgid "Mover"
 msgstr "Pohyb"
 
-#: crates/bigiris/src/gui.rs:2693
+#: crates/bigiris/src/gui.rs:3551
+msgid "Não foi possível mover para a lixeira"
+msgstr "Nelze přesunout do koše"
+
+#: crates/bigiris/src/gui.rs:3612
 msgid "Navegação"
 msgstr "Navigace"
 
-#: crates/bigiris/src/gui.rs:2695
+#: crates/bigiris/src/gui.rs:3614
 msgid "Anterior / próximo"
 msgstr "Předchozí / další"
 
-#: crates/bigiris/src/gui.rs:2696
+#: crates/bigiris/src/gui.rs:3615
 msgid "Primeiro / último"
 msgstr "První / poslední"
 
-#: crates/bigiris/src/gui.rs:2697
+#: crates/bigiris/src/gui.rs:3616
 msgid "Slideshow (auto-avanço)"
 msgstr "Prezentace"
 
-#: crates/bigiris/src/gui.rs:2701
-msgid "Zoom"
-msgstr "Zoom"
-
-#: crates/bigiris/src/gui.rs:2703
+#: crates/bigiris/src/gui.rs:3622
 msgid "Aproximar / afastar"
 msgstr "Přiblížení / oddálení"
 
-#: crates/bigiris/src/gui.rs:2705
-msgid "Tamanho real (100%)"
-msgstr "Skutečná velikost (100%)"
-
-#: crates/bigiris/src/gui.rs:2706
+#: crates/bigiris/src/gui.rs:3625
 msgid "Zoom contínuo"
 msgstr "Nepřetržitý zoom"
 
-#: crates/bigiris/src/gui.rs:2710
+#: crates/bigiris/src/gui.rs:3629
 msgid "Janela"
 msgstr "Okno"
 
-#: crates/bigiris/src/gui.rs:2712
+#: crates/bigiris/src/gui.rs:3631
 msgid "Tela cheia"
 msgstr "Fullscreen"
 
-#: crates/bigiris/src/gui.rs:2713
+#: crates/bigiris/src/gui.rs:3632
 msgid "Modo teatro"
 msgstr "Režim kina"
 
-#: crates/bigiris/src/gui.rs:2714
+#: crates/bigiris/src/gui.rs:3633
 msgid "Fita de miniaturas"
 msgstr "Náhledy"
 
-#: crates/bigiris/src/gui.rs:2715
+#: crates/bigiris/src/gui.rs:3634
 msgid "Histograma RGB"
 msgstr "RGB histogram"
 
-#: crates/bigiris/src/gui.rs:2716
+#: crates/bigiris/src/gui.rs:3635
 msgid "Fixar barras visíveis"
 msgstr "Udržování ovládacích prvků viditelných"
 
-#: crates/bigiris/src/gui.rs:2721
+#: crates/bigiris/src/gui.rs:3636
+msgid "Sair da tela cheia ou fechar"
+msgstr "Ukončit celou obrazovku nebo zavřít"
+
+#: crates/bigiris/src/gui.rs:3640
 msgid "Edição"
 msgstr "Editace"
 
-#: crates/bigiris/src/gui.rs:2734 crates/bigiris/src/gui.rs:5463
+#: crates/bigiris/src/gui.rs:3653
+#: crates/bigiris/src/gui/dialogs/properties.rs:120
 msgid "Arquivo"
 msgstr "Soubor"
 
-#: crates/bigiris/src/gui.rs:2739
+#: crates/bigiris/src/gui.rs:3658
 msgid "Imprimir"
 msgstr "Tisk"
 
-#: crates/bigiris/src/gui.rs:2740 crates/bigiris/src/gui.rs:5378
-#: crates/bigiris/src/gui.rs:5423
+#: crates/bigiris/src/gui.rs:3659
+#: crates/bigiris/src/gui/dialogs/properties.rs:38
+#: crates/bigiris/src/gui/dialogs/properties.rs:80
 msgid "Propriedades"
 msgstr "Vlastnosti"
 
-#: crates/bigiris/src/gui.rs:2745
+#: crates/bigiris/src/gui.rs:3664
 msgid "Ajuda"
 msgstr "Help"
 
-#: crates/bigiris/src/gui.rs:2746
+#: crates/bigiris/src/gui.rs:3665
 msgid "Este diálogo"
 msgstr "Toto dialogové okno"
 
-#: crates/bigiris/src/gui.rs:2746
+#: crates/bigiris/src/gui.rs:3665
 msgid "Sobre"
 msgstr "O aplikaci"
 
-#: crates/bigiris/src/gui.rs:2753
-msgid "Categoria dos atalhos"
-msgstr "Kategorie zkratek"
-
-#: crates/bigiris/src/gui.rs:2770
+#: crates/bigiris/src/gui.rs:3675
 msgid "Roda do mouse"
 msgstr "Kolečko"
 
-#: crates/bigiris/src/gui.rs:2821
+#: crates/bigiris/src/gui.rs:3703
 msgid "Atalhos de teclado"
 msgstr "Klávesové zkratky"
 
-#: crates/bigiris/src/gui.rs:2847
+#: crates/bigiris/src/gui.rs:3729
 msgid ""
 "Visualizador e conversor de imagens para Linux. Rápido, acessível por "
 "teclado e integrado ao gerenciador de arquivos."
@@ -356,426 +450,550 @@ msgstr ""
 "Prohlížeč a konvertor obrázků pro Linux. Rychlý, přístupný z klávesnice a "
 "integrovaný se správcem souborů."
 
-#: crates/bigiris/src/gui.rs:2874
+#: crates/bigiris/src/gui.rs:3762
 msgid "Abra suas imagens"
 msgstr "Otevřete své obrázky"
 
-#: crates/bigiris/src/gui.rs:2879
+#: crates/bigiris/src/gui.rs:3767
 msgid "Arraste imagens para cá ou cole arquivos com Ctrl+V."
 msgstr "Přetáhněte sem obrázky nebo vložte soubory pomocí Ctrl+V."
 
-#: crates/bigiris/src/gui.rs:2921
+#: crates/bigiris/src/gui.rs:3810
 msgid "Selecionar pasta com imagens"
 msgstr "Vyberte složku s obrázky"
 
-#: crates/bigiris/src/gui.rs:2941
+#: crates/bigiris/src/gui.rs:3831
 msgid "Selecionar imagens"
 msgstr "Vyberte obrázky"
 
-#: crates/bigiris/src/gui.rs:3075
-#: crates/bigimage-integrations/src/action.rs:150
-#: data/nautilus/bigiris-menu.py:104
-msgid "PNG"
-msgstr "PNG"
+#: crates/bigiris/src/gui.rs:3878
+msgid "{current} de {total}"
+msgstr "{current} z {total}"
 
-#: crates/bigiris/src/gui.rs:3076
-msgid "JPG (JPEG)"
-msgstr "JPG (JPEG)"
+#: crates/bigiris/src/gui/batch_runner.rs:82
+msgid "≈ mesmo tamanho"
+msgstr "≈ stejná velikost"
 
-#: crates/bigiris/src/gui.rs:3077
-#: crates/bigimage-integrations/src/action.rs:166
-#: data/nautilus/bigiris-menu.py:106
-msgid "WebP"
-msgstr "WebP"
+#: crates/bigiris/src/gui/batch_runner.rs:160
+msgid "{written} gravado(s), {skipped} ignorado(s), {failed} falha(s)"
+msgstr "zapsáno: {written}, přeskočeno: {skipped}, selhalo: {failed}"
 
-#: crates/bigiris/src/gui.rs:3078
-#: crates/bigimage-integrations/src/action.rs:174
-#: data/nautilus/bigiris-menu.py:107
-msgid "AVIF"
-msgstr "AVIF"
+#: crates/bigiris/src/gui/batch_runner.rs:190
+msgid "Concluído em {time} · {counts}"
+msgstr "Dokončeno za {time} · {counts}"
 
-#: crates/bigiris/src/gui.rs:3079
-#: crates/bigimage-integrations/src/action.rs:182
-#: data/nautilus/bigiris-menu.py:108
-msgid "TIFF"
-msgstr "TIFF"
+#: crates/bigiris/src/gui/batch_runner.rs:199
+msgid ""
+"{before} → {after} ({delta}) · média por arquivo {average_before} → "
+"{average_after}"
+msgstr ""
+"{before} → {after} ({delta}) · průměr na soubor {average_before} → "
+"{average_after}"
 
-#: crates/bigiris/src/gui.rs:3080
-msgid "BMP"
-msgstr "BMP"
+#: crates/bigiris/src/gui/batch_runner.rs:222
+#: crates/bigiris/src/gui/dialogs/animate.rs:315
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:349
+msgid "O processamento terminou inesperadamente. Tente novamente."
+msgstr "Zpracování neočekávaně skončilo. Zkuste to znovu."
 
-#: crates/bigiris/src/gui.rs:3081
-msgid "GIF"
-msgstr "GIF"
+#: crates/bigiris/src/gui/batch_runner.rs:311
+msgid "falha inesperada no worker"
+msgstr "neočekávané selhání workeru"
 
-#: crates/bigiris/src/gui.rs:3082
-msgid "ICO (até 256 × 256)"
-msgstr "ICO (až do 256 × 200)"
+#: crates/bigiris/src/gui/batch_runner.rs:359
+msgid "um worker terminou inesperadamente"
+msgstr "worker neočekávaně skončil"
 
-#: crates/bigiris/src/gui.rs:3083
-msgid "PNM (Netpbm)"
-msgstr "PNM (Netpbm)"
+#: crates/bigiris/src/gui/dialogs/adjust.rs:20
+msgid "Ajustar cores — Prisma"
+msgstr "Úprava barev — Prisma"
 
-#: crates/bigiris/src/gui.rs:3084
-msgid "TGA"
-msgstr "TGA"
+#: crates/bigiris/src/gui/dialogs/adjust.rs:35
+#: crates/bigimage-integrations/src/action.rs:91
+#: data/nautilus/bigiris-menu.py:153
+msgid "Ajustar cores"
+msgstr "Nastavení barev"
 
-#: crates/bigiris/src/gui.rs:3085
-msgid "QOI"
-msgstr "QOI"
+#: crates/bigiris/src/gui/dialogs/adjust.rs:38
+msgid "Brilho"
+msgstr "Jas"
 
-#: crates/bigiris/src/gui.rs:3086
-msgid "HDR"
-msgstr "HDR"
+#: crates/bigiris/src/gui/dialogs/adjust.rs:39
+msgid "-100 escuro · 0 neutro · +100 claro"
+msgstr "-100 tmavý · 0 neutrální · +101 světlý"
 
-#: crates/bigiris/src/gui.rs:3087
-msgid "OpenEXR"
-msgstr "OpenEXR"
+#: crates/bigiris/src/gui/dialogs/adjust.rs:43
+msgid "Contraste"
+msgstr "Kontrast"
 
-#: crates/bigiris/src/gui.rs:3111
-msgid "Pular se já existir"
-msgstr "Přeskočit existující soubory"
+#: crates/bigiris/src/gui/dialogs/adjust.rs:44
+msgid "-100 plano · 0 neutro · +100 agressivo"
+msgstr "-100 plochý · 0 neutrální · +101 silný"
 
-#: crates/bigiris/src/gui.rs:3112
-msgid "Sobrescrever o arquivo"
-msgstr "Přepsat soubor"
+#: crates/bigiris/src/gui/dialogs/adjust.rs:48
+msgid "Saturação"
+msgstr "Saturace"
 
-#: crates/bigiris/src/gui.rs:3113
-msgid "Incrementar (_1, _2, …)"
-msgstr "Přidání přípony (_1, _2, …)"
+#: crates/bigiris/src/gui/dialogs/adjust.rs:49
+msgid "-100 cinza · 0 neutro · +100 vibrante"
+msgstr "-100 šedá · 0 neutrální · +101 živá"
 
-#: crates/bigiris/src/gui.rs:3118
-msgid "Lanczos3 (padrão)"
-msgstr "Lanczos3 (výchozí)"
+#: crates/bigiris/src/gui/dialogs/adjust.rs:53
+msgid "Gamma"
+msgstr "Gamma"
 
-#: crates/bigiris/src/gui.rs:3119
-msgid "Mitchell"
-msgstr "Mitchell"
+#: crates/bigiris/src/gui/dialogs/adjust.rs:55
+msgid "Abaixo de 1 clareia os meios-tons · 1 mantém · acima de 1 escurece"
+msgstr "Pod 1 zesvětlí střední tóny · 1 je zachová · nad 1 ztmaví"
 
-#: crates/bigiris/src/gui.rs:3120
-msgid "CatmullRom"
-msgstr "CatmullRom"
+#: crates/bigiris/src/gui/dialogs/adjust.rs:64
+#: crates/bigiris/src/gui/dialogs/batch.rs:389
+#: crates/bigiris/src/gui/dialogs/convert.rs:39
+#: crates/bigiris/src/gui/dialogs/crop.rs:344
+#: crates/bigiris/src/gui/dialogs/extent.rs:92
+#: crates/bigiris/src/gui/dialogs/flip.rs:37
+#: crates/bigiris/src/gui/dialogs/resize.rs:128
+#: crates/bigiris/src/gui/dialogs/rotate.rs:42
+#: crates/bigiris/src/gui/dialogs/upscale.rs:68
+msgid "Arquivos selecionados"
+msgstr "Vybrané soubory"
 
-#: crates/bigiris/src/gui.rs:3121
-msgid "Bilinear"
-msgstr "Bilinear"
+#: crates/bigiris/src/gui/dialogs/adjust.rs:69
+msgid "Tom"
+msgstr "Tón"
 
-#: crates/bigiris/src/gui.rs:3122
-msgid "Nearest (sem anti-aliasing)"
-msgstr "Nejbližší (bez vyhlazování)"
+#: crates/bigiris/src/gui/dialogs/adjust.rs:74
+msgid "Cor"
+msgstr "Barva"
 
-#: crates/bigiris/src/gui.rs:3141
+#: crates/bigiris/src/gui/dialogs/adjust.rs:77
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:151
+msgid "Saída"
+msgstr "Výstup"
+
+#: crates/bigiris/src/gui/dialogs/adjust.rs:83
+msgid "Aplicar"
+msgstr "Použít"
+
+#: crates/bigiris/src/gui/dialogs/adjust.rs:190
+msgid "Ajustando…"
+msgstr "Nastavování…"
+
+#: crates/bigiris/src/gui/dialogs/adjust.rs:196
+msgid "Ajustando"
+msgstr "Nastavení"
+
+#: crates/bigiris/src/gui/dialogs/animate.rs:29
+msgid "Criar GIF animado — Prisma"
+msgstr "Vytvořit animovaný GIF — Prisma"
+
+#: crates/bigiris/src/gui/dialogs/animate.rs:33
+msgid "Criar GIF animado"
+msgstr "Vytvořit animovaný GIF"
+
+#: crates/bigiris/src/gui/dialogs/animate.rs:47
+msgid "Selecione pelo menos 2 imagens"
+msgstr "Vyberte alespoň 2 obrázky"
+
+#: crates/bigiris/src/gui/dialogs/animate.rs:48
+msgid "Informe vários arquivos de uma vez para montar a animação."
+msgstr "Vyberte více souborů pro vytvoření animace."
+
+#: crates/bigiris/src/gui/dialogs/animate.rs:66
+msgid "Atraso por quadro (ms)"
+msgstr "Zpoždění snímku (ms)"
+
+#: crates/bigiris/src/gui/dialogs/animate.rs:67
+msgid "100 ≈ 10 fps · 40 ≈ 25 fps · 1000 = 1 s"
+msgstr "100 ≈ 12 fps · 40 = 25 fps"
+
+#: crates/bigiris/src/gui/dialogs/animate.rs:72
+msgid "Loop"
+msgstr "Opakování animace"
+
+#: crates/bigiris/src/gui/dialogs/animate.rs:74
+msgid "Infinito (padrão)"
+msgstr "Nekonečné (výchozí)"
+
+#: crates/bigiris/src/gui/dialogs/animate.rs:75
+msgid "Uma vez"
+msgstr "Once"
+
+#: crates/bigiris/src/gui/dialogs/animate.rs:76
+msgid "2 vezes"
+msgstr "2 krát"
+
+#: crates/bigiris/src/gui/dialogs/animate.rs:77
+msgid "5 vezes"
+msgstr "5 krát"
+
+#: crates/bigiris/src/gui/dialogs/animate.rs:78
+msgid "10 vezes"
+msgstr "10 krát"
+
+#: crates/bigiris/src/gui/dialogs/animate.rs:83
+msgid "Velocidade do encoder"
+msgstr "Rychlost snímače"
+
+#: crates/bigiris/src/gui/dialogs/animate.rs:84
+msgid "maior = mais rápido, paleta um pouco pior · padrão 10"
+msgstr "vyšší = rychlejší, o něco nižší kvalita palety · default 10"
+
+#: crates/bigiris/src/gui/dialogs/animate.rs:94
+msgid "Arquivo de saída (.gif)"
+msgstr "Výstupní soubor (.gif)"
+
+#: crates/bigiris/src/gui/dialogs/animate.rs:98
+msgid "Quadros"
+msgstr "Rámy"
+
+#: crates/bigiris/src/gui/dialogs/animate.rs:111
+msgid "Criar GIF"
+msgstr "Vytvořit soubor GIF"
+
+#: crates/bigiris/src/gui/dialogs/animate.rs:184
+msgid "Substituir arquivo existente?"
+msgstr "Nahradit existující soubor?"
+
+#: crates/bigiris/src/gui/dialogs/animate.rs:188
+msgid "Substituir"
+msgstr "Nahradit"
+
+#: crates/bigiris/src/gui/dialogs/animate.rs:206
+msgid "Informe o arquivo de saída."
+msgstr "Zadejte výstupní soubor."
+
+#: crates/bigiris/src/gui/dialogs/animate.rs:215
+msgid "O arquivo de saída não pode ser uma pasta."
+msgstr "Výstupní soubor nemůže být složka."
+
+#: crates/bigiris/src/gui/dialogs/animate.rs:219
+msgid "O arquivo de saída não pode ser um dos quadros."
+msgstr "Výstupní soubor nemůže být jedním ze snímků."
+
+#: crates/bigiris/src/gui/dialogs/animate.rs:255
+msgid "Montando GIF…"
+msgstr "Vytváření GIF…"
+
+#: crates/bigiris/src/gui/dialogs/animate.rs:297
+#: crates/bigiris/src/gui/dialogs/batch.rs:111
+msgid "Pronto"
+msgstr "Připraveno"
+
+#: crates/bigiris/src/gui/dialogs/animate.rs:302
+msgid "O arquivo {file} passou a existir e foi mantido; nada foi gravado."
+msgstr "Soubor {file} mezitím vznikl a byl zachován; nic nebylo zapsáno."
+
+#: crates/bigiris/src/gui/dialogs/animate.rs:309
+msgid "Falha"
+msgstr "Selhání"
+
+#: crates/bigiris/src/gui/dialogs/batch.rs:35
+msgid "Prisma — Lote"
+msgstr "Prisma — Batch"
+
+#: crates/bigiris/src/gui/dialogs/batch.rs:39
+msgid "Conversão em lote"
+msgstr "Dávková konverze"
+
+#: crates/bigiris/src/gui/dialogs/batch.rs:46
+msgid "Arquivos"
+msgstr "Soubory"
+
+#: crates/bigiris/src/gui/dialogs/batch.rs:50
+#: crates/bigiris/src/gui/dialogs/batch.rs:402
+msgid "Adicionar arquivos"
+msgstr "Přidání souborů"
+
+#: crates/bigiris/src/gui/dialogs/batch.rs:56
+msgid "Adicionar pasta (imagens)"
+msgstr "Přidat složku (obrázky)"
+
+#: crates/bigiris/src/gui/dialogs/batch.rs:66
+#: crates/bigiris/src/gui/dialogs/convert.rs:62
+msgid "Conversão"
+msgstr "Konverze"
+
+#: crates/bigiris/src/gui/dialogs/batch.rs:72
+#: crates/bigiris/src/gui/dialogs/convert.rs:42
+msgid "Qualidade (JPEG/AVIF)"
+msgstr "Kvalita (JPEG / AVIF)"
+
+#: crates/bigiris/src/gui/dialogs/batch.rs:73
+#: crates/bigiris/src/gui/dialogs/convert.rs:43
+msgid "1 menor qualidade · 85 equilíbrio · 100 maior qualidade"
+msgstr "1 nižší kvalita · 85 vyvážený · 100 vyšší kvalita"
+
+#: crates/bigiris/src/gui/dialogs/batch.rs:79
+#: crates/bigiris/src/gui/dialogs/convert.rs:48
+msgid "Otimizar tamanho"
+msgstr "Optimalizace velikosti"
+
+#: crates/bigiris/src/gui/dialogs/batch.rs:80
+#: crates/bigiris/src/gui/dialogs/convert.rs:49
+msgid "PNG com compressão máxima; AVIF mais lento; arquivo menor"
+msgstr "PNG s maximální kompresí; AVIF pomaleji; menší soubor"
+
+#: crates/bigiris/src/gui/dialogs/batch.rs:86
+#: crates/bigiris/src/gui/dialogs/convert.rs:69
+msgid "Destino"
+msgstr "Destinace"
+
+#: crates/bigiris/src/gui/dialogs/batch.rs:93
+#: crates/bigiris/src/gui/dialogs/convert.rs:77
+msgid "Pasta de saída"
+msgstr "Výstupní složka"
+
+#: crates/bigiris/src/gui/dialogs/batch.rs:94
+#: crates/bigiris/src/gui/dialogs/batch.rs:216
+#: crates/bigiris/src/gui/dialogs/convert.rs:78
+#: crates/bigiris/src/gui/dialogs/convert.rs:165
+msgid "Mesma pasta do arquivo de origem"
+msgstr "Stejná složka jako zdrojový soubor"
+
+#: crates/bigiris/src/gui/dialogs/batch.rs:102
+#: crates/bigiris/src/gui/dialogs/convert.rs:86
+msgid "Usar a mesma pasta do arquivo de origem"
+msgstr "Použití složky zdrojového souboru"
+
+#: crates/bigiris/src/gui/dialogs/batch.rs:117
+msgid "Aguardando. Clique em Processar para iniciar."
+msgstr "Hotovo. Klikněte na Zpracovat pro spuštění."
+
+#: crates/bigiris/src/gui/dialogs/batch.rs:128
+msgid "Processar"
+msgstr "Procesní obrázky"
+
+#: crates/bigiris/src/gui/dialogs/batch.rs:259
+msgid "Adicione ao menos uma imagem para processar."
+msgstr "Přidejte alespoň jeden obrázek ke zpracování."
+
+#: crates/bigiris/src/gui/dialogs/batch.rs:271
+msgid "Iniciando…"
+msgstr "Začínáme…"
+
+#: crates/bigiris/src/gui/dialogs/batch.rs:272
+msgid "Processando…"
+msgstr "Zpracovávám…"
+
+#: crates/bigiris/src/gui/dialogs/batch.rs:316
+msgid ""
+"Cancelado após {done}/{total} em {timing}. {ok} gravado(s), {skip} "
+"ignorado(s), {fail} falha(s)."
+msgstr ""
+"Zrušeno po {done}/{total} za {timing}. Zapsáno: {ok}, přeskočeno: {skip}, "
+"selhalo: {fail}."
+
+#: crates/bigiris/src/gui/dialogs/batch.rs:318
+msgid ""
+"Concluído em {timing}. {ok} gravado(s), {skip} ignorado(s), {fail} falha(s)."
+msgstr ""
+"Dokončeno za {timing}. Zapsáno: {ok}, přeskočeno: {skip}, selhalo: {fail}."
+
+#: crates/bigiris/src/gui/dialogs/batch.rs:338
+msgid ""
+"{before} → {after} ({delta}) · média por arquivo {avg_before} → {avg_after}"
+msgstr ""
+"{before} → {after} ({delta}) · průměr na soubor {avg_before} → {avg_after}"
+
+#: crates/bigiris/src/gui/dialogs/batch.rs:354
+msgid "Cancelado"
+msgstr "Zrušeno"
+
+#: crates/bigiris/src/gui/dialogs/batch.rs:356
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:369
+msgid "Concluído"
+msgstr "Hotovo"
+
+#: crates/bigiris/src/gui/dialogs/batch.rs:446
+msgid "Adicionar pasta com imagens"
+msgstr "Přidat složku obrázků"
+
+#: crates/bigiris/src/gui/dialogs/compare.rs:31
+msgid "Comparar imagens — Íris"
+msgstr "Porovnat obrázky — Iris"
+
+#: crates/bigiris/src/gui/dialogs/compare.rs:43
+msgid "Comparar imagens"
+msgstr "Porovnat obrázky"
+
+#: crates/bigiris/src/gui/dialogs/compare.rs:45
+msgid "Antes: {before}  ·  Depois: {after}"
+msgstr "Před: {before}  ·  Po: {after}"
+
+#: crates/bigiris/src/gui/dialogs/compare.rs:69
+msgid "Arraste o divisor para comparar · Esc fecha"
+msgstr "Přetáhněte oddělovač pro porovnání · Esc pro zavření"
+
+#: crates/bigiris/src/gui/dialogs/compare.rs:157
+msgid "Não foi possível abrir esta imagem"
+msgstr "Tento obrázek nelze otevřít"
+
+#: crates/bigiris/src/gui/dialogs/convert.rs:20
 msgid "Converter imagens — Prisma"
 msgstr "Převést obrázky — Prisma"
 
-#: crates/bigiris/src/gui.rs:3153 crates/bigiris/src/gui.rs:3233
+#: crates/bigiris/src/gui/dialogs/convert.rs:32
+#: crates/bigiris/src/gui/dialogs/convert.rs:96
 #: crates/bigimage-integrations/src/action.rs:75
 #: data/nautilus/bigiris-menu.py:100
 msgid "Converter"
 msgstr "Převést obrázky"
 
-#: crates/bigiris/src/gui.rs:3159 crates/bigiris/src/gui.rs:3505
-#: crates/bigiris/src/gui.rs:3773 crates/bigiris/src/gui.rs:4251
-#: crates/bigiris/src/gui.rs:4524 crates/bigiris/src/gui.rs:4860
-#: crates/bigiris/src/gui.rs:5010 crates/bigiris/src/gui.rs:5170
-#: crates/bigiris/src/gui.rs:5912
-msgid "Formato de destino"
-msgstr "Cílový formát"
-
-#: crates/bigiris/src/gui.rs:3166 crates/bigiris/src/gui.rs:3512
-#: crates/bigiris/src/gui.rs:3779 crates/bigiris/src/gui.rs:4257
-#: crates/bigiris/src/gui.rs:4530 crates/bigiris/src/gui.rs:4866
-#: crates/bigiris/src/gui.rs:5016 crates/bigiris/src/gui.rs:5176
-#: crates/bigiris/src/gui.rs:5935
-msgid "Se o arquivo de saída existir"
-msgstr "Pokud výstupní soubor existuje"
-
-#: crates/bigiris/src/gui.rs:3172 crates/bigiris/src/gui.rs:3518
-#: crates/bigiris/src/gui.rs:3785 crates/bigiris/src/gui.rs:4219
-#: crates/bigiris/src/gui.rs:4462 crates/bigiris/src/gui.rs:4812
-#: crates/bigiris/src/gui.rs:5022 crates/bigiris/src/gui.rs:5182
-#: crates/bigiris/src/gui.rs:6211
-msgid "Arquivos selecionados"
-msgstr "Vybrané soubory"
-
-#: crates/bigiris/src/gui.rs:3177 crates/bigiris/src/gui.rs:5918
-msgid "Qualidade (JPEG/AVIF)"
-msgstr "Kvalita (JPEG / AVIF)"
-
-#: crates/bigiris/src/gui.rs:3178 crates/bigiris/src/gui.rs:5919
-msgid "1 menor qualidade · 85 equilíbrio · 100 maior qualidade"
-msgstr "1 nižší kvalita · 85 vyvážený · 100 vyšší kvalita"
-
-#: crates/bigiris/src/gui.rs:3183 crates/bigiris/src/gui.rs:5925
-msgid "Otimizar tamanho"
-msgstr "Optimalizace velikosti"
-
-#: crates/bigiris/src/gui.rs:3190
+#: crates/bigiris/src/gui/dialogs/convert.rs:55
 msgid "Avançado"
 msgstr "Pokročilé"
 
-#: crates/bigiris/src/gui.rs:3191
+#: crates/bigiris/src/gui/dialogs/convert.rs:56
 msgid "Otimização do encoder"
 msgstr "Optimalizace enkodéru"
 
-#: crates/bigiris/src/gui.rs:3197 crates/bigiris/src/gui.rs:5908
-msgid "Conversão"
-msgstr "Konverze"
-
-#: crates/bigiris/src/gui.rs:3204 crates/bigiris/src/gui.rs:5932
-msgid "Destino"
-msgstr "Destinace"
-
-#: crates/bigiris/src/gui.rs:3212 crates/bigiris/src/gui.rs:5943
-msgid "Pasta de saída"
-msgstr "Výstupní složka"
-
-#: crates/bigiris/src/gui.rs:3213 crates/bigiris/src/gui.rs:3315
-#: crates/bigiris/src/gui.rs:6057
-msgid "Mesma pasta do arquivo de origem"
-msgstr "Stejná složka jako zdrojový soubor"
-
-#: crates/bigiris/src/gui.rs:3221 crates/bigiris/src/gui.rs:5952
-msgid "Usar a mesma pasta do arquivo de origem"
-msgstr "Použití složky zdrojového souboru"
-
-#: crates/bigiris/src/gui.rs:3249
+#: crates/bigiris/src/gui/dialogs/convert.rs:102
 msgid ""
 "Esta imagem tem transparência — JPEG perde o canal alfa. Considere PNG ou "
 "WebP."
 msgstr ""
-"Tento obrázek má průhlednost – ve formátu JPEG je alfa kanál vynechán. (PNG)"
-" (WebP)"
+"Tento obrázek má průhlednost – ve formátu JPEG je alfa kanál vynechán. (PNG) "
+"(WebP)"
 
-#: crates/bigiris/src/gui.rs:3372
+#: crates/bigiris/src/gui/dialogs/convert.rs:123
+msgid ""
+"Esta imagem contém GPS (localização) no EXIF. Atenção ao compartilhar "
+"publicamente — nosso pipeline remove o EXIF automaticamente no re-encode."
+msgstr ""
+"Tento obrázek obsahuje v EXIF údaje GPS (polohu). Dejte pozor při veřejném "
+"sdílení — náš pipeline při překódování EXIF automaticky odstraní."
+
+#: crates/bigiris/src/gui/dialogs/convert.rs:217
 msgid "Convertendo…"
 msgstr "Převádím…"
 
-#: crates/bigiris/src/gui.rs:3378
+#: crates/bigiris/src/gui/dialogs/convert.rs:223
 msgid "Convertendo"
 msgstr "Konverze"
 
-#: crates/bigiris/src/gui.rs:3406
-msgid "Redimensionar imagens — Prisma"
-msgstr "Změna velikosti obrázků — Prisma"
+#: crates/bigiris/src/gui/dialogs/crop.rs:284
+msgid ""
+"Arraste nos cantos para redimensionar · dentro do recorte para mover · fora "
+"dele para uma nova seleção."
+msgstr ""
+"Tažením rohů změníte velikost · uvnitř ořezu jej přesunete · mimo něj "
+"vytvoříte nový výběr."
 
-#: crates/bigiris/src/gui.rs:3418 crates/bigiris/src/gui.rs:3538
-#: crates/bigimage-integrations/src/action.rs:79
-#: data/nautilus/bigiris-menu.py:115
-msgid "Redimensionar"
-msgstr "Změna velikosti obrázků"
-
-#: crates/bigiris/src/gui.rs:3424 crates/bigiris/src/gui.rs:3438
-msgid "Aresta máxima"
-msgstr "Max edge"
-
-#: crates/bigiris/src/gui.rs:3425
-msgid "Escala (%)"
-msgstr "Měřítko (v %)"
-
-#: crates/bigiris/src/gui.rs:3426
-msgid "Dimensão exata (WxH)"
-msgstr "Přesná velikost (WxH)"
-
-#: crates/bigiris/src/gui.rs:3427
-msgid "Encaixar em (WxH)"
-msgstr "Rozměry (WxH)"
-
-#: crates/bigiris/src/gui.rs:3431
-msgid "Modo"
-msgstr "Režim"
-
-#: crates/bigiris/src/gui.rs:3439
-msgid "pixels (lado maior)"
-msgstr "pixelů (nejdelší strana)"
-
-#: crates/bigiris/src/gui.rs:3443
-msgid "Porcentagem"
-msgstr "Procento"
-
-#: crates/bigiris/src/gui.rs:3444
-msgid "100 = tamanho original"
-msgstr "100 = původní velikost"
-
-#: crates/bigiris/src/gui.rs:3448
-msgid "Largura"
-msgstr "Šířka"
-
-#: crates/bigiris/src/gui.rs:3451
-msgid "Altura"
-msgstr "Výška"
-
-#: crates/bigiris/src/gui.rs:3455
-msgid "Largura máxima"
-msgstr "Maximální šířka 100 cm"
-
-#: crates/bigiris/src/gui.rs:3458
-msgid "Altura máxima"
-msgstr "Max. výška 100 cm"
-
-#: crates/bigiris/src/gui.rs:3497
-msgid "Kernel de interpolação"
-msgstr "Interpolační jádro"
-
-#: crates/bigiris/src/gui.rs:3526
-msgid "Modo de redimensionamento"
-msgstr "Režim změny velikosti"
-
-#: crates/bigiris/src/gui.rs:3529
-msgid "Opções"
-msgstr "Možnosti"
-
-#: crates/bigiris/src/gui.rs:3702
-msgid "Redimensionando…"
-msgstr "Změna velikosti…"
-
-#: crates/bigiris/src/gui.rs:3708
-msgid "Redimensionando"
-msgstr "Změna velikosti"
-
-#: crates/bigiris/src/gui.rs:3756
-msgid "Girar imagens — Prisma"
-msgstr "Otočení obrázků — Prisma"
-
-#: crates/bigiris/src/gui.rs:3760 crates/bigiris/src/gui.rs:3799
-#: crates/bigimage-integrations/src/action.rs:83
-#: data/nautilus/bigiris-menu.py:129
-msgid "Girar"
-msgstr "Otočit"
-
-#: crates/bigiris/src/gui.rs:3762
-msgid "90° (horário)"
-msgstr "90° (ve směru hodinových ručiček)"
-
-#: crates/bigiris/src/gui.rs:3762
-#: crates/bigimage-integrations/src/action.rs:259
-#: data/nautilus/bigiris-menu.py:134
-msgid "180°"
-msgstr "180°"
-
-#: crates/bigiris/src/gui.rs:3762
-msgid "270° (anti-horário)"
-msgstr "270° (proti směru hodinových ručiček)"
-
-#: crates/bigiris/src/gui.rs:3765
-msgid "Rotação"
-msgstr "Rotace"
-
-#: crates/bigiris/src/gui.rs:3856
-msgid "Girando…"
-msgstr "Rotující…"
-
-#: crates/bigiris/src/gui.rs:3862
-msgid "Girando"
-msgstr "Rotace"
-
-#: crates/bigiris/src/gui.rs:4182
+#: crates/bigiris/src/gui/dialogs/crop.rs:309
 msgid "Recortar — Prisma"
 msgstr "Oříznout — Prisma"
 
-#: crates/bigiris/src/gui.rs:4194 crates/bigiris/src/gui.rs:4278
+#: crates/bigiris/src/gui/dialogs/crop.rs:321
+#: crates/bigiris/src/gui/dialogs/crop.rs:389
 msgid "Recortar"
 msgstr "Oříznout obrázek"
 
-#: crates/bigiris/src/gui.rs:4225 crates/bigiris/src/gui.rs:4468
-#: crates/bigiris/src/gui.rs:4818
+#: crates/bigiris/src/gui/dialogs/crop.rs:348
+#: crates/bigiris/src/gui/dialogs/extent.rs:96
+#: crates/bigiris/src/gui/dialogs/upscale.rs:72
 msgid "Tamanho original"
 msgstr "Původní velikost"
 
-#: crates/bigiris/src/gui.rs:4226 crates/bigiris/src/gui.rs:4469
-#: crates/bigiris/src/gui.rs:4822
+#: crates/bigiris/src/gui/dialogs/crop.rs:349
+#: crates/bigiris/src/gui/dialogs/extent.rs:97
+#: crates/bigiris/src/gui/dialogs/upscale.rs:76
 msgid "Primeiro arquivo"
 msgstr "První soubor"
 
-#: crates/bigiris/src/gui.rs:4232
+#: crates/bigiris/src/gui/dialogs/crop.rs:355
 msgid "X (px)"
 msgstr "X (px)"
 
-#: crates/bigiris/src/gui.rs:4236
+#: crates/bigiris/src/gui/dialogs/crop.rs:359
 msgid "Y (px)"
 msgstr "Y (px)"
 
-#: crates/bigiris/src/gui.rs:4240
+#: crates/bigiris/src/gui/dialogs/crop.rs:363
 msgid "Largura (px)"
 msgstr "Šířka (px)"
 
-#: crates/bigiris/src/gui.rs:4244
+#: crates/bigiris/src/gui/dialogs/crop.rs:367
 msgid "Altura (px)"
 msgstr "Výška (v px)"
 
-#: crates/bigiris/src/gui.rs:4277
+#: crates/bigiris/src/gui/dialogs/crop.rs:388
 msgid "Centro 50%"
 msgstr "Na střed 50%"
 
-#: crates/bigiris/src/gui.rs:4354
+#: crates/bigiris/src/gui/dialogs/crop.rs:449
 msgid "Recortando…"
 msgstr "Ořezávám…"
 
-#: crates/bigiris/src/gui.rs:4360
+#: crates/bigiris/src/gui/dialogs/crop.rs:455
 msgid "Recortando"
 msgstr "Oříznutí"
 
-#: crates/bigiris/src/gui.rs:4378
+#: crates/bigiris/src/gui/dialogs/extent.rs:12
 msgid "YouTube community (1:1)"
 msgstr "Komunita YouTube (1:1)"
 
-#: crates/bigiris/src/gui.rs:4379
+#: crates/bigiris/src/gui/dialogs/extent.rs:13
 msgid "Instagram feed (4:5)"
 msgstr "Instagram feed (4:5)"
 
-#: crates/bigiris/src/gui.rs:4380
+#: crates/bigiris/src/gui/dialogs/extent.rs:14
 msgid "Stories / Shorts (9:16)"
 msgstr "Příběhy / krátké filmy (9:16)"
 
-#: crates/bigiris/src/gui.rs:4381
+#: crates/bigiris/src/gui/dialogs/extent.rs:15
 msgid "Widescreen (16:9)"
 msgstr "Širokoúhlý formát (16:9)"
 
-#: crates/bigiris/src/gui.rs:4382
+#: crates/bigiris/src/gui/dialogs/extent.rs:16
 msgid "Personalizado…"
 msgstr "Vlastní…"
 
-#: crates/bigiris/src/gui.rs:4388
+#: crates/bigiris/src/gui/dialogs/extent.rs:22
 msgid "Preto suave (#0d0e12)"
 msgstr "Měkká černá (#0d0e12)"
 
-#: crates/bigiris/src/gui.rs:4389
+#: crates/bigiris/src/gui/dialogs/extent.rs:23
 msgid "Preto puro (#000000)"
 msgstr "Čistá černá (#000100)"
 
-#: crates/bigiris/src/gui.rs:4390
+#: crates/bigiris/src/gui/dialogs/extent.rs:24
 msgid "Branco (#ffffff)"
 msgstr "Bílá (#ffffff)"
 
-#: crates/bigiris/src/gui.rs:4391
+#: crates/bigiris/src/gui/dialogs/extent.rs:25
 msgid "Transparente"
 msgstr "Transparentní"
 
-#: crates/bigiris/src/gui.rs:4392
+#: crates/bigiris/src/gui/dialogs/extent.rs:26
 msgid "Personalizada (hex)"
 msgstr "Vlastní (hex)"
 
-#: crates/bigiris/src/gui.rs:4399
+#: crates/bigiris/src/gui/dialogs/extent.rs:33
 msgid "Centro"
 msgstr "Centrum"
 
-#: crates/bigiris/src/gui.rs:4399
+#: crates/bigiris/src/gui/dialogs/extent.rs:33
 msgid "Topo"
 msgstr "Horní okraj"
 
-#: crates/bigiris/src/gui.rs:4399
+#: crates/bigiris/src/gui/dialogs/extent.rs:33
 msgid "Base"
 msgstr "Dolní okraj"
 
-#: crates/bigiris/src/gui.rs:4417
+#: crates/bigiris/src/gui/dialogs/extent.rs:49
 msgid "Letterbox — Prisma"
 msgstr "Poštovní schránka — Prisma"
 
-#: crates/bigiris/src/gui.rs:4430
+#: crates/bigiris/src/gui/dialogs/extent.rs:62
 msgid "Letterbox"
 msgstr "Letterbox"
 
-#: crates/bigiris/src/gui.rs:4453
+#: crates/bigiris/src/gui/dialogs/extent.rs:63
+msgid "Prisma · sem corte"
+msgstr "Prisma · bez ořezu"
+
+#: crates/bigiris/src/gui/dialogs/extent.rs:85
 msgid ""
 "Estende a tela em volta da imagem para encaixá-la num formato fixo (post de "
 "YouTube, feed do Instagram, Stories…) sem cortar nenhum pixel. A imagem "
@@ -786,339 +1004,314 @@ msgstr ""
 "pixelů. Původní obrázek je vycentrován a zbývající oblast je vyplněna "
 "vybranou barvou."
 
-#: crates/bigiris/src/gui.rs:4476
+#: crates/bigiris/src/gui/dialogs/extent.rs:104
 msgid "Proporção alvo"
 msgstr "Cílový poměr stran"
 
-#: crates/bigiris/src/gui.rs:4483
+#: crates/bigiris/src/gui/dialogs/extent.rs:111
 msgid "Razão W"
 msgstr "Poměr stran"
 
-#: crates/bigiris/src/gui.rs:4486
+#: crates/bigiris/src/gui/dialogs/extent.rs:114
 msgid "Razão H"
 msgstr "Poměr stran"
 
-#: crates/bigiris/src/gui.rs:4496
+#: crates/bigiris/src/gui/dialogs/extent.rs:124
 msgid "Cor de fundo"
 msgstr "Barva pozadí"
 
-#: crates/bigiris/src/gui.rs:4502
+#: crates/bigiris/src/gui/dialogs/extent.rs:130
 msgid "Hex (#RRGGBB)"
 msgstr "Hex (#RRGGBB)"
 
-#: crates/bigiris/src/gui.rs:4510
+#: crates/bigiris/src/gui/dialogs/extent.rs:138
 msgid "Posição da imagem"
 msgstr "Pozice obrázku"
 
-#: crates/bigiris/src/gui.rs:4516 crates/bigiris/src/gui.rs:4835
+#: crates/bigiris/src/gui/dialogs/extent.rs:144
+#: crates/bigiris/src/gui/dialogs/upscale.rs:89
 msgid "Destino previsto"
 msgstr "Předpokládaná destinace"
 
-#: crates/bigiris/src/gui.rs:4555
+#: crates/bigiris/src/gui/dialogs/extent.rs:171
 msgid "Estender"
 msgstr "Extend"
 
-#: crates/bigiris/src/gui.rs:4634
+#: crates/bigiris/src/gui/dialogs/extent.rs:240
 msgid "—"
 msgstr "—"
 
-#: crates/bigiris/src/gui.rs:4726
+#: crates/bigiris/src/gui/dialogs/extent.rs:326
 msgid "Estendendo…"
 msgstr "Rozšiřování…"
 
-#: crates/bigiris/src/gui.rs:4732
+#: crates/bigiris/src/gui/dialogs/extent.rs:332
 msgid "Estendendo"
 msgstr "Rozšiřování"
 
-#: crates/bigiris/src/gui.rs:4765
-msgid "Aumentar resolução — Prisma"
-msgstr "Upscale — Prisma"
-
-#: crates/bigiris/src/gui.rs:4778
-msgid "Aumentar resolução"
-msgstr "Upscale image"
-
-#: crates/bigiris/src/gui.rs:4829
-msgid "Fator"
-msgstr "Faktor"
-
-#: crates/bigiris/src/gui.rs:4886
-msgid "Aumentar"
-msgstr "Upscale image"
-
-#: crates/bigiris/src/gui.rs:4956
-msgid "Aumentando…"
-msgstr "Upscaling…"
-
-#: crates/bigiris/src/gui.rs:4965
-msgid "Aumentando"
-msgstr "Upscaling"
-
-#: crates/bigiris/src/gui.rs:4993
+#: crates/bigiris/src/gui/dialogs/flip.rs:20
 msgid "Espelhar imagens — Prisma"
 msgstr "Převrátit obrázky — Prisma"
 
-#: crates/bigiris/src/gui.rs:4997 crates/bigiris/src/gui.rs:5036
+#: crates/bigiris/src/gui/dialogs/flip.rs:24
+#: crates/bigiris/src/gui/dialogs/flip.rs:47
 #: crates/bigimage-integrations/src/action.rs:87
 #: data/nautilus/bigiris-menu.py:142
 msgid "Espelhar"
 msgstr "Překlopit obrázek"
 
-#: crates/bigiris/src/gui.rs:4999
+#: crates/bigiris/src/gui/dialogs/flip.rs:26
 msgid "Horizontal (esquerda ↔ direita)"
 msgstr "Horizontální (vlevo ↔ vpravo)"
 
-#: crates/bigiris/src/gui.rs:4999
+#: crates/bigiris/src/gui/dialogs/flip.rs:26
 msgid "Vertical (cima ↔ baixo)"
 msgstr "Vertikální (horní ↔ dolní)"
 
-#: crates/bigiris/src/gui.rs:5002
+#: crates/bigiris/src/gui/dialogs/flip.rs:29
 msgid "Eixo"
 msgstr "Axis"
 
-#: crates/bigiris/src/gui.rs:5092
+#: crates/bigiris/src/gui/dialogs/flip.rs:87
 msgid "Espelhando…"
 msgstr "Flipping…"
 
-#: crates/bigiris/src/gui.rs:5098
+#: crates/bigiris/src/gui/dialogs/flip.rs:93
 msgid "Espelhando"
 msgstr "Flipping"
 
-#: crates/bigiris/src/gui.rs:5126
-msgid "Ajustar cores — Prisma"
-msgstr "Úprava barev — Prisma"
+#: crates/bigiris/src/gui/dialogs/mod.rs:64
+#: crates/bigimage-integrations/src/action.rs:150
+#: data/nautilus/bigiris-menu.py:104
+msgid "PNG"
+msgstr "PNG"
 
-#: crates/bigiris/src/gui.rs:5141
-#: crates/bigimage-integrations/src/action.rs:91
-#: data/nautilus/bigiris-menu.py:153
-msgid "Ajustar cores"
-msgstr "Nastavení barev"
+#: crates/bigiris/src/gui/dialogs/mod.rs:65
+msgid "JPG (JPEG)"
+msgstr "JPG (JPEG)"
 
-#: crates/bigiris/src/gui.rs:5144
-msgid "Brilho"
-msgstr "Jas"
+#: crates/bigiris/src/gui/dialogs/mod.rs:66
+#: crates/bigimage-integrations/src/action.rs:166
+#: data/nautilus/bigiris-menu.py:106
+msgid "WebP"
+msgstr "WebP"
 
-#: crates/bigiris/src/gui.rs:5145
-msgid "-100 escuro · 0 neutro · +100 claro"
-msgstr "-100 tmavý · 0 neutrální · +101 světlý"
+#: crates/bigiris/src/gui/dialogs/mod.rs:67
+#: crates/bigimage-integrations/src/action.rs:174
+#: data/nautilus/bigiris-menu.py:107
+msgid "AVIF"
+msgstr "AVIF"
 
-#: crates/bigiris/src/gui.rs:5149
-msgid "Contraste"
-msgstr "Kontrast"
+#: crates/bigiris/src/gui/dialogs/mod.rs:68
+#: crates/bigimage-integrations/src/action.rs:182
+#: data/nautilus/bigiris-menu.py:108
+msgid "TIFF"
+msgstr "TIFF"
 
-#: crates/bigiris/src/gui.rs:5150
-msgid "-100 plano · 0 neutro · +100 agressivo"
-msgstr "-100 plochý · 0 neutrální · +101 silný"
+#: crates/bigiris/src/gui/dialogs/mod.rs:69
+msgid "BMP"
+msgstr "BMP"
 
-#: crates/bigiris/src/gui.rs:5154
-msgid "Saturação"
-msgstr "Saturace"
+#: crates/bigiris/src/gui/dialogs/mod.rs:70
+msgid "GIF"
+msgstr "GIF"
 
-#: crates/bigiris/src/gui.rs:5155
-msgid "-100 cinza · 0 neutro · +100 vibrante"
-msgstr "-100 šedá · 0 neutrální · +101 živá"
+#: crates/bigiris/src/gui/dialogs/mod.rs:71
+msgid "ICO (até 256 × 256)"
+msgstr "ICO (až do 256 × 200)"
 
-#: crates/bigiris/src/gui.rs:5159
-msgid "Gamma"
-msgstr "Gamma"
+#: crates/bigiris/src/gui/dialogs/mod.rs:72
+msgid "PNM (Netpbm)"
+msgstr "PNM (Netpbm)"
 
-#: crates/bigiris/src/gui.rs:5161
-msgid "Abaixo de 1 clareia os meios-tons · 1 mantém · acima de 1 escurece"
-msgstr "Pod 1 zesvětlí střední tóny · 1 je zachová · nad 1 ztmaví"
+#: crates/bigiris/src/gui/dialogs/mod.rs:73
+msgid "TGA"
+msgstr "TGA"
 
-#: crates/bigiris/src/gui.rs:5189
-msgid "Tom"
-msgstr "Tón"
+#: crates/bigiris/src/gui/dialogs/mod.rs:74
+msgid "QOI"
+msgstr "QOI"
 
-#: crates/bigiris/src/gui.rs:5194
-msgid "Cor"
-msgstr "Barva"
+#: crates/bigiris/src/gui/dialogs/mod.rs:75
+msgid "HDR"
+msgstr "HDR"
 
-#: crates/bigiris/src/gui.rs:5197 crates/bigiris/src/gui.rs:6697
-msgid "Saída"
-msgstr "Výstup"
+#: crates/bigiris/src/gui/dialogs/mod.rs:76
+msgid "OpenEXR"
+msgstr "OpenEXR"
 
-#: crates/bigiris/src/gui.rs:5205
-msgid "Aplicar"
-msgstr "Použít"
+#: crates/bigiris/src/gui/dialogs/mod.rs:100
+msgid "Pular se já existir"
+msgstr "Přeskočit existující soubory"
 
-#: crates/bigiris/src/gui.rs:5328
-msgid "Ajustando…"
-msgstr "Nastavování…"
+#: crates/bigiris/src/gui/dialogs/mod.rs:101
+msgid "Sobrescrever o arquivo"
+msgstr "Přepsat soubor"
 
-#: crates/bigiris/src/gui.rs:5334
-msgid "Ajustando"
-msgstr "Nastavení"
+#: crates/bigiris/src/gui/dialogs/mod.rs:102
+msgid "Incrementar (_1, _2, …)"
+msgstr "Přidání přípony (_1, _2, …)"
 
-#: crates/bigiris/src/gui.rs:5433
-msgid "Privacidade"
-msgstr "Soukromí"
+#: crates/bigiris/src/gui/dialogs/mod.rs:123
+#: crates/bigiris/src/gui/dialogs/mod.rs:138
+msgid "Formato de destino"
+msgstr "Cílový formát"
 
-#: crates/bigiris/src/gui.rs:5509
-msgid "Imagem"
-msgstr "Obrázek"
+#: crates/bigiris/src/gui/dialogs/mod.rs:134
+msgid "Manter o formato original"
+msgstr "Zachovat původní formát"
 
-#: crates/bigiris/src/gui.rs:5678
-msgid "Comparar imagens — Íris"
-msgstr "Porovnat obrázky — Iris"
+#: crates/bigiris/src/gui/dialogs/mod.rs:156
+msgid "Se o arquivo de saída existir"
+msgstr "Pokud výstupní soubor existuje"
 
-#: crates/bigiris/src/gui.rs:5713
-msgid "Arraste o divisor para comparar · Esc fecha"
-msgstr "Přetáhněte oddělovač pro porovnání · Esc pro zavření"
+#: crates/bigiris/src/gui/dialogs/mod.rs:216
+msgid "{first} e mais {count}"
+msgstr "{first} a {count} dalších"
 
-#: crates/bigiris/src/gui.rs:5874
-msgid "Prisma — Lote"
-msgstr "Prisma — Batch"
-
-#: crates/bigiris/src/gui.rs:5878
-msgid "Conversão em lote"
-msgstr "Dávková konverze"
-
-#: crates/bigiris/src/gui.rs:5888
-msgid "Arquivos"
-msgstr "Soubory"
-
-#: crates/bigiris/src/gui.rs:5892 crates/bigiris/src/gui.rs:6224
-msgid "Adicionar arquivos"
-msgstr "Přidání souborů"
-
-#: crates/bigiris/src/gui.rs:5898
-msgid "Adicionar pasta (imagens)"
-msgstr "Přidat složku (obrázky)"
-
-#: crates/bigiris/src/gui.rs:5967
-msgid "Aguardando. Clique em Processar para iniciar."
-msgstr "Hotovo. Klikněte na Zpracovat pro spuštění."
-
-#: crates/bigiris/src/gui.rs:5978
-msgid "Processar"
-msgstr "Procesní obrázky"
-
-#: crates/bigiris/src/gui.rs:6102
-msgid "Adicione ao menos uma imagem para processar."
-msgstr "Přidejte alespoň jeden obrázek ke zpracování."
-
-#: crates/bigiris/src/gui.rs:6112
-msgid "Iniciando…"
-msgstr "Začínáme…"
-
-#: crates/bigiris/src/gui.rs:6113
-msgid "Processando…"
-msgstr "Zpracovávám…"
-
-#: crates/bigiris/src/gui.rs:6175
-msgid "Cancelado"
-msgstr "Zrušeno"
-
-#: crates/bigiris/src/gui.rs:6177 crates/bigiris/src/gui.rs:6911
-msgid "Concluído"
-msgstr "Hotovo"
-
-#: crates/bigiris/src/gui.rs:6268
-msgid "Adicionar pasta com imagens"
-msgstr "Přidat složku obrázků"
-
-#: crates/bigiris/src/gui.rs:6330
+#: crates/bigiris/src/gui/dialogs/mod.rs:231
 msgid "Escolher pasta de saída"
 msgstr "Vyberte výstupní složku"
 
-#: crates/bigiris/src/gui.rs:6362
-msgid "Criar GIF animado — Prisma"
-msgstr "Vytvořit animovaný GIF — Prisma"
+#: crates/bigiris/src/gui/dialogs/properties.rs:60
+msgid "Não foi possível ler as informações do arquivo"
+msgstr "Informace o souboru nelze načíst"
 
-#: crates/bigiris/src/gui.rs:6366
-msgid "Criar GIF animado"
-msgstr "Vytvořit animovaný GIF"
+#: crates/bigiris/src/gui/dialogs/properties.rs:90
+msgid "Privacidade"
+msgstr "Soukromí"
 
-#: crates/bigiris/src/gui.rs:6380
-msgid "Selecione pelo menos 2 imagens"
-msgstr "Vyberte alespoň 2 obrázky"
+#: crates/bigiris/src/gui/dialogs/properties.rs:94
+msgid "Coordenadas GPS presentes"
+msgstr "Souřadnice GPS přítomny"
 
-#: crates/bigiris/src/gui.rs:6381
-msgid "Informe vários arquivos de uma vez para montar a animação."
-msgstr "Vyberte více souborů pro vytvoření animace."
+#: crates/bigiris/src/gui/dialogs/properties.rs:96
+msgid "Identificação de câmera/software presente"
+msgstr "Identifikace fotoaparátu/softwaru přítomna"
 
-#: crates/bigiris/src/gui.rs:6402
-msgid "Atraso por quadro (ms)"
-msgstr "Zpoždění snímku (ms)"
+#: crates/bigiris/src/gui/dialogs/properties.rs:98
+msgid "Remova antes de publicar se for sensível."
+msgstr "Pokud je to citlivé, před zveřejněním odstraňte."
 
-#: crates/bigiris/src/gui.rs:6403
-msgid "100 ≈ 10 fps · 40 ≈ 25 fps · 1000 = 1 s"
-msgstr "100 ≈ 12 fps · 40 = 25 fps"
+#: crates/bigiris/src/gui/dialogs/properties.rs:126
+msgid "Nome"
+msgstr "Název"
 
-#: crates/bigiris/src/gui.rs:6408
-msgid "Loop"
-msgstr "Opakování animace"
+#: crates/bigiris/src/gui/dialogs/properties.rs:131
+msgid "Pasta"
+msgstr "Složka"
 
-#: crates/bigiris/src/gui.rs:6410
-msgid "Infinito (padrão)"
-msgstr "Nekonečné (výchozí)"
+#: crates/bigiris/src/gui/dialogs/properties.rs:149
+#: crates/bigiris/src/gui/dialogs/properties.rs:156
+#: crates/bigiris/src/gui/dialogs/properties.rs:157
+msgid "Formato"
+msgstr "Formát"
 
-#: crates/bigiris/src/gui.rs:6411
-msgid "Uma vez"
-msgstr "Once"
+#: crates/bigiris/src/gui/dialogs/properties.rs:151
+msgid "{format} (extensão: {extension})"
+msgstr "{format} (přípona: {extension})"
 
-#: crates/bigiris/src/gui.rs:6412
-msgid "2 vezes"
-msgstr "2 krát"
+#: crates/bigiris/src/gui/dialogs/properties.rs:163
+#: crates/bigiris/src/gui/dialogs/properties.rs:170
+msgid "Tamanho"
+msgstr "Velikost"
 
-#: crates/bigiris/src/gui.rs:6413
-msgid "5 vezes"
-msgstr "5 krát"
+#: crates/bigiris/src/gui/dialogs/properties.rs:165
+msgid "Modificado"
+msgstr "Změněno"
 
-#: crates/bigiris/src/gui.rs:6414
-msgid "10 vezes"
-msgstr "10 krát"
+#: crates/bigiris/src/gui/dialogs/properties.rs:171
+msgid "(indisponível: {error})"
+msgstr "(nedostupné: {error})"
 
-#: crates/bigiris/src/gui.rs:6419
-msgid "Velocidade do encoder"
-msgstr "Rychlost snímače"
+#: crates/bigiris/src/gui/dialogs/properties.rs:180
+msgid "Imagem"
+msgstr "Obrázek"
 
-#: crates/bigiris/src/gui.rs:6420
-msgid "maior = mais rápido, paleta um pouco pior · padrão 10"
-msgstr "vyšší = rychlejší, o něco nižší kvalita palety · default 10"
+#: crates/bigiris/src/gui/dialogs/properties.rs:197
+#: crates/bigiris/src/gui/dialogs/properties.rs:214
+msgid "Dimensões"
+msgstr "Rozměry"
 
-#: crates/bigiris/src/gui.rs:6430
-msgid "Arquivo de saída (.gif)"
-msgstr "Výstupní soubor (.gif)"
+#: crates/bigiris/src/gui/dialogs/properties.rs:201
+msgid "Megapixels"
+msgstr "Megapixely"
 
-#: crates/bigiris/src/gui.rs:6436
-msgid "Quadros"
-msgstr "Rámy"
+#: crates/bigiris/src/gui/dialogs/properties.rs:205
+msgid "Razão de aspecto"
+msgstr "Poměr stran"
 
-#: crates/bigiris/src/gui.rs:6453
-msgid "Criar GIF"
-msgstr "Vytvořit soubor GIF"
+#: crates/bigiris/src/gui/dialogs/properties.rs:208
+msgid "Modo de cor"
+msgstr "Barevný režim"
 
-#: crates/bigiris/src/gui.rs:6503
-msgid "Montando GIF…"
-msgstr "Vytváření GIF…"
+#: crates/bigiris/src/gui/dialogs/properties.rs:209
+msgid "Bits por canal"
+msgstr "Bitů na kanál"
 
-#: crates/bigiris/src/gui.rs:6521
-msgid "Pronto"
-msgstr "Připraveno"
+#: crates/bigiris/src/gui/dialogs/properties.rs:215
+msgid "(falha: não foi possível identificar o formato pelo conteúdo)"
+msgstr "(selhání: formát nelze podle obsahu určit)"
 
-#: crates/bigiris/src/gui.rs:6527
-msgid "Falha"
-msgstr "Selhání"
+#: crates/bigiris/src/gui/dialogs/properties.rs:225
+msgid "Orientação EXIF"
+msgstr "Orientace EXIF"
 
-#: crates/bigiris/src/gui.rs:6608
+#: crates/bigiris/src/gui/dialogs/properties.rs:227
+msgid "{orientation} · use Girar ▸ Automático pra corrigir"
+msgstr "{orientation} · k opravě použijte Otočit ▸ Automaticky"
+
+#: crates/bigiris/src/gui/dialogs/properties.rs:242
+msgid "Tons de cinza"
+msgstr "Odstíny šedi"
+
+#: crates/bigiris/src/gui/dialogs/properties.rs:243
+msgid "Tons de cinza + alfa"
+msgstr "Odstíny šedi + alfa"
+
+#: crates/bigiris/src/gui/dialogs/properties.rs:280
+msgid "Campos presentes: {count}"
+msgstr "Přítomná pole: {count}"
+
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:25
+msgid "Não foi possível ler a imagem: {error}"
+msgstr "Obrázek nelze načíst: {error}"
+
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:38
+msgid "Não foi possível gravar o resultado: {error}"
+msgstr "Výsledek nelze zapsat: {error}"
+
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:72
 msgid "Remover fundo — Prisma"
 msgstr "Odstranit pozadí — Prisma"
 
-#: crates/bigiris/src/gui.rs:6613 crates/bigiris/src/gui.rs:6726
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:77
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:177
 msgid "Remover fundo"
 msgstr "Odstranit pozadí"
 
-#: crates/bigiris/src/gui.rs:6630
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:78
+msgid "Prisma · BiRefNet-lite"
+msgstr "Prisma · BiRefNet-lite"
+
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:94
+#: crates/bigiris/src/gui/previews.rs:223
 msgid "Nenhuma imagem selecionada"
 msgstr "Nebyl vybrán žádný obrázek"
 
-#: crates/bigiris/src/gui.rs:6631
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:95
 msgid "Informe um ou mais arquivos ao abrir o diálogo."
 msgstr "Při otevření dialogového okna vyberte jeden nebo více souborů."
 
-#: crates/bigiris/src/gui.rs:6668
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:116
+msgid ""
+"Esta build não inclui IA. Recompile com `cargo build --features ai` e "
+"instale `onnxruntime` (Arch: `pacman -S onnxruntime`)."
+msgstr ""
+"Toto sestavení neobsahuje AI. Znovu sestavte pomocí `cargo build --features "
+"ai` a nainstalujte `onnxruntime` (Arch: `pacman -S onnxruntime`)."
+
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:126
 msgid ""
 "Remoção de fundo: requer 8 GiB de RAM livre para iniciar. Este recurso é "
 "opcional."
@@ -1126,29 +1319,250 @@ msgstr ""
 "Odstranění pozadí vyžaduje ke spuštění 8 GiB volné paměti RAM. Tato funkce "
 "je volitelná."
 
-#: crates/bigiris/src/gui.rs:6686
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:140
 msgid "Modelo"
 msgstr "Model umělé inteligence"
 
-#: crates/bigiris/src/gui.rs:6704
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:141
+msgid "BiRefNet-lite (MIT) · roda offline no seu computador"
+msgstr "BiRefNet-lite (MIT) · běží offline ve vašem počítači"
+
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:153
+msgid ""
+"«origem»_nobg.png · PNG com alfa, sem sobrescrever (_1, _2… se já existir)"
+msgstr ""
+"„zdroj“_nobg.png · PNG s alfou, bez přepisování (_1, _2… pokud už existuje)"
+
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:160
 msgid "Remover fundo com IA local"
 msgstr "Odstranění pozadí pomocí místní umělé inteligence"
 
-#: crates/bigiris/src/gui.rs:6780
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:161
+msgid ""
+"O modelo roda inteiramente no seu computador. Nenhuma imagem sai do disco — "
+"sem upload, sem conta, sem API externa."
+msgstr ""
+"Model běží výhradně ve vašem počítači. Žádný obrázek neopustí disk — žádné "
+"nahrávání, žádný účet, žádné externí API."
+
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:235
 msgid "Preparando…"
 msgstr "Připravuji se…"
 
-#: crates/bigiris/src/gui.rs:6910 crates/bigiris/src/gui.rs:6933
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:276
+msgid "Falha ao carregar o modelo: {error}"
+msgstr "Model se nepodařilo načíst: {error}"
+
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:368
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:388
 msgid "Imagens gravadas"
 msgstr "Uložené obrázky"
 
-#: crates/bigiris/src/gui.rs:6934
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:389
 msgid "Falhas"
 msgstr "Selhání"
 
-#: crates/bigiris/src/gui.rs:6936
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:391
 msgid "Com erros"
 msgstr "S chybami"
+
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:412
+msgid "Baixando modelo (uma vez só): {done} / {total}"
+msgstr "Stahování modelu (jen jednou): {done} / {total}"
+
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:420
+msgid "Processando {current}/{total} — {file}"
+msgstr "Zpracování {current}/{total} — {file}"
+
+#: crates/bigiris/src/gui/dialogs/resize.rs:8
+msgid "Lanczos3 (padrão)"
+msgstr "Lanczos3 (výchozí)"
+
+#: crates/bigiris/src/gui/dialogs/resize.rs:9
+msgid "Mitchell"
+msgstr "Mitchell"
+
+#: crates/bigiris/src/gui/dialogs/resize.rs:10
+msgid "CatmullRom"
+msgstr "CatmullRom"
+
+#: crates/bigiris/src/gui/dialogs/resize.rs:11
+msgid "Bilinear"
+msgstr "Bilinear"
+
+#: crates/bigiris/src/gui/dialogs/resize.rs:12
+msgid "Nearest (sem anti-aliasing)"
+msgstr "Nejbližší (bez vyhlazování)"
+
+#: crates/bigiris/src/gui/dialogs/resize.rs:29
+msgid "Redimensionar imagens — Prisma"
+msgstr "Změna velikosti obrázků — Prisma"
+
+#: crates/bigiris/src/gui/dialogs/resize.rs:41
+#: crates/bigiris/src/gui/dialogs/resize.rs:144
+#: crates/bigiris/src/gui/dialogs/resize.rs:372
+#: crates/bigimage-integrations/src/action.rs:79
+#: data/nautilus/bigiris-menu.py:115
+msgid "Redimensionar"
+msgstr "Změna velikosti obrázků"
+
+#: crates/bigiris/src/gui/dialogs/resize.rs:47
+#: crates/bigiris/src/gui/dialogs/resize.rs:61
+msgid "Aresta máxima"
+msgstr "Max edge"
+
+#: crates/bigiris/src/gui/dialogs/resize.rs:48
+msgid "Escala (%)"
+msgstr "Měřítko (v %)"
+
+#: crates/bigiris/src/gui/dialogs/resize.rs:49
+msgid "Dimensão exata (WxH)"
+msgstr "Přesná velikost (WxH)"
+
+#: crates/bigiris/src/gui/dialogs/resize.rs:50
+msgid "Encaixar em (WxH)"
+msgstr "Rozměry (WxH)"
+
+#: crates/bigiris/src/gui/dialogs/resize.rs:54
+msgid "Modo"
+msgstr "Režim"
+
+#: crates/bigiris/src/gui/dialogs/resize.rs:62
+msgid "pixels (lado maior)"
+msgstr "pixelů (nejdelší strana)"
+
+#: crates/bigiris/src/gui/dialogs/resize.rs:66
+msgid "Porcentagem"
+msgstr "Procento"
+
+#: crates/bigiris/src/gui/dialogs/resize.rs:67
+msgid "100 = tamanho original"
+msgstr "100 = původní velikost"
+
+#: crates/bigiris/src/gui/dialogs/resize.rs:71
+msgid "Largura"
+msgstr "Šířka"
+
+#: crates/bigiris/src/gui/dialogs/resize.rs:74
+msgid "Altura"
+msgstr "Výška"
+
+#: crates/bigiris/src/gui/dialogs/resize.rs:78
+msgid "Largura máxima"
+msgstr "Maximální šířka 100 cm"
+
+#: crates/bigiris/src/gui/dialogs/resize.rs:81
+msgid "Altura máxima"
+msgstr "Max. výška 100 cm"
+
+#: crates/bigiris/src/gui/dialogs/resize.rs:120
+msgid "Kernel de interpolação"
+msgstr "Interpolační jádro"
+
+#: crates/bigiris/src/gui/dialogs/resize.rs:134
+msgid "Modo de redimensionamento"
+msgstr "Režim změny velikosti"
+
+#: crates/bigiris/src/gui/dialogs/resize.rs:137
+msgid "Opções"
+msgstr "Možnosti"
+
+#: crates/bigiris/src/gui/dialogs/resize.rs:292
+msgid "Redimensionando…"
+msgstr "Změna velikosti…"
+
+#: crates/bigiris/src/gui/dialogs/resize.rs:298
+msgid "Redimensionando"
+msgstr "Změna velikosti"
+
+#: crates/bigiris/src/gui/dialogs/rotate.rs:25
+msgid "Girar imagens — Prisma"
+msgstr "Otočení obrázků — Prisma"
+
+#: crates/bigiris/src/gui/dialogs/rotate.rs:29
+#: crates/bigiris/src/gui/dialogs/rotate.rs:52
+#: crates/bigimage-integrations/src/action.rs:83
+#: data/nautilus/bigiris-menu.py:129
+msgid "Girar"
+msgstr "Otočit"
+
+#: crates/bigiris/src/gui/dialogs/rotate.rs:31
+msgid "90° (horário)"
+msgstr "90° (ve směru hodinových ručiček)"
+
+#: crates/bigiris/src/gui/dialogs/rotate.rs:31
+#: crates/bigimage-integrations/src/action.rs:259
+#: data/nautilus/bigiris-menu.py:134
+msgid "180°"
+msgstr "180°"
+
+#: crates/bigiris/src/gui/dialogs/rotate.rs:31
+msgid "270° (anti-horário)"
+msgstr "270° (proti směru hodinových ručiček)"
+
+#: crates/bigiris/src/gui/dialogs/rotate.rs:34
+msgid "Rotação"
+msgstr "Rotace"
+
+#: crates/bigiris/src/gui/dialogs/rotate.rs:93
+msgid "Girando…"
+msgstr "Rotující…"
+
+#: crates/bigiris/src/gui/dialogs/rotate.rs:99
+msgid "Girando"
+msgstr "Rotace"
+
+#: crates/bigiris/src/gui/dialogs/upscale.rs:26
+msgid "Aumentar resolução — Prisma"
+msgstr "Upscale — Prisma"
+
+#: crates/bigiris/src/gui/dialogs/upscale.rs:39
+msgid "Aumentar resolução"
+msgstr "Upscale image"
+
+#: crates/bigiris/src/gui/dialogs/upscale.rs:62
+msgid ""
+"Motor: Lanczos3 (CPU). O modo IA (Real-ESRGAN) será habilitado "
+"automaticamente quando um modelo ONNX FOSS estiver disponível."
+msgstr ""
+"Engine: Lanczos3 (CPU). Režim AI (Real-ESRGAN) bude zapnut automaticky, "
+"jakmile bude k dispozici FOSS model ONNX."
+
+#: crates/bigiris/src/gui/dialogs/upscale.rs:83
+msgid "Fator"
+msgstr "Faktor"
+
+#: crates/bigiris/src/gui/dialogs/upscale.rs:98
+msgid "× {factor} (tamanho indisponível)"
+msgstr "× {factor} (velikost nedostupná)"
+
+#: crates/bigiris/src/gui/dialogs/upscale.rs:128
+msgid "Aumentar"
+msgstr "Upscale image"
+
+#: crates/bigiris/src/gui/dialogs/upscale.rs:182
+msgid "Aumentando…"
+msgstr "Upscaling…"
+
+#: crates/bigiris/src/gui/dialogs/upscale.rs:191
+msgid "Aumentando"
+msgstr "Upscaling"
+
+#: crates/bigiris/src/gui/previews.rs:32
+msgid "Pré-visualização"
+msgstr "Náhled"
+
+#: crates/bigiris/src/gui/previews.rs:38
+msgid "Original: {width}×{height} px"
+msgstr "Originál: {width}×{height} px"
+
+#: crates/bigiris/src/gui/previews.rs:201
+msgid "Preparando pré-visualização…"
+msgstr "Příprava náhledu…"
+
+#: crates/bigiris/src/gui/previews.rs:249
+msgid "A preparação foi interrompida"
+msgstr "Příprava byla přerušena"
 
 #: crates/bigiris/src/gui/transfers.rs:86
 msgid "A seleção é muito grande. Abra menos arquivos por vez."

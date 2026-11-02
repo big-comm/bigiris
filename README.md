@@ -143,10 +143,31 @@ cargo build --locked --release --features "gui ai" -p bigiris
 ./install.sh --no-build
 ```
 
+As ações do Thunar são sempre por usuário: `bigiris install-integrations --user`
+mescla as entradas do BigIris em `~/.config/Thunar/uca.xml`, preservando as
+ações que você já tinha. Se você ainda não tem esse arquivo, ele começa como
+cópia de `/etc/xdg/Thunar/uca.xml` (como o próprio Thunar faz), para não esconder
+as ações padrão do sistema. Os pacotes não instalam `/etc/xdg/Thunar/uca.xml`:
+esse arquivo pertence ao pacote `thunar`. Quem usa Thunar deve rodar o comando
+acima uma vez por usuário (`install.sh` já faz isso).
+
+Com o pacote instalado, `install-integrations --user` não grava cópias pessoais
+das integrações que o pacote já fornece em `/usr/share` (Dolphin, Nautilus, Nemo,
+PCManFM-Qt, elementary Files, atalho e ícone) e apaga cópias pessoais antigas
+delas, que de outro modo sombreariam as do pacote e ficariam desatualizadas.
+Na prática, só as ações do Thunar são gravadas.
+
 Para remover as integrações pessoais antes de apagar o binário:
 
 ```bash
 bigiris uninstall-integrations
+```
+
+Para desfazer tudo o que o `install.sh` instalou (integrações, binário, schema e
+traduções em `$PREFIX`), use o mesmo `PREFIX` da instalação:
+
+```bash
+./install.sh --uninstall
 ```
 
 ## Uso
@@ -174,8 +195,8 @@ bigiris flip --axis horizontal foto.jpg
 bigiris crop --rect 800x600+100+50 foto.jpg
 bigiris adjust --brightness 15 --contrast 10 foto.jpg
 bigiris animate -o saida.gif --delay 100 frame_*.png
-bigiris remove-bg foto.jpg
-bigiris to-pdf documento.docx
+bigiris remove-bg --overwrite increment foto.jpg
+bigiris to-pdf --overwrite replace --timeout 300 documento.docx
 bigiris batch --profile docs/batch-profile.example.toml pasta-com-fotos
 
 # Integrações e diagnóstico
@@ -183,6 +204,26 @@ bigiris install-integrations --user
 bigiris uninstall-integrations
 bigiris --self-test
 ```
+
+Todos os comandos que gravam arquivos aceitam
+`--overwrite skip|replace|increment` e, por padrão, **não sobrescrevem**
+(`skip`): o arquivo existente é mantido e a saída mostra `skip`. Isso vale
+também para `animate` (o `.gif` de destino), `remove-bg` (`<nome>_nobg.png`) e
+`to-pdf`, que agora ignora o `<nome>.pdf` já existente em vez de substituí-lo.
+`to-pdf --timeout <segundos>` (1 a 3600, padrão 120) limita o tempo de cada
+documento no LibreOffice; ao estourar, o processo e seus filhos são encerrados
+e nenhum PDF parcial fica para trás. Saídas que colidiriam entre si no mesmo
+comando são recusadas antes de qualquer gravação.
+
+### Códigos de saída
+
+| Código | Significado |
+|---|---|
+| `0` | Sucesso, inclusive quando arquivos foram ignorados por já existirem |
+| `1` | Uso inválido ou erro fatal antes de processar; nada foi gravado |
+| `2` | Falha parcial: um ou mais arquivos de entrada não puderam ser processados |
+
+Os mesmos códigos aparecem em `bigiris --help`.
 
 ### Atalhos do visualizador
 

@@ -3,8 +3,6 @@
 
 use std::path::Path;
 
-use image::imageops;
-
 use crate::convert::{ConvertOutcome, OverwritePolicy};
 use crate::{pipeline, Format, Result};
 
@@ -33,28 +31,48 @@ pub fn flip_file(
     target: Option<Format>,
     policy: OverwritePolicy,
 ) -> Result<ConvertOutcome> {
+    flip_file_with_options(input, axis, target, &crate::EncodeOptions::default(), policy)
+}
+
+/// Like [`flip_file`], with caller-supplied encoder options.
+pub fn flip_file_with_options(
+    input: impl AsRef<Path>,
+    axis: FlipAxis,
+    target: Option<Format>,
+    opts: &crate::EncodeOptions,
+    policy: OverwritePolicy,
+) -> Result<ConvertOutcome> {
     let input = input.as_ref();
+    if let Some(skipped) = pipeline::skip_before_decode(
+        input,
+        axis.filename_suffix(),
+        target,
+        policy,
+        pipeline::any_size,
+    )? {
+        return Ok(skipped);
+    }
 
     let (src, src_format) = pipeline::decode_with_source_format(input)?;
     let target = target.unwrap_or(src_format);
 
     let output = pipeline::resolve_output(input, Some(axis.filename_suffix()), target, policy)?;
 
-    if matches!(policy, OverwritePolicy::Skip) && output.exists() {
+    if pipeline::existing_output(&output, target, policy) {
         tracing::debug!(?output, "flip: skipping existing output");
         return Ok(ConvertOutcome::Skipped { output });
     }
 
     tracing::debug!(?input, ?output, ?target, ?axis, "flip: computing");
     let flipped = apply_to(&src, axis);
-    pipeline::encode_and_cleanup(flipped, output, target, &crate::EncodeOptions::default(), policy)
+    pipeline::encode_output(flipped, output, target, opts, policy)
 }
 
 /// Pure in-memory flip — shared with preview pipeline.
 pub fn apply_to(src: &image::DynamicImage, axis: FlipAxis) -> image::DynamicImage {
     match axis {
-        FlipAxis::Horizontal => imageops::flip_horizontal(src).into(),
-        FlipAxis::Vertical => imageops::flip_vertical(src).into(),
+        FlipAxis::Horizontal => src.fliph(),
+        FlipAxis::Vertical => src.flipv(),
     }
 }
 

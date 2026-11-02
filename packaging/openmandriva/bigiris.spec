@@ -15,7 +15,7 @@ BuildRequires:  gettext
 BuildRequires:  desktop-file-utils
 BuildRequires:  appstream
 BuildRequires:  pkgconfig(gtk4) >= 4.12
-BuildRequires:  pkgconfig(libadwaita-1) >= 1.5
+BuildRequires:  pkgconfig(libadwaita-1) >= 1.6
 BuildRequires:  pkgconfig(dav1d)
 BuildRequires:  pkgconfig(openssl)
 BuildRequires:  onnxruntime-devel
@@ -51,8 +51,13 @@ done < data/po/LINGUAS
 export CARGO_HOME="%{_builddir}/cargo-home"
 export CARGO_TARGET_DIR="%{_builddir}/target"
 export CARGO_NET_OFFLINE=true
-cargo test --locked --offline --release --workspace --all-features
-"%{_builddir}/target/release/bigiris" --self-test
+# Must match %%build: different RUSTFLAGS invalidate every cached crate
+# and rebuild the whole workspace from scratch.
+export RUSTFLAGS="-C debuginfo=2"
+# Same gate as the Arch PKGBUILD: codec self-test, then the full test suite.
+# Inside a build container that forbids nested namespaces, only the three
+# sandbox-dependent CLI tests are filtered (native CI still runs them).
+bash scripts/package-check.sh "%{_builddir}/target"
 desktop-file-validate data/com.biglinux.Iris.desktop
 appstreamcli validate --no-net data/com.biglinux.Iris.metainfo.xml
 glib-compile-schemas --strict --dry-run data
@@ -78,6 +83,17 @@ done < data/po/LINGUAS
 "%{_builddir}/target/release/bigiris" install-integrations --system \
     --destdir="%{buildroot}"
 
+%post
+# Thunar keeps custom actions in /etc/xdg/Thunar/uca.xml, which belongs to
+# the thunar package, so BigIris cannot ship them system-wide. Each user
+# merges them into ~/.config/Thunar/uca.xml instead.
+if command -v thunar >/dev/null 2>&1; then
+    echo 'Thunar: run "bigiris install-integrations --user" as your user to add'
+    echo 'the BigIris actions to the Thunar context menu. It only writes'
+    echo '~/.config/Thunar/uca.xml; the other file managers use the copies this'
+    echo 'package installs in /usr/share.'
+fi
+
 %files
 %license LICENSE
 %doc README.md
@@ -92,7 +108,6 @@ done < data/po/LINGUAS
 %{_datadir}/file-manager/actions/bigiris-*.desktop
 %{_datadir}/contractor/bigiris-*.contract
 %{_datadir}/nautilus-python/extensions/bigiris-menu.py
-%config(noreplace) %{_sysconfdir}/xdg/Thunar/uca.xml
 
 %changelog
 * Sat Sep 12 2026 Leonardo Athayde <leoathayde@gmail.com> 0.1.0-1

@@ -116,10 +116,43 @@ pub(crate) fn installed_executable() -> std::io::Result<(PathBuf, bool)> {
     })
 }
 
+#[cfg(test)]
+/// Test-only, process-wide worker binary (see [`configure_for_tests`]);
+/// unlike `TEST_EXECUTABLE` it reaches batch worker threads too.
+static TEST_WORKER: std::sync::OnceLock<PathBuf> = std::sync::OnceLock::new();
+
+/// The real `bigiris` binary next to the test harness: `target/<profile>/
+/// bigiris`, built by `cargo test --all-targets` for the CLI tests.
+#[cfg(test)]
+pub(crate) fn built_worker() -> Option<PathBuf> {
+    let exe = std::env::current_exe().ok()?;
+    Some(exe.parent()?.parent()?.join("bigiris")).filter(|path| path.is_file())
+}
+
+/// Test-only: route every decode in this process through the real sandbox,
+/// like `main` does, with `worker` (default: [`built_worker`]) as the codec
+/// binary on every thread. Idempotent; the first worker path wins. Panics
+/// if no worker binary exists (build it with `cargo test --all-targets`).
+#[cfg(test)]
+pub(crate) fn configure_for_tests(worker: Option<PathBuf>) -> PathBuf {
+    static CONFIGURE: std::sync::Once = std::sync::Once::new();
+    let path = TEST_WORKER
+        .get_or_init(|| {
+            worker.or_else(built_worker).expect("bigiris binary missing: cargo test --all-targets")
+        })
+        .clone();
+    CONFIGURE.call_once(configure);
+    path
+}
+
 fn worker_executable() -> std::io::Result<(PathBuf, bool, Duration)> {
     #[cfg(test)]
     if let Some((path, deadline, replaced)) = TEST_EXECUTABLE.with(|slot| slot.borrow().clone()) {
         return Ok((path, replaced, deadline));
+    }
+    #[cfg(test)]
+    if let Some(path) = TEST_WORKER.get() {
+        return Ok((path.clone(), false, DEADLINE));
     }
     installed_executable().map(|(path, replaced)| (path, replaced, DEADLINE))
 }
@@ -1100,13 +1133,6 @@ mod tests {
         assert!(result.unwrap_err().to_string().contains("excessivos"));
     }
 
-    /// The real `bigiris` binary next to the test harness (built by
-    /// `cargo test --all-targets` for the CLI integration tests).
-    fn built_worker() -> Option<PathBuf> {
-        let exe = std::env::current_exe().ok()?;
-        Some(exe.parent()?.parent()?.join("bigiris")).filter(|path| path.is_file())
-    }
-
     #[test]
     fn sandboxed_resave_keeps_exif_and_wide_gamut_profile() {
         use bigimage_core::{EncodeOptions, OverwritePolicy};
@@ -1176,6 +1202,25 @@ mod tests {
             return;
         };
         assert_eq!(result.unwrap().0.dimensions(), (2, 2));
+        drop(leaked);
+    }
+
+    /// What the GUI does after its first frame: decode on a batch worker
+    /// thread (no thread-local override) while the process holds a
+    /// non-CLOEXEC descriptor. Configures the process-wide backend, so it
+    /// is ignored by default; run alone.
+    #[test]
+    #[ignore = "configures the process-wide codec backend; run alone"]
+    fn configured_backend_decodes_on_other_threads_with_leaked_descriptors() {
+        let worker = configure_for_tests(None);
+        assert!(worker.is_file());
+        let leaked = tempfile::tempfile().unwrap();
+        rustix::io::fcntl_setfd(&leaked, rustix::io::FdFlags::empty()).unwrap();
+        let file = input();
+        let path = file.path().to_path_buf();
+        let image =
+            std::thread::spawn(move || bigimage_core::open_image(&path)).join().unwrap().unwrap();
+        assert_eq!(image.dimensions(), (2, 2));
         drop(leaked);
     }
 

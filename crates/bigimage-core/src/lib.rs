@@ -41,7 +41,7 @@ pub use extent::{
 };
 pub use flip::{flip_file, flip_file_with_options, FlipAxis};
 pub use format::Format;
-pub use metadata::Metadata;
+pub use metadata::{Metadata, MetadataSupport, SourceMetadata};
 pub use preview::{PreviewOp, PreviewSession};
 pub use resize::{resize_file, Filter, ResizeMode};
 pub use rotate::{
@@ -101,7 +101,7 @@ pub fn image_dimensions(path: impl AsRef<std::path::Path>) -> image::ImageResult
 /// Float images are scene-linear; integer images are sRGB-encoded. Crossing
 /// between the two applies the sRGB transfer function (clamping HDR values
 /// above 1.0). PNG and JPEG outputs carry a generated sRGB ICC profile; no
-/// source metadata is written.
+/// source metadata is written (see [`save_image_preserving_metadata`]).
 pub fn save_image(
     image: image::DynamicImage,
     output: impl AsRef<std::path::Path>,
@@ -110,6 +110,92 @@ pub fn save_image(
     policy: OverwritePolicy,
 ) -> Result<ConvertOutcome> {
     pipeline::encode_and_cleanup(image, output.as_ref().to_path_buf(), target, options, policy)
+}
+
+/// Decode an image for an in-place re-save: upright pixels kept in the
+/// source colour space, plus the source EXIF and ICC blobs. Pair with
+/// [`save_image_preserving_metadata`].
+///
+/// With a process backend configured, this goes through the decoder
+/// installed by [`backend::configure_resave`]; if none was installed the
+/// pixels come back sRGB-normalised with empty metadata (nothing can be
+/// re-attached, and no codec runs in this process).
+pub fn open_image_for_resave(
+    path: impl AsRef<std::path::Path>,
+) -> image::ImageResult<(image::DynamicImage, SourceMetadata)> {
+    let path = path.as_ref();
+    if let Some(decode) = backend::configured_resave() {
+        return decode(path).map(|(image, _, meta)| (image, meta));
+    }
+    if backend::configured().is_some() {
+        tracing::warn!(
+            ?path,
+            "backend sem decodificação para regravação; metadados não preservados"
+        );
+        return open_image(path).map(|image| (image, SourceMetadata::default()));
+    }
+    pipeline::decode_local_with(path, false).map(|(image, _, meta)| (image, meta))
+}
+
+/// Like [`save_image`], but writes the source metadata back — for saving
+/// edits over the original file without losing capture date, camera, GPS
+/// or a wide-gamut colour profile.
+///
+/// `image` must be in the colour space described by `source.icc` (as
+/// returned by [`open_image_for_resave`]) and already upright: EXIF is
+/// re-attached with `Orientation` reset to 1. Where the target cannot embed
+/// that profile (or its colour model does not match the written pixels),
+/// pixels are converted to sRGB instead. What each format keeps is reported
+/// by [`metadata::preserved_by`]. `options.strip_metadata` is ignored: the
+/// whole point of this call is to keep the user's own metadata.
+pub fn save_image_preserving_metadata(
+    image: image::DynamicImage,
+    output: impl AsRef<std::path::Path>,
+    target: Format,
+    options: &EncodeOptions,
+    policy: OverwritePolicy,
+    source: &SourceMetadata,
+) -> Result<ConvertOutcome> {
+    const MAX_BLOB: usize = 4 * 1024 * 1024;
+    // JPEG APP1 segments hold at most 65533 bytes, including `Exif\0\0`.
+    const MAX_JPEG_EXIF: usize = 65_533 - 6;
+    let mut image = image;
+    let support = metadata::preserved_by(target);
+    let mut extras = pipeline::Extras::default();
+    if let Some(icc) = source.icc.as_deref().filter(|icc| !icc.is_empty()) {
+        use image::ColorType;
+        let gray = matches!(target, Format::Png | Format::Tiff | Format::Pnm)
+            && matches!(
+                image.color(),
+                ColorType::L8 | ColorType::La8 | ColorType::L16 | ColorType::La16
+            );
+        let matches_pixels = match icc.get(16..20) {
+            Some(b"RGB ") => !gray,
+            Some(b"GRAY") => gray,
+            _ => false,
+        };
+        if support.icc && matches_pixels && icc.len() <= MAX_BLOB {
+            extras.icc = Some(icc.to_vec());
+        } else if let Err(error) = color::normalize_srgb(&mut image, icc) {
+            tracing::warn!(%error, "perfil ICC de origem descartado ao regravar");
+        }
+    }
+    if support.exif {
+        let limit = if target == Format::Jpeg { MAX_JPEG_EXIF } else { MAX_BLOB };
+        extras.exif = source
+            .exif
+            .as_deref()
+            .and_then(metadata::upright_exif)
+            .filter(|exif| exif.len() <= limit);
+    }
+    pipeline::encode_and_cleanup_with(
+        image,
+        output.as_ref().to_path_buf(),
+        target,
+        options,
+        policy,
+        &extras,
+    )
 }
 
 /// Errors returned by core pipelines.

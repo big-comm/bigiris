@@ -35,6 +35,86 @@ impl Metadata {
     }
 }
 
+/// Raw metadata blobs of a source image, kept so an in-place save can write
+/// them back (see [`crate::save_image_preserving_metadata`]).
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct SourceMetadata {
+    /// TIFF-structured EXIF block (as returned by the `image` decoders).
+    pub exif: Option<Vec<u8>>,
+    /// Embedded ICC profile describing the source pixels.
+    pub icc: Option<Vec<u8>>,
+}
+
+/// Which metadata a target format can carry through
+/// [`crate::save_image_preserving_metadata`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct MetadataSupport {
+    /// EXIF (capture date, camera, GPS…) is written back.
+    pub exif: bool,
+    /// The source ICC profile is embedded as-is (otherwise pixels are
+    /// converted to sRGB, clipping wide-gamut colours).
+    pub icc: bool,
+}
+
+impl MetadataSupport {
+    /// Everything the source carried survives the save.
+    pub fn is_complete(self) -> bool {
+        self.exif && self.icc
+    }
+}
+
+/// Metadata preserved for `format` by the vendored encoders: JPEG, PNG and
+/// WebP keep both; AVIF keeps EXIF only; TIFF keeps the ICC profile only;
+/// every other format keeps neither.
+pub fn preserved_by(format: crate::Format) -> MetadataSupport {
+    use crate::Format;
+    MetadataSupport {
+        exif: matches!(format, Format::Jpeg | Format::Png | Format::WebP | Format::Avif),
+        icc: matches!(format, Format::Jpeg | Format::Png | Format::WebP | Format::Tiff),
+    }
+}
+
+/// Normalise an EXIF blob for re-attachment: drop an `Exif\0\0` prefix and
+/// reset IFD0 `Orientation` to 1, because the pixels being saved are already
+/// upright. Returns `None` for blobs that are not TIFF-structured.
+pub(crate) fn upright_exif(exif: &[u8]) -> Option<Vec<u8>> {
+    let mut tiff = exif.strip_prefix(b"Exif\0\0").unwrap_or(exif).to_vec();
+    let little = match tiff.get(..4)? {
+        [b'I', b'I', 42, 0] => true,
+        [b'M', b'M', 0, 42] => false,
+        _ => return None,
+    };
+    let word = |b: &[u8]| {
+        let b = [b[0], b[1]];
+        if little {
+            u16::from_le_bytes(b)
+        } else {
+            u16::from_be_bytes(b)
+        }
+    };
+    let long = |b: &[u8]| {
+        let b = [b[0], b[1], b[2], b[3]];
+        if little {
+            u32::from_le_bytes(b)
+        } else {
+            u32::from_be_bytes(b)
+        }
+    };
+    let ifd = usize::try_from(long(tiff.get(4..8)?)).ok()?;
+    let count = usize::from(word(tiff.get(ifd..ifd + 2)?));
+    for entry in 0..count {
+        let at = ifd + 2 + entry * 12;
+        let field = tiff.get(at..at + 12)?;
+        // Orientation, SHORT, count 1: value is inline in the first 2 bytes.
+        if word(&field[..2]) == 0x0112 && word(&field[2..4]) == 3 && long(&field[4..8]) == 1 {
+            let one = if little { 1u16.to_le_bytes() } else { 1u16.to_be_bytes() };
+            tiff[at + 8..at + 10].copy_from_slice(&one);
+        }
+    }
+    Some(tiff)
+}
+
 /// Read EXIF from `path`. Returns an empty [`Metadata`] when the file
 /// has no EXIF segment (very common for PNG/WebP/GIF outputs from
 /// non-camera sources) — the caller decides whether that's notable.
@@ -132,6 +212,30 @@ mod tests {
         let dir = TempDir::new().unwrap();
         let path = write_plain_png(dir.path());
         assert_eq!(has_gps(&path), read(&path).unwrap().has_gps);
+    }
+
+    #[test]
+    fn upright_exif_resets_orientation_in_both_byte_orders() {
+        let le: &[u8] = &[
+            b'E', b'x', b'i', b'f', 0, 0, b'I', b'I', 42, 0, 8, 0, 0, 0, 2,
+            0, // header, 2 entries
+            0x0f, 0x01, 2, 0, 4, 0, 0, 0, b'A', b'B', b'C', 0, // Make "ABC"
+            0x12, 0x01, 3, 0, 1, 0, 0, 0, 6, 0, 0, 0, // Orientation = 6
+            0, 0, 0, 0,
+        ];
+        let fixed = upright_exif(le).unwrap();
+        assert_eq!(&fixed[..2], b"II", "Exif prefix dropped");
+        assert_eq!(&fixed[30..32], &[1, 0]);
+        assert_eq!(&fixed[18..22], &[b'A', b'B', b'C', 0], "other tags untouched");
+        let be: &[u8] = &[
+            b'M', b'M', 0, 42, 0, 0, 0, 8, 0, 1, // header, 1 entry
+            0x01, 0x12, 0, 3, 0, 0, 0, 1, 0, 8, 0, 0, // Orientation = 8
+            0, 0, 0, 0,
+        ];
+        assert_eq!(&upright_exif(be).unwrap()[18..20], &[0, 1]);
+        assert_eq!(upright_exif(b"not exif"), None);
+        // Truncated IFD: rejected instead of panicking.
+        assert_eq!(upright_exif(&le[..20]), None);
     }
 
     #[test]

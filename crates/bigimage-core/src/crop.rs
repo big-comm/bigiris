@@ -94,7 +94,7 @@ pub fn crop_file_with_options(
 
     let output = pipeline::resolve_output(input, Some(&rect.filename_suffix()), target, policy)?;
 
-    if matches!(policy, OverwritePolicy::Skip) && output.exists() {
+    if pipeline::existing_output(&output, target, policy) {
         tracing::debug!(?output, "crop: skipping existing output");
         return Ok(ConvertOutcome::Skipped { output });
     }
@@ -102,7 +102,7 @@ pub fn crop_file_with_options(
     tracing::debug!(?input, ?output, ?target, ?rect, "crop: computing");
     let cropped = apply_to(&src, rect)?;
 
-    pipeline::encode_and_cleanup(cropped, output, target, opts, policy)
+    pipeline::encode_output(cropped, output, target, opts, policy)
 }
 
 /// Pure in-memory crop — validates `rect` against the image then returns a

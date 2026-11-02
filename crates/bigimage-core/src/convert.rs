@@ -80,14 +80,16 @@ pub fn convert_file_to(
     let output = pipeline::resolve_output_to(input, output_dir, None, target, policy)?;
 
     if matches!(policy, OverwritePolicy::Skip) {
-        if let Some(skipped) = pipeline::skip_existing(input, output.clone(), pipeline::any_size)? {
+        if let Some(skipped) =
+            pipeline::skip_existing(input, output.clone(), target, pipeline::any_size)?
+        {
             return Ok(skipped);
         }
     }
 
     tracing::debug!(?input, ?output, ?target, ?opts, "convert: decoding");
     let (img, _src_format) = pipeline::decode_with_source_format(input)?;
-    pipeline::encode_and_cleanup(img, output, target, opts, policy)
+    pipeline::encode_output(img, output, target, opts, policy)
 }
 
 /// Coerce a `DynamicImage` into a colour/bit-depth that the target encoder is

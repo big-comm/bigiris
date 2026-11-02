@@ -212,7 +212,7 @@ pub(crate) fn skip_before_decode(
     let Ok(output) = resolve_output(input, Some(suffix), target, policy) else {
         return Ok(None);
     };
-    skip_existing(input, output, validate)
+    skip_existing(input, output, target, validate)
 }
 
 /// Skip outcome for an `output` that already exists, after the cheap checks
@@ -223,12 +223,16 @@ pub(crate) fn skip_before_decode(
 /// applied; the operation is rejected only when it is invalid for both the
 /// stored and the transposed size, so a rotated photo is never refused
 /// wrongly (the post-decode check stays authoritative).
+///
+/// PNM outputs are never skipped here: their extension depends on the
+/// pixels (see [`content_output`]), so the decision waits for the decode.
 pub(crate) fn skip_existing(
     input: &Path,
     output: PathBuf,
+    target: Format,
     validate: impl Fn(u32, u32) -> Result<()>,
 ) -> Result<Option<crate::ConvertOutcome>> {
-    if output.symlink_metadata().is_err() {
+    if target == Format::Pnm || output.symlink_metadata().is_err() {
         return Ok(None);
     }
     crate::content::ensure_static(input)?;
@@ -237,6 +241,36 @@ pub(crate) fn skip_existing(
     validate(w, h).or_else(|error| validate(h, w).map_err(|_| error))?;
     tracing::debug!(?output, "skipping existing output before decoding");
     Ok(Some(crate::ConvertOutcome::Skipped { output }))
+}
+
+/// Post-decode `Skip` check for a planned `output`. Always `false` for PNM,
+/// whose final name is only known once the pixels are (see
+/// [`content_output`]); publication still never overwrites under `Skip`.
+pub(crate) fn existing_output(output: &Path, target: Format, policy: OverwritePolicy) -> bool {
+    matches!(policy, OverwritePolicy::Skip) && target != Format::Pnm && output.exists()
+}
+
+/// Final output path for `image`: the planned one, except that a PNM
+/// target takes the extension of what is actually written — `.pgm` for
+/// gray, `.ppm` for colour ([`Format::extension_for`]).
+pub(crate) fn content_output(output: PathBuf, target: Format, image: &DynamicImage) -> PathBuf {
+    if target != Format::Pnm {
+        return output;
+    }
+    output.with_extension(target.extension_for(image.color()))
+}
+
+/// [`encode_and_cleanup`] to the [`content_output`] path, for pipelines
+/// that name their own outputs.
+pub(crate) fn encode_output(
+    img: DynamicImage,
+    output: PathBuf,
+    target: Format,
+    opts: &EncodeOptions,
+    policy: OverwritePolicy,
+) -> Result<crate::ConvertOutcome> {
+    let output = content_output(output, target, &img);
+    encode_and_cleanup(img, output, target, opts, policy)
 }
 
 /// Accept-everything validator for operations valid on any static image.
@@ -524,6 +558,47 @@ fn encode_to_writer(
             encoder.set_icc_profile(icc()?).map_err(image::ImageError::Unsupported)?;
             encoder.write_image(img.as_bytes(), img.width(), img.height(), img.color().into())
         }
+        Format::Pnm => write_pnm(img, writer),
         _ => img.write_to(writer, target.to_image_format()),
     }
+}
+
+/// Binary PGM (P5) or PPM (P6) at the prepared depth. The vendored PNM
+/// encoder writes PAM (P7) by default — which many viewers cannot open and
+/// which contradicts the `.pgm`/`.ppm` name — and its P5/P6 headers only
+/// take 8-bit samples. Netpbm stores 16-bit samples big-endian.
+fn write_pnm(img: &DynamicImage, writer: &mut impl std::io::Write) -> image::ImageResult<()> {
+    use image::ColorType;
+    let rgb8;
+    let img = match img.color() {
+        ColorType::L8 | ColorType::L16 | ColorType::Rgb8 | ColorType::Rgb16 => img,
+        // prepare_for_target never produces these; stay total anyway.
+        _ => {
+            rgb8 = DynamicImage::ImageRgb8(img.to_rgb8());
+            &rgb8
+        }
+    };
+    let (magic, maxval) = match img.color() {
+        ColorType::L8 => ("P5", 255),
+        ColorType::L16 => ("P5", 65535),
+        ColorType::Rgb16 => ("P6", 65535),
+        _ => ("P6", 255),
+    };
+    write!(writer, "{magic}\n{} {}\n{maxval}\n", img.width(), img.height())?;
+    match img {
+        DynamicImage::ImageLuma16(b) => write_be16(b.as_raw(), writer)?,
+        DynamicImage::ImageRgb16(b) => write_be16(b.as_raw(), writer)?,
+        other => writer.write_all(other.as_bytes())?,
+    }
+    Ok(())
+}
+
+fn write_be16(samples: &[u16], writer: &mut impl std::io::Write) -> std::io::Result<()> {
+    let mut chunk = Vec::with_capacity(64 * 1024);
+    for part in samples.chunks(32 * 1024) {
+        chunk.clear();
+        chunk.extend(part.iter().flat_map(|v| v.to_be_bytes()));
+        writer.write_all(&chunk)?;
+    }
+    Ok(())
 }

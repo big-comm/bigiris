@@ -58,14 +58,14 @@ pub fn flip_file_with_options(
 
     let output = pipeline::resolve_output(input, Some(axis.filename_suffix()), target, policy)?;
 
-    if matches!(policy, OverwritePolicy::Skip) && output.exists() {
+    if pipeline::existing_output(&output, target, policy) {
         tracing::debug!(?output, "flip: skipping existing output");
         return Ok(ConvertOutcome::Skipped { output });
     }
 
     tracing::debug!(?input, ?output, ?target, ?axis, "flip: computing");
     let flipped = apply_to(&src, axis);
-    pipeline::encode_and_cleanup(flipped, output, target, opts, policy)
+    pipeline::encode_output(flipped, output, target, opts, policy)
 }
 
 /// Pure in-memory flip — shared with preview pipeline.

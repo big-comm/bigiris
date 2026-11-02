@@ -246,14 +246,14 @@ pub fn extent_file_with_options(
     let suffix = filename_suffix(nw, nh);
     let output = pipeline::resolve_output(input, Some(&suffix), target, policy)?;
 
-    if matches!(policy, OverwritePolicy::Skip) && output.exists() {
+    if pipeline::existing_output(&output, target, policy) {
         tracing::debug!(?output, "extent: skipping existing output");
         return Ok(ConvertOutcome::Skipped { output });
     }
 
     tracing::debug!(?input, ?output, ?target, ?opts, "extent: computing");
     let extended = apply_to(&src, &opts)?;
-    pipeline::encode_and_cleanup(extended, output, target, encode, policy)
+    pipeline::encode_output(extended, output, target, encode, policy)
 }
 
 /// Pure in-memory extent — shared with the preview pipeline.

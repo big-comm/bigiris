@@ -133,7 +133,7 @@ pub fn adjust_file_with_options(
 
     let output = pipeline::resolve_output(input, Some(&suffix), target, policy)?;
 
-    if matches!(policy, OverwritePolicy::Skip) && output.exists() {
+    if pipeline::existing_output(&output, target, policy) {
         tracing::debug!(?output, "adjust: skipping existing output");
         return Ok(ConvertOutcome::Skipped { output });
     }
@@ -141,7 +141,7 @@ pub fn adjust_file_with_options(
     tracing::debug!(?input, ?output, ?ops, "adjust: applying");
     let tweaked = if ops.is_identity() { src } else { apply_to(src, ops) };
 
-    pipeline::encode_and_cleanup(tweaked, output, target, opts, policy)
+    pipeline::encode_output(tweaked, output, target, opts, policy)
 }
 
 /// Pure in-memory variant of [`adjust_file`] — applies `ops` to an already-

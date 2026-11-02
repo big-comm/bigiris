@@ -108,11 +108,15 @@ pub fn image_dimensions(path: impl AsRef<std::path::Path>) -> image::ImageResult
 /// | OpenEXR             | `Rgba32F`, linear light                                           |
 /// | Radiance HDR        | `Rgb32F`, linear light                                            |
 ///
+/// PNM is written as binary PGM (P5) for gray and PPM (P6) for colour.
+/// The transform pipelines name it `.pgm`/`.ppm` accordingly (see
+/// [`Format::extension_for`]); with `save_image` the caller picks the path.
+///
 /// Float images are scene-linear; integer images are sRGB-encoded. Crossing
 /// between the two applies the sRGB transfer function (clamping HDR values
 /// above 1.0). Float outputs replace NaN and -inf with 0 and clamp +inf to
-/// a large finite value the encoders can represent. PNG and JPEG outputs carry a generated sRGB ICC profile; no
-/// source metadata is written (see [`save_image_preserving_metadata`]).
+/// a large finite value the encoders can represent. PNG and JPEG outputs
+/// carry a generated sRGB ICC profile; no source metadata is written (see [`save_image_preserving_metadata`]).
 pub fn save_image(
     image: image::DynamicImage,
     output: impl AsRef<std::path::Path>,

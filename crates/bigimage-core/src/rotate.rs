@@ -67,14 +67,14 @@ pub fn rotate_file_with_options(
 
     let output = pipeline::resolve_output(input, Some(rotation.filename_suffix()), target, policy)?;
 
-    if matches!(policy, OverwritePolicy::Skip) && output.exists() {
+    if pipeline::existing_output(&output, target, policy) {
         tracing::debug!(?output, "rotate: skipping existing output");
         return Ok(ConvertOutcome::Skipped { output });
     }
 
     tracing::debug!(?input, ?output, ?target, ?rotation, "rotate: computing");
     let rotated = apply_to(&src, rotation);
-    pipeline::encode_and_cleanup(rotated, output, target, opts, policy)
+    pipeline::encode_output(rotated, output, target, opts, policy)
 }
 
 /// Pure in-memory rotation — shared with preview pipeline.
@@ -152,12 +152,12 @@ pub fn rotate_file_auto_with_options(
     let target = target.unwrap_or(src_format);
 
     let output = crate::pipeline::resolve_output(input, Some("_auto"), target, policy)?;
-    if matches!(policy, OverwritePolicy::Skip) && output.exists() {
+    if pipeline::existing_output(&output, target, policy) {
         return Ok(ConvertOutcome::Skipped { output });
     }
 
     tracing::debug!(?input, ?output, "rotate: bake EXIF orientation");
-    pipeline::encode_and_cleanup(src, output, target, opts, policy)
+    pipeline::encode_output(src, output, target, opts, policy)
 }
 
 #[cfg(test)]

@@ -171,14 +171,14 @@ pub fn resize_file(
 
     let output = pipeline::resolve_output(input, Some(&suffix), target, policy)?;
 
-    if matches!(policy, OverwritePolicy::Skip) && output.exists() {
+    if pipeline::existing_output(&output, target, policy) {
         tracing::debug!(?output, "resize: skipping existing output");
         return Ok(ConvertOutcome::Skipped { output });
     }
 
     tracing::debug!(?input, ?output, ?target, ?mode, ?filter, "resize: computing");
     let resized = apply_to(&src, mode, filter)?;
-    pipeline::encode_and_cleanup(resized, output, target, opts, policy)
+    pipeline::encode_output(resized, output, target, opts, policy)
 }
 
 /// Pure in-memory variant — resizes an already-decoded image and returns

@@ -62,6 +62,21 @@ impl Format {
         }
     }
 
+    /// Extension for a file of this format holding pixels of colour type
+    /// `color`, as the pipelines write it: PNM is `pgm` for gray (PGM, P5)
+    /// and `ppm` for colour (PPM, P6) — alpha is flattened, so PAM is never
+    /// written. Every other format returns [`Format::extension`].
+    ///
+    /// The transform pipelines name PNM outputs with this, so the extension
+    /// is only known after decoding; `OverwritePolicy::Skip` for a PNM
+    /// target is therefore decided after the decode, never before it.
+    pub fn extension_for(&self, color: image::ColorType) -> &'static str {
+        match self {
+            Format::Pnm if crate::convert::writes_gray(color, Format::Pnm) => "pgm",
+            other => other.extension(),
+        }
+    }
+
     /// MIME type.
     pub fn mime(&self) -> &'static str {
         match self {
@@ -200,6 +215,21 @@ mod tests {
             });
             assert_eq!(parsed, *f);
         }
+    }
+
+    #[test]
+    fn pnm_extension_follows_the_written_pixels() {
+        use image::ColorType;
+        for (color, ext) in [
+            (ColorType::L8, "pgm"),
+            (ColorType::La16, "pgm"),
+            (ColorType::Rgb8, "ppm"),
+            (ColorType::Rgba16, "ppm"),
+            (ColorType::Rgb32F, "ppm"),
+        ] {
+            assert_eq!(Format::Pnm.extension_for(color), ext, "{color:?}");
+        }
+        assert_eq!(Format::Png.extension_for(ColorType::L8), "png");
     }
 
     #[test]

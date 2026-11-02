@@ -483,6 +483,41 @@ fn skip_policy_still_rejects_invalid_operations() {
 }
 
 #[test]
+fn pnm_outputs_are_named_after_the_written_pixels() {
+    use bigimage_core::*;
+    let dir = tempfile::tempdir().unwrap();
+    let gray = dir.path().join("gray.png");
+    image::GrayImage::from_pixel(6, 4, image::Luma([90])).save(&gray).unwrap();
+    let color = fixture(dir.path(), "color.png", 9);
+    let opts = EncodeOptions::default();
+    let replace = OverwritePolicy::Replace;
+    let pgm = convert_file(&gray, Format::Pnm, &opts, replace).unwrap();
+    assert_eq!(pgm.path(), dir.path().join("gray.pgm"));
+    assert_eq!(&std::fs::read(pgm.path()).unwrap()[..2], b"P5");
+    let ppm = convert_file(&color, Format::Pnm, &opts, replace).unwrap();
+    assert_eq!(ppm.path(), dir.path().join("color.ppm"));
+    assert_eq!(&std::fs::read(ppm.path()).unwrap()[..2], b"P6");
+
+    // Keeping the source format: a gray PGM stays .pgm.
+    let rotated = rotate_file(pgm.path(), Rotation::Deg90, None, replace).unwrap();
+    assert_eq!(rotated.path(), dir.path().join("gray_rot90.pgm"));
+    // A coloured canvas turns gray pixels into colour: .ppm.
+    let extent = ExtentOptions::new(ExtentSize::Exact { width: 8, height: 8 })
+        .with_background([255, 0, 0, 255]);
+    let extended = extent_file(&gray, extent, Some(Format::Pnm), replace).unwrap();
+    assert_eq!(extended.path(), dir.path().join("gray_extent-8x8.ppm"));
+
+    // Skip is decided against the real name, after decoding.
+    std::fs::write(dir.path().join("gray_rot90.pgm"), b"keep").unwrap();
+    let skipped = rotate_file(pgm.path(), Rotation::Deg90, None, OverwritePolicy::Skip).unwrap();
+    assert_eq!(skipped, ConvertOutcome::Skipped { output: dir.path().join("gray_rot90.pgm") });
+    assert_eq!(std::fs::read(dir.path().join("gray_rot90.pgm")).unwrap(), b"keep");
+    let skipped = convert_file(&gray, Format::Pnm, &opts, OverwritePolicy::Skip).unwrap();
+    assert_eq!(skipped, ConvertOutcome::Skipped { output: dir.path().join("gray.pgm") });
+    assert_no_partials(dir.path());
+}
+
+#[test]
 fn single_file_operations_honour_caller_encode_options() {
     use bigimage_core::*;
     let dir = tempfile::tempdir().unwrap();

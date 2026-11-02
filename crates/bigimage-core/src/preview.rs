@@ -164,7 +164,11 @@ impl PreviewSession {
             PreviewOp::Rotate(r) => Ok(rotate::apply_to(&self.thumbnail, *r)),
             PreviewOp::Flip(a) => Ok(flip::apply_to(&self.thumbnail, *a)),
             PreviewOp::Crop(rect) => {
-                let scaled = scale_rect(*rect, self.thumbnail_scale);
+                let scaled = scale_rect(
+                    *rect,
+                    self.natural_size,
+                    (self.thumbnail.width(), self.thumbnail.height()),
+                );
                 crop::apply_to(&self.thumbnail, scaled)
             }
             PreviewOp::Extent(opts) => {
@@ -257,15 +261,7 @@ fn downscale(img: &DynamicImage, max_edge: u32) -> Result<DynamicImage> {
         return Ok(img.clone());
     }
 
-    let (new_w, new_h) = if w >= h {
-        let nw = max_edge;
-        let nh = ((h as u64) * (nw as u64) / (w as u64)) as u32;
-        (nw, nh.max(1))
-    } else {
-        let nh = max_edge;
-        let nw = ((w as u64) * (nh as u64) / (h as u64)) as u32;
-        (nw.max(1), nh)
-    };
+    let (new_w, new_h) = crate::resize::max_edge_dims(w, h, max_edge);
 
     let mut dst = DynamicImage::new(new_w, new_h, img.color());
     let mut resizer = Resizer::new();
@@ -277,13 +273,21 @@ fn downscale(img: &DynamicImage, max_edge: u32) -> Result<DynamicImage> {
     Ok(dst)
 }
 
-fn scale_rect(rect: CropRect, ratio: f64) -> CropRect {
-    CropRect {
-        x: ((rect.x as f64) * ratio).round() as u32,
-        y: ((rect.y as f64) * ratio).round() as u32,
-        width: ((rect.width as f64) * ratio).round().max(1.0) as u32,
-        height: ((rect.height as f64) * ratio).round().max(1.0) as u32,
-    }
+/// Map a crop in source pixels onto the thumbnail. Each axis uses its own
+/// scale (independent rounding makes them differ slightly) and the edges are
+/// clamped to the thumbnail, so a crop touching the bottom/right border of
+/// the source always stays inside the preview.
+fn scale_rect(rect: CropRect, natural: (u32, u32), thumbnail: (u32, u32)) -> CropRect {
+    let axis = |start: u32, len: u32, natural: u32, thumb: u32| {
+        let ratio = f64::from(thumb) / f64::from(natural.max(1));
+        let end = u64::from(start) + u64::from(len);
+        let end = ((end as f64) * ratio).round().clamp(1.0, f64::from(thumb)) as u32;
+        let start = ((f64::from(start) * ratio).round() as u32).min(end - 1);
+        (start, end - start)
+    };
+    let (x, width) = axis(rect.x, rect.width, natural.0, thumbnail.0);
+    let (y, height) = axis(rect.y, rect.height, natural.1, thumbnail.1);
+    CropRect { x, y, width, height }
 }
 
 #[cfg(test)]
@@ -403,6 +407,32 @@ mod tests {
         // Top-row corner is bg (red), source sits centered vertically.
         let rgba = out.to_rgba8();
         assert_eq!(rgba.get_pixel(0, 0).0, [255, 0, 0, 0xFF]);
+    }
+
+    #[test]
+    fn crop_touching_bottom_right_edge_stays_inside_thumbnail() {
+        // 1000x997 → 800x798 thumbnail; width and height scales differ.
+        let dir = TempDir::new().unwrap();
+        let src = write_fixture(dir.path(), "edge.png", 1000, 997);
+        let sess = PreviewSession::open(&src).unwrap();
+        let (tw, th) = (sess.thumbnail().width(), sess.thumbnail().height());
+        let full = sess.apply(&PreviewOp::Crop(CropRect::new(0, 0, 1000, 997))).unwrap();
+        assert_eq!((full.width(), full.height()), (tw, th));
+        let corner = sess.apply(&PreviewOp::Crop(CropRect::new(999, 996, 1, 1))).unwrap();
+        assert_eq!((corner.width(), corner.height()), (1, 1));
+        for (w, h) in [(1000, 997), (997, 1000), (1001, 999), (1999, 1003)] {
+            let natural = (w, h);
+            let thumb = crate::resize::max_edge_dims(w, h, PREVIEW_MAX_EDGE);
+            for rect in [
+                CropRect::new(0, 0, w, h),
+                CropRect::new(w / 3, h / 3, w - w / 3, h - h / 3),
+                CropRect::new(w - 1, h - 1, 1, 1),
+            ] {
+                let r = scale_rect(rect, natural, thumb);
+                assert!(r.width >= 1 && r.height >= 1);
+                assert!(r.x + r.width <= thumb.0 && r.y + r.height <= thumb.1, "{rect:?}");
+            }
+        }
     }
 
     #[test]

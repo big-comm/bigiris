@@ -57,19 +57,7 @@ impl ResizeMode {
 
         match *self {
             ResizeMode::MaxEdge(edge) => {
-                let edge = edge.max(1);
-                if src_w <= edge && src_h <= edge {
-                    return Ok((src_w, src_h));
-                }
-                if src_w >= src_h {
-                    let new_w = edge;
-                    let new_h = ((src_h as u64) * (new_w as u64) / (src_w as u64)) as u32;
-                    Ok((new_w, new_h.max(1)))
-                } else {
-                    let new_h = edge;
-                    let new_w = ((src_w as u64) * (new_h as u64) / (src_h as u64)) as u32;
-                    Ok((new_w.max(1), new_h))
-                }
+                Ok(max_edge_dims(src_w, src_h, edge))
             }
             ResizeMode::Percent(p) => {
                 if !p.is_finite() || p <= 0.0 || p > 1000.0 {
@@ -105,6 +93,28 @@ impl ResizeMode {
                 Ok((w.max(1), h.max(1)))
             }
         }
+    }
+}
+
+/// Dimensions with the longest edge clamped to `edge`, aspect preserved.
+/// The short side is rounded to nearest (like `Fit`/`Percent`) instead of
+/// truncated, and never collapses to 0. Images already within the bound are
+/// returned unchanged.
+pub(crate) fn max_edge_dims(src_w: u32, src_h: u32, edge: u32) -> (u32, u32) {
+    let edge = edge.max(1);
+    if src_w <= edge && src_h <= edge {
+        return (src_w, src_h);
+    }
+    // round(short * edge / long) in integer space.
+    let scale = |short: u32, long: u32| {
+        let (short, long) = (u64::from(short), u64::from(long));
+        let value = (2 * short * u64::from(edge) + long) / (2 * long);
+        (value as u32).clamp(1, edge)
+    };
+    if src_w >= src_h {
+        (edge, scale(src_h, src_w))
+    } else {
+        (scale(src_w, src_h), edge)
     }
 }
 
@@ -229,6 +239,17 @@ mod tests {
 
         assert_eq!(out, dir.path().join("l_100.png"));
         assert_eq!(dims_of(&out), (100, 50));
+    }
+
+    #[test]
+    fn max_edge_rounds_the_short_side_instead_of_truncating() {
+        let dims = |w, h, e| ResizeMode::MaxEdge(e).target_dims(w, h).unwrap();
+        assert_eq!(dims(1000, 667, 100), (100, 67));
+        assert_eq!(dims(667, 1000, 100), (67, 100));
+        assert_eq!(dims(1000, 997, 800), (800, 798));
+        // Extreme aspect ratios never collapse to zero.
+        assert_eq!(dims(100_000, 1, 10), (10, 1));
+        assert_eq!(dims(1, 100_000, 10), (1, 10));
     }
 
     #[test]

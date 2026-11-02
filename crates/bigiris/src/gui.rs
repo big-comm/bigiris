@@ -3623,8 +3623,57 @@ use bigimage_core::{
     ExtentSize, Filter, FlipAxis, Format, Gravity, LoopMode, OverwritePolicy, PreviewOp,
     PreviewSession, ResizeMode, Rotation,
 };
+use gettextrs::ngettext;
 use image::DynamicImage;
 use std::time::Duration;
+
+/// Substitute `{name}` placeholders of a translated template in one pass,
+/// so a value that itself contains `{…}` (a file name) is never expanded.
+fn fill(template: &str, values: &[(&str, &str)]) -> String {
+    let mut out = String::with_capacity(template.len());
+    let mut rest = template;
+    while let Some(open) = rest.find('{') {
+        out.push_str(&rest[..open]);
+        let after = &rest[open + 1..];
+        let value = after.find('}').and_then(|close| {
+            let key = &after[..close];
+            values.iter().find(|(name, _)| *name == key).map(|(_, value)| (close, *value))
+        });
+        match value {
+            Some((close, value)) => {
+                out.push_str(value);
+                rest = &after[close + 1..];
+            }
+            None => {
+                out.push('{');
+                rest = after;
+            }
+        }
+    }
+    out.push_str(rest);
+    out
+}
+
+#[cfg(test)]
+mod fill_tests {
+    use super::{files_subtitle, fill};
+    use std::path::PathBuf;
+
+    #[test]
+    fn fills_named_placeholders_once() {
+        assert_eq!(fill("{a} → {b}", &[("a", "{b}"), ("b", "x")]), "{b} → x");
+        assert_eq!(fill("{unknown} {", &[("a", "1")]), "{unknown} {");
+    }
+
+    #[test]
+    fn files_subtitle_counts_the_others() {
+        let one = vec![PathBuf::from("/x/{count}.png")];
+        assert_eq!(files_subtitle(&one), "{count}.png");
+        let three = vec![one[0].clone(), PathBuf::from("b.png"), PathBuf::from("c.png")];
+        assert_eq!(files_subtitle(&three), "{count}.png +2 outros");
+        assert_eq!(files_subtitle(&three[..2]), "{count}.png +1 outro");
+    }
+}
 
 /// Dialog signals capture related widgets for the duration of the dialog.
 /// Disconnect when the surface is released, before object finalization:
@@ -3767,7 +3816,7 @@ fn fill_convert_dialog(
     let optimize_switch = adw::SwitchRow::builder()
         .use_markup(false)
         .title(gettext("Otimizar tamanho"))
-        .subtitle("PNG com compressão máxima; AVIF mais lento; arquivo menor")
+        .subtitle(gettext("PNG com compressão máxima; AVIF mais lento; arquivo menor"))
         .active(false)
         .build();
 
@@ -3853,10 +3902,7 @@ fn fill_convert_dialog(
     // Smart prompt: LGPD / privacidade — se a imagem tem coordenadas GPS
     // no EXIF, avisa que o upload pode vazar a localização.
     let gps_banner = adw::Banner::builder()
-        .title(
-            "Esta imagem contém GPS (localização) no EXIF. Atenção ao compartilhar \
-             publicamente — nosso pipeline remove o EXIF automaticamente no re-encode.",
-        )
+        .title(gettext("Esta imagem contém GPS (localização) no EXIF. Atenção ao compartilhar publicamente — nosso pipeline remove o EXIF automaticamente no re-encode."))
         .revealed(false)
         .build();
     gps_banner.add_css_class("warning");
@@ -4088,7 +4134,7 @@ fn fill_resize_dialog(
         .model(&translated_strings(&filter_names))
         .build();
 
-    let mut target_names = vec!["Manter o formato original"];
+    let mut target_names = vec![n_("Manter o formato original")];
     target_names.extend(CONVERT_FORMATS.iter().map(|(n, _)| *n));
     let target_row = adw::ComboRow::builder()
         .use_markup(false)
@@ -4315,7 +4361,12 @@ fn files_subtitle(files: &[PathBuf]) -> String {
     if files.len() == 1 {
         first
     } else {
-        format!("{first} +{} outros", files.len() - 1)
+        let others = files.len() - 1;
+        // Translators: {first} is a file name, {count} how many more files.
+        fill(
+            &ngettext("{first} +{count} outro", "{first} +{count} outros", others as u32),
+            &[("first", &first), ("count", &others.to_string())],
+        )
     }
 }
 
@@ -4360,7 +4411,7 @@ fn build_rotate_dialog(app: &adw::Application, files: Rc<Vec<PathBuf>>) -> adw::
         .model(&translated_strings(&rotations))
         .build();
 
-    let mut target_names = vec!["Manter o formato original"];
+    let mut target_names = vec![n_("Manter o formato original")];
     target_names.extend(CONVERT_FORMATS.iter().map(|(n, _)| *n));
     let target_row = adw::ComboRow::builder()
         .use_markup(false)
@@ -4743,10 +4794,7 @@ fn build_crop_preview_column(
     column.append(&overlay);
 
     let hint = gtk::Label::builder()
-        .label(
-            "Arraste nos cantos para redimensionar · dentro do recorte para mover · \
-             fora dele para uma nova seleção.",
-        )
+        .label(gettext("Arraste nos cantos para redimensionar · dentro do recorte para mover · fora dele para uma nova seleção."))
         .wrap(true)
         .xalign(0.5)
         .margin_top(6)
@@ -4842,7 +4890,7 @@ fn fill_crop_dialog(
     h_spin.set_title(&gettext("Altura (px)"));
     h_spin.set_value(initial.height as f64);
 
-    let mut target_names = vec!["Manter o formato original"];
+    let mut target_names = vec![n_("Manter o formato original")];
     target_names.extend(CONVERT_FORMATS.iter().map(|(n, _)| *n));
     let target_row = adw::ComboRow::builder()
         .use_markup(false)
@@ -5030,7 +5078,7 @@ fn fill_extent_dialog(
     let header = adw::HeaderBar::new();
     header.set_title_widget(Some(&adw::WindowTitle::new(
         &gettext("Letterbox"),
-        "Prisma · sem corte",
+        &gettext("Prisma · sem corte"),
     )));
 
     let content_h = gtk::Box::builder()
@@ -5119,7 +5167,7 @@ fn fill_extent_dialog(
         .subtitle("—")
         .build();
 
-    let mut target_names = vec!["Manter o formato original"];
+    let mut target_names = vec![n_("Manter o formato original")];
     target_names.extend(CONVERT_FORMATS.iter().map(|(n, _)| *n));
     let target_row = adw::ComboRow::builder()
         .use_markup(false)
@@ -5404,10 +5452,7 @@ fn fill_upscale_dialog(
 
     // Hook — shown when an IA backend lands. Today just an informative note.
     let engine_note = gtk::Label::builder()
-        .label(
-            "Motor: Lanczos3 (CPU). O modo IA (Real-ESRGAN) será habilitado \
-             automaticamente quando um modelo ONNX FOSS estiver disponível.",
-        )
+        .label(gettext("Motor: Lanczos3 (CPU). O modo IA (Real-ESRGAN) será habilitado automaticamente quando um modelo ONNX FOSS estiver disponível."))
         .wrap(true)
         .xalign(0.0)
         .build();
@@ -5447,7 +5492,7 @@ fn fill_upscale_dialog(
         let refresh_prediction = move || {
             let f = UPSCALE_FACTORS[factor_row_c.selected() as usize].1;
             let sub = if natural == (0, 0) {
-                format!("× {f} (tamanho indisponível)")
+                fill(&gettext("× {factor} (tamanho indisponível)"), &[("factor", &f.to_string())])
             } else {
                 let w = (natural.0 as u64) * (f as u64);
                 let h = (natural.1 as u64) * (f as u64);
@@ -5459,7 +5504,7 @@ fn fill_upscale_dialog(
         dialog_signal!(window, factor_row, connect_selected_notify, move |_| refresh_prediction());
     }
 
-    let mut target_names = vec!["Manter o formato original"];
+    let mut target_names = vec![n_("Manter o formato original")];
     target_names.extend(CONVERT_FORMATS.iter().map(|(n, _)| *n));
     let target_row = adw::ComboRow::builder()
         .use_markup(false)
@@ -5613,7 +5658,7 @@ fn build_flip_dialog(app: &adw::Application, files: Rc<Vec<PathBuf>>) -> adw::Ap
         .model(&translated_strings(&axes))
         .build();
 
-    let mut target_names = vec!["Manter o formato original"];
+    let mut target_names = vec![n_("Manter o formato original")];
     target_names.extend(CONVERT_FORMATS.iter().map(|(n, _)| *n));
     let target_row = adw::ComboRow::builder()
         .use_markup(false)
@@ -5777,7 +5822,7 @@ fn fill_adjust_dialog(
     gamma.set_digits(2);
     gamma.set_value(1.0);
 
-    let mut target_names = vec!["Manter o formato original"];
+    let mut target_names = vec![n_("Manter o formato original")];
     target_names.extend(CONVERT_FORMATS.iter().map(|(n, _)| *n));
     let target_row = adw::ComboRow::builder()
         .use_markup(false)
@@ -6051,11 +6096,11 @@ fn fill_properties_window(
                 let row = adw::ActionRow::builder()
                     .use_markup(false)
                     .title(if meta.has_gps {
-                        "Coordenadas GPS presentes"
+                        gettext("Coordenadas GPS presentes")
                     } else {
-                        "Identificação de câmera/software presente"
+                        gettext("Identificação de câmera/software presente")
                     })
-                    .subtitle("Remova antes de publicar se for sensível.")
+                    .subtitle(gettext("Remova antes de publicar se for sensível."))
                     .build();
                 warning.add(&row);
                 page.add(&warning);
@@ -6083,12 +6128,12 @@ fn build_properties_file_group(
         .file_name()
         .map(|n| n.to_string_lossy().into_owned())
         .unwrap_or_else(|| path.display().to_string());
-    group.add(&info_row("Nome", &filename));
+    group.add(&info_row(&gettext("Nome"), &filename));
 
     if let Some(parent) = path.parent() {
         let parent_str = parent.display().to_string();
         if !parent_str.is_empty() {
-            group.add(&info_row("Pasta", &parent_str));
+            group.add(&info_row(&gettext("Pasta"), &parent_str));
         }
     }
 
@@ -6105,22 +6150,31 @@ fn build_properties_file_group(
     let sniffed = info.and_then(|i| i.format.as_deref()).map(canonical);
     match (sniffed, ext) {
         (Some(s), Some(e)) if s != e => {
-            group.add(&info_row("Formato", &format!("{s} (extensão: {e})")));
+            group.add(&info_row(
+                &gettext("Formato"),
+                &fill(
+                    &gettext("{format} (extensão: {extension})"),
+                    &[("format", &s), ("extension", &e)],
+                ),
+            ));
         }
-        (Some(s), _) => group.add(&info_row("Formato", &s)),
-        (None, Some(e)) => group.add(&info_row("Formato", &e)),
+        (Some(s), _) => group.add(&info_row(&gettext("Formato"), &s)),
+        (None, Some(e)) => group.add(&info_row(&gettext("Formato"), &e)),
         (None, None) => {}
     }
 
     match fsmeta {
         Ok(fsmeta) => {
-            group.add(&info_row("Tamanho", &format_bytes(fsmeta.len())));
+            group.add(&info_row(&gettext("Tamanho"), &format_bytes(fsmeta.len())));
             if let Ok(mtime) = fsmeta.modified() {
-                group.add(&info_row("Modificado", &format_system_time(mtime)));
+                group.add(&info_row(&gettext("Modificado"), &format_system_time(mtime)));
             }
         }
         Err(e) => {
-            group.add(&info_row("Tamanho", &format!("(indisponível: {e})")));
+            group.add(&info_row(
+                &gettext("Tamanho"),
+                &fill(&gettext("(indisponível: {error})"), &[("error", e.as_str())]),
+            ));
         }
     }
 
@@ -6145,25 +6199,25 @@ fn build_properties_image_group(info: Option<&crate::codec::Information>) -> adw
                 10 => Some(image::ColorType::Rgba32F),
                 _ => None,
             });
-            group.add(&info_row("Dimensões", &format!("{w} × {h} px")));
+            group.add(&info_row(&gettext("Dimensões"), &format!("{w} × {h} px")));
 
             let mp = (f64::from(w) * f64::from(h)) / 1_000_000.0;
             if mp >= 0.1 {
-                group.add(&info_row("Megapixels", &format!("{mp:.1} MP")));
+                group.add(&info_row(&gettext("Megapixels"), &format!("{mp:.1} MP")));
             }
             if w > 0 && h > 0 {
                 let (rw, rh) = simplify_ratio(w, h);
-                group.add(&info_row("Razão de aspecto", &format!("{rw}:{rh}")));
+                group.add(&info_row(&gettext("Razão de aspecto"), &format!("{rw}:{rh}")));
             }
             if let Some(color) = color {
-                group.add(&info_row("Modo de cor", color_type_label(color)));
-                group.add(&info_row("Bits por canal", color_type_bits(color)));
+                group.add(&info_row(&gettext("Modo de cor"), &color_type_label(color)));
+                group.add(&info_row(&gettext("Bits por canal"), color_type_bits(color)));
             }
         }
         None => {
             group.add(&info_row(
-                "Dimensões",
-                "(falha: não foi possível identificar o formato pelo conteúdo)",
+                &gettext("Dimensões"),
+                &gettext("(falha: não foi possível identificar o formato pelo conteúdo)"),
             ));
         }
     }
@@ -6173,8 +6227,11 @@ fn build_properties_image_group(info: Option<&crate::codec::Information>) -> adw
         if let Some(o) = meta.orientation {
             if o != 1 {
                 group.add(&info_row(
-                    "Orientação EXIF",
-                    &format!("{o} · use Girar ▸ Automático pra corrigir"),
+                    &gettext("Orientação EXIF"),
+                    &fill(
+                        &gettext("{orientation} · use Girar ▸ Automático pra corrigir"),
+                        &[("orientation", &o.to_string())],
+                    ),
                 ));
             }
         }
@@ -6184,14 +6241,14 @@ fn build_properties_image_group(info: Option<&crate::codec::Information>) -> adw
 
 /// Friendly label for the decoded pixel layout, matching what the Convert
 /// dialog says when picking encoders.
-fn color_type_label(c: image::ColorType) -> &'static str {
+fn color_type_label(c: image::ColorType) -> String {
     use image::ColorType::*;
     match c {
-        L8 | L16 => "Tons de cinza",
-        La8 | La16 => "Tons de cinza + alfa",
-        Rgb8 | Rgb16 | Rgb32F => "RGB",
-        Rgba8 | Rgba16 | Rgba32F => "RGBA",
-        _ => "—",
+        L8 | L16 => gettext("Tons de cinza"),
+        La8 | La16 => gettext("Tons de cinza + alfa"),
+        Rgb8 | Rgb16 | Rgb32F => "RGB".to_string(),
+        Rgba8 | Rgba16 | Rgba32F => "RGBA".to_string(),
+        _ => "—".to_string(),
     }
 }
 
@@ -6224,7 +6281,10 @@ fn simplify_ratio(w: u32, h: u32) -> (u32, u32) {
 fn build_properties_exif_group(meta: &metadata::Metadata) -> adw::PreferencesGroup {
     let group = adw::PreferencesGroup::builder()
         .title("EXIF")
-        .description(format!("{} campo(s) presentes", meta.tags.len()))
+        .description(fill(
+            &ngettext("{count} campo presente", "{count} campos presentes", meta.tags.len() as u32),
+            &[("count", &meta.tags.len().to_string())],
+        ))
         .build();
     for (name, value) in &meta.tags {
         group.add(&info_row(name, value));
@@ -6313,8 +6373,11 @@ fn build_compare_dialog(app: &adw::Application, files: Rc<Vec<PathBuf>>) -> adw:
     let right_name =
         right_path.file_name().map(|s| s.to_string_lossy().into_owned()).unwrap_or_default();
     let title = adw::WindowTitle::new(
-        "Comparar imagens",
-        &format!("Antes: {left_name}  ·  Depois: {right_name}"),
+        &gettext("Comparar imagens"),
+        &fill(
+            &gettext("Antes: {before}  ·  Depois: {after}"),
+            &[("before", &left_name), ("after", &right_name)],
+        ),
     );
     header.set_title_widget(Some(&title));
 
@@ -6552,7 +6615,7 @@ fn build_batch_dialog(
     let optimize_switch = adw::SwitchRow::builder()
         .use_markup(false)
         .title(gettext("Otimizar tamanho"))
-        .subtitle("PNG com compressão máxima; AVIF mais lento; arquivo menor")
+        .subtitle(gettext("PNG com compressão máxima; AVIF mais lento; arquivo menor"))
         .build();
     convert_group.add(&optimize_switch);
     bind_encode_controls(&window, &format_row, &quality_spin, &optimize_switch);
@@ -6570,7 +6633,7 @@ fn build_batch_dialog(
     let folder_row = adw::ActionRow::builder()
         .use_markup(false)
         .title(gettext("Pasta de saída"))
-        .subtitle("Mesma pasta do arquivo de origem")
+        .subtitle(gettext("Mesma pasta do arquivo de origem"))
         .activatable(true)
         .build();
     let folder_icon = gtk::Image::from_icon_name("folder-open-symbolic");
@@ -6587,7 +6650,7 @@ fn build_batch_dialog(
     dest_group.add(&folder_row);
 
     // ── Rodapé: barra de progresso + status + botões ────────────────────
-    let progress = gtk::ProgressBar::builder().show_text(true).text("Pronto").build();
+    let progress = gtk::ProgressBar::builder().show_text(true).text(gettext("Pronto")).build();
     progress.set_margin_start(18);
     progress.set_margin_end(18);
     progress.set_margin_top(8);
@@ -6783,28 +6846,39 @@ fn build_batch_dialog(
                     }) => {
                         running.set(false);
                         let timing = batch_runner::format_duration(elapsed);
-                        let mut msg = if cancelled {
-                            format!(
-                                "Cancelado após {done}/{total} em {timing}. \
-                                 {ok} gravado(s), {skip} ignorado(s), {fail} falha(s)."
-                            )
+                        let template = if cancelled {
+                            gettext("Cancelado após {done}/{total} em {timing}. {ok} gravado(s), {skip} ignorado(s), {fail} falha(s).")
                         } else {
-                            format!(
-                                "Concluído em {timing}. \
-                                 {ok} gravado(s), {skip} ignorado(s), {fail} falha(s)."
-                            )
+                            gettext("Concluído em {timing}. {ok} gravado(s), {skip} ignorado(s), {fail} falha(s).")
                         };
+                        let mut msg = fill(
+                            &template,
+                            &[
+                                ("done", &done.to_string()),
+                                ("total", &total.to_string()),
+                                ("timing", &timing),
+                                ("ok", &ok.to_string()),
+                                ("skip", &skip.to_string()),
+                                ("fail", &fail.to_string()),
+                            ],
+                        );
                         if ok > 0 && bytes_in > 0 && bytes_out > 0 {
                             let delta = batch_runner::format_size_delta(bytes_in, bytes_out);
                             let avg_in = bytes_in / (ok as u64).max(1);
                             let avg_out = bytes_out / (ok as u64).max(1);
-                            msg.push_str(&format!(
-                                "\n{} → {} ({delta}) · média por arquivo {} → {}",
-                                batch_runner::format_size(bytes_in),
-                                batch_runner::format_size(bytes_out),
-                                batch_runner::format_size(avg_in),
-                                batch_runner::format_size(avg_out),
-                            ));
+                            msg.push('\n');
+                            msg.push_str(
+                                &fill(
+                                    &gettext("{before} → {after} ({delta}) · média por arquivo {avg_before} → {avg_after}"),
+                                    &[
+                                        ("before", &batch_runner::format_size(bytes_in)),
+                                        ("after", &batch_runner::format_size(bytes_out)),
+                                        ("delta", &delta),
+                                        ("avg_before", &batch_runner::format_size(avg_in)),
+                                        ("avg_after", &batch_runner::format_size(avg_out)),
+                                    ],
+                                ),
+                            );
                         }
                         status.set_text(&msg);
                         if let Some(err) = first_err {
@@ -7476,7 +7550,7 @@ fn build_remove_bg_dialog(
     let header = adw::HeaderBar::new();
     header.set_title_widget(Some(&adw::WindowTitle::new(
         &gettext("Remover fundo"),
-        "Prisma · BiRefNet-lite",
+        &gettext("Prisma · BiRefNet-lite"),
     )));
 
     let content = gtk::Box::builder()
@@ -7517,10 +7591,7 @@ fn build_remove_bg_dialog(
     // get a surprise error.
     if !bigimage_ai::onnx_available() {
         let banner = gtk::Label::builder()
-            .label(
-                "Esta build não inclui IA. Recompile com `cargo build --features ai` \
-                 e instale `onnxruntime` (Arch: `pacman -S onnxruntime`).",
-            )
+            .label(gettext("Esta build não inclui IA. Recompile com `cargo build --features ai` e instale `onnxruntime` (Arch: `pacman -S onnxruntime`)."))
             .wrap(true)
             .xalign(0.0)
             .build();
@@ -7549,7 +7620,7 @@ fn build_remove_bg_dialog(
     let model_row = adw::ActionRow::builder()
         .use_markup(false)
         .title(gettext("Modelo"))
-        .subtitle("BiRefNet-lite (MIT) · roda offline no seu computador")
+        .subtitle(gettext("BiRefNet-lite (MIT) · roda offline no seu computador"))
         .build();
     let model_icon = gtk::Image::from_icon_name("application-x-executable-symbolic");
     model_row.add_prefix(&model_icon);
@@ -7569,10 +7640,7 @@ fn build_remove_bg_dialog(
 
     let group = adw::PreferencesGroup::builder()
         .title(gettext("Remover fundo com IA local"))
-        .description(
-            "O modelo roda inteiramente no seu computador. \
-             Nenhuma imagem sai do disco — sem upload, sem conta, sem API externa.",
-        )
+        .description(gettext("O modelo roda inteiramente no seu computador. Nenhuma imagem sai do disco — sem upload, sem conta, sem API externa."))
         .build();
     group.add(&files_row);
     group.add(&model_row);
@@ -7745,21 +7813,22 @@ fn build_remove_bg_dialog(
                             0.0
                         };
                         progress_bar.set_fraction(frac);
-                        progress_bar.set_text(Some(&format!(
-                            "Baixando modelo (uma vez só): {} / {}",
-                            format_size(done),
-                            format_size(total),
+                        progress_bar.set_text(Some(&fill(
+                            &gettext("Baixando modelo (uma vez só): {done} / {total}"),
+                            &[("done", &format_size(done)), ("total", &format_size(total))],
                         )));
                         glib::ControlFlow::Continue
                     }
                     BgUiState::Processing { idx, total, file } => {
                         let frac = (idx as f64 / total.max(1) as f64).clamp(0.0, 1.0);
                         progress_bar.set_fraction(frac);
-                        progress_bar.set_text(Some(&format!(
-                            "Processando {}/{} — {}",
-                            idx + 1,
-                            total,
-                            file
+                        progress_bar.set_text(Some(&fill(
+                            &gettext("Processando {current}/{total} — {file}"),
+                            &[
+                                ("current", &(idx + 1).to_string()),
+                                ("total", &total.to_string()),
+                                ("file", &file),
+                            ],
                         )));
                         glib::ControlFlow::Continue
                     }

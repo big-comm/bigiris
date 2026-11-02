@@ -79,6 +79,29 @@ pub fn image_dimensions(path: impl AsRef<std::path::Path>) -> image::ImageResult
 
 /// Encode pixels atomically with shared color, format and privacy policy.
 /// This is also used by the viewer and AI outputs instead of ad-hoc writes.
+///
+/// # Depth and alpha policy per target
+///
+/// Every pipeline (`convert`, `resize`, `crop`, …) funnels through the same
+/// preparation step, so this table is the whole contract. "8-bit" means a
+/// 16-bit or float source is reduced; "adds alpha" means an opaque source is
+/// written with an opaque alpha channel.
+///
+/// | Target              | Written as                                                       |
+/// |---------------------|------------------------------------------------------------------|
+/// | PNG, TIFF           | Source type kept (L/La/Rgb/Rgba, 8 or 16-bit); float → `Rgb16`/`Rgba16` |
+/// | PNM (PGM/PPM)       | `L8`/`L16`/`Rgb8`/`Rgb16` kept; alpha flattened over white keeping depth; float → `Rgb16` |
+/// | JPEG                | `Rgb8`; alpha flattened over white; 8-bit                         |
+/// | AVIF                | `Rgba8`: 8-bit, adds alpha                                        |
+/// | WebP, GIF, BMP, TGA, QOI | `Rgba8`: 8-bit, adds alpha                                   |
+/// | ICO                 | `Rgba8`, longest edge ≤ 256 px                                    |
+/// | OpenEXR             | `Rgba32F`, linear light                                           |
+/// | Radiance HDR        | `Rgb32F`, linear light                                            |
+///
+/// Float images are scene-linear; integer images are sRGB-encoded. Crossing
+/// between the two applies the sRGB transfer function (clamping HDR values
+/// above 1.0). PNG and JPEG outputs carry a generated sRGB ICC profile; no
+/// source metadata is written.
 pub fn save_image(
     image: image::DynamicImage,
     output: impl AsRef<std::path::Path>,

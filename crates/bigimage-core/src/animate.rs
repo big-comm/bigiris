@@ -38,8 +38,9 @@ impl LoopMode {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct AnimateOptions {
     /// Delay shown for each frame, in milliseconds. `100` ≈ 10fps,
-    /// `40` ≈ 25fps. Capped internally to 10 ms to respect GIF's minimum
-    /// practical rate.
+    /// `40` ≈ 25fps. GIF stores delays in centiseconds and browsers replace
+    /// delays below 2 cs with 10 cs (making "fast" GIFs play *slower*), so
+    /// values below [`MIN_DELAY_MS`] are raised to it.
     pub delay_ms: u32,
     /// Loop behaviour (see [`LoopMode`]).
     pub loop_mode: LoopMode,
@@ -47,6 +48,10 @@ pub struct AnimateOptions {
     /// encode but worse colour quality. `10` is the balanced default.
     pub speed: i32,
 }
+
+/// Shortest frame delay written to a GIF (2 centiseconds, 50fps): the
+/// smallest value every major browser honours instead of clamping to 100 ms.
+pub const MIN_DELAY_MS: u32 = 20;
 
 impl Default for AnimateOptions {
     fn default() -> Self {
@@ -73,7 +78,7 @@ pub fn make_gif(frames: &[PathBuf], output: &Path, opts: AnimateOptions) -> Resu
     // Decode first frame to lock canvas dimensions.
     let (first_img, _fmt) = pipeline::decode_with_source_format(&frames[0])?;
     let (w, h) = (first_img.width(), first_img.height());
-    let delay = image::Delay::from_numer_denom_ms(opts.delay_ms.max(10), 1);
+    let delay = image::Delay::from_numer_denom_ms(opts.delay_ms.max(MIN_DELAY_MS), 1);
 
     let mut push_frame = |img: DynamicImage| -> Result<()> {
         let rgba = normalise_frame(img, w, h)?;
@@ -160,6 +165,24 @@ mod tests {
         let decoded = image::open(&out).unwrap();
         assert_eq!(decoded.width(), 120);
         assert_eq!(decoded.height(), 80);
+    }
+
+    #[test]
+    fn tiny_delays_are_raised_to_two_centiseconds() {
+        use image::AnimationDecoder;
+        let dir = TempDir::new().unwrap();
+        let f = fixture(dir.path(), "f.png", 8, 8, [9; 3]);
+        let out = dir.path().join("fast.gif");
+        let opts = AnimateOptions { delay_ms: 5, ..AnimateOptions::default() };
+        make_gif(&[f.clone(), f], &out, opts).unwrap();
+        let decoder = image::codecs::gif::GifDecoder::new(std::io::BufReader::new(
+            std::fs::File::open(&out).unwrap(),
+        ))
+        .unwrap();
+        for frame in decoder.into_frames().collect_frames().unwrap() {
+            let (numer, denom) = frame.delay().numer_denom_ms();
+            assert_eq!(numer / denom, MIN_DELAY_MS);
+        }
     }
 
     #[test]

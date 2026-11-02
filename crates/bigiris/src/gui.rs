@@ -3706,7 +3706,11 @@ const RESIZE_FILTERS: &[(&str, Filter)] = &[
 
 /// Run the "Converter" modal. Returns GTK's exit code.
 pub fn run_convert_dialog(files: Vec<PathBuf>) -> i32 {
-    let app = adw::Application::builder().application_id(APP_ID).build();
+    // NON_UNIQUE: each service-menu action is its own process; see run_viewer.
+    let app = adw::Application::builder()
+        .application_id(APP_ID)
+        .flags(gio::ApplicationFlags::NON_UNIQUE)
+        .build();
     let files = Rc::new(files);
     app.connect_activate(move |app| {
         build_convert_dialog(app, files.clone()).present();
@@ -3971,7 +3975,11 @@ fn fill_convert_dialog(
 
 /// Run the "Redimensionar" modal.
 pub fn run_resize_dialog(files: Vec<PathBuf>) -> i32 {
-    let app = adw::Application::builder().application_id(APP_ID).build();
+    // NON_UNIQUE: each service-menu action is its own process; see run_viewer.
+    let app = adw::Application::builder()
+        .application_id(APP_ID)
+        .flags(gio::ApplicationFlags::NON_UNIQUE)
+        .build();
     let files = Rc::new(files);
     app.connect_activate(move |app| {
         build_resize_dialog(app, files.clone()).present();
@@ -4321,7 +4329,11 @@ use batch_runner::run_batch_async;
 
 /// Rotate modal: pick 90 / 180 / 270 and an optional target format.
 pub fn run_rotate_dialog(files: Vec<PathBuf>) -> i32 {
-    let app = adw::Application::builder().application_id(APP_ID).build();
+    // NON_UNIQUE: each service-menu action is its own process; see run_viewer.
+    let app = adw::Application::builder()
+        .application_id(APP_ID)
+        .flags(gio::ApplicationFlags::NON_UNIQUE)
+        .build();
     let files = Rc::new(files);
     app.connect_activate(move |app| {
         build_rotate_dialog(app, files.clone()).present();
@@ -4747,7 +4759,11 @@ fn build_crop_preview_column(
 
 /// Crop modal: rectangular window by (x, y, w, h) with live preview.
 pub fn run_crop_dialog(files: Vec<PathBuf>) -> i32 {
-    let app = adw::Application::builder().application_id(APP_ID).build();
+    // NON_UNIQUE: each service-menu action is its own process; see run_viewer.
+    let app = adw::Application::builder()
+        .application_id(APP_ID)
+        .flags(gio::ApplicationFlags::NON_UNIQUE)
+        .build();
     let files = Rc::new(files);
     app.connect_activate(move |app| {
         build_crop_dialog(app, files.clone()).present();
@@ -4982,7 +4998,11 @@ const EXTENT_GRAVITIES: &[(&str, Gravity)] =
 
 /// Run the "Letterbox" modal. Returns GTK's exit code.
 pub fn run_extent_dialog(files: Vec<PathBuf>) -> i32 {
-    let app = adw::Application::builder().application_id(APP_ID).build();
+    // NON_UNIQUE: each service-menu action is its own process; see run_viewer.
+    let app = adw::Application::builder()
+        .application_id(APP_ID)
+        .flags(gio::ApplicationFlags::NON_UNIQUE)
+        .build();
     let files = Rc::new(files);
     app.connect_activate(move |app| {
         build_extent_dialog(app, files.clone()).present();
@@ -5330,7 +5350,11 @@ const UPSCALE_FACTORS: &[(&str, u8)] = &[("2× (200%)", 2), ("3× (300%)", 3), (
 
 /// Upscale modal: pick an integer factor and run Lanczos3 resize.
 pub fn run_upscale_dialog(files: Vec<PathBuf>) -> i32 {
-    let app = adw::Application::builder().application_id(APP_ID).build();
+    // NON_UNIQUE: each service-menu action is its own process; see run_viewer.
+    let app = adw::Application::builder()
+        .application_id(APP_ID)
+        .flags(gio::ApplicationFlags::NON_UNIQUE)
+        .build();
     let files = Rc::new(files);
     app.connect_activate(move |app| {
         build_upscale_dialog(app, files.clone()).present();
@@ -5558,7 +5582,11 @@ fn fill_upscale_dialog(
 
 /// Flip modal: horizontal or vertical mirror.
 pub fn run_flip_dialog(files: Vec<PathBuf>) -> i32 {
-    let app = adw::Application::builder().application_id(APP_ID).build();
+    // NON_UNIQUE: each service-menu action is its own process; see run_viewer.
+    let app = adw::Application::builder()
+        .application_id(APP_ID)
+        .flags(gio::ApplicationFlags::NON_UNIQUE)
+        .build();
     let files = Rc::new(files);
     app.connect_activate(move |app| {
         build_flip_dialog(app, files.clone()).present();
@@ -5691,7 +5719,11 @@ fn build_flip_dialog(app: &adw::Application, files: Rc<Vec<PathBuf>>) -> adw::Ap
 
 /// Adjust modal: brightness + contrast + saturation + gamma.
 pub fn run_adjust_dialog(files: Vec<PathBuf>) -> i32 {
-    let app = adw::Application::builder().application_id(APP_ID).build();
+    // NON_UNIQUE: each service-menu action is its own process; see run_viewer.
+    let app = adw::Application::builder()
+        .application_id(APP_ID)
+        .flags(gio::ApplicationFlags::NON_UNIQUE)
+        .build();
     let files = Rc::new(files);
     app.connect_activate(move |app| {
         build_adjust_dialog(app, files.clone()).present();
@@ -5933,7 +5965,11 @@ fn fill_adjust_dialog(
 /// Run the metadata viewer for `files[0]`. Multi-select still opens but
 /// only the first file is inspected — a "próximo" navegator fica para M3.
 pub fn run_metadata_dialog(files: Vec<PathBuf>) -> i32 {
-    let app = adw::Application::builder().application_id(APP_ID).build();
+    // NON_UNIQUE: each service-menu action is its own process; see run_viewer.
+    let app = adw::Application::builder()
+        .application_id(APP_ID)
+        .flags(gio::ApplicationFlags::NON_UNIQUE)
+        .build();
     let files = Rc::new(files);
     app.connect_activate(move |app| {
         let Some(first) = files.first() else { return };
@@ -6247,7 +6283,11 @@ pub fn run_compare_dialog(files: Vec<PathBuf>) -> i32 {
         tracing::warn!(count = files.len(), "compare needs two files; falling back to viewer");
         return run_viewer(files);
     }
-    let app = adw::Application::builder().application_id(APP_ID).build();
+    // NON_UNIQUE: each service-menu action is its own process; see run_viewer.
+    let app = adw::Application::builder()
+        .application_id(APP_ID)
+        .flags(gio::ApplicationFlags::NON_UNIQUE)
+        .build();
     let files = Rc::new(files);
     app.connect_activate(move |app| {
         build_compare_dialog(app, files.clone()).present();
@@ -6425,7 +6465,11 @@ fn make_compare_side(path: &Path, window: &adw::ApplicationWindow) -> gtk::Box {
 /// Prisma Lote — converter em lote. Pega a lista de arquivos recebida via
 /// CLI, expande pastas e aplica a conversão no pool paralelo compartilhado.
 pub fn run_batch_dialog(files: Vec<PathBuf>) -> i32 {
-    let app = adw::Application::builder().application_id(APP_ID).build();
+    // NON_UNIQUE: each service-menu action is its own process; see run_viewer.
+    let app = adw::Application::builder()
+        .application_id(APP_ID)
+        .flags(gio::ApplicationFlags::NON_UNIQUE)
+        .build();
     let files = Rc::new(RefCell::new(expand_batch_inputs(files)));
     app.connect_activate(move |app| {
         build_batch_dialog(app, files.clone()).present();
@@ -6930,7 +6974,11 @@ fn pick_output_folder(
 use batch_runner::format_size;
 
 pub fn run_animate_dialog(files: Vec<PathBuf>) -> i32 {
-    let app = adw::Application::builder().application_id(APP_ID).build();
+    // NON_UNIQUE: each service-menu action is its own process; see run_viewer.
+    let app = adw::Application::builder()
+        .application_id(APP_ID)
+        .flags(gio::ApplicationFlags::NON_UNIQUE)
+        .build();
     let files = Rc::new(files);
     app.connect_activate(move |app| {
         build_animate_dialog(app, files.clone()).present();
@@ -7173,7 +7221,11 @@ enum BgUiState {
 }
 
 pub fn run_remove_bg_dialog(files: Vec<PathBuf>) -> i32 {
-    let app = adw::Application::builder().application_id(APP_ID).build();
+    // NON_UNIQUE: each service-menu action is its own process; see run_viewer.
+    let app = adw::Application::builder()
+        .application_id(APP_ID)
+        .flags(gio::ApplicationFlags::NON_UNIQUE)
+        .build();
     let files = Rc::new(files);
     app.connect_activate(move |app| {
         build_remove_bg_dialog(app, files.clone()).present();

@@ -34,6 +34,7 @@ fn render(action: &Action) -> String {
     let mime_line: String = action.mime_types.iter().map(|m| format!("{m};")).collect();
     format!(
         "[Contractor Entry]\n\
+         X-BigIris-Generated=true\n\
          Name={label}\n{localized_name}\
          Icon={icon}\n\
          Description=BigIris — {comment}\n{localized_comment}\

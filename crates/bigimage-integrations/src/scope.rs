@@ -142,14 +142,37 @@ impl ScopePaths {
     }
 }
 
-/// Remove every file in `dir` whose name starts with `prefix` and ends with
-/// `suffix`. Non-matching files are left alone; a missing `dir` returns an
-/// empty list rather than an error, so uninstall is idempotent.
+/// Key-file line every generator writes into the first group of the
+/// files it creates (Dolphin, Nemo, PCManFM-Qt, Contractor). Uninstall
+/// deletes only files carrying it, so a user's own `bigiris-foo.desktop`
+/// survives even though it matches our naming scheme.
+pub(crate) const GENERATED_MARKER: &str = "X-BigIris-Generated=true";
+
+/// Upper bound on how much of a candidate file we read to identify it.
+/// Our generated files are a few KiB even with 29 locales.
+const MAX_IDENTIFY_BYTES: u64 = 256 * 1024;
+
+/// Is `body` a file our generators wrote? Current files carry
+/// [`GENERATED_MARKER`]; files from releases before the marker are still
+/// recognized because every action they contained launched `bigiris`
+/// directly (`Exec=bigiris …`).
+pub(crate) fn is_generated_by_us(body: &str) -> bool {
+    body.lines().map(str::trim).any(|line| {
+        line == GENERATED_MARKER || line == "Exec=bigiris" || line.starts_with("Exec=bigiris ")
+    })
+}
+
+/// Remove every regular file in `dir` whose name starts with `prefix`,
+/// ends with `suffix` **and** whose content [`is_generated_by_us`].
+/// Non-matching files (and symlinks) are left alone; a missing `dir`
+/// returns an empty list rather than an error, so uninstall is idempotent.
 pub(crate) fn remove_matching(
     dir: &Path,
     prefix: &str,
     suffix: &str,
 ) -> std::io::Result<Vec<PathBuf>> {
+    use std::io::Read;
+
     let mut removed = Vec::new();
     if !dir.exists() {
         return Ok(removed);
@@ -158,8 +181,18 @@ pub(crate) fn remove_matching(
         let entry = entry?;
         let name = entry.file_name();
         let name = name.to_string_lossy();
-        if name.starts_with(prefix) && name.ends_with(suffix) {
-            let path = entry.path();
+        if !(name.starts_with(prefix) && name.ends_with(suffix)) {
+            continue;
+        }
+        if !entry.file_type()?.is_file() {
+            continue;
+        }
+        let path = entry.path();
+        let mut body = String::new();
+        let readable = std::fs::File::open(&path)
+            .and_then(|f| f.take(MAX_IDENTIFY_BYTES).read_to_string(&mut body))
+            .is_ok();
+        if readable && is_generated_by_us(&body) {
             std::fs::remove_file(&path)?;
             removed.push(path);
         }
@@ -197,6 +230,44 @@ mod tests {
             tmp.path().join(".local/share/nautilus-python/extensions")
         );
         assert_eq!(p.thunar_uca(), tmp.path().join(".config/Thunar/uca.xml"));
+    }
+
+    #[test]
+    fn remove_matching_requires_marker_or_legacy_bigiris_exec() {
+        let tmp = TempDir::new().unwrap();
+        let dir = tmp.path();
+        let marked = dir.join("bigiris-new.desktop");
+        let legacy = dir.join("bigiris-old.desktop");
+        let users = dir.join("bigiris-mine.desktop");
+        let other_cmd = dir.join("bigiris-wrapper.desktop");
+        let foreign = dir.join("someone-else.desktop");
+        std::fs::write(&marked, format!("[Desktop Entry]\n{GENERATED_MARKER}\nExec=x\n")).unwrap();
+        std::fs::write(&legacy, "[Desktop Entry]\nExec=bigiris convert --to png %F\n").unwrap();
+        std::fs::write(&users, "[Desktop Entry]\nName=My own\nExec=gimp %F\n").unwrap();
+        std::fs::write(&other_cmd, "[Desktop Entry]\nExec=bigiris-helper %F\n").unwrap();
+        std::fs::write(&foreign, format!("{GENERATED_MARKER}\n")).unwrap();
+
+        let mut removed = remove_matching(dir, "bigiris-", ".desktop").unwrap();
+        removed.sort();
+        let mut expected = vec![legacy.clone(), marked.clone()];
+        expected.sort();
+        assert_eq!(removed, expected);
+        assert!(users.exists(), "user's own bigiris-* file was deleted");
+        assert!(other_cmd.exists());
+        assert!(foreign.exists(), "prefix filter ignored");
+    }
+
+    #[test]
+    fn remove_matching_skips_symlinks_and_directories() {
+        let tmp = TempDir::new().unwrap();
+        let dir = tmp.path().join("menus");
+        std::fs::create_dir_all(dir.join("bigiris-dir.desktop")).unwrap();
+        let target = tmp.path().join("target.desktop");
+        std::fs::write(&target, format!("{GENERATED_MARKER}\n")).unwrap();
+        std::os::unix::fs::symlink(&target, dir.join("bigiris-link.desktop")).unwrap();
+        assert!(remove_matching(&dir, "bigiris-", ".desktop").unwrap().is_empty());
+        assert!(target.exists());
+        assert!(dir.join("bigiris-dir.desktop").is_dir());
     }
 
     #[test]

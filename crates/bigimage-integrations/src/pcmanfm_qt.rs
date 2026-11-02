@@ -36,6 +36,7 @@ fn render(action: &Action) -> String {
 
     format!(
         "[Desktop Entry]\n\
+         X-BigIris-Generated=true\n\
          Type=Action\n\
          Name={label}\n{localized_name}\
          Icon={icon}\n\

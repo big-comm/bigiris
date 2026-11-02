@@ -45,6 +45,7 @@ fn render(action: &Action) -> String {
 
     format!(
         "[Desktop Entry]\n\
+         X-BigIris-Generated=true\n\
          Type=Service\n\
          ServiceTypes=KonqPopupMenu/Plugin\n\
          MimeType={mime_line}\n\

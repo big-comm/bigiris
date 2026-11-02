@@ -33,6 +33,7 @@ fn render(action: &Action) -> String {
     let mime_line: String = action.mime_types.iter().map(|m| format!("{m};")).collect();
     format!(
         "[Nemo Action]\n\
+         X-BigIris-Generated=true\n\
          Active=true\n\
          Name={label}\n{localized_name}\
          Comment=BigIris — {comment}\n{localized_comment}\

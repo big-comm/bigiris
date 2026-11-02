@@ -333,6 +333,48 @@ mod tests {
     }
 
     #[test]
+    fn every_generated_key_file_carries_the_marker() {
+        let tmp = TempDir::new().unwrap();
+        let paths = ScopePaths::rooted_at(tmp.path());
+        let report = install_with_paths(&paths);
+        let key_files: Vec<_> = report
+            .outcomes
+            .iter()
+            .filter(|o| !matches!(o.fm, FileManager::Thunar | FileManager::Nautilus))
+            .flat_map(|o| o.files.iter())
+            .collect();
+        assert!(!key_files.is_empty());
+        for file in key_files {
+            let body = std::fs::read_to_string(file).unwrap();
+            assert!(
+                body.lines().nth(1) == Some(crate::scope::GENERATED_MARKER),
+                "{} lacks the generated marker in its first group",
+                file.display()
+            );
+        }
+    }
+
+    #[test]
+    fn uninstall_keeps_user_files_that_only_share_our_name_prefix() {
+        let tmp = TempDir::new().unwrap();
+        let paths = ScopePaths::rooted_at(tmp.path());
+        install_with_paths(&paths);
+        let mine = [
+            paths.kio_servicemenus().join("bigiris-mine.desktop"),
+            paths.nemo_actions().join("bigiris-mine.nemo_action"),
+            paths.libfm_actions().join("bigiris-mine.desktop"),
+            paths.contractor().join("bigiris-mine.contract"),
+        ];
+        for file in &mine {
+            std::fs::write(file, "[Desktop Entry]\nName=Mine\nExec=gimp %F\n").unwrap();
+        }
+        assert!(uninstall_with_paths(&paths).is_success());
+        for file in &mine {
+            assert!(file.exists(), "{} was deleted", file.display());
+        }
+    }
+
+    #[test]
     fn uninstall_on_fresh_home_is_noop_but_ok() {
         let tmp = TempDir::new().unwrap();
         let paths = ScopePaths::rooted_at(tmp.path());

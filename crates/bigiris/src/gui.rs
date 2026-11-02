@@ -3623,7 +3623,6 @@ use bigimage_core::{
     ExtentSize, Filter, FlipAxis, Format, Gravity, LoopMode, OverwritePolicy, PreviewOp,
     PreviewSession, ResizeMode, Rotation,
 };
-use gettextrs::ngettext;
 use image::DynamicImage;
 use std::time::Duration;
 
@@ -3670,8 +3669,8 @@ mod fill_tests {
         let one = vec![PathBuf::from("/x/{count}.png")];
         assert_eq!(files_subtitle(&one), "{count}.png");
         let three = vec![one[0].clone(), PathBuf::from("b.png"), PathBuf::from("c.png")];
-        assert_eq!(files_subtitle(&three), "{count}.png +2 outros");
-        assert_eq!(files_subtitle(&three[..2]), "{count}.png +1 outro");
+        assert_eq!(files_subtitle(&three), "{count}.png e mais 2");
+        assert_eq!(files_subtitle(&three[..2]), "{count}.png e mais 1");
     }
 }
 
@@ -4379,9 +4378,10 @@ fn files_subtitle(files: &[PathBuf]) -> String {
         first
     } else {
         let others = files.len() - 1;
-        // Translators: {first} is a file name, {count} how many more files.
+        // No plural forms: the catalog validator rejects msgid_plural, so
+        // the wording avoids a counted noun. {first} is a file name.
         fill(
-            &ngettext("{first} +{count} outro", "{first} +{count} outros", others as u32),
+            &gettext("{first} e mais {count}"),
             &[("first", &first), ("count", &others.to_string())],
         )
     }
@@ -6046,7 +6046,7 @@ fn build_properties_exif_group(meta: &metadata::Metadata) -> adw::PreferencesGro
     let group = adw::PreferencesGroup::builder()
         .title("EXIF")
         .description(fill(
-            &ngettext("{count} campo presente", "{count} campos presentes", meta.tags.len() as u32),
+            &gettext("Campos presentes: {count}"),
             &[("count", &meta.tags.len().to_string())],
         ))
         .build();

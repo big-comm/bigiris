@@ -1560,9 +1560,13 @@ fn reveal_top(state: &Rc<RefCell<ViewerState>>) {
         return;
     }
     let delay = state.borrow().autohide_delay_ms;
-    let clone = state.clone();
+    let weak = Rc::downgrade(state);
     let id = glib::timeout_add_local_once(std::time::Duration::from_millis(delay), move || {
-        hide_top(&clone)
+        if let Some(state) = weak.upgrade() {
+            // This source is the one firing: forget it instead of removing it.
+            state.borrow_mut().top_hide_source = None;
+            hide_top(&state);
+        }
     });
     state.borrow_mut().top_hide_source = Some(id);
 }
@@ -1570,7 +1574,7 @@ fn reveal_top(state: &Rc<RefCell<ViewerState>>) {
 fn hide_top(state: &Rc<RefCell<ViewerState>>) {
     let mut s = state.borrow_mut();
     s.top_hide_source = None;
-    let window = s.window();
+    let Some(window) = s.window_weak.upgrade() else { return };
     let keyboard_in_header = gtk::prelude::GtkWindowExt::focus(&window).is_some_and(|widget| {
         !widget.is_ancestor(&s.scroller) && !widget.is_ancestor(&s.film_strip_scroll)
     });
@@ -1613,17 +1617,24 @@ fn reveal_bottom(state: &Rc<RefCell<ViewerState>>) {
         return;
     }
     let delay = state.borrow().autohide_delay_ms;
-    let clone = state.clone();
+    let weak = Rc::downgrade(state);
     let id = glib::timeout_add_local_once(std::time::Duration::from_millis(delay), move || {
-        hide_bottom(&clone)
+        if let Some(state) = weak.upgrade() {
+            // This source is the one firing: forget it instead of removing it.
+            state.borrow_mut().bottom_hide_source = None;
+            hide_bottom(&state);
+        }
     });
     state.borrow_mut().bottom_hide_source = Some(id);
 }
 
 fn hide_bottom(state: &Rc<RefCell<ViewerState>>) {
-    let mut s = state.borrow_mut();
-    s.bottom_hide_source = None;
-    let keyboard_in_strip = gtk::prelude::GtkWindowExt::focus(&s.window())
+    // The F key hides the strip directly: drop the pending timer too, or it
+    // would outlive a window closed right after and touch freed state.
+    cancel_bottom_hide(state);
+    let s = state.borrow();
+    let Some(window) = s.window_weak.upgrade() else { return };
+    let keyboard_in_strip = gtk::prelude::GtkWindowExt::focus(&window)
         .is_some_and(|widget| widget.is_ancestor(&s.film_strip_scroll));
     if !keyboard_in_strip && !adw::StyleManager::default().is_high_contrast() {
         s.strip_revealer.set_reveal_child(false);
@@ -1651,10 +1662,13 @@ fn pulse_osd(state: &Rc<RefCell<ViewerState>>) {
     if state.borrow().ui_pinned {
         return;
     }
-    let clone = state.clone();
+    let weak = Rc::downgrade(state);
     let id =
         glib::timeout_add_local_once(std::time::Duration::from_millis(OSD_PULSE_MS), move || {
-            hide_osd(&clone)
+            if let Some(state) = weak.upgrade() {
+                state.borrow_mut().osd_hide_source = None;
+                hide_osd(&state);
+            }
         });
     state.borrow_mut().osd_hide_source = Some(id);
 }

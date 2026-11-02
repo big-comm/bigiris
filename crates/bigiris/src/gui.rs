@@ -1762,7 +1762,14 @@ fn handle_key(
 
     match key {
         Key::Escape => {
-            state.borrow().window().close();
+            // Like GNOME's image viewer: Esc first leaves fullscreen and
+            // only closes the window when it is not fullscreen.
+            let window = state.borrow().window();
+            if window.is_fullscreen() {
+                window.unfullscreen();
+            } else {
+                window.close();
+            }
             return glib::Propagation::Stop;
         }
         Key::F11 => {
@@ -3287,7 +3294,7 @@ fn present_shortcuts_dialog(parent: &adw::ApplicationWindow) {
                 ("F", gettext("Fita de miniaturas")),
                 ("G", gettext("Histograma RGB")),
                 ("H", gettext("Fixar barras visíveis")),
-                ("Escape", gettext("Fechar")),
+                ("Escape", gettext("Sair da tela cheia ou fechar")),
             ],
         ),
         (

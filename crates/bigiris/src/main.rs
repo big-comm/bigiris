@@ -1228,7 +1228,8 @@ fn run_to_pdf(
 /// output folder, then publish the PDF with the overwrite policy.
 ///
 /// soffice exits 0 when it cannot load a document or when another instance
-/// owns the profile, so success means "a fresh PDF exists", not the status.
+/// owns the profile, so success means "a PDF exists in the private
+/// staging folder", not the status.
 fn to_pdf_one(
     soffice: &Path,
     file: &Path,
@@ -1255,7 +1256,6 @@ fn to_pdf_one(
     // Same folder as the destination, so publishing is an atomic rename.
     let staging = tempfile::Builder::new().prefix(".bigiris-pdf-").tempdir_in(dir)?;
     let profile = tempfile::Builder::new().prefix("bigiris-soffice-").tempdir()?;
-    let started = std::time::SystemTime::now();
     let mut child = codec::close_inherited_descriptors(&mut std::process::Command::new(soffice))
         .arg(format!("-env:UserInstallation={}", file_url(profile.path())))
         .args(["--headless", "--norestore", "--nolockcheck", "--convert-to", "pdf", "--outdir"])
@@ -1282,12 +1282,11 @@ fn to_pdf_one(
         std::thread::sleep(std::time::Duration::from_millis(50));
     };
     let produced = staging.path().join(&name);
-    let fresh = std::fs::symlink_metadata(&produced).is_ok_and(|meta| {
-        meta.is_file()
-            && meta.len() > 0
-            && meta.modified().is_ok_and(|modified| modified >= started)
-    });
-    if !fresh {
+    // The staging folder is new and private, so anything there is fresh;
+    // no mtime comparison, which clock skew on NFS/SMB would break.
+    let produced_pdf =
+        std::fs::symlink_metadata(&produced).is_ok_and(|meta| meta.is_file() && meta.len() > 0);
+    if !produced_pdf {
         return Err(eyre!("soffice não gerou o PDF ({status})"));
     }
     publish_file(&produced, destination, policy)

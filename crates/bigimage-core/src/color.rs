@@ -15,6 +15,9 @@ fn error(message: impl std::fmt::Display) -> ImageError {
 /// * RGB profile on RGB pixels: colorimetric transform into sRGB.
 /// * Gray profile on gray pixels: transform into a gray profile with the
 ///   sRGB tone curve, so the samples display like untagged gray.
+/// * Gray profile on RGB pixels (gray samples widened to RGB by an edit,
+///   e.g. a coloured extent canvas): each channel goes through the gray
+///   tone curve into sRGB, so neutral pixels look exactly as before.
 /// * Any other combination (CMYK profile on pixels the decoder already
 ///   converted to RGB, RGB profile on gray pixels, Lab/XYZ…): the profile is
 ///   ignored with a warning — refusing to open the image would be worse.
@@ -22,19 +25,38 @@ fn error(message: impl std::fmt::Display) -> ImageError {
 /// Only a malformed profile fails: relabeling those pixels silently would
 /// hide a corrupt file.
 pub fn normalize_srgb(image: &mut DynamicImage, icc: &[u8]) -> ImageResult<()> {
+    normalize_srgb_applied(image, icc).map(drop)
+}
+
+/// [`normalize_srgb`], reporting whether the profile was applied (`false`:
+/// incompatible combination, profile ignored and pixels unchanged).
+pub(crate) fn normalize_srgb_applied(image: &mut DynamicImage, icc: &[u8]) -> ImageResult<bool> {
     let profile = parse(icc)?;
     match profile.color_space {
         DataColorSpace::Rgb if is_rgb(image) => normalize_rgb(image, icc, &profile),
         DataColorSpace::Gray if is_gray(image) => normalize_gray(image, &profile),
+        DataColorSpace::Gray if is_rgb(image) && profile.gray_trc.is_some() => {
+            // An RGB profile with the gray tone curve on every channel and
+            // sRGB primaries maps neutral samples like the gray profile does.
+            let mut widened = ColorProfile::new_srgb();
+            widened.cicp = None;
+            widened.red_trc.clone_from(&profile.gray_trc);
+            widened.green_trc.clone_from(&profile.gray_trc);
+            widened.blue_trc.clone_from(&profile.gray_trc);
+            transform_rgb(image, &widened, &ColorProfile::new_srgb())?;
+            image.set_color_space(image::metadata::Cicp::SRGB)?;
+            Ok(())
+        }
         space => {
             tracing::warn!(
                 ?space,
                 color = ?image.color(),
                 "perfil ICC incompatível com os pixels decodificados; perfil ignorado"
             );
-            Ok(())
+            return Ok(false);
         }
     }
+    .map(|()| true)
 }
 
 fn parse(icc: &[u8]) -> ImageResult<ColorProfile> {
@@ -228,12 +250,9 @@ mod tests {
 
     #[test]
     fn mismatched_or_cmyk_profiles_are_ignored_without_error() {
-        // Gray profile on RGB pixels, RGB profile on gray pixels.
-        let gray = ColorProfile::new_gray_with_gamma(1.0).encode().unwrap();
+        // RGB profile on gray pixels.
         let mut rgb =
             DynamicImage::ImageRgb8(image::ImageBuffer::from_pixel(1, 1, image::Rgb([10, 20, 30])));
-        normalize_srgb(&mut rgb, &gray).unwrap();
-        assert_eq!(rgb.as_rgb8().unwrap().get_pixel(0, 0).0, [10, 20, 30]);
 
         let p3 = ColorProfile::new_display_p3().encode().unwrap();
         let mut luma =
@@ -247,6 +266,38 @@ mod tests {
         assert_eq!(parse(&cmyk).unwrap().color_space, DataColorSpace::Cmyk);
         normalize_srgb(&mut rgb, &cmyk).unwrap();
         assert_eq!(rgb.as_rgb8().unwrap().get_pixel(0, 0).0, [10, 20, 30]);
+    }
+
+    #[test]
+    fn gray_profile_on_rgb_pixels_goes_through_the_gray_curve() {
+        // Linear gray profile: mid-gray 128 must brighten to ~188 on every
+        // channel, alpha and neutrality preserved; sRGB-curve gray is a no-op.
+        let linear = ColorProfile::new_gray_with_gamma(1.0).encode().unwrap();
+        let mut rgba = DynamicImage::ImageRgba8(image::ImageBuffer::from_pixel(
+            1,
+            1,
+            image::Rgba([128, 128, 128, 77]),
+        ));
+        assert!(normalize_srgb_applied(&mut rgba, &linear).unwrap());
+        let px = rgba.as_rgba8().unwrap().get_pixel(0, 0).0;
+        assert!((185..=191).contains(&px[0]), "{px:?}");
+        assert!(px[0].abs_diff(px[1]) <= 1 && px[1].abs_diff(px[2]) <= 1, "{px:?}");
+        assert_eq!(px[3], 77);
+        let mut float =
+            DynamicImage::ImageRgb32F(image::ImageBuffer::from_pixel(1, 1, image::Rgb([0.5; 3])));
+        normalize_srgb(&mut float, &linear).unwrap();
+        let v = float.as_rgb32f().unwrap().get_pixel(0, 0).0[0];
+        assert!((0.72..0.75).contains(&v), "{v}");
+        let srgb_gray = srgb_gray().encode().unwrap();
+        let mut rgb16 = DynamicImage::ImageRgb16(image::ImageBuffer::from_pixel(
+            1,
+            1,
+            image::Rgb([30000u16, 30000, 30000]),
+        ));
+        normalize_srgb(&mut rgb16, &srgb_gray).unwrap();
+        for c in rgb16.as_rgb16().unwrap().get_pixel(0, 0).0 {
+            assert!(c.abs_diff(30000) < 80, "{c}");
+        }
     }
 
     #[test]

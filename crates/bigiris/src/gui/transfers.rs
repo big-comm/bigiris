@@ -109,10 +109,15 @@ pub(super) fn open_files(
     if paths.is_empty() {
         return false;
     }
-    let result = std::env::current_exe()
-        .and_then(|exe| std::process::Command::new(exe).arg("--").args(paths).spawn());
+    // After an upgrade the running image is "(deleted)"; launch the installed one.
+    let result = crate::codec::installed_executable()
+        .and_then(|(exe, _)| std::process::Command::new(exe).arg("--").args(paths).spawn());
     match result {
-        Ok(_) => {
+        Ok(mut child) => {
+            // Reap the independent viewer when it exits; no zombie per paste/drop.
+            std::thread::spawn(move || {
+                let _ = child.wait();
+            });
             if close_after_open {
                 window.close();
             }

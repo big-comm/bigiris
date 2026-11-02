@@ -28,11 +28,17 @@ pub(super) fn build_preview_column(session: &PreviewSession) -> (gtk::Picture, g
     let initial = dynamic_image_to_texture(session.thumbnail().clone());
     picture.set_paintable(Some(&initial));
 
-    let heading =
-        gtk::Label::builder().label("<b>Pré-visualização</b>").use_markup(true).xalign(0.0).build();
+    let heading = gtk::Label::builder()
+        .label(format!("<b>{}</b>", glib::markup_escape_text(&gettext("Pré-visualização"))))
+        .use_markup(true)
+        .xalign(0.0)
+        .build();
 
     let (nw, nh) = session.natural_size();
-    let info = gtk::Label::builder().label(format!("Original: {nw}×{nh} px")).xalign(0.0).build();
+    let original = gettext("Original: {width}×{height} px")
+        .replace("{width}", &nw.to_string())
+        .replace("{height}", &nh.to_string());
+    let info = gtk::Label::builder().label(original).xalign(0.0).build();
     info.add_css_class("dim-label");
 
     let frame = gtk::Frame::new(None);
@@ -132,10 +138,15 @@ pub(super) fn refresh_preview(session: &PreviewSession, picture: &gtk::Picture, 
                 }
                 pending.next.take().unwrap()
             };
-            let image = session
-                .apply(&request.1)
-                .map(|img| DynamicImage::ImageRgba8(img.to_rgba8()))
-                .map_err(|e| e.to_string());
+            // A panicking transform must not kill the renderer and freeze
+            // the preview; report it like any other failed render.
+            let image = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                session
+                    .apply(&request.1)
+                    .map(|img| DynamicImage::ImageRgba8(img.to_rgba8()))
+                    .map_err(|e| e.to_string())
+            }))
+            .unwrap_or_else(|_| Err("preview renderer panicked".to_string()));
             let mut pending = lock.lock().unwrap();
             if !pending.stopped {
                 pending.result = Some((request.0, image));
@@ -187,8 +198,8 @@ pub(super) fn prepare_dialog(
     let loading = gtk::Box::new(gtk::Orientation::Vertical, 16);
     loading.set_valign(gtk::Align::Center);
     loading.append(&spinner);
-    loading.append(&gtk::Label::new(Some("Preparando pré-visualização…")));
-    let cancel_button = gtk::Button::with_label("Cancelar");
+    loading.append(&gtk::Label::new(Some(&gettext("Preparando pré-visualização…"))));
+    let cancel_button = gtk::Button::with_label(&gettext("Cancelar"));
     cancel_button.set_halign(gtk::Align::Center);
     let weak_window = window.downgrade();
     cancel_button.connect_clicked(move |_| {
@@ -209,7 +220,7 @@ pub(super) fn prepare_dialog(
     std::thread::spawn(move || {
         let result = crate::codec::with_cancel(cancel, || {
             input
-                .ok_or_else(|| "Nenhuma imagem selecionada".to_string())
+                .ok_or_else(|| gettext("Nenhuma imagem selecionada"))
                 .and_then(|path| PreviewSession::open(path).map_err(|e| e.to_string()))
         });
         let _ = tx.send(result);
@@ -226,7 +237,7 @@ pub(super) fn prepare_dialog(
             }
             Ok(Err(error)) => {
                 let page = adw::StatusPage::builder()
-                    .title("Não foi possível abrir a imagem")
+                    .title(gettext("Não foi possível abrir a imagem"))
                     .description(error)
                     .icon_name("dialog-error-symbolic")
                     .build();
@@ -234,7 +245,9 @@ pub(super) fn prepare_dialog(
             }
             Err(std::sync::mpsc::TryRecvError::Empty) => return glib::ControlFlow::Continue,
             Err(std::sync::mpsc::TryRecvError::Disconnected) => {
-                window.set_content(Some(&gtk::Label::new(Some("A preparação foi interrompida"))));
+                window.set_content(Some(&gtk::Label::new(Some(&gettext(
+                    "A preparação foi interrompida",
+                )))));
             }
         }
         glib::ControlFlow::Break

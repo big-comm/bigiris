@@ -315,6 +315,22 @@ fn large_ico_is_scaled_to_supported_dimensions() {
     assert_eq!(open_image(out.path()).unwrap().dimensions(), (256, 128));
 }
 
+#[test]
+fn gray_png_with_gray_icc_profile_opens() {
+    use image::ImageEncoder;
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("gray.png");
+    let mut encoder =
+        image::codecs::png::PngEncoder::new(std::fs::File::create(&path).unwrap());
+    encoder
+        .set_icc_profile(moxcms::ColorProfile::new_gray_with_gamma(2.2).encode().unwrap())
+        .unwrap();
+    encoder.write_image(&[100u8; 6], 3, 2, image::ExtendedColorType::L8).unwrap();
+    let image = open_image(&path).unwrap();
+    assert_eq!(image.color(), image::ColorType::L8);
+    assert_eq!(image.dimensions(), (3, 2));
+}
+
 fn expected_new_file_mode() -> u32 {
     let umask = std::fs::read_to_string("/proc/self/status")
         .ok()

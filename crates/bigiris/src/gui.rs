@@ -2066,7 +2066,9 @@ fn sync_edit_actions(state: &Rc<RefCell<ViewerState>>) {
             simple.set_enabled(!s.redo_ops.is_empty() && idle);
         }
     }
-    for name in ["rotate-cw", "rotate-ccw", "rotate-180", "flip-h", "flip-v"] {
+    // Trashing during a save would let the save's final rename bring the
+    // file back from the trash.
+    for name in ["rotate-cw", "rotate-ccw", "rotate-180", "flip-h", "flip-v", "trash"] {
         if let Some(action) = s.window().lookup_action(name) {
             if let Some(simple) = action.downcast_ref::<gio::SimpleAction>() {
                 simple.set_enabled(idle && !s.files.is_empty());
@@ -2895,9 +2897,8 @@ fn install_viewer_actions(
         window.add_action(&action);
     }
 
-    // win.trash — confirma e joga o arquivo na lixeira do XDG. Como o
-    // state guarda files como Rc<Vec>, depois de deletar fechamos a
-    // janela em vez de tentar mutar a lista (o usuário reabre o próximo).
+    // win.trash — confirma e joga o arquivo na lixeira do XDG, depois mostra
+    // a imagem vizinha. Desligada enquanto um salvamento está em curso.
     let trash = gio::SimpleAction::new("trash", None);
     trash.set_enabled(has_files);
     {
@@ -3155,12 +3156,12 @@ fn show_metadata_for_current(state: &Rc<RefCell<ViewerState>>) {
 }
 
 /// Confirma com AdwAlertDialog e move o arquivo corrente pra lixeira
-/// via `gio::File::trash`. Depois fecha a janela — a `files` do state
-/// é imutável (Rc<Vec>), então remover elemento exigiria refactor.
+/// via `gio::File::trash`. Depois segue para a próxima imagem da pasta
+/// (ou a anterior, se era a última); só fecha quando não sobra nenhuma.
 fn trash_current(state: &Rc<RefCell<ViewerState>>) {
     let (window, path) = {
         let s = state.borrow();
-        if s.files.is_empty() {
+        if s.files.is_empty() || s.saving {
             return;
         }
         (s.window().clone(), s.files[s.idx].clone())
@@ -3184,18 +3185,77 @@ fn trash_current(state: &Rc<RefCell<ViewerState>>) {
     alert.set_default_response(Some("cancel"));
     alert.set_close_response("cancel");
 
-    let window_for_close = window.clone();
+    let weak = Rc::downgrade(state);
     alert.connect_response(Some("trash"), move |_, _| {
+        let Some(state) = weak.upgrade() else { return };
+        // A save may have started while the dialog was open.
+        if state.borrow().saving {
+            return;
+        }
         let file = gio::File::for_path(&path);
         match file.trash(gio::Cancellable::NONE) {
-            Ok(_) => {
+            Ok(()) => {
                 tracing::info!(?path, "trash ok");
-                window_for_close.close();
+                remove_current_file(&state, &path);
             }
-            Err(e) => tracing::warn!(?path, error = %e, "trash falhou"),
+            Err(error) => {
+                tracing::warn!(?path, %error, "trash falhou");
+                let window = state.borrow().window();
+                let alert = adw::AlertDialog::builder()
+                    .heading(gettext("Não foi possível mover para a lixeira"))
+                    .body(format!("\"{name}\"\n\n{}", error.message()))
+                    .build();
+                alert.add_response("close", &gettext("Fechar"));
+                alert.present(Some(&window));
+            }
         }
     });
     alert.present(Some(&window));
+}
+
+/// Drop `path` (the file on screen) from the list after it went to the
+/// trash and show its neighbour: the next one, or the previous when it was
+/// the last. The window closes only when the list becomes empty.
+fn remove_current_file(state: &Rc<RefCell<ViewerState>>, path: &Path) {
+    let remaining = {
+        let mut s = state.borrow_mut();
+        let Some(position) = s.files.iter().position(|p| p == path) else { return };
+        let mut files = s.files.as_ref().clone();
+        files.remove(position);
+        // The edits belonged to the file that is gone.
+        s.pending_ops.clear();
+        s.redo_ops.clear();
+        s.frame_cache.retain(|frame| frame.path != path);
+        s.prefetch_skip.retain(|p| p != path);
+        s.idx = position.min(files.len().saturating_sub(1));
+        s.zoom = ZoomState::Fit;
+        s.files = Rc::new(files);
+        s.files.len()
+    };
+    if remaining == 0 {
+        let window = state.borrow().window();
+        window.close();
+        return;
+    }
+    if remaining < 2 {
+        let s = state.borrow();
+        s.strip_revealer.set_reveal_child(false);
+        s.strip_revealer.set_visible(false);
+        s.strip_revealer.set_can_target(false);
+        let window = s.window();
+        drop(s);
+        for name in ["previous", "next"] {
+            if let Some(action) = window.lookup_action(name).and_downcast::<gio::SimpleAction>() {
+                action.set_enabled(false);
+            }
+        }
+        if let Some(id) = state.borrow_mut().slideshow_source.take() {
+            id.remove();
+        }
+    }
+    rebuild_film_strip(state);
+    update_display(state);
+    pulse_osd(state);
 }
 
 /// Compact keyboard reference using widgets supported by GTK 4.12 / Adwaita 1.5.

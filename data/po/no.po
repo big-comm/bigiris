@@ -155,7 +155,7 @@ msgstr "Angre"
 
 #: crates/bigiris/src/gui.rs:2077 crates/bigiris/src/gui.rs:2724
 msgid "Refazer"
-msgstr "& Gjør om"
+msgstr "Gjør om"
 
 #: crates/bigiris/src/gui.rs:2079 crates/bigiris/src/gui.rs:2725
 msgid "Girar à direita"
@@ -627,7 +627,7 @@ msgstr "Valg"
 
 #: crates/bigiris/src/gui.rs:3702
 msgid "Redimensionando…"
-msgstr "Endre størrelse & # 160; …"
+msgstr "Endre størrelse…"
 
 #: crates/bigiris/src/gui.rs:3708
 msgid "Redimensionando"
@@ -733,7 +733,7 @@ msgstr "Bredskjerm (16: 9)"
 
 #: crates/bigiris/src/gui.rs:4382
 msgid "Personalizado…"
-msgstr "Selvvalgt & # 160; …"
+msgstr "Selvvalgt…"
 
 #: crates/bigiris/src/gui.rs:4388
 msgid "Preto suave (#0d0e12)"
@@ -848,7 +848,7 @@ msgstr "Oppskalert bilde"
 
 #: crates/bigiris/src/gui.rs:4956
 msgid "Aumentando…"
-msgstr "Skalerer opp & # 160; …"
+msgstr "Skalerer opp…"
 
 #: crates/bigiris/src/gui.rs:4965
 msgid "Aumentando"
@@ -1358,7 +1358,7 @@ msgstr "Egendefinert postkasse …"
 #: crates/bigimage-integrations/src/action.rs:462
 #: data/nautilus/bigiris-menu.py:216
 msgid "Ver metadados…"
-msgstr "Vis metadata & # 160; …"
+msgstr "Vis metadata…"
 
 #: crates/bigimage-integrations/src/action.rs:470
 #: data/nautilus/bigiris-menu.py:217

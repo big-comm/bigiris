@@ -1115,7 +1115,7 @@ pub(super) const CATALOGS: &[(&str, &[(&str, &str)])] = &[
             ("Telegram (2560 px · JPG q85)", "Telegram (2560 px · JPG q85)"),
             ("Twitter · X (1200 px · JPG q85)", "Twitter · X (1200 px · JPG q85)"),
             ("Utilidades", "Verktøy"),
-            ("Ver metadados…", "Vis metadata & # 160; …"),
+            ("Ver metadados…", "Vis metadata…"),
             ("Vertical", "Loddrett"),
             ("Visualizar em BigIris", "Vis i BigIris"),
             ("WebP", "WebP"),

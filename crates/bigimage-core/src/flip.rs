@@ -3,8 +3,6 @@
 
 use std::path::Path;
 
-use image::imageops;
-
 use crate::convert::{ConvertOutcome, OverwritePolicy};
 use crate::{pipeline, Format, Result};
 
@@ -73,8 +71,8 @@ pub fn flip_file_with_options(
 /// Pure in-memory flip — shared with preview pipeline.
 pub fn apply_to(src: &image::DynamicImage, axis: FlipAxis) -> image::DynamicImage {
     match axis {
-        FlipAxis::Horizontal => imageops::flip_horizontal(src).into(),
-        FlipAxis::Vertical => imageops::flip_vertical(src).into(),
+        FlipAxis::Horizontal => src.fliph(),
+        FlipAxis::Vertical => src.flipv(),
     }
 }
 

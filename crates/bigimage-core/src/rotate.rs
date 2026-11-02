@@ -9,8 +9,6 @@
 
 use std::path::Path;
 
-use image::imageops;
-
 use crate::convert::{ConvertOutcome, OverwritePolicy};
 use crate::{pipeline, Format, Result};
 
@@ -82,9 +80,9 @@ pub fn rotate_file_with_options(
 /// Pure in-memory rotation — shared with preview pipeline.
 pub fn apply_to(src: &image::DynamicImage, rotation: Rotation) -> image::DynamicImage {
     match rotation {
-        Rotation::Deg90 => imageops::rotate90(src).into(),
-        Rotation::Deg180 => imageops::rotate180(src).into(),
-        Rotation::Deg270 => imageops::rotate270(src).into(),
+        Rotation::Deg90 => src.rotate90(),
+        Rotation::Deg180 => src.rotate180(),
+        Rotation::Deg270 => src.rotate270(),
     }
 }
 
@@ -164,6 +162,39 @@ pub fn rotate_file_auto_with_options(
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn rotate_and_flip_keep_sample_type() {
+        use image::DynamicImage;
+        let images = [
+            DynamicImage::ImageLuma8(image::ImageBuffer::from_pixel(3, 2, image::Luma([7u8]))),
+            DynamicImage::ImageLuma16(image::ImageBuffer::from_pixel(3, 2, image::Luma([4321u16]))),
+            DynamicImage::ImageRgb16(image::ImageBuffer::from_pixel(
+                3,
+                2,
+                image::Rgb([1u16, 2, 60000]),
+            )),
+            DynamicImage::ImageRgba32F(image::ImageBuffer::from_pixel(
+                3,
+                2,
+                image::Rgba([0.25f32, 2.0, 0.0, 0.5]),
+            )),
+        ];
+        for img in images {
+            for rotation in
+                [super::Rotation::Deg90, super::Rotation::Deg180, super::Rotation::Deg270]
+            {
+                let out = super::apply_to(&img, rotation);
+                assert_eq!(out.color(), img.color(), "{rotation:?}");
+                assert_eq!(out.as_bytes()[..6], img.as_bytes()[..6]);
+            }
+            for axis in [crate::FlipAxis::Horizontal, crate::FlipAxis::Vertical] {
+                let out = crate::flip::apply_to(&img, axis);
+                assert_eq!(out.color(), img.color(), "{axis:?}");
+                assert_eq!(out.as_bytes()[..6], img.as_bytes()[..6]);
+            }
+        }
+    }
+
     use super::*;
     use image::{Rgb, RgbImage};
     use std::path::PathBuf;

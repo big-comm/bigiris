@@ -519,6 +519,74 @@ fn documented_depth_and_alpha_policy_holds() {
     assert_eq!(save(extended, "extent-gray.png", Format::Png).color(), image::ColorType::L16);
 }
 
+/// Every in-memory colour type must save to every advertised format, both
+/// through `save_image` and through the metadata-preserving resave with a
+/// profile of the matching colour model (GRAY for gray pixels, RGB
+/// otherwise). Regression: gray+alpha (produced by extent) failed for TIFF.
+#[test]
+fn every_colour_type_saves_to_every_format() {
+    use image::{ImageBuffer, Luma, LumaA, Rgba};
+    let (w, h) = (5, 3);
+    let images = [
+        DynamicImage::ImageLuma8(ImageBuffer::from_pixel(w, h, Luma([90u8]))),
+        DynamicImage::ImageLumaA8(ImageBuffer::from_pixel(w, h, LumaA([90u8, 128]))),
+        DynamicImage::ImageRgb8(ImageBuffer::from_pixel(w, h, Rgb([90u8, 20, 200]))),
+        DynamicImage::ImageRgba8(ImageBuffer::from_pixel(w, h, Rgba([90u8, 20, 200, 128]))),
+        DynamicImage::ImageLuma16(ImageBuffer::from_pixel(w, h, Luma([40000u16]))),
+        DynamicImage::ImageLumaA16(ImageBuffer::from_pixel(w, h, LumaA([40000u16, 30000]))),
+        DynamicImage::ImageRgb16(ImageBuffer::from_pixel(w, h, Rgb([40000u16, 2000, 60000]))),
+        DynamicImage::ImageRgba16(ImageBuffer::from_pixel(
+            w,
+            h,
+            Rgba([40000u16, 2000, 60000, 30000]),
+        )),
+        DynamicImage::ImageRgb32F(ImageBuffer::from_pixel(w, h, Rgb([0.2f32, 1.5, 0.0]))),
+        DynamicImage::ImageRgba32F(ImageBuffer::from_pixel(w, h, Rgba([0.2f32, 1.5, 0.0, 0.5]))),
+    ];
+    let gray_icc = moxcms::ColorProfile::new_gray_with_gamma(2.2).encode().unwrap();
+    let rgb_icc = moxcms::ColorProfile::new_display_p3().encode().unwrap();
+    let dir = tempfile::tempdir().unwrap();
+    let opts = EncodeOptions { quality: Some(60), avif_speed: 10, ..EncodeOptions::default() };
+    for image in &images {
+        let gray = matches!(
+            image.color(),
+            image::ColorType::L8
+                | image::ColorType::La8
+                | image::ColorType::L16
+                | image::ColorType::La16
+        );
+        let source = bigimage_core::SourceMetadata {
+            exif: None,
+            icc: Some(if gray { gray_icc.clone() } else { rgb_icc.clone() }),
+        };
+        for &format in Format::all() {
+            let name = format!("{:?}-{format:?}.{}", image.color(), format.extension());
+            let path = dir.path().join(&name);
+            bigimage_core::save_image(
+                image.clone(),
+                &path,
+                format,
+                &opts,
+                OverwritePolicy::Replace,
+            )
+            .unwrap_or_else(|e| panic!("save {name}: {e}"));
+            assert_eq!(open_image(&path).unwrap().dimensions(), (w, h), "{name}");
+            let path = dir.path().join(format!("resave-{name}"));
+            bigimage_core::save_image_preserving_metadata(
+                image.clone(),
+                &path,
+                format,
+                &opts,
+                OverwritePolicy::Replace,
+                &source,
+            )
+            .unwrap_or_else(|e| panic!("resave {name}: {e}"));
+            assert_eq!(open_image(&path).unwrap().dimensions(), (w, h), "resave {name}");
+        }
+    }
+    assert_no_partials(dir.path());
+}
+
 /// Append an `irot` property to `ipco`, associate it with the single item
 /// in `ipma` (as the encoder writes it), grow the enclosing box sizes and
 /// shift the `iloc` offsets that point past the insertion.

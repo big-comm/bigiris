@@ -98,7 +98,8 @@ pub fn image_dimensions(path: impl AsRef<std::path::Path>) -> image::ImageResult
 ///
 /// | Target              | Written as                                                       |
 /// |---------------------|------------------------------------------------------------------|
-/// | PNG, TIFF           | Source type kept (L/La/Rgb/Rgba, 8 or 16-bit); float → `Rgb16`/`Rgba16` |
+/// | PNG                 | Source type kept (L/La/Rgb/Rgba, 8 or 16-bit); float → `Rgb16`/`Rgba16` |
+/// | TIFF                | As PNG, except gray+alpha (`La8`/`La16`) → `Rgba8`/`Rgba16` (no La TIFF encoder) |
 /// | PNM (PGM/PPM)       | `L8`/`L16`/`Rgb8`/`Rgb16` kept; alpha flattened over white keeping depth; float → `Rgb16` |
 /// | JPEG                | `Rgb8`; alpha flattened over white; 8-bit                         |
 /// | AVIF                | `Rgba8`: 8-bit, adds alpha                                        |
@@ -109,7 +110,8 @@ pub fn image_dimensions(path: impl AsRef<std::path::Path>) -> image::ImageResult
 ///
 /// Float images are scene-linear; integer images are sRGB-encoded. Crossing
 /// between the two applies the sRGB transfer function (clamping HDR values
-/// above 1.0). PNG and JPEG outputs carry a generated sRGB ICC profile; no
+/// above 1.0). Float outputs replace NaN and -inf with 0 and clamp +inf to
+/// a large finite value the encoders can represent. PNG and JPEG outputs carry a generated sRGB ICC profile; no
 /// source metadata is written (see [`save_image_preserving_metadata`]).
 pub fn save_image(
     image: image::DynamicImage,
@@ -172,12 +174,7 @@ pub fn save_image_preserving_metadata(
     let support = metadata::preserved_by(target);
     let mut extras = pipeline::Extras::default();
     if let Some(icc) = source.icc.as_deref().filter(|icc| !icc.is_empty()) {
-        use image::ColorType;
-        let gray = matches!(target, Format::Png | Format::Tiff | Format::Pnm)
-            && matches!(
-                image.color(),
-                ColorType::L8 | ColorType::La8 | ColorType::L16 | ColorType::La16
-            );
+        let gray = convert::writes_gray(image.color(), target);
         let matches_pixels = match icc.get(16..20) {
             Some(b"RGB ") => !gray,
             Some(b"GRAY") => gray,

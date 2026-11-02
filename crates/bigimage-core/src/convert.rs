@@ -101,7 +101,7 @@ pub fn convert_file_to(
 /// would make linear images look far too dark and vice versa.
 pub(crate) fn prepare_for_target(img: DynamicImage, target: Format) -> DynamicImage {
     let img = match target {
-        Format::OpenExr | Format::Hdr => linear_from_srgb(img),
+        Format::OpenExr | Format::Hdr => sanitize_floats(linear_from_srgb(img)),
         _ => srgb_from_linear(img),
     };
     match target {
@@ -115,9 +115,19 @@ pub(crate) fn prepare_for_target(img: DynamicImage, target: Format) -> DynamicIm
         Format::WebP | Format::Gif | Format::Bmp | Format::Tga | Format::Qoi => {
             DynamicImage::ImageRgba8(img.into_rgba8())
         }
-        Format::Png | Format::Tiff => match img {
+        Format::Png => match img {
             DynamicImage::ImageRgb32F(_) => DynamicImage::ImageRgb16(img.into_rgb16()),
             DynamicImage::ImageRgba32F(_) => DynamicImage::ImageRgba16(img.into_rgba16()),
+            other => other,
+        },
+        // The TIFF encoder writes L, Rgb and Rgba (8/16-bit) but has no
+        // gray+alpha layout, so `La` is widened to `Rgba` at the same depth
+        // (the alpha channel is kept; extent produces `La` canvases).
+        Format::Tiff => match img {
+            DynamicImage::ImageRgb32F(_) => DynamicImage::ImageRgb16(img.into_rgb16()),
+            DynamicImage::ImageRgba32F(_) => DynamicImage::ImageRgba16(img.into_rgba16()),
+            DynamicImage::ImageLumaA8(_) => DynamicImage::ImageRgba8(img.into_rgba8()),
+            DynamicImage::ImageLumaA16(_) => DynamicImage::ImageRgba16(img.into_rgba16()),
             other => other,
         },
         // JPEG has no alpha channel. The encoder path does a bare
@@ -133,6 +143,46 @@ pub(crate) fn prepare_for_target(img: DynamicImage, target: Format) -> DynamicIm
         Format::Pnm => flatten_alpha_keep_depth(img),
         _ => img,
     }
+}
+
+/// Whether the pixels written for `target` stay single-channel gray (with
+/// or without alpha) for a source of colour type `color` — i.e. whether a
+/// GRAY ICC profile still describes them after [`prepare_for_target`].
+pub(crate) fn writes_gray(color: image::ColorType, target: Format) -> bool {
+    use image::ColorType;
+    match target {
+        Format::Png | Format::Pnm => {
+            matches!(color, ColorType::L8 | ColorType::La8 | ColorType::L16 | ColorType::La16)
+        }
+        Format::Tiff => matches!(color, ColorType::L8 | ColorType::L16),
+        _ => false,
+    }
+}
+
+/// Largest sample written to float formats: 2^126, the top of the RGBE
+/// exponent range (still far beyond any real scene luminance).
+const FLOAT_OUTPUT_MAX: f32 = 8.507_059e37;
+
+/// Replace values the float encoders cannot represent: NaN and -inf become
+/// 0; +inf and anything above [`FLOAT_OUTPUT_MAX`] are clamped to it.
+/// Radiance HDR's RGBE conversion overflows its exponent from 2^127 up (a
+/// panic in debug builds on +inf, a black or corrupt pixel in release), and
+/// OpenEXR readers commonly reject non-finite samples.
+fn sanitize_floats(img: DynamicImage) -> DynamicImage {
+    fn fix(v: &mut f32) {
+        if v.is_nan() || *v == f32::NEG_INFINITY {
+            *v = 0.0;
+        } else if *v > FLOAT_OUTPUT_MAX {
+            *v = FLOAT_OUTPUT_MAX;
+        }
+    }
+    let mut img = img;
+    match &mut img {
+        DynamicImage::ImageRgb32F(b) => b.iter_mut().for_each(fix),
+        DynamicImage::ImageRgba32F(b) => b.iter_mut().for_each(fix),
+        _ => {}
+    }
+    img
 }
 
 /// sRGB opto-electronic transfer function (linear → encoded), clamped.
@@ -593,6 +643,41 @@ mod tests {
         ));
         let flat = prepare_for_target(rgba8, Format::Pnm);
         assert_eq!(flat.as_rgb8().unwrap().get_pixel(0, 0).0, [127, 127, 127]);
+    }
+
+    #[test]
+    fn non_finite_floats_are_sanitised_for_float_targets() {
+        let img = DynamicImage::ImageRgb32F(image::ImageBuffer::from_fn(4, 1, |x, _| {
+            let v = [f32::INFINITY, f32::NAN, f32::NEG_INFINITY, f32::MAX][x as usize];
+            image::Rgb([v, 0.5, v])
+        }));
+        for target in [Format::Hdr, Format::OpenExr] {
+            let prepared = prepare_for_target(img.clone(), target).into_rgb32f();
+            for px in prepared.pixels() {
+                assert!(px.0.iter().all(|v| v.is_finite() && *v >= 0.0), "{target:?}: {px:?}");
+            }
+            assert_eq!(prepared.get_pixel(0, 0).0[0], FLOAT_OUTPUT_MAX);
+            assert_eq!(prepared.get_pixel(1, 0).0[0], 0.0);
+            assert_eq!(prepared.get_pixel(2, 0).0[0], 0.0);
+            assert_eq!(prepared.get_pixel(3, 0).0[0], FLOAT_OUTPUT_MAX);
+        }
+        // Through the public path: no overflow, and +inf stays the brightest
+        // value instead of wrapping to black.
+        let dir = TempDir::new().unwrap();
+        for (name, format) in [("inf.hdr", Format::Hdr), ("inf.exr", Format::OpenExr)] {
+            let path = dir.path().join(name);
+            crate::save_image(
+                img.clone(),
+                &path,
+                format,
+                &crate::EncodeOptions::default(),
+                OverwritePolicy::Replace,
+            )
+            .unwrap();
+            let back = crate::open_image(&path).unwrap().into_rgb32f();
+            assert!(back.get_pixel(0, 0).0[0] > 1e37, "{format:?}");
+            assert!(back.pixels().all(|px| px.0.iter().all(|v| v.is_finite())), "{format:?}");
+        }
     }
 
     #[test]

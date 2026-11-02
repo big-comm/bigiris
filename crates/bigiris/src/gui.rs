@@ -7192,16 +7192,17 @@ fn remove_bg_one_with_session(
     bigimage_core::content::ensure_static(src).map_err(|e| e.to_string())?;
     let img = bigimage_core::open_image(src).map_err(|e| format!("decode: {e}"))?;
     let out = session.process(&img).map_err(|e| e.to_string())?;
-    let dest = nobg_output_path(src);
-    bigimage_core::save_image(
+    // Increment, never Replace: the dialog promises not to overwrite, and
+    // `foto.jpg` + `foto.png` in one batch both map to `foto_nobg.png`.
+    let outcome = bigimage_core::save_image(
         out,
-        &dest,
+        nobg_output_path(src),
         Format::Png,
         &EncodeOptions::default(),
-        OverwritePolicy::Replace,
+        OverwritePolicy::Increment,
     )
     .map_err(|e| format!("encode: {e}"))?;
-    Ok(dest)
+    Ok(outcome.path().to_path_buf())
 }
 
 /// Worker-thread state for the remove-bg dialog. Shared via `Arc<Mutex>`
@@ -7332,7 +7333,9 @@ fn build_remove_bg_dialog(
     let output_row = adw::ActionRow::builder()
         .use_markup(false)
         .title(gettext("Saída"))
-        .subtitle("«origem»_nobg.png · PNG com alfa, sem sobrescrever")
+        .subtitle(gettext(
+            "«origem»_nobg.png · PNG com alfa, sem sobrescrever (_1, _2… se já existir)",
+        ))
         .build();
     let output_icon = gtk::Image::from_icon_name("document-save-symbolic");
     output_row.add_prefix(&output_icon);

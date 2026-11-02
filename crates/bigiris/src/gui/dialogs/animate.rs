@@ -2,6 +2,9 @@
 //! Criar GIF animado: build an animated GIF from the selected frames.
 
 use super::*;
+use bigimage_core::{make_gif_with_policy, ConvertOutcome};
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 
 // ---------------------------------------------------------------------------
 // Animate dialog — pick a delay, a loop mode, an output path and build an
@@ -157,11 +160,12 @@ pub(in crate::gui) fn build_animate_dialog(
                 let apply_btn = apply_btn.clone();
                 let cancel_btn = cancel_btn.clone();
                 let window = window.clone();
-                move || {
+                move |policy| {
                     start_animate_run(
                         (*files).clone(),
                         output.clone(),
                         opts,
+                        policy,
                         &status,
                         &apply_btn,
                         &cancel_btn,
@@ -170,11 +174,12 @@ pub(in crate::gui) fn build_animate_dialog(
                 }
             };
             if !exists {
-                start();
+                // Skip, not Replace: a file that appears meanwhile was never
+                // confirmed by the user and is left alone.
+                start(OverwritePolicy::Skip);
                 return;
             }
-            // make_gif publishes with Replace; only replace an existing
-            // file the user explicitly agreed to lose.
+            // Only replace an existing file the user explicitly agreed to lose.
             let alert = adw::AlertDialog::builder()
                 .heading(gettext("Substituir arquivo existente?"))
                 .body(shown)
@@ -184,7 +189,7 @@ pub(in crate::gui) fn build_animate_dialog(
             alert.set_response_appearance("replace", adw::ResponseAppearance::Destructive);
             alert.set_default_response(Some("cancel"));
             alert.set_close_response("cancel");
-            alert.connect_response(Some("replace"), move |_, _| start());
+            alert.connect_response(Some("replace"), move |_, _| start(OverwritePolicy::Replace));
             alert.present(Some(&window));
         });
     }
@@ -233,46 +238,95 @@ fn comparable_path(path: &Path) -> PathBuf {
 }
 
 /// Encode the GIF on a worker thread and reflect the result in the dialog.
+#[allow(clippy::too_many_arguments)]
 fn start_animate_run(
     frames: Vec<PathBuf>,
     output: PathBuf,
     opts: AnimateOptions,
+    policy: OverwritePolicy,
     status: &gtk::Label,
     apply_btn: &gtk::Button,
     cancel_btn: &gtk::Button,
     window: &adw::ApplicationWindow,
 ) {
+    batch_runner::disarm_auto_close(window);
     apply_btn.set_sensitive(false);
     cancel_btn.set_sensitive(false);
     status.set_text(&gettext("Montando GIF…"));
 
-    // Worker thread runs make_gif (encoding 100 frames at 4K can
-    // take several seconds); main loop polls a oneshot channel
-    // for the result. Window stays responsive throughout.
+    // Closing the window aborts an in-flight isolated decode; the frames
+    // already decoded are dropped and nothing is published.
+    let cancelled = Arc::new(AtomicBool::new(false));
+    let close_handler = {
+        let cancelled = cancelled.clone();
+        window.connect_close_request(move |_| {
+            cancelled.store(true, Ordering::Release);
+            glib::Propagation::Proceed
+        })
+    };
+
+    // Worker thread runs the encode (100 frames at 4K can take several
+    // seconds); the main loop polls a oneshot channel for the result.
     let (tx, rx) = std::sync::mpsc::channel();
-    std::thread::spawn(move || {
-        let _ = tx.send(make_gif(&frames, &output, opts));
-    });
+    {
+        let cancelled = cancelled.clone();
+        std::thread::spawn(move || {
+            let result = crate::codec::with_cancel(cancelled, || {
+                make_gif_with_policy(&frames, &output, opts, policy)
+            });
+            let _ = tx.send(result);
+        });
+    }
 
     let status = status.clone();
     let window = window.clone();
     let apply_btn = apply_btn.clone();
     let cancel_btn = cancel_btn.clone();
-    glib::timeout_add_local(std::time::Duration::from_millis(80), move || match rx.try_recv() {
-        Ok(Ok(path)) => {
-            status.set_text(&format!("{}: {}", gettext("Pronto"), path.display()));
-            let w = window.clone();
-            glib::timeout_add_seconds_local_once(2, move || w.close());
-            glib::ControlFlow::Break
+    let mut close_handler = Some(close_handler);
+    // Released with the poll closure, i.e. only after the encoder finished:
+    // closing the window never exits mid-write and strands `.part` files.
+    let hold = window.application().map(|app| app.hold());
+    glib::timeout_add_local(std::time::Duration::from_millis(80), move || {
+        let _hold = &hold;
+        let result = match rx.try_recv() {
+            Err(std::sync::mpsc::TryRecvError::Empty) => return glib::ControlFlow::Continue,
+            Ok(result) => Some(result),
+            Err(std::sync::mpsc::TryRecvError::Disconnected) => None,
+        };
+        if let Some(handler) = close_handler.take() {
+            window.disconnect(handler);
         }
-        Ok(Err(e)) => {
-            status.set_text(&format!("{}: {e}", gettext("Falha")));
-            apply_btn.set_sensitive(true);
-            cancel_btn.set_sensitive(true);
-            glib::ControlFlow::Break
+        // Closed mid-run: nothing left to show or to auto-close.
+        if cancelled.load(Ordering::Acquire) && !window.is_visible() {
+            return glib::ControlFlow::Break;
         }
-        Err(std::sync::mpsc::TryRecvError::Empty) => glib::ControlFlow::Continue,
-        Err(std::sync::mpsc::TryRecvError::Disconnected) => glib::ControlFlow::Break,
+        match result {
+            Some(Ok(ConvertOutcome::Written { output })) => {
+                status.set_text(&format!("{}: {}", gettext("Pronto"), output.display()));
+                batch_runner::arm_auto_close(&window, 2);
+            }
+            Some(Ok(ConvertOutcome::Skipped { output })) => {
+                status.set_text(&fill(
+                    &gettext("O arquivo {file} passou a existir e foi mantido; nada foi gravado."),
+                    &[("file", &output.display().to_string())],
+                ));
+                apply_btn.set_sensitive(true);
+                cancel_btn.set_sensitive(true);
+            }
+            Some(Err(e)) => {
+                status.set_text(&format!("{}: {e}", gettext("Falha")));
+                apply_btn.set_sensitive(true);
+                cancel_btn.set_sensitive(true);
+            }
+            None => {
+                status.set_text(&gettext(
+                    "O processamento terminou inesperadamente. Tente novamente.",
+                ));
+                apply_btn.set_sensitive(true);
+                cancel_btn.set_sensitive(true);
+            }
+        }
+        glib::ControlFlow::Break
     });
 }
 

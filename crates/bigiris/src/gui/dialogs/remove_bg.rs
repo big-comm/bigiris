@@ -206,6 +206,7 @@ pub(in crate::gui) fn build_remove_bg_dialog(
                 status.set_text(&error.to_string());
                 return;
             }
+            batch_runner::disarm_auto_close(&window);
             apply_btn.set_sensitive(false);
             // Cancelar continua disponível — vira "abortar e fechar".
             cancel_btn.set_label(&gettext("Cancelar"));
@@ -219,7 +220,7 @@ pub(in crate::gui) fn build_remove_bg_dialog(
             let shared: std::sync::Arc<std::sync::Mutex<BgUiState>> =
                 std::sync::Arc::new(std::sync::Mutex::new(BgUiState::Idle));
 
-            {
+            let worker = {
                 let shared = shared.clone();
                 let cancelled_w = cancelled.clone();
                 std::thread::spawn(move || {
@@ -274,7 +275,12 @@ pub(in crate::gui) fn build_remove_bg_dialog(
                                     .unwrap_or_default(),
                             };
                         }
-                        match remove_bg_one_with_session(&mut session, path) {
+                        // Scoped cancel lets closing the window stop the
+                        // isolated decode instead of waiting for it.
+                        let result = crate::codec::with_cancel(cancelled_w.clone(), || {
+                            remove_bg_one_with_session(&mut session, path)
+                        });
+                        match result {
                             Ok(out) => outputs.push(Some(out)),
                             Err(e) => {
                                 if first_err.is_none() {
@@ -286,11 +292,12 @@ pub(in crate::gui) fn build_remove_bg_dialog(
                     }
                     let mut st = shared.lock().unwrap_or_else(|p| p.into_inner());
                     *st = BgUiState::Done { outputs, first_err };
-                });
-            }
+                })
+            };
 
-            // UI poll @ 10 Hz. Se a janela já foi fechada (cancelled),
-            // cortamos o loop imediatamente — widgets podem estar mortos.
+            // UI poll @ 10 Hz. Se a janela já foi fechada (cancelled), não
+            // tocamos mais nos widgets, mas seguramos o app até o worker
+            // terminar: sair no meio da gravação deixaria `.part` órfãos.
             let progress_bar = progress_bar.clone();
             let status = status.clone();
             let apply_btn = apply_btn.clone();
@@ -298,11 +305,28 @@ pub(in crate::gui) fn build_remove_bg_dialog(
             let window = window.clone();
             let originals = files_rc.clone();
             let cancelled_poll = cancelled.clone();
+            let hold = window.application().map(|app| app.hold());
             glib::timeout_add_local(std::time::Duration::from_millis(100), move || {
+                let _hold = &hold;
+                let finished = worker.is_finished();
                 if cancelled_poll.load(std::sync::atomic::Ordering::Relaxed) {
-                    return glib::ControlFlow::Break;
+                    return if finished {
+                        glib::ControlFlow::Break
+                    } else {
+                        glib::ControlFlow::Continue
+                    };
                 }
                 let snapshot = shared.lock().unwrap_or_else(|p| p.into_inner()).clone();
+                // The worker died (panic) without its summary: let the user
+                // retry or close instead of polling forever.
+                if finished && !matches!(snapshot, BgUiState::Done { .. }) {
+                    status.set_text(&gettext(
+                        "O processamento terminou inesperadamente. Tente novamente.",
+                    ));
+                    apply_btn.set_sensitive(true);
+                    cancel_btn.set_label(&gettext("Fechar"));
+                    return glib::ControlFlow::Break;
+                }
                 match snapshot {
                     BgUiState::Idle => glib::ControlFlow::Continue,
                     BgUiState::Download { done, total } => {
@@ -335,9 +359,6 @@ pub(in crate::gui) fn build_remove_bg_dialog(
                         // Checa cancelamento antes de qualquer side-effect:
                         // se o usuário fechou a janela durante a inferência,
                         // não queremos que o Compare apareça sozinho.
-                        if cancelled_poll.load(std::sync::atomic::Ordering::Relaxed) {
-                            return glib::ControlFlow::Break;
-                        }
                         progress_bar.set_fraction(1.0);
                         let ok = outputs.iter().filter(|o| o.is_some()).count();
                         let fail = outputs.len() - ok;
@@ -358,8 +379,7 @@ pub(in crate::gui) fn build_remove_bg_dialog(
                             } else {
                                 // Lote: segura 2 s pra o usuário conferir o
                                 // sumário antes de sumir.
-                                let w = window.clone();
-                                glib::timeout_add_seconds_local_once(2, move || w.close());
+                                batch_runner::arm_auto_close(&window, 2);
                             }
                         } else {
                             let detail = first_err.unwrap_or_default();

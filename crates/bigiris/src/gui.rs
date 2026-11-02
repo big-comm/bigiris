@@ -3620,10 +3620,10 @@ fn sampled_histogram(rgba: &[u8]) -> Histogram {
 // --------------------------------------------------------------------------
 
 use bigimage_core::{
-    adjust_file, convert_file_to, crop_file, extent_file, flip_file, make_gif, metadata,
-    resize_file, rotate_file, AdjustOps, AnimateOptions, CropRect, EncodeOptions, ExtentOptions,
-    ExtentSize, Filter, FlipAxis, Format, Gravity, LoopMode, OverwritePolicy, PreviewOp,
-    PreviewSession, ResizeMode, Rotation,
+    adjust_file, convert_file_to, crop_file, extent_file, flip_file, metadata, resize_file,
+    rotate_file, AdjustOps, AnimateOptions, CropRect, EncodeOptions, ExtentOptions, ExtentSize,
+    Filter, FlipAxis, Format, Gravity, LoopMode, OverwritePolicy, PreviewOp, PreviewSession,
+    ResizeMode, Rotation,
 };
 use image::DynamicImage;
 use std::time::Duration;

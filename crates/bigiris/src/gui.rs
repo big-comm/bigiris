@@ -395,6 +395,10 @@ struct ViewerState {
     /// False while the current file is still being decoded; prefetching
     /// waits so it never competes with the image the user asked for.
     current_ready: bool,
+    /// File whose unedited pixels `texture` holds. The film strip reuses
+    /// the texture for the current cell only when it matches: `texture`
+    /// still shows the previous image while the next one is decoding.
+    shown_path: Option<PathBuf>,
     /// The current file is the one the prefetcher is already decoding, so
     /// its result is shown instead of decoding the same file twice.
     awaiting_prefetch: bool,
@@ -851,6 +855,7 @@ fn build_window_preloaded(
         frame_cache: Vec::new(),
         prefetch_skip: Vec::new(),
         current_ready: false,
+        shown_path: None,
         awaiting_prefetch: false,
         first_frame_shown: false,
         deferred_thumbnails: None,
@@ -1322,16 +1327,23 @@ fn rebuild_film_strip(state: &Rc<RefCell<ViewerState>>) {
     let current = state.borrow().idx.checked_sub(start).filter(|offset| *offset < paths.len());
     let weak_state = Rc::downgrade(state);
     let begin = move || {
+        // Navigation rebuilds the strip before the new frame is decoded, so
+        // `texture` may still be the previous image: reuse it only when it
+        // is known to be this file, otherwise decode the cell like the rest.
+        // A frame that arrives later paints the cell itself (show_frame).
+        let mut skip = None;
         if let (Some(state), Some(offset)) = (weak_state.upgrade(), current) {
             let s = state.borrow();
             let button = weak_buttons.get(offset).and_then(|w| w.upgrade());
-            if let (Some(texture), Some(button)) = (s.texture.as_ref(), button) {
+            let matches = s.current_ready && s.shown_path.as_ref() == paths.get(offset);
+            if let (true, Some(texture), Some(button)) = (matches, s.texture.as_ref(), button) {
                 if let Some(picture) = thumb_picture(&button) {
                     picture.set_paintable(Some(texture));
+                    skip = Some(offset);
                 }
             }
         }
-        start_thumbnail_decoding(paths, current, cancel, weak_buttons);
+        start_thumbnail_decoding(paths, skip, cancel, weak_buttons);
     };
     let mut s = state.borrow_mut();
     if s.first_frame_shown {
@@ -1339,6 +1351,15 @@ fn rebuild_film_strip(state: &Rc<RefCell<ViewerState>>) {
         begin();
     } else {
         s.deferred_thumbnails = Some(Box::new(begin));
+    }
+}
+
+/// Paint the current file's strip cell with the frame just shown, so the
+/// strip never keeps a thumbnail of what the file looked like before.
+fn paint_current_thumb(s: &ViewerState, texture: &gdk::Texture) {
+    let button = s.idx.checked_sub(s.film_strip_start).and_then(|o| s.film_strip_buttons.get(o));
+    if let Some(picture) = button.and_then(thumb_picture) {
+        picture.set_paintable(Some(texture));
     }
 }
 
@@ -2350,20 +2371,27 @@ fn show_cached_frame(state: &Rc<RefCell<ViewerState>>, path: &Path) -> bool {
         s.load_generation = s.load_generation.wrapping_add(1);
         s.awaiting_prefetch = false;
         s.current_ready = true;
-        show_frame(&mut s, frame.texture, frame.natural, frame.histogram);
+        show_frame(&mut s, frame.texture, frame.natural, frame.histogram, Some(path));
     }
     schedule_prefetch(state);
     true
 }
 
+/// `clean` names the file when `texture` holds its unedited pixels; edited
+/// previews pass `None` so the film strip never shows unsaved edits.
 fn show_frame(
     s: &mut ViewerState,
     texture: gdk::Texture,
     natural: (u32, u32),
     histogram: Histogram,
+    clean: Option<&Path>,
 ) {
     s.natural = natural;
     s.histogram = histogram;
+    s.shown_path = clean.map(Path::to_path_buf);
+    if clean.is_some() {
+        paint_current_thumb(s, &texture);
+    }
     s.texture = Some(texture);
     s.stack.set_visible_child_name("picture");
     apply_zoom(s);
@@ -2461,7 +2489,7 @@ fn apply_prefetched_frame(state: &Rc<RefCell<ViewerState>>, frame: DecodedFrame)
                         zoom::cancel_pending(&mut s);
                         s.awaiting_prefetch = false;
                         s.current_ready = true;
-                        show_frame(&mut s, texture, (w, h), histogram);
+                        show_frame(&mut s, texture, (w, h), histogram, Some(&frame.path));
                     }
                 }
                 None
@@ -2562,7 +2590,7 @@ fn apply_decoded_frame(state: &Rc<RefCell<ViewerState>>, frame: DecodedFrame) {
                 remember_frame(
                     &mut s,
                     CachedFrame {
-                        path: frame.path,
+                        path: frame.path.clone(),
                         modified: frame.modified,
                         texture: texture.clone(),
                         natural: (w, h),
@@ -2570,12 +2598,14 @@ fn apply_decoded_frame(state: &Rc<RefCell<ViewerState>>, frame: DecodedFrame) {
                     },
                 );
             }
-            show_frame(&mut s, texture, (w, h), histogram);
+            let clean = (!frame.edited).then_some(frame.path.as_path());
+            show_frame(&mut s, texture, (w, h), histogram, clean);
             drop(s);
         }
         Err(error) => {
             tracing::error!(path = ?frame.path, %error, "falha ao carregar imagem");
             s.texture = None;
+            s.shown_path = None;
             s.picture.set_paintable(gdk::Paintable::NONE);
             let name = frame.path.file_name().map_or_else(
                 || frame.path.display().to_string(),

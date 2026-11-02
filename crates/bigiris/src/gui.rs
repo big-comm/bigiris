@@ -24,6 +24,7 @@ use libadwaita as adw;
 
 mod previews;
 mod transfers;
+mod viewer;
 mod zoom;
 use previews::{
     build_preview_column, dynamic_image_to_texture, prepare_dialog, refresh_preview,
@@ -1213,15 +1214,10 @@ fn thumb_picture(button: &gtk::Button) -> Option<gtk::Picture> {
 fn decode_thumbnail(path: &Path) -> Result<(Vec<u8>, u32, u32), Box<dyn std::error::Error>> {
     let img = bigimage_core::open_image(path)?;
     // Cells crop to a square, so the short side must cover the cell; twice
-    // the cell keeps thumbnails sharp on HiDPI screens.
-    let short = f64::from(img.width().min(img.height()).max(1));
-    let scale = f64::from(THUMB_EDGE * 2) / short;
-    let thumb = img
-        .thumbnail(
-            (f64::from(img.width()) * scale).ceil() as u32,
-            (f64::from(img.height()) * scale).ceil() as u32,
-        )
-        .to_rgba8();
+    // the cell keeps thumbnails sharp on HiDPI screens. Never upscale and
+    // cap the long side: extreme aspect ratios must not allocate gigabytes.
+    let (width, height) = viewer::thumbnail_dimensions(img.width(), img.height(), THUMB_EDGE * 2);
+    let thumb = img.thumbnail(width, height).to_rgba8();
     let (w, h) = thumb.dimensions();
     Ok((thumb.into_raw(), w, h))
 }

@@ -223,10 +223,19 @@ impl BgSession {
             }
             // Full-size buffers plus the resize intermediates, beyond the
             // model's fixed tensor budget. Memory is rechecked per input.
-            self.memory.check(process_workspace_bytes(orig_w, orig_h))?;
-            let resized = input
-                .resize_exact(INPUT_SIDE as u32, INPUT_SIDE as u32, FilterType::Lanczos3)
-                .to_rgb8();
+            self.memory.check(
+                process_workspace_bytes(orig_w, orig_h).saturating_add(float_copy_bytes(input)),
+            )?;
+            // Both the model input and the composited output are 8-bit
+            // sRGB: float (OpenEXR/HDR) sources are scene-linear and need
+            // the transfer function, or the cut-out comes back far too dark.
+            let src_rgba = display_rgba8(input);
+            let resized = image::imageops::resize(
+                &src_rgba,
+                INPUT_SIDE as u32,
+                INPUT_SIDE as u32,
+                FilterType::Lanczos3,
+            );
 
             // Preprocess: HWC u8 → CHW f32 normalised by ImageNet stats.
             // Walking each channel as a contiguous slice lets the inner
@@ -235,6 +244,7 @@ impl BgSession {
             let mean = [0.485f32, 0.456, 0.406];
             let std = [0.229f32, 0.224, 0.225];
             let raw: &[u8] = resized.as_raw();
+            const CHANNELS: usize = 4;
             let mut tensor = ndarray::Array4::<f32>::zeros((1, 3, INPUT_SIDE, INPUT_SIDE));
             {
                 let plane = INPUT_PIXELS;
@@ -244,7 +254,7 @@ impl BgSession {
                     let s = std[c];
                     let dst_chan = &mut dst[c * plane..(c + 1) * plane];
                     for (i, out) in dst_chan.iter_mut().enumerate() {
-                        let v = f32::from(raw[i * 3 + c]) / 255.0;
+                        let v = f32::from(raw[i * CHANNELS + c]) / 255.0;
                         *out = (v - m) / s;
                     }
                 }
@@ -275,7 +285,6 @@ impl BgSession {
 
             // Composite RGB src + mask alpha → RGBA dest. Both source
             // and dest are HWC; iterate as flat slices.
-            let src_rgba = input.to_rgba8();
             let src: &[u8] = src_rgba.as_raw();
             let mask_raw: &[u8] = mask_full.as_raw();
             let n = (orig_w as usize) * (orig_h as usize);
@@ -292,6 +301,30 @@ impl BgSession {
                     .expect("RGBA buffer matches dimensions");
             Ok(DynamicImage::ImageRgba8(out))
         }
+    }
+}
+
+/// 8-bit sRGB RGBA view of `input`, as written by the core encoders:
+/// float images go through [`bigimage_core::into_srgb_rgba8`] (sRGB
+/// transfer), integer ones are already sRGB-encoded.
+#[cfg(any(feature = "onnx", test))]
+fn display_rgba8(input: &DynamicImage) -> image::RgbaImage {
+    match input {
+        DynamicImage::ImageRgb32F(_) | DynamicImage::ImageRgba32F(_) => {
+            bigimage_core::into_srgb_rgba8(input.clone())
+        }
+        other => other.to_rgba8(),
+    }
+}
+
+/// Transient copy [`display_rgba8`] makes of a float source.
+#[cfg(any(feature = "onnx", test))]
+fn float_copy_bytes(input: &DynamicImage) -> u64 {
+    match input {
+        DynamicImage::ImageRgb32F(_) | DynamicImage::ImageRgba32F(_) => u64::from(input.width())
+            .saturating_mul(u64::from(input.height()))
+            .saturating_mul(u64::from(input.color().bytes_per_pixel())),
+        _ => 0,
     }
 }
 
@@ -393,6 +426,24 @@ mod tests {
         let small = process_workspace_bytes(1, 1_000);
         let large = process_workspace_bytes(1, 2_000);
         assert_eq!(large - small, 16 * 1024 * 1_000 + 9 * 1_000);
+    }
+
+    #[test]
+    fn linear_float_sources_are_srgb_encoded_for_model_and_output() {
+        // Linear 0.5 is sRGB ~188; a bare quantisation would give 128.
+        let float = DynamicImage::ImageRgba32F(image::ImageBuffer::from_pixel(
+            2,
+            1,
+            image::Rgba([0.5f32, 0.0, 2.0, 1.0]),
+        ));
+        let px = display_rgba8(&float).get_pixel(0, 0).0;
+        assert!((187..=189).contains(&px[0]), "{px:?}");
+        assert_eq!(&px[1..], &[0, 255, 255]);
+        assert_eq!(float_copy_bytes(&float), 2 * 16);
+        let rgb =
+            DynamicImage::ImageRgb8(image::RgbImage::from_pixel(1, 1, image::Rgb([128, 7, 9])));
+        assert_eq!(display_rgba8(&rgb).get_pixel(0, 0).0, [128, 7, 9, 255]);
+        assert_eq!(float_copy_bytes(&rgb), 0);
     }
 
     #[test]

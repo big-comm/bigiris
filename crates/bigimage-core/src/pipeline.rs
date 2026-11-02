@@ -193,21 +193,55 @@ pub(crate) fn sniff_format(input: &Path) -> Option<Format> {
 /// `Skip` short-circuit before decoding: when the destination name can be
 /// computed from the path and header alone and already exists, return the
 /// skip outcome without paying for a full decode.
+///
+/// The operation is still validated first (see [`skip_existing`]), so an
+/// invalid request fails the same way whether or not the output exists.
 pub(crate) fn skip_before_decode(
     input: &Path,
     suffix: &str,
     target: Option<Format>,
     policy: OverwritePolicy,
-) -> Option<crate::ConvertOutcome> {
+    validate: impl Fn(u32, u32) -> Result<()>,
+) -> Result<Option<crate::ConvertOutcome>> {
     if !matches!(policy, OverwritePolicy::Skip) {
-        return None;
+        return Ok(None);
     }
-    let target = target.or_else(|| sniff_format(input))?;
-    let output = resolve_output(input, Some(suffix), target, policy).ok()?;
-    output.symlink_metadata().is_ok().then(|| {
-        tracing::debug!(?output, "skipping existing output before decoding");
-        crate::ConvertOutcome::Skipped { output }
-    })
+    let Some(target) = target.or_else(|| sniff_format(input)) else {
+        return Ok(None);
+    };
+    let Ok(output) = resolve_output(input, Some(suffix), target, policy) else {
+        return Ok(None);
+    };
+    skip_existing(input, output, validate)
+}
+
+/// Skip outcome for an `output` that already exists, after the cheap checks
+/// a full run would fail on: the input must be a static image (no animation
+/// or extra pages) and `validate` must accept its header dimensions.
+///
+/// The header reports stored dimensions, before EXIF/AVIF orientation is
+/// applied; the operation is rejected only when it is invalid for both the
+/// stored and the transposed size, so a rotated photo is never refused
+/// wrongly (the post-decode check stays authoritative).
+pub(crate) fn skip_existing(
+    input: &Path,
+    output: PathBuf,
+    validate: impl Fn(u32, u32) -> Result<()>,
+) -> Result<Option<crate::ConvertOutcome>> {
+    if output.symlink_metadata().is_err() {
+        return Ok(None);
+    }
+    crate::content::ensure_static(input)?;
+    let (w, h) = crate::image_dimensions(input)
+        .map_err(|source| BigImageError::Decode { path: input.to_path_buf(), source })?;
+    validate(w, h).or_else(|error| validate(h, w).map_err(|_| error))?;
+    tracing::debug!(?output, "skipping existing output before decoding");
+    Ok(Some(crate::ConvertOutcome::Skipped { output }))
+}
+
+/// Accept-everything validator for operations valid on any static image.
+pub(crate) fn any_size(_: u32, _: u32) -> Result<()> {
+    Ok(())
 }
 
 /// Compute the output path.

@@ -80,7 +80,9 @@ pub fn crop_file_with_options(
 ) -> Result<ConvertOutcome> {
     let input = input.as_ref();
     if let Some(skipped) =
-        pipeline::skip_before_decode(input, &rect.filename_suffix(), target, policy)
+        pipeline::skip_before_decode(input, &rect.filename_suffix(), target, policy, |w, h| {
+            rect.validate_against(w, h)
+        })?
     {
         return Ok(skipped);
     }

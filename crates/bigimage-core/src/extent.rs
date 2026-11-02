@@ -229,8 +229,11 @@ pub fn extent_file_with_options(
     // Only exact sizes name the output without the (upright) source
     // dimensions; aspect targets are checked after decoding.
     if let ExtentSize::Exact { width, height } = opts.size {
+        let suffix = filename_suffix(width, height);
         if let Some(skipped) =
-            pipeline::skip_before_decode(input, &filename_suffix(width, height), target, policy)
+            pipeline::skip_before_decode(input, &suffix, target, policy, |w, h| {
+                opts.size.resolve(w, h).map(drop)
+            })?
         {
             return Ok(skipped);
         }

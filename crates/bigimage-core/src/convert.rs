@@ -79,9 +79,10 @@ pub fn convert_file_to(
     let input = input.as_ref();
     let output = pipeline::resolve_output_to(input, output_dir, None, target, policy)?;
 
-    if matches!(policy, OverwritePolicy::Skip) && output.exists() {
-        tracing::debug!(?output, "convert: skipping existing output");
-        return Ok(ConvertOutcome::Skipped { output });
+    if matches!(policy, OverwritePolicy::Skip) {
+        if let Some(skipped) = pipeline::skip_existing(input, output.clone(), pipeline::any_size)? {
+            return Ok(skipped);
+        }
     }
 
     tracing::debug!(?input, ?output, ?target, ?opts, "convert: decoding");

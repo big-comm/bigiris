@@ -54,9 +54,13 @@ pub fn rotate_file_with_options(
     policy: OverwritePolicy,
 ) -> Result<ConvertOutcome> {
     let input = input.as_ref();
-    if let Some(skipped) =
-        pipeline::skip_before_decode(input, rotation.filename_suffix(), target, policy)
-    {
+    if let Some(skipped) = pipeline::skip_before_decode(
+        input,
+        rotation.filename_suffix(),
+        target,
+        policy,
+        pipeline::any_size,
+    )? {
         return Ok(skipped);
     }
 
@@ -138,7 +142,9 @@ pub fn rotate_file_auto_with_options(
     policy: OverwritePolicy,
 ) -> Result<ConvertOutcome> {
     let input = input.as_ref();
-    if let Some(skipped) = pipeline::skip_before_decode(input, "_auto", target, policy) {
+    if let Some(skipped) =
+        pipeline::skip_before_decode(input, "_auto", target, policy, pipeline::any_size)?
+    {
         return Ok(skipped);
     }
 

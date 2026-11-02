@@ -388,10 +388,12 @@ fn new_outputs_get_umask_permissions_instead_of_private_temp_mode() {
 fn skip_policy_returns_before_decoding_when_destination_is_known() {
     use bigimage_core::*;
     let dir = tempfile::tempdir().unwrap();
-    // Valid PNG signature, truncated body: decoding it would fail.
+    // Valid header up to the pixel data, truncated inside it: the header
+    // checks pass, decoding it would fail.
     let src = dir.path().join("broken.png");
     let good = std::fs::read(fixture(dir.path(), "good.png", 1)).unwrap();
-    std::fs::write(&src, &good[..40]).unwrap();
+    let idat = good.windows(4).position(|w| w == b"IDAT").unwrap();
+    std::fs::write(&src, &good[..idat + 8]).unwrap();
     assert!(open_image(&src).is_err());
     let skip = OverwritePolicy::Skip;
     let existing = |name: &str| {
@@ -439,6 +441,45 @@ fn skip_policy_returns_before_decoding_when_destination_is_known() {
         assert_eq!(outcome.unwrap(), ConvertOutcome::Skipped { output: path.clone() });
         assert_eq!(std::fs::read(&path).unwrap(), b"keep");
     }
+}
+
+/// Skip must not hide an invalid request: with or without an existing
+/// output of that name, the same operation fails the same way.
+#[test]
+fn skip_policy_still_rejects_invalid_operations() {
+    use bigimage_core::*;
+    let dir = tempfile::tempdir().unwrap();
+    let src = fixture(dir.path(), "src.png", 1); // 32x24
+    let skip = OverwritePolicy::Skip;
+    let existing = |name: &str| std::fs::write(dir.path().join(name), b"keep").unwrap();
+    let crop = CropRect::new(20, 0, 40, 10);
+    let extent = ExtentOptions::new(ExtentSize::Exact { width: 30, height: 30 });
+    let fresh_crop = crop_file(&src, crop, None, skip).unwrap_err().to_string();
+    let fresh_extent = extent_file(&src, extent, None, skip).unwrap_err().to_string();
+    existing("src_crop-40x10+20+0.png");
+    existing("src_extent-30x30.png");
+    assert_eq!(crop_file(&src, crop, None, skip).unwrap_err().to_string(), fresh_crop);
+    assert_eq!(extent_file(&src, extent, None, skip).unwrap_err().to_string(), fresh_extent);
+    // Valid only once transposed (as for an EXIF-rotated photo): still
+    // skipped before decoding, the decode path stays authoritative.
+    existing("src_crop-20x30+0+0.png");
+    let transposed = crop_file(&src, CropRect::new(0, 0, 20, 30), None, skip).unwrap();
+    assert!(matches!(transposed, ConvertOutcome::Skipped { .. }));
+
+    // Animated input: refused, never reported as skipped.
+    let gif = dir.path().join("anim.gif");
+    make_gif(&[src.clone(), fixture(dir.path(), "b.png", 200)], &gif, AnimateOptions::default())
+        .unwrap();
+    existing("anim_rot90.gif");
+    existing("anim.png");
+    assert!(matches!(
+        rotate_file(&gif, Rotation::Deg90, None, skip),
+        Err(BigImageError::InvalidInput(_))
+    ));
+    assert!(matches!(
+        convert_file(&gif, Format::Png, &EncodeOptions::default(), skip),
+        Err(BigImageError::InvalidInput(_))
+    ));
 }
 
 #[test]

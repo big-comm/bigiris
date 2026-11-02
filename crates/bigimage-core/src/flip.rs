@@ -45,9 +45,13 @@ pub fn flip_file_with_options(
     policy: OverwritePolicy,
 ) -> Result<ConvertOutcome> {
     let input = input.as_ref();
-    if let Some(skipped) =
-        pipeline::skip_before_decode(input, axis.filename_suffix(), target, policy)
-    {
+    if let Some(skipped) = pipeline::skip_before_decode(
+        input,
+        axis.filename_suffix(),
+        target,
+        policy,
+        pipeline::any_size,
+    )? {
         return Ok(skipped);
     }
 

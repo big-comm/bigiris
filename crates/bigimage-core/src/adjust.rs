@@ -122,7 +122,9 @@ pub fn adjust_file_with_options(
     let input = input.as_ref();
     let suffix_tag = ops.suffix_tag();
     let suffix = format!("_{suffix_tag}");
-    if let Some(skipped) = pipeline::skip_before_decode(input, &suffix, target, policy) {
+    if let Some(skipped) =
+        pipeline::skip_before_decode(input, &suffix, target, policy, pipeline::any_size)?
+    {
         return Ok(skipped);
     }
 

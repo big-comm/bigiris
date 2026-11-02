@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: bigiris 0.1.0\n"
 "Report-Msgid-Bugs-To: https://github.com/big-comm/bigiris/issues\n"
-"POT-Creation-Date: 2026-11-02 18:04-0300\n"
+"POT-Creation-Date: 2026-11-02 20:57-0300\n"
 "PO-Revision-Date: 2026-10-14 01:36-0300\n"
 "Last-Translator: BigCommunity Team\n"
 "Language-Team: BigCommunity Team\n"
@@ -16,87 +16,88 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: crates/bigiris/src/gui.rs:648
+#: crates/bigiris/src/gui.rs:658
 msgid "BigIris"
 msgstr "BigIris"
 
-#: crates/bigiris/src/gui.rs:683 crates/bigiris/src/gui/previews.rs:240
+#: crates/bigiris/src/gui.rs:693 crates/bigiris/src/gui/previews.rs:240
 msgid "Não foi possível abrir a imagem"
 msgstr "Nem sikerült megnyitni a képet"
 
-#: crates/bigiris/src/gui.rs:923 crates/bigiris/src/gui.rs:3264
+#: crates/bigiris/src/gui.rs:940 crates/bigiris/src/gui.rs:3337
+#: crates/bigiris/src/gui/viewer/crop.rs:599
 msgid "Aguarde o salvamento terminar"
 msgstr "Várjon a mentés befejezésére"
 
-#: crates/bigiris/src/gui.rs:934
+#: crates/bigiris/src/gui.rs:951
 msgid "Descartar alterações?"
 msgstr "Elveti a változtatásokat?"
 
-#: crates/bigiris/src/gui.rs:935
+#: crates/bigiris/src/gui.rs:952
 msgid "A imagem tem edições que ainda não foram salvas."
 msgstr "A kép nem mentett módosításokat tartalmaz."
 
-#: crates/bigiris/src/gui.rs:937
+#: crates/bigiris/src/gui.rs:954
 msgid "Continuar editando"
 msgstr "A szerkesztés folytatása"
 
-#: crates/bigiris/src/gui.rs:938
+#: crates/bigiris/src/gui.rs:955
 msgid "Descartar"
 msgstr "Változások elvetése"
 
-#: crates/bigiris/src/gui.rs:1007
+#: crates/bigiris/src/gui.rs:1024
 msgid "Imagem anterior"
 msgstr "← Előző kép"
 
-#: crates/bigiris/src/gui.rs:1008
+#: crates/bigiris/src/gui.rs:1025
 msgid "Próxima imagem"
 msgstr "Következő kép »"
 
-#: crates/bigiris/src/gui.rs:1020
+#: crates/bigiris/src/gui.rs:1037
 msgid "Propriedades da imagem (Ctrl+I)"
 msgstr "Kép tulajdonságai (Ctrl+I)"
 
-#: crates/bigiris/src/gui.rs:1026
+#: crates/bigiris/src/gui.rs:1043
 msgid "Tela cheia (F11)"
 msgstr "Teljes képernyő (F11)"
 
-#: crates/bigiris/src/gui.rs:1035
+#: crates/bigiris/src/gui.rs:1052
 msgid "Afastar"
 msgstr "Kicsinyítés"
 
-#: crates/bigiris/src/gui.rs:1039 crates/bigiris/src/gui.rs:3623
+#: crates/bigiris/src/gui.rs:1056 crates/bigiris/src/gui.rs:3696
 msgid "Ajustar à janela"
 msgstr "Illeszkedjen az ablakhoz"
 
-#: crates/bigiris/src/gui.rs:1040 crates/bigiris/src/gui.rs:3624
+#: crates/bigiris/src/gui.rs:1057 crates/bigiris/src/gui.rs:3697
 msgid "Tamanho real (100%)"
 msgstr "Tényleges méret (100%)"
 
-#: crates/bigiris/src/gui.rs:1049 crates/bigiris/src/gui.rs:3620
+#: crates/bigiris/src/gui.rs:1066 crates/bigiris/src/gui.rs:3693
 msgid "Zoom"
 msgstr "Nagyítás"
 
-#: crates/bigiris/src/gui.rs:1053
+#: crates/bigiris/src/gui.rs:1070
 msgid "Aproximar"
 msgstr "Nagyítás a képre"
 
-#: crates/bigiris/src/gui.rs:2028
+#: crates/bigiris/src/gui.rs:2094
 msgid "Slideshow: pausado"
 msgstr "Diavetítés: szüneteltetve"
 
-#: crates/bigiris/src/gui.rs:2056
+#: crates/bigiris/src/gui.rs:2122
 msgid "Slideshow: a cada {interval} s"
 msgstr "Diavetítés: {interval} másodpercenként"
 
-#: crates/bigiris/src/gui.rs:2078
+#: crates/bigiris/src/gui.rs:2144
 msgid "Histograma ligado"
 msgstr "Hisztogram be"
 
-#: crates/bigiris/src/gui.rs:2080
+#: crates/bigiris/src/gui.rs:2146
 msgid "Histograma desligado"
 msgstr "Hisztogram ki"
 
-#: crates/bigiris/src/gui.rs:2265
+#: crates/bigiris/src/gui.rs:2346
 msgid ""
 "O arquivo será sobrescrito. JPEG é recodificado a cada gravação; isso pode "
 "reduzir a qualidade."
@@ -104,11 +105,11 @@ msgstr ""
 "A fájl felülírásra kerül. A JPEG minden mentésekor újrakódolásra kerül; ez "
 "csökkentheti a minőséget."
 
-#: crates/bigiris/src/gui.rs:2267
+#: crates/bigiris/src/gui.rs:2348
 msgid "O arquivo será sobrescrito."
 msgstr "A fájl felülírásra kerül."
 
-#: crates/bigiris/src/gui.rs:2273
+#: crates/bigiris/src/gui.rs:2354
 msgid ""
 "Este formato não guarda todos os metadados da foto (data, câmera, perfil de "
 "cor); o que ele não suportar será removido ou convertido."
@@ -117,30 +118,31 @@ msgstr ""
 "fényképezőgép, színprofil); amit nem támogat, az eltávolításra vagy "
 "átalakításra kerül."
 
-#: crates/bigiris/src/gui.rs:2276
+#: crates/bigiris/src/gui.rs:2357
 msgid "Salvar alterações?"
 msgstr "Menteni a módosításokat?"
 
-#: crates/bigiris/src/gui.rs:2277 crates/bigiris/src/gui.rs:3528
+#: crates/bigiris/src/gui.rs:2358 crates/bigiris/src/gui.rs:3601
 #: crates/bigiris/src/gui/dialogs/animate.rs:187
 #: crates/bigiris/src/gui/dialogs/batch.rs:131
 #: crates/bigiris/src/gui/dialogs/batch.rs:269
 #: crates/bigiris/src/gui/dialogs/batch.rs:362
+#: crates/bigiris/src/gui/viewer/crop.rs:372
 #: crates/bigiris/src/gui/dialogs/mod.rs:184
 #: crates/bigiris/src/gui/dialogs/remove_bg.rs:230
 #: crates/bigiris/src/gui/previews.rs:202
 msgid "Cancelar"
 msgstr "Mégse"
 
-#: crates/bigiris/src/gui.rs:2278
+#: crates/bigiris/src/gui.rs:2359
 msgid "Salvar"
 msgstr "Mentés"
 
-#: crates/bigiris/src/gui.rs:2326
+#: crates/bigiris/src/gui.rs:2407
 msgid "Salvo"
 msgstr "A fájl mentve lett."
 
-#: crates/bigiris/src/gui.rs:2405
+#: crates/bigiris/src/gui.rs:2486
 msgid ""
 "Este arquivo é animado, tem várias páginas ou não pôde ser verificado. Girar "
 "ou espelhar e salvar descartaria os outros quadros, então ele não foi "
@@ -149,7 +151,7 @@ msgstr ""
 "Ez a fájl animált, több oldalas, vagy nem sikerült ellenőrizni. A forgatás "
 "vagy tükrözés és mentés elvetné a többi képkockát, ezért nem lett módosítva."
 
-#: crates/bigiris/src/gui.rs:2406
+#: crates/bigiris/src/gui.rs:2487
 msgid ""
 "O BigIris não sabe gravar este formato. As alterações não podem ser salvas "
 "no próprio arquivo."
@@ -157,175 +159,175 @@ msgstr ""
 "A BigIris nem tudja írni ezt a formátumot. A módosítások nem menthetők "
 "magába a fájlba."
 
-#: crates/bigiris/src/gui.rs:2407
+#: crates/bigiris/src/gui.rs:2488
 msgid "Sem permissão para alterar este arquivo ou a pasta dele."
 msgstr "Nincs jogosultság a fájl vagy a mappája módosításához."
 
-#: crates/bigiris/src/gui.rs:2409
+#: crates/bigiris/src/gui.rs:2490
 msgid "O arquivo não foi alterado. Detalhes: {detail}"
 msgstr "A fájl nem módosult. Részletek: {detail}"
 
-#: crates/bigiris/src/gui.rs:2421
+#: crates/bigiris/src/gui.rs:2502
 msgid "Não foi possível salvar"
 msgstr "Nem sikerült menteni"
 
-#: crates/bigiris/src/gui.rs:2424
+#: crates/bigiris/src/gui.rs:2505
 msgid "Manter alterações"
 msgstr "Módosítások megtartása"
 
-#: crates/bigiris/src/gui.rs:2425
+#: crates/bigiris/src/gui.rs:2506
 msgid "Descartar alterações"
 msgstr "Módosítások elvetése"
 
-#: crates/bigiris/src/gui.rs:2510
+#: crates/bigiris/src/gui.rs:2591
 msgid "o formato não guarda EXIF"
 msgstr "a formátum nem tárol EXIF-et"
 
-#: crates/bigiris/src/gui.rs:2511
+#: crates/bigiris/src/gui.rs:2592
 msgid "EXIF grande demais para JPEG"
 msgstr "az EXIF túl nagy a JPEG-hez"
 
-#: crates/bigiris/src/gui.rs:2512
+#: crates/bigiris/src/gui.rs:2593
 msgid "EXIF inválido"
 msgstr "érvénytelen EXIF"
 
-#: crates/bigiris/src/gui.rs:2515
+#: crates/bigiris/src/gui.rs:2596
 msgid "perfil de cor convertido para sRGB"
 msgstr "színprofil sRGB-re konvertálva"
 
-#: crates/bigiris/src/gui.rs:2516
+#: crates/bigiris/src/gui.rs:2597
 msgid "perfil de cor inválido ignorado"
 msgstr "érvénytelen színprofil figyelmen kívül hagyva"
 
-#: crates/bigiris/src/gui.rs:2517
+#: crates/bigiris/src/gui.rs:2598
 msgid "metadados não suportados"
 msgstr "nem támogatott metaadatok"
 
-#: crates/bigiris/src/gui.rs:2527
+#: crates/bigiris/src/gui.rs:2608
 msgid "Salvo. Alguns metadados não puderam ser mantidos: {list}"
 msgstr "Mentve. Néhány metaadatot nem sikerült megtartani: {list}"
 
-#: crates/bigiris/src/gui.rs:2787
+#: crates/bigiris/src/gui.rs:2868
 msgid "Salve ou desfaça as alterações antes de navegar"
 msgstr "Módosítások mentése vagy visszavonása navigálás előtt"
 
-#: crates/bigiris/src/gui.rs:2868 crates/bigiris/src/gui.rs:3776
-#: crates/bigiris/src/gui.rs:4786 crates/bigiris/src/gui.rs:4921
+#: crates/bigiris/src/gui.rs:2949 crates/bigiris/src/gui.rs:3849
+#: crates/bigiris/src/gui.rs:4859 crates/bigiris/src/gui.rs:4994
 msgid "Abrir imagens…"
 msgstr "Képek megnyitása…"
 
-#: crates/bigiris/src/gui.rs:2869 crates/bigiris/src/gui.rs:3657
+#: crates/bigiris/src/gui.rs:2950 crates/bigiris/src/gui.rs:3730
 msgid "Colar arquivos de imagem"
 msgstr "Képfájlok beillesztése"
 
-#: crates/bigiris/src/gui.rs:2871 crates/bigiris/src/gui.rs:3656
+#: crates/bigiris/src/gui.rs:2952 crates/bigiris/src/gui.rs:3729
 msgid "Copiar imagem"
 msgstr "A kép másolása"
 
-#: crates/bigiris/src/gui.rs:2872
+#: crates/bigiris/src/gui.rs:2953
 msgid "Imprimir…"
 msgstr "Nyomtatás…"
 
-#: crates/bigiris/src/gui.rs:2874 crates/bigiris/src/gui.rs:3788
-#: crates/bigiris/src/gui.rs:4786
+#: crates/bigiris/src/gui.rs:2955 crates/bigiris/src/gui.rs:3861
+#: crates/bigiris/src/gui.rs:4859
 msgid "Processar uma pasta…"
 msgstr "Mappa feldolgozása…"
 
-#: crates/bigiris/src/gui.rs:2879 crates/bigiris/src/gui.rs:3642
+#: crates/bigiris/src/gui.rs:2960 crates/bigiris/src/gui.rs:3715
 msgid "Desfazer"
 msgstr "Visszavonás"
 
-#: crates/bigiris/src/gui.rs:2880 crates/bigiris/src/gui.rs:3643
+#: crates/bigiris/src/gui.rs:2961 crates/bigiris/src/gui.rs:3716
 msgid "Refazer"
 msgstr "Újra"
 
-#: crates/bigiris/src/gui.rs:2882 crates/bigiris/src/gui.rs:3644
+#: crates/bigiris/src/gui.rs:2963 crates/bigiris/src/gui.rs:3717
 msgid "Girar à direita"
 msgstr "Forgatás jobbra"
 
-#: crates/bigiris/src/gui.rs:2883 crates/bigiris/src/gui.rs:3645
+#: crates/bigiris/src/gui.rs:2964 crates/bigiris/src/gui.rs:3718
 msgid "Girar à esquerda"
 msgstr "Forgatás balra"
 
-#: crates/bigiris/src/gui.rs:2884
+#: crates/bigiris/src/gui.rs:2965
 msgid "Girar 180°"
 msgstr "180°-os elforgatás"
 
-#: crates/bigiris/src/gui.rs:2885
+#: crates/bigiris/src/gui.rs:2966
 msgid "Espelhar horizontal"
 msgstr "Flip vízszintesen"
 
-#: crates/bigiris/src/gui.rs:2886
+#: crates/bigiris/src/gui.rs:2967
 msgid "Espelhar vertical"
 msgstr "Függőleges átfordítás"
 
-#: crates/bigiris/src/gui.rs:2887 crates/bigiris/src/gui.rs:3646
+#: crates/bigiris/src/gui.rs:2968 crates/bigiris/src/gui.rs:3719
 msgid "Recortar…"
 msgstr "Kivágás…"
 
-#: crates/bigiris/src/gui.rs:2889
+#: crates/bigiris/src/gui.rs:2970
 msgid "Editar imagem"
 msgstr "A kép szerkesztése"
 
-#: crates/bigiris/src/gui.rs:2891 crates/bigiris/src/gui.rs:3647
+#: crates/bigiris/src/gui.rs:2972 crates/bigiris/src/gui.rs:3720
 msgid "Remover fundo (IA)…"
 msgstr "Háttér eltávolítása (AI)…"
 
-#: crates/bigiris/src/gui.rs:2892 crates/bigiris/src/gui.rs:3648
+#: crates/bigiris/src/gui.rs:2973 crates/bigiris/src/gui.rs:3721
 msgid "Aumentar resolução…"
 msgstr "Upscale…"
 
-#: crates/bigiris/src/gui.rs:2893
+#: crates/bigiris/src/gui.rs:2974
 msgid "Ferramentas"
 msgstr "Eszközök"
 
-#: crates/bigiris/src/gui.rs:2895 crates/bigiris/src/gui.rs:3649
+#: crates/bigiris/src/gui.rs:2976 crates/bigiris/src/gui.rs:3722
 msgid "Salvar alterações"
 msgstr "A módosítások mentése"
 
-#: crates/bigiris/src/gui.rs:2896 crates/bigiris/src/gui.rs:3660
+#: crates/bigiris/src/gui.rs:2977 crates/bigiris/src/gui.rs:3733
 msgid "Mover para a lixeira"
 msgstr "Áthelyezés a kukába"
 
-#: crates/bigiris/src/gui.rs:2900
+#: crates/bigiris/src/gui.rs:2981
 msgid "Atalhos do teclado"
 msgstr "Gyorsbillentyűk"
 
-#: crates/bigiris/src/gui.rs:2901
+#: crates/bigiris/src/gui.rs:2982
 msgid "Sobre o BigIris"
 msgstr "A BigIris -ról"
 
-#: crates/bigiris/src/gui.rs:2906
+#: crates/bigiris/src/gui.rs:2987
 msgid "Menu principal"
 msgstr "Főmenü"
 
-#: crates/bigiris/src/gui.rs:3266
+#: crates/bigiris/src/gui.rs:3339
 msgid "Salve ou desfaça as alterações antes de usar esta ferramenta"
 msgstr "Az eszköz használata előtt mentse vagy vonja vissza a módosításokat"
 
-#: crates/bigiris/src/gui.rs:3282 crates/bigiris/src/gui.rs:3834
+#: crates/bigiris/src/gui.rs:3355 crates/bigiris/src/gui.rs:3907
 #: crates/bigiris/src/gui/dialogs/batch.rs:404
 #: crates/bigiris/src/gui/dialogs/remove_bg.rs:134
 msgid "Imagens"
 msgstr "Képek"
 
-#: crates/bigiris/src/gui.rs:3288 crates/bigiris/src/gui.rs:3655
+#: crates/bigiris/src/gui.rs:3361 crates/bigiris/src/gui.rs:3728
 msgid "Abrir imagens"
 msgstr "Képek megnyitása"
 
-#: crates/bigiris/src/gui.rs:3340 crates/bigiris/src/gui.rs:3380
+#: crates/bigiris/src/gui.rs:3413 crates/bigiris/src/gui.rs:3453
 msgid "Não foi possível preparar a página"
 msgstr "Nem sikerült előkészíteni az oldalt"
 
-#: crates/bigiris/src/gui.rs:3362
+#: crates/bigiris/src/gui.rs:3435
 msgid "O preparo da impressão falhou"
 msgstr "A nyomtatás előkészítése sikertelen"
 
-#: crates/bigiris/src/gui.rs:3419
+#: crates/bigiris/src/gui.rs:3492
 msgid "Não foi possível imprimir"
 msgstr "Nem lehetett nyomtatni"
 
-#: crates/bigiris/src/gui.rs:3422 crates/bigiris/src/gui.rs:3554
+#: crates/bigiris/src/gui.rs:3495 crates/bigiris/src/gui.rs:3627
 #: crates/bigiris/src/gui/dialogs/animate.rs:53
 #: crates/bigiris/src/gui/dialogs/batch.rs:360
 #: crates/bigiris/src/gui/dialogs/remove_bg.rs:100
@@ -335,116 +337,116 @@ msgstr "Nem lehetett nyomtatni"
 msgid "Fechar"
 msgstr "Bezárás"
 
-#: crates/bigiris/src/gui.rs:3520
+#: crates/bigiris/src/gui.rs:3593
 msgid "Mover para a lixeira?"
 msgstr "Áthelyezés a kukába?"
 
-#: crates/bigiris/src/gui.rs:3524
+#: crates/bigiris/src/gui.rs:3597
 msgid ""
 "O arquivo será movido para a lixeira do sistema. Você pode restaurá-lo "
 "depois."
 msgstr "A fájl átkerül a kukába. Később visszaállíthatja azt."
 
-#: crates/bigiris/src/gui.rs:3529
+#: crates/bigiris/src/gui.rs:3602
 msgid "Mover"
 msgstr "Mozgás"
 
-#: crates/bigiris/src/gui.rs:3551
+#: crates/bigiris/src/gui.rs:3624
 msgid "Não foi possível mover para a lixeira"
 msgstr "Nem sikerült a kukába helyezni"
 
-#: crates/bigiris/src/gui.rs:3612
+#: crates/bigiris/src/gui.rs:3685
 msgid "Navegação"
 msgstr "Navigáció"
 
-#: crates/bigiris/src/gui.rs:3614
+#: crates/bigiris/src/gui.rs:3687
 msgid "Anterior / próximo"
 msgstr "Előző / következő"
 
-#: crates/bigiris/src/gui.rs:3615
+#: crates/bigiris/src/gui.rs:3688
 msgid "Primeiro / último"
 msgstr "Első / utolsó"
 
-#: crates/bigiris/src/gui.rs:3616
+#: crates/bigiris/src/gui.rs:3689
 msgid "Slideshow (auto-avanço)"
 msgstr "Diavetítés"
 
-#: crates/bigiris/src/gui.rs:3622
+#: crates/bigiris/src/gui.rs:3695
 msgid "Aproximar / afastar"
 msgstr "Nagyítás / kicsinyítés"
 
-#: crates/bigiris/src/gui.rs:3625
+#: crates/bigiris/src/gui.rs:3698
 msgid "Zoom contínuo"
 msgstr "Folyamatos zoom funkció"
 
-#: crates/bigiris/src/gui.rs:3629
+#: crates/bigiris/src/gui.rs:3702
 msgid "Janela"
 msgstr "Ablak"
 
-#: crates/bigiris/src/gui.rs:3631
+#: crates/bigiris/src/gui.rs:3704
 msgid "Tela cheia"
 msgstr "Teljes képernyő"
 
-#: crates/bigiris/src/gui.rs:3632
+#: crates/bigiris/src/gui.rs:3705
 msgid "Modo teatro"
 msgstr "Színházi üzemmód"
 
-#: crates/bigiris/src/gui.rs:3633
+#: crates/bigiris/src/gui.rs:3706
 msgid "Fita de miniaturas"
 msgstr "Miniatűrök"
 
-#: crates/bigiris/src/gui.rs:3634
+#: crates/bigiris/src/gui.rs:3707
 msgid "Histograma RGB"
 msgstr "RGB hisztogram"
 
-#: crates/bigiris/src/gui.rs:3635
+#: crates/bigiris/src/gui.rs:3708
 msgid "Fixar barras visíveis"
 msgstr "A vezérlők láthatóvá tétele"
 
-#: crates/bigiris/src/gui.rs:3636
+#: crates/bigiris/src/gui.rs:3709
 msgid "Sair da tela cheia ou fechar"
 msgstr "Kilépés a teljes képernyőből vagy bezárás"
 
-#: crates/bigiris/src/gui.rs:3640
+#: crates/bigiris/src/gui.rs:3713
 msgid "Edição"
 msgstr "Szerkesztés"
 
-#: crates/bigiris/src/gui.rs:3653
+#: crates/bigiris/src/gui.rs:3726
 #: crates/bigiris/src/gui/dialogs/properties.rs:120
 msgid "Arquivo"
 msgstr "Fájl"
 
-#: crates/bigiris/src/gui.rs:3658
+#: crates/bigiris/src/gui.rs:3731
 msgid "Imprimir"
 msgstr "Nyomtatás"
 
-#: crates/bigiris/src/gui.rs:3659
+#: crates/bigiris/src/gui.rs:3732
 #: crates/bigiris/src/gui/dialogs/properties.rs:38
 #: crates/bigiris/src/gui/dialogs/properties.rs:80
 msgid "Propriedades"
 msgstr "Tulajdonságok"
 
-#: crates/bigiris/src/gui.rs:3664
+#: crates/bigiris/src/gui.rs:3737
 msgid "Ajuda"
 msgstr "Segítség"
 
-#: crates/bigiris/src/gui.rs:3665
+#: crates/bigiris/src/gui.rs:3738
 msgid "Este diálogo"
 msgstr "Ez a párbeszédpanel"
 
-#: crates/bigiris/src/gui.rs:3665
+#: crates/bigiris/src/gui.rs:3738
 msgid "Sobre"
 msgstr "Névjegy"
 
-#: crates/bigiris/src/gui.rs:3675
+#: crates/bigiris/src/gui.rs:3748
 msgid "Roda do mouse"
 msgstr "Az egérkerék"
 
-#: crates/bigiris/src/gui.rs:3703
+#: crates/bigiris/src/gui.rs:3776
 msgid "Atalhos de teclado"
 msgstr "Gyorsbillentyűk"
 
-#: crates/bigiris/src/gui.rs:3729
+#: crates/bigiris/src/gui.rs:3802
 msgid ""
 "Visualizador e conversor de imagens para Linux. Rápido, acessível por "
 "teclado e integrado ao gerenciador de arquivos."
@@ -452,25 +454,25 @@ msgstr ""
 "Képnézegető és átalakító Linuxhoz.Gyors, billentyűzettel elérhető és a "
 "fájlkezelővel integrált."
 
-#: crates/bigiris/src/gui.rs:3762
+#: crates/bigiris/src/gui.rs:3835
 msgid "Abra suas imagens"
 msgstr "Nyissa meg a képeket"
 
-#: crates/bigiris/src/gui.rs:3767
+#: crates/bigiris/src/gui.rs:3840
 msgid "Arraste imagens para cá ou cole arquivos com Ctrl+V."
 msgstr ""
 "Húzza ide a képeket vagy illessze be a fájlokat a Ctrl+V "
 "billentyűkombinációval."
 
-#: crates/bigiris/src/gui.rs:3810
+#: crates/bigiris/src/gui.rs:3883
 msgid "Selecionar pasta com imagens"
 msgstr "Képeket tartalmazó mappa kiválasztása"
 
-#: crates/bigiris/src/gui.rs:3831
+#: crates/bigiris/src/gui.rs:3904
 msgid "Selecionar imagens"
 msgstr "Válasszon ki képeket"
 
-#: crates/bigiris/src/gui.rs:3878
+#: crates/bigiris/src/gui.rs:3951
 msgid "{current} de {total}"
 msgstr "{current} / {total}"
 
@@ -882,6 +884,7 @@ msgid "Convertendo"
 msgstr "Átalakít"
 
 #: crates/bigiris/src/gui/dialogs/crop.rs:284
+#: crates/bigiris/src/gui/viewer/crop.rs:645
 msgid ""
 "Arraste nos cantos para redimensionar · dentro do recorte para mover · fora "
 "dele para uma nova seleção."
@@ -895,6 +898,7 @@ msgstr "Crop — Prisma játék"
 
 #: crates/bigiris/src/gui/dialogs/crop.rs:321
 #: crates/bigiris/src/gui/dialogs/crop.rs:389
+#: crates/bigiris/src/gui/viewer/crop.rs:374
 msgid "Recortar"
 msgstr "A kép kivágása"
 
@@ -937,6 +941,18 @@ msgstr "Kivágás…"
 #: crates/bigiris/src/gui/dialogs/crop.rs:455
 msgid "Recortando"
 msgstr "Körülvágás"
+
+#: crates/bigiris/src/gui/viewer/crop.rs:360
+msgid "Livre"
+msgstr "Szabad"
+
+#: crates/bigiris/src/gui/viewer/crop.rs:361
+msgid "Original"
+msgstr "Eredeti"
+
+#: crates/bigiris/src/gui/viewer/crop.rs:367
+msgid "Proporção"
+msgstr "Képarány"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:12
 msgid "YouTube community (1:1)"

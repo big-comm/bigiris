@@ -4,7 +4,16 @@
 //! Every model we ship has a pinned `url` + `sha256`. Downloads are
 //! atomic: we write to a unique temporary sibling, verify the hash, and only rename
 //! into place when everything matches. Re-running over an already-valid
-//! file is a no-op — the hash short-circuits the copy.
+//! file is a no-op: after the first full hash we keep a
+//! `<model>.onnx.verified` stamp (hash + size + device/inode + mtime +
+//! ctime) and re-hash only when the file's identity no longer matches it.
+//! Any write, truncate, chmod, utime or replacement changes ctime or the
+//! inode, so accidental or out-of-band modification is still caught. The
+//! stamp lives in the same user-owned directory as the model; whoever can
+//! forge it can already replace anything else the user runs.
+//!
+//! Partial downloads abandoned by a crash are deleted on the next
+//! [`ensure`] once they are older than six hours.
 //!
 //! Hard-coded to `ureq` + blocking IO: simple, no runtime dependency,
 //! fits the rare "first-time setup" moment this runs in.
@@ -95,16 +104,19 @@ pub fn ensure(
         std::fs::create_dir_all(parent).map_err(DownloadError::Io)?;
     }
 
-    // Happy path: already downloaded with correct hash.
-    if dest.exists() && verify_hash(&dest, model.sha256).unwrap_or(false) {
+    // Happy path: already downloaded and verified (stamp or full hash).
+    if dest.exists() && cached_model_is_valid(&dest, model.sha256) {
         progress(model.size_bytes, model.size_bytes);
         return Ok(dest);
     }
 
+    let models_dir = dest.parent().ok_or(DownloadError::NoCacheDir)?;
+    remove_stale_partials(models_dir, STALE_PARTIAL_AGE);
+
     let mut partial = tempfile::Builder::new()
-        .prefix(".bigiris-model-")
-        .suffix(".part")
-        .tempfile_in(dest.parent().ok_or(DownloadError::NoCacheDir)?)
+        .prefix(PARTIAL_PREFIX)
+        .suffix(PARTIAL_SUFFIX)
+        .tempfile_in(models_dir)
         .map_err(DownloadError::Io)?;
     download_stream(model.url, partial.as_file_mut(), model.size_bytes, &mut progress)?;
     let actual = file_sha256(partial.path()).map_err(DownloadError::Io)?;
@@ -113,7 +125,123 @@ pub fn ensure(
     }
     partial.as_file().sync_all().map_err(DownloadError::Io)?;
     partial.persist(&dest).map_err(|e| DownloadError::Io(e.error))?;
+    // Metadata is read after the rename (which updates ctime), so the stamp
+    // matches the file as it now sits in the cache.
+    if let Ok(meta) = std::fs::metadata(&dest) {
+        write_stamp(&dest, &meta, model.sha256);
+    }
     Ok(dest)
+}
+
+/// Prefix/suffix of the exclusive temporary files [`ensure`] downloads into.
+const PARTIAL_PREFIX: &str = ".bigiris-model-";
+const PARTIAL_SUFFIX: &str = ".part";
+
+/// A `.part` file untouched for this long belongs to a download that died
+/// (crash, power loss, killed process) and will never be finished: every
+/// download writes to a fresh unique file. A live download rewrites its
+/// file every 64 KiB and gives up after 60 s without data (`timeout_read`),
+/// so its mtime is never anywhere near this old; a concurrent download in
+/// another process is therefore never deleted, no lock needed.
+const STALE_PARTIAL_AGE: std::time::Duration = std::time::Duration::from_secs(6 * 60 * 60);
+
+/// Delete abandoned partial downloads (each up to ~224 MB) left in `dir`.
+/// Best effort: errors are ignored, a later call retries.
+fn remove_stale_partials(dir: &Path, max_age: std::time::Duration) -> Vec<PathBuf> {
+    let mut removed = Vec::new();
+    let Ok(entries) = std::fs::read_dir(dir) else {
+        return removed;
+    };
+    let now = std::time::SystemTime::now();
+    for entry in entries.flatten() {
+        let name = entry.file_name();
+        let name = name.to_string_lossy();
+        if !(name.starts_with(PARTIAL_PREFIX) && name.ends_with(PARTIAL_SUFFIX)) {
+            continue;
+        }
+        // DirEntry::metadata does not follow symlinks; only plain files.
+        let Ok(meta) = entry.metadata() else { continue };
+        if !meta.is_file() {
+            continue;
+        }
+        let stale = meta
+            .modified()
+            .ok()
+            .and_then(|modified| now.duration_since(modified).ok())
+            .is_some_and(|age| age >= max_age);
+        if stale && std::fs::remove_file(entry.path()).is_ok() {
+            tracing::info!(path = %entry.path().display(), "removed abandoned model download");
+            removed.push(entry.path());
+        }
+    }
+    removed
+}
+
+/// Path of the verification stamp kept next to a cached model.
+fn stamp_path(model: &Path) -> PathBuf {
+    let mut name = model.file_name().unwrap_or_default().to_os_string();
+    name.push(".verified");
+    model.with_file_name(name)
+}
+
+/// Identity of the exact file we hashed. `ctime` cannot be set from user
+/// space and changes on every write, truncate, chmod or utime, and the
+/// device/inode pair changes when the file is replaced, so any change to
+/// the model after verification invalidates the stamp and forces a full
+/// re-hash. Without the stamp every `BgSession::new` re-hashed 224 MB.
+fn stamp_contents(meta: &std::fs::Metadata, sha256: &str) -> String {
+    use std::os::unix::fs::MetadataExt;
+    format!(
+        "sha256={}\nsize={}\ndev={}\nino={}\nmtime={}.{:09}\nctime={}.{:09}\n",
+        sha256.to_ascii_lowercase(),
+        meta.size(),
+        meta.dev(),
+        meta.ino(),
+        meta.mtime(),
+        meta.mtime_nsec(),
+        meta.ctime(),
+        meta.ctime_nsec(),
+    )
+}
+
+/// Record that `model` (described by `meta`) hashed to `sha256`. Best
+/// effort: without a stamp the next call just hashes again.
+fn write_stamp(model: &Path, meta: &std::fs::Metadata, sha256: &str) {
+    let path = stamp_path(model);
+    let Some(dir) = path.parent() else { return };
+    let written =
+        tempfile::Builder::new().prefix(".bigiris-stamp-").tempfile_in(dir).and_then(|mut tmp| {
+            tmp.write_all(stamp_contents(meta, sha256).as_bytes())?;
+            tmp.persist(&path).map_err(|e| e.error)?;
+            Ok(())
+        });
+    if let Err(error) = written {
+        tracing::debug!(%error, "could not record model verification stamp");
+    }
+}
+
+/// Is the cached `model` the verified file? Trust a stamp that matches the
+/// file's current identity and the expected hash; otherwise hash the whole
+/// file and, if it matches, stamp it for next time.
+fn cached_model_is_valid(model: &Path, sha256: &str) -> bool {
+    let Ok(before) = std::fs::metadata(model) else { return false };
+    if !before.is_file() {
+        return false;
+    }
+    let expected = stamp_contents(&before, sha256);
+    if std::fs::read_to_string(stamp_path(model)).is_ok_and(|stamp| stamp == expected) {
+        return true;
+    }
+    if !verify_hash(model, sha256).unwrap_or(false) {
+        return false;
+    }
+    // Only stamp if nothing changed while we were hashing.
+    if let Ok(after) = std::fs::metadata(model) {
+        if stamp_contents(&after, sha256) == expected {
+            write_stamp(model, &after, sha256);
+        }
+    }
+    true
 }
 
 /// Margin we tolerate over the catalogue's `expected_total` before
@@ -275,6 +403,103 @@ mod tests {
         let p = local_path(&m).unwrap();
         let s = p.to_string_lossy();
         assert!(s.ends_with("/models/probe.onnx"), "path={s}");
+    }
+
+    const SAMPLE_SHA: &str = "4a30443c709da4a8901dcba8bd388efda3da7d23772b5d5d6c7c0e0c2c368744";
+
+    fn sample_model(dir: &Path) -> PathBuf {
+        let path = dir.join("probe.onnx");
+        std::fs::write(&path, b"hello, bigiris\n").unwrap();
+        path
+    }
+
+    fn age(path: &Path, by: std::time::Duration) {
+        let when = std::time::SystemTime::now() - by;
+        std::fs::File::options().write(true).open(path).unwrap().set_modified(when).unwrap();
+    }
+
+    #[test]
+    fn verified_model_gets_a_stamp() {
+        let dir = TempDir::new().unwrap();
+        let model = sample_model(dir.path());
+        assert!(cached_model_is_valid(&model, SAMPLE_SHA));
+        let stamp = std::fs::read_to_string(stamp_path(&model)).unwrap();
+        assert_eq!(stamp, stamp_contents(&std::fs::metadata(&model).unwrap(), SAMPLE_SHA));
+        assert!(cached_model_is_valid(&model, SAMPLE_SHA));
+    }
+
+    #[test]
+    fn matching_stamp_skips_the_rehash() {
+        // A stamp recorded for the file's exact identity is trusted without
+        // reading the model: here it claims a hash the bytes don't have,
+        // which only a no-rehash path can accept.
+        let dir = TempDir::new().unwrap();
+        let model = sample_model(dir.path());
+        let meta = std::fs::metadata(&model).unwrap();
+        write_stamp(&model, &meta, "deadbeef");
+        assert!(cached_model_is_valid(&model, "deadbeef"));
+        // A stamp for another hash is ignored and the file is hashed.
+        assert!(!cached_model_is_valid(&model, "cafebabe"));
+        assert!(cached_model_is_valid(&model, SAMPLE_SHA));
+    }
+
+    #[test]
+    fn modified_model_invalidates_stamp_and_is_rehashed() {
+        let dir = TempDir::new().unwrap();
+        let model = sample_model(dir.path());
+        assert!(cached_model_is_valid(&model, SAMPLE_SHA));
+        // Same size, different bytes, original mtime restored: ctime still
+        // moves, so the stamp no longer matches and the hash catches it.
+        let mtime = std::fs::metadata(&model).unwrap().modified().unwrap();
+        std::fs::write(&model, b"HELLO, bigiris\n").unwrap();
+        std::fs::File::options().write(true).open(&model).unwrap().set_modified(mtime).unwrap();
+        assert!(!cached_model_is_valid(&model, SAMPLE_SHA));
+    }
+
+    #[test]
+    fn replaced_model_invalidates_stamp() {
+        let dir = TempDir::new().unwrap();
+        let model = sample_model(dir.path());
+        assert!(cached_model_is_valid(&model, SAMPLE_SHA));
+        let other = dir.path().join("other");
+        std::fs::write(&other, b"tampered weights\n").unwrap();
+        std::fs::rename(&other, &model).unwrap();
+        assert!(!cached_model_is_valid(&model, SAMPLE_SHA));
+    }
+
+    #[test]
+    fn stale_partials_are_removed_but_fresh_ones_and_models_are_kept() {
+        let dir = TempDir::new().unwrap();
+        let stale = dir.path().join(".bigiris-model-abc123.part");
+        let live = dir.path().join(".bigiris-model-def456.part");
+        let model = dir.path().join("birefnet-lite.onnx");
+        let unrelated = dir.path().join("notes.part");
+        for path in [&stale, &live, &model, &unrelated] {
+            std::fs::write(path, b"x").unwrap();
+        }
+        let seven_hours = std::time::Duration::from_secs(7 * 60 * 60);
+        for path in [&stale, &model, &unrelated] {
+            age(path, seven_hours);
+        }
+        age(&live, std::time::Duration::from_secs(5 * 60));
+        let removed = remove_stale_partials(dir.path(), STALE_PARTIAL_AGE);
+        assert_eq!(removed, vec![stale.clone()]);
+        assert!(!stale.exists());
+        assert!(live.exists(), "an in-progress download was deleted");
+        assert!(model.exists());
+        assert!(unrelated.exists());
+    }
+
+    #[test]
+    fn stale_partial_cleanup_ignores_symlinks_and_missing_dirs() {
+        let dir = TempDir::new().unwrap();
+        let target = dir.path().join("target");
+        std::fs::write(&target, b"x").unwrap();
+        age(&target, std::time::Duration::from_secs(7 * 60 * 60));
+        std::os::unix::fs::symlink(&target, dir.path().join(".bigiris-model-x.part")).unwrap();
+        assert!(remove_stale_partials(dir.path(), STALE_PARTIAL_AGE).is_empty());
+        assert!(target.exists());
+        assert!(remove_stale_partials(&dir.path().join("missing"), STALE_PARTIAL_AGE).is_empty());
     }
 
     #[test]

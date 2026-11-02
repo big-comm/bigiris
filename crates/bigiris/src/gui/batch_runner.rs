@@ -404,20 +404,42 @@ pub(super) fn run_batch_async<W>(
     let cancelled = Arc::new(AtomicBool::new(false));
     disarm_auto_close(&window);
 
-    {
+    // Disconnected when this run ends: every Apply connects its own, and a
+    // stale handler would keep the finished run's flag (and closure) alive.
+    let mut close_handler = Some({
         let cancelled = cancelled.clone();
         window.connect_close_request(move |_| {
             cancelled.store(true, Ordering::Release);
             gtk4::glib::Propagation::Proceed
-        });
-    }
+        })
+    });
 
     let rx = spawn_batch_workers(files, work, cancelled);
     // Released with the poll closure, i.e. only after the pool reported back.
     let hold = window.application().map(|app| app.hold());
 
-    gtk4::glib::timeout_add_local(std::time::Duration::from_millis(50), move || loop {
+    gtk4::glib::timeout_add_local(std::time::Duration::from_millis(50), move || {
         let _hold = &hold;
+        let flow = poll_batch(&rx, &busy_label, &status, &apply_btn, &cancel_btn, &window);
+        if flow.is_break() {
+            if let Some(handler) = close_handler.take() {
+                window.disconnect(handler);
+            }
+        }
+        flow
+    });
+}
+
+/// Drain pending batch events; `Break` once the run is over.
+fn poll_batch(
+    rx: &mpsc::Receiver<AsyncBatchEvent>,
+    busy_label: &str,
+    status: &gtk::Label,
+    apply_btn: &gtk::Button,
+    cancel_btn: &gtk::Button,
+    window: &adw::ApplicationWindow,
+) -> gtk4::glib::ControlFlow {
+    loop {
         match rx.try_recv() {
             Ok(AsyncBatchEvent::Progress { done, total, file }) => {
                 status.set_text(&format!("{busy_label} {done}/{total} — {file}"));
@@ -438,27 +460,18 @@ pub(super) fn run_batch_async<W>(
                     return gtk4::glib::ControlFlow::Break;
                 }
                 finish_dialog(
-                    &status,
-                    &apply_btn,
-                    &cancel_btn,
-                    &window,
-                    ok,
-                    skip,
-                    fail,
-                    first_err,
-                    elapsed,
-                    bytes_in,
-                    bytes_out,
+                    status, apply_btn, cancel_btn, window, ok, skip, fail, first_err, elapsed,
+                    bytes_in, bytes_out,
                 );
                 return gtk4::glib::ControlFlow::Break;
             }
             Err(mpsc::TryRecvError::Empty) => return gtk4::glib::ControlFlow::Continue,
             Err(mpsc::TryRecvError::Disconnected) => {
-                abort_dialog(&status, &apply_btn, &cancel_btn);
+                abort_dialog(status, apply_btn, cancel_btn);
                 return gtk4::glib::ControlFlow::Break;
             }
         }
-    });
+    }
 }
 
 #[cfg(test)]

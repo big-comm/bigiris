@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: bigiris 0.1.0\n"
 "Report-Msgid-Bugs-To: https://github.com/big-comm/bigiris/issues\n"
-"POT-Creation-Date: 2026-10-14 01:35-0300\n"
+"POT-Creation-Date: 2026-11-02 16:42-0300\n"
 "PO-Revision-Date: 2026-10-14 01:36-0300\n"
 "Last-Translator: BigCommunity Team\n"
 "Language-Team: BigCommunity Team\n"
@@ -14,341 +14,376 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
+"Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && "
+"n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
 
-#: crates/bigiris/src/gui.rs:110
-msgid "BigIris — abrindo imagens"
-msgstr "BigIris — slike otvaranja"
-
-#: crates/bigiris/src/gui.rs:551
+#: crates/bigiris/src/gui.rs:640
 msgid "BigIris"
 msgstr "BigIris"
 
-#: crates/bigiris/src/gui.rs:746
+#: crates/bigiris/src/gui.rs:675 crates/bigiris/src/gui/previews.rs:240
+msgid "Não foi possível abrir a imagem"
+msgstr "Nisam mogao otvoriti sliku"
+
+#: crates/bigiris/src/gui.rs:883 crates/bigiris/src/gui.rs:2989
 msgid "Aguarde o salvamento terminar"
 msgstr "Pričekajte da se završi spremanje"
 
-#: crates/bigiris/src/gui.rs:757
+#: crates/bigiris/src/gui.rs:894
 msgid "Descartar alterações?"
 msgstr "Odbaci promjene?"
 
-#: crates/bigiris/src/gui.rs:758
+#: crates/bigiris/src/gui.rs:895
 msgid "A imagem tem edições que ainda não foram salvas."
 msgstr "Slika ima nespremljene promjene."
 
-#: crates/bigiris/src/gui.rs:760
+#: crates/bigiris/src/gui.rs:897
 msgid "Continuar editando"
 msgstr "Nastavi uređivati"
 
-#: crates/bigiris/src/gui.rs:761
+#: crates/bigiris/src/gui.rs:898
 msgid "Descartar"
 msgstr "Odbaci promjene"
 
-#: crates/bigiris/src/gui.rs:820
-msgid "Abrir imagens (Ctrl+O)"
-msgstr "Otvori slike (Ctrl+O)"
-
-#: crates/bigiris/src/gui.rs:825
+#: crates/bigiris/src/gui.rs:967
 msgid "Imagem anterior"
 msgstr "Prethodna slika"
 
-#: crates/bigiris/src/gui.rs:831
+#: crates/bigiris/src/gui.rs:968
 msgid "Próxima imagem"
 msgstr "Sljedeća slika"
 
-#: crates/bigiris/src/gui.rs:837
+#: crates/bigiris/src/gui.rs:980
 msgid "Propriedades da imagem (Ctrl+I)"
 msgstr "Svojstva slike (Ctrl+I)"
 
-#: crates/bigiris/src/gui.rs:848
+#: crates/bigiris/src/gui.rs:986
 msgid "Tela cheia (F11)"
 msgstr "Preko cijelog zaslona (F11)"
 
-#: crates/bigiris/src/gui.rs:854
-msgid "Aproximar"
-msgstr "Zumiraj"
-
-#: crates/bigiris/src/gui.rs:860 crates/bigiris/src/gui.rs:2704
-msgid "Ajustar à janela"
-msgstr "Prilagodi prozoru"
-
-#: crates/bigiris/src/gui.rs:866
+#: crates/bigiris/src/gui.rs:995
 msgid "Afastar"
 msgstr "Umanji"
 
-#: crates/bigiris/src/gui.rs:1638
+#: crates/bigiris/src/gui.rs:999 crates/bigiris/src/gui.rs:3318
+msgid "Ajustar à janela"
+msgstr "Prilagodi prozoru"
+
+#: crates/bigiris/src/gui.rs:1000 crates/bigiris/src/gui.rs:3319
+msgid "Tamanho real (100%)"
+msgstr "Stvarna veličina (100%)"
+
+#: crates/bigiris/src/gui.rs:1009 crates/bigiris/src/gui.rs:3315
+msgid "Zoom"
+msgstr "Zumiranje"
+
+#: crates/bigiris/src/gui.rs:1013
+msgid "Aproximar"
+msgstr "Zumiraj"
+
+#: crates/bigiris/src/gui.rs:1956
 msgid "Slideshow: pausado"
 msgstr "Dijaprojekcija: pauzirano"
 
-#: crates/bigiris/src/gui.rs:1870
+#: crates/bigiris/src/gui.rs:1984
+msgid "Slideshow: a cada {interval} s"
+msgstr "Dijaprojekcija: svakih {interval} s"
+
+#: crates/bigiris/src/gui.rs:2006
+msgid "Histograma ligado"
+msgstr "Histogram uključen"
+
+#: crates/bigiris/src/gui.rs:2008
+msgid "Histograma desligado"
+msgstr "Histogram isključen"
+
+#: crates/bigiris/src/gui.rs:2187
 msgid ""
 "O arquivo será sobrescrito. JPEG é recodificado a cada gravação; isso pode "
 "reduzir a qualidade."
 msgstr ""
-"Datoteka će biti prepisana. JPEG se ponovno kodira svaki put kada se spremi;"
-" to može smanjiti kvalitetu."
+"Datoteka će biti prepisana. JPEG se ponovno kodira svaki put kada se spremi; "
+"to može smanjiti kvalitetu."
 
-#: crates/bigiris/src/gui.rs:1872
+#: crates/bigiris/src/gui.rs:2189
 msgid "O arquivo será sobrescrito."
 msgstr "Datoteka će biti prepisana."
 
-#: crates/bigiris/src/gui.rs:1875
+#: crates/bigiris/src/gui.rs:2197
+msgid ""
+"Este formato não guarda todos os metadados da foto (data, câmera, perfil de "
+"cor); o que ele não suportar será removido ou convertido."
+msgstr ""
+"Ovaj format ne čuva sve metapodatke fotografije (datum, fotoaparat, profil "
+"boja); ono što ne podržava bit će uklonjeno ili pretvoreno."
+
+#: crates/bigiris/src/gui.rs:2200
 msgid "Salvar alterações?"
 msgstr "Spremi promjene?"
 
-#: crates/bigiris/src/gui.rs:1876 crates/bigiris/src/gui.rs:2668
-#: crates/bigiris/src/gui.rs:3232 crates/bigiris/src/gui.rs:3537
-#: crates/bigiris/src/gui.rs:3798 crates/bigiris/src/gui.rs:4276
-#: crates/bigiris/src/gui.rs:4554 crates/bigiris/src/gui.rs:4885
-#: crates/bigiris/src/gui.rs:5035 crates/bigiris/src/gui.rs:5204
-#: crates/bigiris/src/gui.rs:5981 crates/bigiris/src/gui.rs:6110
-#: crates/bigiris/src/gui.rs:6183 crates/bigiris/src/gui.rs:6452
-#: crates/bigiris/src/gui.rs:6725 crates/bigiris/src/gui.rs:6777
+#: crates/bigiris/src/gui.rs:2201 crates/bigiris/src/gui.rs:3223
+#: crates/bigiris/src/gui/dialogs/animate.rs:187
+#: crates/bigiris/src/gui/dialogs/batch.rs:131
+#: crates/bigiris/src/gui/dialogs/batch.rs:269
+#: crates/bigiris/src/gui/dialogs/batch.rs:362
+#: crates/bigiris/src/gui/dialogs/mod.rs:184
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:212
+#: crates/bigiris/src/gui/previews.rs:202
 msgid "Cancelar"
 msgstr "Odustani"
 
-#: crates/bigiris/src/gui.rs:1877
+#: crates/bigiris/src/gui.rs:2202
 msgid "Salvar"
 msgstr "Spremi"
 
-#: crates/bigiris/src/gui.rs:1922
+#: crates/bigiris/src/gui.rs:2240
 msgid "Salvo"
 msgstr "Datoteka je spremljena."
 
-#: crates/bigiris/src/gui.rs:1925
+#: crates/bigiris/src/gui.rs:2243
 msgid "Falha ao salvar"
 msgstr "Spremanje nije uspjelo"
 
-#: crates/bigiris/src/gui.rs:2007
+#: crates/bigiris/src/gui.rs:2522
 msgid "Salve ou desfaça as alterações antes de navegar"
 msgstr "Spremanje ili poništavanje promjena prije navigacije"
 
-#: crates/bigiris/src/gui.rs:2050
-msgid "Não foi possível abrir a imagem"
-msgstr "Nisam mogao otvoriti sliku"
-
-#: crates/bigiris/src/gui.rs:2065 crates/bigiris/src/gui.rs:2887
-#: crates/bigiris/src/gui.rs:7714
+#: crates/bigiris/src/gui.rs:2601 crates/bigiris/src/gui.rs:3471
+#: crates/bigiris/src/gui.rs:4452 crates/bigiris/src/gui.rs:4587
 msgid "Abrir imagens…"
 msgstr "Otvori slike…"
 
-#: crates/bigiris/src/gui.rs:2066 crates/bigiris/src/gui.rs:2738
+#: crates/bigiris/src/gui.rs:2602 crates/bigiris/src/gui.rs:3352
 msgid "Colar arquivos de imagem"
 msgstr "Zalijepi slikovne datoteke"
 
-#: crates/bigiris/src/gui.rs:2068 crates/bigiris/src/gui.rs:2737
+#: crates/bigiris/src/gui.rs:2604 crates/bigiris/src/gui.rs:3351
 msgid "Copiar imagem"
 msgstr "Kopiraj sliku"
 
-#: crates/bigiris/src/gui.rs:2069
+#: crates/bigiris/src/gui.rs:2605
 msgid "Imprimir…"
 msgstr "Ispis…"
 
-#: crates/bigiris/src/gui.rs:2071 crates/bigiris/src/gui.rs:2899
-#: crates/bigiris/src/gui.rs:7714
+#: crates/bigiris/src/gui.rs:2607 crates/bigiris/src/gui.rs:3483
+#: crates/bigiris/src/gui.rs:4452
 msgid "Processar uma pasta…"
 msgstr "Obradi ovu mapu…"
 
-#: crates/bigiris/src/gui.rs:2076 crates/bigiris/src/gui.rs:2723
+#: crates/bigiris/src/gui.rs:2612 crates/bigiris/src/gui.rs:3337
 msgid "Desfazer"
 msgstr "Vrati"
 
-#: crates/bigiris/src/gui.rs:2077 crates/bigiris/src/gui.rs:2724
+#: crates/bigiris/src/gui.rs:2613 crates/bigiris/src/gui.rs:3338
 msgid "Refazer"
 msgstr "Ponovi"
 
-#: crates/bigiris/src/gui.rs:2079 crates/bigiris/src/gui.rs:2725
+#: crates/bigiris/src/gui.rs:2615 crates/bigiris/src/gui.rs:3339
 msgid "Girar à direita"
 msgstr "Rotiraj udesno"
 
-#: crates/bigiris/src/gui.rs:2080 crates/bigiris/src/gui.rs:2726
+#: crates/bigiris/src/gui.rs:2616 crates/bigiris/src/gui.rs:3340
 msgid "Girar à esquerda"
 msgstr "Rotiraj lijevo"
 
-#: crates/bigiris/src/gui.rs:2081
+#: crates/bigiris/src/gui.rs:2617
 msgid "Girar 180°"
 msgstr "Rotiraj za 180°"
 
-#: crates/bigiris/src/gui.rs:2082
+#: crates/bigiris/src/gui.rs:2618
 msgid "Espelhar horizontal"
 msgstr "Okrenuti vodoravno"
 
-#: crates/bigiris/src/gui.rs:2083
+#: crates/bigiris/src/gui.rs:2619
 msgid "Espelhar vertical"
 msgstr "Okrenuti okomito"
 
-#: crates/bigiris/src/gui.rs:2084 crates/bigiris/src/gui.rs:2727
+#: crates/bigiris/src/gui.rs:2620 crates/bigiris/src/gui.rs:3341
 msgid "Recortar…"
 msgstr "Izrezati…"
 
-#: crates/bigiris/src/gui.rs:2086
+#: crates/bigiris/src/gui.rs:2622
 msgid "Editar imagem"
 msgstr "Uredi sliku"
 
-#: crates/bigiris/src/gui.rs:2088 crates/bigiris/src/gui.rs:2728
+#: crates/bigiris/src/gui.rs:2624 crates/bigiris/src/gui.rs:3342
 msgid "Remover fundo (IA)…"
 msgstr "Ukloni pozadinu (AI)…"
 
-#: crates/bigiris/src/gui.rs:2089 crates/bigiris/src/gui.rs:2729
+#: crates/bigiris/src/gui.rs:2625 crates/bigiris/src/gui.rs:3343
 msgid "Aumentar resolução…"
 msgstr "Upscale…"
 
-#: crates/bigiris/src/gui.rs:2090
+#: crates/bigiris/src/gui.rs:2626
 msgid "Ferramentas"
 msgstr "Alati"
 
-#: crates/bigiris/src/gui.rs:2092 crates/bigiris/src/gui.rs:2730
+#: crates/bigiris/src/gui.rs:2628 crates/bigiris/src/gui.rs:3344
 msgid "Salvar alterações"
 msgstr "Spremi promjene"
 
-#: crates/bigiris/src/gui.rs:2093 crates/bigiris/src/gui.rs:2741
+#: crates/bigiris/src/gui.rs:2629 crates/bigiris/src/gui.rs:3355
 msgid "Mover para a lixeira"
 msgstr "Premjesti u smeće"
 
-#: crates/bigiris/src/gui.rs:2097
+#: crates/bigiris/src/gui.rs:2633
 msgid "Atalhos do teclado"
 msgstr "Prečaci na tipkovnici"
 
-#: crates/bigiris/src/gui.rs:2098
+#: crates/bigiris/src/gui.rs:2634
 msgid "Sobre o BigIris"
 msgstr "O BigIris-u"
 
-#: crates/bigiris/src/gui.rs:2103
+#: crates/bigiris/src/gui.rs:2639
 msgid "Menu principal"
 msgstr "Glavni izbornik"
 
-#: crates/bigiris/src/gui.rs:2452 crates/bigiris/src/gui.rs:2944
-#: crates/bigiris/src/gui.rs:6226 crates/bigiris/src/gui.rs:6678
+#: crates/bigiris/src/gui.rs:2991
+msgid "Salve ou desfaça as alterações antes de usar esta ferramenta"
+msgstr "Spremite ili poništite promjene prije korištenja ovog alata"
+
+#: crates/bigiris/src/gui.rs:3007 crates/bigiris/src/gui.rs:3528
+#: crates/bigiris/src/gui/dialogs/batch.rs:404
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:130
 msgid "Imagens"
 msgstr "Slike"
 
-#: crates/bigiris/src/gui.rs:2458 crates/bigiris/src/gui.rs:2736
+#: crates/bigiris/src/gui.rs:3013 crates/bigiris/src/gui.rs:3350
 msgid "Abrir imagens"
 msgstr "Otvori slike"
 
-#: crates/bigiris/src/gui.rs:2576
+#: crates/bigiris/src/gui.rs:3077
+msgid "O preparo da impressão falhou"
+msgstr "Priprema ispisa nije uspjela"
+
+#: crates/bigiris/src/gui.rs:3095
+msgid "Não foi possível preparar a página"
+msgstr "Nije moguće pripremiti stranicu"
+
+#: crates/bigiris/src/gui.rs:3117
 msgid "Não foi possível imprimir"
 msgstr "Nisam mogao ispisati"
 
-#: crates/bigiris/src/gui.rs:2579 crates/bigiris/src/gui.rs:2717
-#: crates/bigiris/src/gui.rs:6181 crates/bigiris/src/gui.rs:6386
-#: crates/bigiris/src/gui.rs:6636 crates/bigiris/src/gui.rs:6939
+#: crates/bigiris/src/gui.rs:3120 crates/bigiris/src/gui.rs:3249
+#: crates/bigiris/src/gui/dialogs/animate.rs:53
+#: crates/bigiris/src/gui/dialogs/batch.rs:360
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:96
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:327
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:394
 #: crates/bigiris/src/gui/transfers.rs:99
 msgid "Fechar"
 msgstr "Zatvori"
 
-#: crates/bigiris/src/gui.rs:2660
+#: crates/bigiris/src/gui.rs:3215
 msgid "Mover para a lixeira?"
 msgstr "Premjestiti u smeće?"
 
-#: crates/bigiris/src/gui.rs:2664
+#: crates/bigiris/src/gui.rs:3219
 msgid ""
 "O arquivo será movido para a lixeira do sistema. Você pode restaurá-lo "
 "depois."
 msgstr "Datoteka će biti premještena u smeće. Možete je vratiti kasnije."
 
-#: crates/bigiris/src/gui.rs:2669
+#: crates/bigiris/src/gui.rs:3224
 msgid "Mover"
 msgstr "Pomakni"
 
-#: crates/bigiris/src/gui.rs:2693
+#: crates/bigiris/src/gui.rs:3246
+msgid "Não foi possível mover para a lixeira"
+msgstr "Nije moguće premjestiti u smeće"
+
+#: crates/bigiris/src/gui.rs:3307
 msgid "Navegação"
 msgstr "Navigacija"
 
-#: crates/bigiris/src/gui.rs:2695
+#: crates/bigiris/src/gui.rs:3309
 msgid "Anterior / próximo"
 msgstr "Prethodna / sljedeća"
 
-#: crates/bigiris/src/gui.rs:2696
+#: crates/bigiris/src/gui.rs:3310
 msgid "Primeiro / último"
 msgstr "Prvi / posljednji"
 
-#: crates/bigiris/src/gui.rs:2697
+#: crates/bigiris/src/gui.rs:3311
 msgid "Slideshow (auto-avanço)"
 msgstr "Slajdšou"
 
-#: crates/bigiris/src/gui.rs:2701
-msgid "Zoom"
-msgstr "Zumiranje"
-
-#: crates/bigiris/src/gui.rs:2703
+#: crates/bigiris/src/gui.rs:3317
 msgid "Aproximar / afastar"
 msgstr "Zumiranje / smanjivanje"
 
-#: crates/bigiris/src/gui.rs:2705
-msgid "Tamanho real (100%)"
-msgstr "Stvarna veličina (100%)"
-
-#: crates/bigiris/src/gui.rs:2706
+#: crates/bigiris/src/gui.rs:3320
 msgid "Zoom contínuo"
 msgstr "Kontinuirano zumiranje"
 
-#: crates/bigiris/src/gui.rs:2710
+#: crates/bigiris/src/gui.rs:3324
 msgid "Janela"
 msgstr "Prozor"
 
-#: crates/bigiris/src/gui.rs:2712
+#: crates/bigiris/src/gui.rs:3326
 msgid "Tela cheia"
 msgstr "Preko cijelog zaslona"
 
-#: crates/bigiris/src/gui.rs:2713
+#: crates/bigiris/src/gui.rs:3327
 msgid "Modo teatro"
 msgstr "Način rada kazališta"
 
-#: crates/bigiris/src/gui.rs:2714
+#: crates/bigiris/src/gui.rs:3328
 msgid "Fita de miniaturas"
 msgstr "Minijature"
 
-#: crates/bigiris/src/gui.rs:2715
+#: crates/bigiris/src/gui.rs:3329
 msgid "Histograma RGB"
 msgstr "RGB histogram"
 
-#: crates/bigiris/src/gui.rs:2716
+#: crates/bigiris/src/gui.rs:3330
 msgid "Fixar barras visíveis"
 msgstr "Držite kontrole vidljivim"
 
-#: crates/bigiris/src/gui.rs:2721
+#: crates/bigiris/src/gui.rs:3331
+msgid "Sair da tela cheia ou fechar"
+msgstr "Izađi iz cijelog zaslona ili zatvori"
+
+#: crates/bigiris/src/gui.rs:3335
 msgid "Edição"
 msgstr "Uređivanje"
 
-#: crates/bigiris/src/gui.rs:2734 crates/bigiris/src/gui.rs:5463
+#: crates/bigiris/src/gui.rs:3348
+#: crates/bigiris/src/gui/dialogs/properties.rs:122
 msgid "Arquivo"
 msgstr "Datoteka"
 
-#: crates/bigiris/src/gui.rs:2739
+#: crates/bigiris/src/gui.rs:3353
 msgid "Imprimir"
 msgstr "Ispis"
 
-#: crates/bigiris/src/gui.rs:2740 crates/bigiris/src/gui.rs:5378
-#: crates/bigiris/src/gui.rs:5423
+#: crates/bigiris/src/gui.rs:3354
+#: crates/bigiris/src/gui/dialogs/properties.rs:38
+#: crates/bigiris/src/gui/dialogs/properties.rs:82
 msgid "Propriedades"
 msgstr "Svojstva"
 
-#: crates/bigiris/src/gui.rs:2745
+#: crates/bigiris/src/gui.rs:3359
 msgid "Ajuda"
 msgstr "Pomoć"
 
-#: crates/bigiris/src/gui.rs:2746
+#: crates/bigiris/src/gui.rs:3360
 msgid "Este diálogo"
 msgstr "Ovaj dijaloški okvir"
 
-#: crates/bigiris/src/gui.rs:2746
+#: crates/bigiris/src/gui.rs:3360
 msgid "Sobre"
 msgstr "O programu"
 
-#: crates/bigiris/src/gui.rs:2753
-msgid "Categoria dos atalhos"
-msgstr "Prečaci"
-
-#: crates/bigiris/src/gui.rs:2770
+#: crates/bigiris/src/gui.rs:3370
 msgid "Roda do mouse"
 msgstr "Kotačić miša"
 
-#: crates/bigiris/src/gui.rs:2821
+#: crates/bigiris/src/gui.rs:3398
 msgid "Atalhos de teclado"
 msgstr "Prečaci na tipkovnici"
 
-#: crates/bigiris/src/gui.rs:2847
+#: crates/bigiris/src/gui.rs:3424
 msgid ""
 "Visualizador e conversor de imagens para Linux. Rápido, acessível por "
 "teclado e integrado ao gerenciador de arquivos."
@@ -356,191 +391,404 @@ msgstr ""
 "Preglednik i pretvarač slika za Linux, brz, dostupan pomoću tipkovnice i "
 "integriran s vašim upraviteljem datoteka."
 
-#: crates/bigiris/src/gui.rs:2874
+#: crates/bigiris/src/gui.rs:3457
 msgid "Abra suas imagens"
 msgstr "Otvorite svoje slike"
 
-#: crates/bigiris/src/gui.rs:2879
+#: crates/bigiris/src/gui.rs:3462
 msgid "Arraste imagens para cá ou cole arquivos com Ctrl+V."
 msgstr ""
 "Ispustite slike ovdje ili zalijepite datoteke pomoću Ctrl + V. (Ctrl+V)"
 
-#: crates/bigiris/src/gui.rs:2921
+#: crates/bigiris/src/gui.rs:3505
 msgid "Selecionar pasta com imagens"
 msgstr "Odaberite mapu sa slikama"
 
-#: crates/bigiris/src/gui.rs:2941
+#: crates/bigiris/src/gui.rs:3525
 msgid "Selecionar imagens"
 msgstr "Odaberite slike"
 
-#: crates/bigiris/src/gui.rs:3075
-#: crates/bigimage-integrations/src/action.rs:150
-#: data/nautilus/bigiris-menu.py:104
-msgid "PNG"
-msgstr "PNG"
+#: crates/bigiris/src/gui.rs:3572
+msgid "{current} de {total}"
+msgstr "{current} od {total}"
 
-#: crates/bigiris/src/gui.rs:3076
-msgid "JPG (JPEG)"
-msgstr "JPG (JPEG)"
+#: crates/bigiris/src/gui/batch_runner.rs:82
+msgid "≈ mesmo tamanho"
+msgstr "≈ ista veličina"
 
-#: crates/bigiris/src/gui.rs:3077
-#: crates/bigimage-integrations/src/action.rs:166
-#: data/nautilus/bigiris-menu.py:106
-msgid "WebP"
-msgstr "WebP"
+#: crates/bigiris/src/gui/batch_runner.rs:160
+msgid "{written} gravado(s), {skipped} ignorado(s), {failed} falha(s)"
+msgstr "zapisano: {written}, preskočeno: {skipped}, neuspjelo: {failed}"
 
-#: crates/bigiris/src/gui.rs:3078
-#: crates/bigimage-integrations/src/action.rs:174
-#: data/nautilus/bigiris-menu.py:107
-msgid "AVIF"
-msgstr "AVIF"
+#: crates/bigiris/src/gui/batch_runner.rs:190
+msgid "Concluído em {time} · {counts}"
+msgstr "Završeno za {time} · {counts}"
 
-#: crates/bigiris/src/gui.rs:3079
-#: crates/bigimage-integrations/src/action.rs:182
-#: data/nautilus/bigiris-menu.py:108
-msgid "TIFF"
-msgstr "TIFF"
+#: crates/bigiris/src/gui/batch_runner.rs:199
+msgid ""
+"{before} → {after} ({delta}) · média por arquivo {average_before} → "
+"{average_after}"
+msgstr ""
+"{before} → {after} ({delta}) · prosjek po datoteci {average_before} → "
+"{average_after}"
 
-#: crates/bigiris/src/gui.rs:3080
-msgid "BMP"
-msgstr "BMP"
+#: crates/bigiris/src/gui/batch_runner.rs:222
+#: crates/bigiris/src/gui/dialogs/animate.rs:323
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:324
+msgid "O processamento terminou inesperadamente. Tente novamente."
+msgstr "Obrada je neočekivano završila. Pokušajte ponovno."
 
-#: crates/bigiris/src/gui.rs:3081
-msgid "GIF"
-msgstr "GIF"
+#: crates/bigiris/src/gui/batch_runner.rs:311
+msgid "falha inesperada no worker"
+msgstr "neočekivana pogreška workera"
 
-#: crates/bigiris/src/gui.rs:3082
-msgid "ICO (até 256 × 256)"
-msgstr "ICO (do 256 × 264)"
+#: crates/bigiris/src/gui/batch_runner.rs:359
+msgid "um worker terminou inesperadamente"
+msgstr "worker je neočekivano završio"
 
-#: crates/bigiris/src/gui.rs:3083
-msgid "PNM (Netpbm)"
-msgstr "PNM (Netpbm)"
+#: crates/bigiris/src/gui/dialogs/adjust.rs:20
+msgid "Ajustar cores — Prisma"
+msgstr "Prilagodba boja — Prisma"
 
-#: crates/bigiris/src/gui.rs:3084
-msgid "TGA"
-msgstr "TGA"
+#: crates/bigiris/src/gui/dialogs/adjust.rs:35
+#: crates/bigimage-integrations/src/action.rs:91
+#: data/nautilus/bigiris-menu.py:153
+msgid "Ajustar cores"
+msgstr "Prilagodba boja"
 
-#: crates/bigiris/src/gui.rs:3085
-msgid "QOI"
-msgstr "QOI"
+#: crates/bigiris/src/gui/dialogs/adjust.rs:38
+msgid "Brilho"
+msgstr "Svjetlina"
 
-#: crates/bigiris/src/gui.rs:3086
-msgid "HDR"
-msgstr "HDR"
+#: crates/bigiris/src/gui/dialogs/adjust.rs:39
+msgid "-100 escuro · 0 neutro · +100 claro"
+msgstr "-100 tamno · 0 neutralno · +101 svijetlo"
 
-#: crates/bigiris/src/gui.rs:3087
-msgid "OpenEXR"
-msgstr "OpenEXR"
+#: crates/bigiris/src/gui/dialogs/adjust.rs:43
+msgid "Contraste"
+msgstr "Kontrast"
 
-#: crates/bigiris/src/gui.rs:3111
-msgid "Pular se já existir"
-msgstr "Preskoči postojeće datoteke"
+#: crates/bigiris/src/gui/dialogs/adjust.rs:44
+msgid "-100 plano · 0 neutro · +100 agressivo"
+msgstr "-100 ravnomjerno · 0 neutralno · +101 snažno"
 
-#: crates/bigiris/src/gui.rs:3112
-msgid "Sobrescrever o arquivo"
-msgstr "Prepiši datoteku"
+#: crates/bigiris/src/gui/dialogs/adjust.rs:48
+msgid "Saturação"
+msgstr "Zasićenost"
 
-#: crates/bigiris/src/gui.rs:3113
-msgid "Incrementar (_1, _2, …)"
-msgstr "Dodavanje sufiksa (_1, _2, …)"
+#: crates/bigiris/src/gui/dialogs/adjust.rs:49
+msgid "-100 cinza · 0 neutro · +100 vibrante"
+msgstr "-100 siva · 0 neutralna · +101 živopisna"
 
-#: crates/bigiris/src/gui.rs:3118
-msgid "Lanczos3 (padrão)"
-msgstr "Lanczos3 (zadano)"
+#: crates/bigiris/src/gui/dialogs/adjust.rs:53
+msgid "Gamma"
+msgstr "Gama"
 
-#: crates/bigiris/src/gui.rs:3119
-msgid "Mitchell"
-msgstr "Mitchell"
+#: crates/bigiris/src/gui/dialogs/adjust.rs:55
+msgid "Abaixo de 1 clareia os meios-tons · 1 mantém · acima de 1 escurece"
+msgstr ""
+"Ispod 1 posvjetljuje srednje tonove · 1 ih zadržava · iznad 1 zamračuje ih"
 
-#: crates/bigiris/src/gui.rs:3120
-msgid "CatmullRom"
-msgstr "CatmullRom"
+#: crates/bigiris/src/gui/dialogs/adjust.rs:64
+#: crates/bigiris/src/gui/dialogs/batch.rs:389
+#: crates/bigiris/src/gui/dialogs/convert.rs:39
+#: crates/bigiris/src/gui/dialogs/crop.rs:344
+#: crates/bigiris/src/gui/dialogs/extent.rs:92
+#: crates/bigiris/src/gui/dialogs/flip.rs:37
+#: crates/bigiris/src/gui/dialogs/resize.rs:128
+#: crates/bigiris/src/gui/dialogs/rotate.rs:42
+#: crates/bigiris/src/gui/dialogs/upscale.rs:68
+msgid "Arquivos selecionados"
+msgstr "Odabrane datoteke"
 
-#: crates/bigiris/src/gui.rs:3121
-msgid "Bilinear"
-msgstr "Bilinear"
+#: crates/bigiris/src/gui/dialogs/adjust.rs:69
+msgid "Tom"
+msgstr "Tone"
 
-#: crates/bigiris/src/gui.rs:3122
-msgid "Nearest (sem anti-aliasing)"
-msgstr "Najbliže (bez glačanja)"
+#: crates/bigiris/src/gui/dialogs/adjust.rs:74
+msgid "Cor"
+msgstr "Boja"
 
-#: crates/bigiris/src/gui.rs:3141
+#: crates/bigiris/src/gui/dialogs/adjust.rs:77
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:147
+msgid "Saída"
+msgstr "Izlaz"
+
+#: crates/bigiris/src/gui/dialogs/adjust.rs:83
+msgid "Aplicar"
+msgstr "Primijeni"
+
+#: crates/bigiris/src/gui/dialogs/adjust.rs:190
+msgid "Ajustando…"
+msgstr "Prilagodba…"
+
+#: crates/bigiris/src/gui/dialogs/adjust.rs:196
+msgid "Ajustando"
+msgstr "Prilagodba"
+
+#: crates/bigiris/src/gui/dialogs/animate.rs:29
+msgid "Criar GIF animado — Prisma"
+msgstr "Napravite animirani GIF — Prisma"
+
+#: crates/bigiris/src/gui/dialogs/animate.rs:33
+msgid "Criar GIF animado"
+msgstr "Napravite animirani GIF"
+
+#: crates/bigiris/src/gui/dialogs/animate.rs:47
+msgid "Selecione pelo menos 2 imagens"
+msgstr "Odaberite najmanje 2 slike"
+
+#: crates/bigiris/src/gui/dialogs/animate.rs:48
+msgid "Informe vários arquivos de uma vez para montar a animação."
+msgstr "Odaberite više datoteka za izradu animacije."
+
+#: crates/bigiris/src/gui/dialogs/animate.rs:66
+msgid "Atraso por quadro (ms)"
+msgstr "Kašnjenje okvira (ms)"
+
+#: crates/bigiris/src/gui/dialogs/animate.rs:67
+msgid "100 ≈ 10 fps · 40 ≈ 25 fps · 1000 = 1 s"
+msgstr "100 = 1 fps · 40 ≈ 25 fps • 1.000=1 s"
+
+#: crates/bigiris/src/gui/dialogs/animate.rs:72
+msgid "Loop"
+msgstr "Ponavljanje animacije"
+
+#: crates/bigiris/src/gui/dialogs/animate.rs:74
+msgid "Infinito (padrão)"
+msgstr "Beskonačno (zadano)"
+
+#: crates/bigiris/src/gui/dialogs/animate.rs:75
+msgid "Uma vez"
+msgstr "Jednom."
+
+#: crates/bigiris/src/gui/dialogs/animate.rs:76
+msgid "2 vezes"
+msgstr "2 puta"
+
+#: crates/bigiris/src/gui/dialogs/animate.rs:77
+msgid "5 vezes"
+msgstr "5 puta."
+
+#: crates/bigiris/src/gui/dialogs/animate.rs:78
+msgid "10 vezes"
+msgstr "10 puta."
+
+#: crates/bigiris/src/gui/dialogs/animate.rs:83
+msgid "Velocidade do encoder"
+msgstr "Brzina enkodera"
+
+#: crates/bigiris/src/gui/dialogs/animate.rs:84
+msgid "maior = mais rápido, paleta um pouco pior · padrão 10"
+msgstr "Više = brže, malo niža kvaliteta palete · default 10"
+
+#: crates/bigiris/src/gui/dialogs/animate.rs:94
+msgid "Arquivo de saída (.gif)"
+msgstr "Izlazna datoteka (.gif)"
+
+#: crates/bigiris/src/gui/dialogs/animate.rs:98
+msgid "Quadros"
+msgstr "Okviri"
+
+#: crates/bigiris/src/gui/dialogs/animate.rs:111
+msgid "Criar GIF"
+msgstr "Napravi GIF"
+
+#: crates/bigiris/src/gui/dialogs/animate.rs:184
+msgid "Substituir arquivo existente?"
+msgstr "Zamijeniti postojeću datoteku?"
+
+#: crates/bigiris/src/gui/dialogs/animate.rs:188
+msgid "Substituir"
+msgstr "Zamijeni"
+
+#: crates/bigiris/src/gui/dialogs/animate.rs:206
+msgid "Informe o arquivo de saída."
+msgstr "Navedite izlaznu datoteku."
+
+#: crates/bigiris/src/gui/dialogs/animate.rs:215
+msgid "O arquivo de saída não pode ser uma pasta."
+msgstr "Izlazna datoteka ne može biti mapa."
+
+#: crates/bigiris/src/gui/dialogs/animate.rs:219
+msgid "O arquivo de saída não pode ser um dos quadros."
+msgstr "Izlazna datoteka ne može biti jedan od okvira."
+
+#: crates/bigiris/src/gui/dialogs/animate.rs:255
+msgid "Montando GIF…"
+msgstr "Izgradnja GIF- a…"
+
+#: crates/bigiris/src/gui/dialogs/animate.rs:305
+#: crates/bigiris/src/gui/dialogs/batch.rs:111
+msgid "Pronto"
+msgstr "Spremno"
+
+#: crates/bigiris/src/gui/dialogs/animate.rs:310
+msgid "O arquivo {file} passou a existir e foi mantido; nada foi gravado."
+msgstr ""
+"Datoteka {file} u međuvremenu je nastala i zadržana je; ništa nije zapisano."
+
+#: crates/bigiris/src/gui/dialogs/animate.rs:317
+msgid "Falha"
+msgstr "Neuspjeh"
+
+#: crates/bigiris/src/gui/dialogs/batch.rs:35
+msgid "Prisma — Lote"
+msgstr "Prisma — serija"
+
+#: crates/bigiris/src/gui/dialogs/batch.rs:39
+msgid "Conversão em lote"
+msgstr "Batch pretvorba"
+
+#: crates/bigiris/src/gui/dialogs/batch.rs:46
+msgid "Arquivos"
+msgstr "Datoteke"
+
+#: crates/bigiris/src/gui/dialogs/batch.rs:50
+#: crates/bigiris/src/gui/dialogs/batch.rs:402
+msgid "Adicionar arquivos"
+msgstr "Dodaj datoteke"
+
+#: crates/bigiris/src/gui/dialogs/batch.rs:56
+msgid "Adicionar pasta (imagens)"
+msgstr "Dodaj mapu (slike)"
+
+#: crates/bigiris/src/gui/dialogs/batch.rs:66
+#: crates/bigiris/src/gui/dialogs/convert.rs:62
+msgid "Conversão"
+msgstr "Konverzija"
+
+#: crates/bigiris/src/gui/dialogs/batch.rs:72
+#: crates/bigiris/src/gui/dialogs/convert.rs:42
+msgid "Qualidade (JPEG/AVIF)"
+msgstr "Kvaliteta slike (JPEG/AVIF)"
+
+#: crates/bigiris/src/gui/dialogs/batch.rs:73
+#: crates/bigiris/src/gui/dialogs/convert.rs:43
+msgid "1 menor qualidade · 85 equilíbrio · 100 maior qualidade"
+msgstr "1 niža kvaliteta · 85 uravnoteženo · 100 viša kvaliteta"
+
+#: crates/bigiris/src/gui/dialogs/batch.rs:79
+#: crates/bigiris/src/gui/dialogs/convert.rs:48
+msgid "Otimizar tamanho"
+msgstr "Optimiziraj veličinu"
+
+#: crates/bigiris/src/gui/dialogs/batch.rs:80
+#: crates/bigiris/src/gui/dialogs/convert.rs:49
+msgid "PNG com compressão máxima; AVIF mais lento; arquivo menor"
+msgstr "PNG s najvećom kompresijom; AVIF sporije; manja datoteka"
+
+#: crates/bigiris/src/gui/dialogs/batch.rs:86
+#: crates/bigiris/src/gui/dialogs/convert.rs:69
+msgid "Destino"
+msgstr "Odredište"
+
+#: crates/bigiris/src/gui/dialogs/batch.rs:93
+#: crates/bigiris/src/gui/dialogs/convert.rs:77
+msgid "Pasta de saída"
+msgstr "Izlazna mapa"
+
+#: crates/bigiris/src/gui/dialogs/batch.rs:94
+#: crates/bigiris/src/gui/dialogs/batch.rs:216
+#: crates/bigiris/src/gui/dialogs/convert.rs:78
+#: crates/bigiris/src/gui/dialogs/convert.rs:165
+msgid "Mesma pasta do arquivo de origem"
+msgstr "Ista mapa kao i izvorna datoteka"
+
+#: crates/bigiris/src/gui/dialogs/batch.rs:102
+#: crates/bigiris/src/gui/dialogs/convert.rs:86
+msgid "Usar a mesma pasta do arquivo de origem"
+msgstr "Korištenje mape izvorišne datoteke"
+
+#: crates/bigiris/src/gui/dialogs/batch.rs:117
+msgid "Aguardando. Clique em Processar para iniciar."
+msgstr "Kliknite Procesiraj da biste započeli."
+
+#: crates/bigiris/src/gui/dialogs/batch.rs:128
+msgid "Processar"
+msgstr "Slike procesa"
+
+#: crates/bigiris/src/gui/dialogs/batch.rs:259
+msgid "Adicione ao menos uma imagem para processar."
+msgstr "Dodajte barem jednu sliku za obradu."
+
+#: crates/bigiris/src/gui/dialogs/batch.rs:271
+msgid "Iniciando…"
+msgstr "Počinjem…"
+
+#: crates/bigiris/src/gui/dialogs/batch.rs:272
+msgid "Processando…"
+msgstr "Obrađujem…"
+
+#: crates/bigiris/src/gui/dialogs/batch.rs:316
+msgid ""
+"Cancelado após {done}/{total} em {timing}. {ok} gravado(s), {skip} "
+"ignorado(s), {fail} falha(s)."
+msgstr ""
+"Otkazano nakon {done}/{total} za {timing}. Zapisano: {ok}, preskočeno: "
+"{skip}, neuspjelo: {fail}."
+
+#: crates/bigiris/src/gui/dialogs/batch.rs:318
+msgid ""
+"Concluído em {timing}. {ok} gravado(s), {skip} ignorado(s), {fail} falha(s)."
+msgstr ""
+"Završeno za {timing}. Zapisano: {ok}, preskočeno: {skip}, neuspjelo: {fail}."
+
+#: crates/bigiris/src/gui/dialogs/batch.rs:338
+msgid ""
+"{before} → {after} ({delta}) · média por arquivo {avg_before} → {avg_after}"
+msgstr ""
+"{before} → {after} ({delta}) · prosjek po datoteci {avg_before} → {avg_after}"
+
+#: crates/bigiris/src/gui/dialogs/batch.rs:354
+msgid "Cancelado"
+msgstr "Otkazano"
+
+#: crates/bigiris/src/gui/dialogs/batch.rs:356
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:367
+msgid "Concluído"
+msgstr "Gotovo"
+
+#: crates/bigiris/src/gui/dialogs/batch.rs:446
+msgid "Adicionar pasta com imagens"
+msgstr "Dodaj mapu sa slikama"
+
+#: crates/bigiris/src/gui/dialogs/compare.rs:31
+msgid "Comparar imagens — Íris"
+msgstr "Usporedite slike — Iris"
+
+#: crates/bigiris/src/gui/dialogs/compare.rs:43
+msgid "Comparar imagens"
+msgstr "Usporedi slike"
+
+#: crates/bigiris/src/gui/dialogs/compare.rs:45
+msgid "Antes: {before}  ·  Depois: {after}"
+msgstr "Prije: {before}  ·  Poslije: {after}"
+
+#: crates/bigiris/src/gui/dialogs/compare.rs:69
+msgid "Arraste o divisor para comparar · Esc fecha"
+msgstr "Povucite razdjelnik za usporedbu · Esc za zatvaranje"
+
+#: crates/bigiris/src/gui/dialogs/convert.rs:20
 msgid "Converter imagens — Prisma"
 msgstr "Konverzija slika — Prisma"
 
-#: crates/bigiris/src/gui.rs:3153 crates/bigiris/src/gui.rs:3233
+#: crates/bigiris/src/gui/dialogs/convert.rs:32
+#: crates/bigiris/src/gui/dialogs/convert.rs:96
 #: crates/bigimage-integrations/src/action.rs:75
 #: data/nautilus/bigiris-menu.py:100
 msgid "Converter"
 msgstr "Pretvori slike"
 
-#: crates/bigiris/src/gui.rs:3159 crates/bigiris/src/gui.rs:3505
-#: crates/bigiris/src/gui.rs:3773 crates/bigiris/src/gui.rs:4251
-#: crates/bigiris/src/gui.rs:4524 crates/bigiris/src/gui.rs:4860
-#: crates/bigiris/src/gui.rs:5010 crates/bigiris/src/gui.rs:5170
-#: crates/bigiris/src/gui.rs:5912
-msgid "Formato de destino"
-msgstr "Ciljni format"
-
-#: crates/bigiris/src/gui.rs:3166 crates/bigiris/src/gui.rs:3512
-#: crates/bigiris/src/gui.rs:3779 crates/bigiris/src/gui.rs:4257
-#: crates/bigiris/src/gui.rs:4530 crates/bigiris/src/gui.rs:4866
-#: crates/bigiris/src/gui.rs:5016 crates/bigiris/src/gui.rs:5176
-#: crates/bigiris/src/gui.rs:5935
-msgid "Se o arquivo de saída existir"
-msgstr "Ako izlazna datoteka postoji"
-
-#: crates/bigiris/src/gui.rs:3172 crates/bigiris/src/gui.rs:3518
-#: crates/bigiris/src/gui.rs:3785 crates/bigiris/src/gui.rs:4219
-#: crates/bigiris/src/gui.rs:4462 crates/bigiris/src/gui.rs:4812
-#: crates/bigiris/src/gui.rs:5022 crates/bigiris/src/gui.rs:5182
-#: crates/bigiris/src/gui.rs:6211
-msgid "Arquivos selecionados"
-msgstr "Odabrane datoteke"
-
-#: crates/bigiris/src/gui.rs:3177 crates/bigiris/src/gui.rs:5918
-msgid "Qualidade (JPEG/AVIF)"
-msgstr "Kvaliteta slike (JPEG/AVIF)"
-
-#: crates/bigiris/src/gui.rs:3178 crates/bigiris/src/gui.rs:5919
-msgid "1 menor qualidade · 85 equilíbrio · 100 maior qualidade"
-msgstr "1 niža kvaliteta · 85 uravnoteženo · 100 viša kvaliteta"
-
-#: crates/bigiris/src/gui.rs:3183 crates/bigiris/src/gui.rs:5925
-msgid "Otimizar tamanho"
-msgstr "Optimiziraj veličinu"
-
-#: crates/bigiris/src/gui.rs:3190
+#: crates/bigiris/src/gui/dialogs/convert.rs:55
 msgid "Avançado"
 msgstr "Napredno"
 
-#: crates/bigiris/src/gui.rs:3191
+#: crates/bigiris/src/gui/dialogs/convert.rs:56
 msgid "Otimização do encoder"
 msgstr "Optimizacija enkodera"
 
-#: crates/bigiris/src/gui.rs:3197 crates/bigiris/src/gui.rs:5908
-msgid "Conversão"
-msgstr "Konverzija"
-
-#: crates/bigiris/src/gui.rs:3204 crates/bigiris/src/gui.rs:5932
-msgid "Destino"
-msgstr "Odredište"
-
-#: crates/bigiris/src/gui.rs:3212 crates/bigiris/src/gui.rs:5943
-msgid "Pasta de saída"
-msgstr "Izlazna mapa"
-
-#: crates/bigiris/src/gui.rs:3213 crates/bigiris/src/gui.rs:3315
-#: crates/bigiris/src/gui.rs:6057
-msgid "Mesma pasta do arquivo de origem"
-msgstr "Ista mapa kao i izvorna datoteka"
-
-#: crates/bigiris/src/gui.rs:3221 crates/bigiris/src/gui.rs:5952
-msgid "Usar a mesma pasta do arquivo de origem"
-msgstr "Korištenje mape izvorišne datoteke"
-
-#: crates/bigiris/src/gui.rs:3249
+#: crates/bigiris/src/gui/dialogs/convert.rs:102
 msgid ""
 "Esta imagem tem transparência — JPEG perde o canal alfa. Considere PNG ou "
 "WebP."
@@ -548,235 +796,144 @@ msgstr ""
 "Ova slika ima prozirnost — JPEG ispušta alfa kanal. Razmislite o PNG ili "
 "WebP."
 
-#: crates/bigiris/src/gui.rs:3372
+#: crates/bigiris/src/gui/dialogs/convert.rs:123
+msgid ""
+"Esta imagem contém GPS (localização) no EXIF. Atenção ao compartilhar "
+"publicamente — nosso pipeline remove o EXIF automaticamente no re-encode."
+msgstr ""
+"Ova slika sadrži GPS (lokaciju) u EXIF-u. Pazite pri javnom dijeljenju — naš "
+"pipeline automatski uklanja EXIF pri ponovnom kodiranju."
+
+#: crates/bigiris/src/gui/dialogs/convert.rs:217
 msgid "Convertendo…"
 msgstr "Pretvaranje…"
 
-#: crates/bigiris/src/gui.rs:3378
+#: crates/bigiris/src/gui/dialogs/convert.rs:223
 msgid "Convertendo"
 msgstr "Pretvaranje"
 
-#: crates/bigiris/src/gui.rs:3406
-msgid "Redimensionar imagens — Prisma"
-msgstr "Promjena veličine slika — Prisma"
+#: crates/bigiris/src/gui/dialogs/crop.rs:284
+msgid ""
+"Arraste nos cantos para redimensionar · dentro do recorte para mover · fora "
+"dele para uma nova seleção."
+msgstr ""
+"Povucite kutove za promjenu veličine · unutar izreza za pomicanje · izvan "
+"njega za novi odabir."
 
-#: crates/bigiris/src/gui.rs:3418 crates/bigiris/src/gui.rs:3538
-#: crates/bigimage-integrations/src/action.rs:79
-#: data/nautilus/bigiris-menu.py:115
-msgid "Redimensionar"
-msgstr "Promjena veličine slika"
-
-#: crates/bigiris/src/gui.rs:3424 crates/bigiris/src/gui.rs:3438
-msgid "Aresta máxima"
-msgstr "Maksimalni rub"
-
-#: crates/bigiris/src/gui.rs:3425
-msgid "Escala (%)"
-msgstr "Skala (%)"
-
-#: crates/bigiris/src/gui.rs:3426
-msgid "Dimensão exata (WxH)"
-msgstr "Točna veličina (WxH)"
-
-#: crates/bigiris/src/gui.rs:3427
-msgid "Encaixar em (WxH)"
-msgstr "Prilagođava se unutar (WxH)"
-
-#: crates/bigiris/src/gui.rs:3431
-msgid "Modo"
-msgstr "Način"
-
-#: crates/bigiris/src/gui.rs:3439
-msgid "pixels (lado maior)"
-msgstr "piksela (najduži rub)"
-
-#: crates/bigiris/src/gui.rs:3443
-msgid "Porcentagem"
-msgstr "Postotak"
-
-#: crates/bigiris/src/gui.rs:3444
-msgid "100 = tamanho original"
-msgstr "100 = originalna veličina"
-
-#: crates/bigiris/src/gui.rs:3448
-msgid "Largura"
-msgstr "Širina"
-
-#: crates/bigiris/src/gui.rs:3451
-msgid "Altura"
-msgstr "Visina"
-
-#: crates/bigiris/src/gui.rs:3455
-msgid "Largura máxima"
-msgstr "Maksimalna širina"
-
-#: crates/bigiris/src/gui.rs:3458
-msgid "Altura máxima"
-msgstr "Maksimalna visina"
-
-#: crates/bigiris/src/gui.rs:3497
-msgid "Kernel de interpolação"
-msgstr "Interpolacijska jezgra"
-
-#: crates/bigiris/src/gui.rs:3526
-msgid "Modo de redimensionamento"
-msgstr "Način promjene veličine"
-
-#: crates/bigiris/src/gui.rs:3529
-msgid "Opções"
-msgstr "Opcije"
-
-#: crates/bigiris/src/gui.rs:3702
-msgid "Redimensionando…"
-msgstr "Promjena veličine…"
-
-#: crates/bigiris/src/gui.rs:3708
-msgid "Redimensionando"
-msgstr "Promjena veličine"
-
-#: crates/bigiris/src/gui.rs:3756
-msgid "Girar imagens — Prisma"
-msgstr "Rotiraj slike — Prisma"
-
-#: crates/bigiris/src/gui.rs:3760 crates/bigiris/src/gui.rs:3799
-#: crates/bigimage-integrations/src/action.rs:83
-#: data/nautilus/bigiris-menu.py:129
-msgid "Girar"
-msgstr "Rotiraj sliku"
-
-#: crates/bigiris/src/gui.rs:3762
-msgid "90° (horário)"
-msgstr "90° (u smjeru kazaljke na satu)"
-
-#: crates/bigiris/src/gui.rs:3762
-#: crates/bigimage-integrations/src/action.rs:259
-#: data/nautilus/bigiris-menu.py:134
-msgid "180°"
-msgstr "180°"
-
-#: crates/bigiris/src/gui.rs:3762
-msgid "270° (anti-horário)"
-msgstr "270° (suprotno od kazaljke na satu)"
-
-#: crates/bigiris/src/gui.rs:3765
-msgid "Rotação"
-msgstr "Rotacija"
-
-#: crates/bigiris/src/gui.rs:3856
-msgid "Girando…"
-msgstr "Rotacija…"
-
-#: crates/bigiris/src/gui.rs:3862
-msgid "Girando"
-msgstr "Rotacija"
-
-#: crates/bigiris/src/gui.rs:4182
+#: crates/bigiris/src/gui/dialogs/crop.rs:309
 msgid "Recortar — Prisma"
 msgstr "Izrezivanje - Prisma"
 
-#: crates/bigiris/src/gui.rs:4194 crates/bigiris/src/gui.rs:4278
+#: crates/bigiris/src/gui/dialogs/crop.rs:321
+#: crates/bigiris/src/gui/dialogs/crop.rs:389
 msgid "Recortar"
 msgstr "Izreži sliku"
 
-#: crates/bigiris/src/gui.rs:4225 crates/bigiris/src/gui.rs:4468
-#: crates/bigiris/src/gui.rs:4818
+#: crates/bigiris/src/gui/dialogs/crop.rs:348
+#: crates/bigiris/src/gui/dialogs/extent.rs:96
+#: crates/bigiris/src/gui/dialogs/upscale.rs:72
 msgid "Tamanho original"
 msgstr "Izvorna veličina"
 
-#: crates/bigiris/src/gui.rs:4226 crates/bigiris/src/gui.rs:4469
-#: crates/bigiris/src/gui.rs:4822
+#: crates/bigiris/src/gui/dialogs/crop.rs:349
+#: crates/bigiris/src/gui/dialogs/extent.rs:97
+#: crates/bigiris/src/gui/dialogs/upscale.rs:76
 msgid "Primeiro arquivo"
 msgstr "Prva datoteka"
 
-#: crates/bigiris/src/gui.rs:4232
+#: crates/bigiris/src/gui/dialogs/crop.rs:355
 msgid "X (px)"
 msgstr "X (px)"
 
-#: crates/bigiris/src/gui.rs:4236
+#: crates/bigiris/src/gui/dialogs/crop.rs:359
 msgid "Y (px)"
 msgstr "Y (px)"
 
-#: crates/bigiris/src/gui.rs:4240
+#: crates/bigiris/src/gui/dialogs/crop.rs:363
 msgid "Largura (px)"
 msgstr "Širina (px)"
 
-#: crates/bigiris/src/gui.rs:4244
+#: crates/bigiris/src/gui/dialogs/crop.rs:367
 msgid "Altura (px)"
 msgstr "Visina (px)"
 
-#: crates/bigiris/src/gui.rs:4277
+#: crates/bigiris/src/gui/dialogs/crop.rs:388
 msgid "Centro 50%"
 msgstr "Centrirano 50%"
 
-#: crates/bigiris/src/gui.rs:4354
+#: crates/bigiris/src/gui/dialogs/crop.rs:449
 msgid "Recortando…"
 msgstr "Izrezivanje…"
 
-#: crates/bigiris/src/gui.rs:4360
+#: crates/bigiris/src/gui/dialogs/crop.rs:455
 msgid "Recortando"
 msgstr "Izrezivanje"
 
-#: crates/bigiris/src/gui.rs:4378
+#: crates/bigiris/src/gui/dialogs/extent.rs:12
 msgid "YouTube community (1:1)"
 msgstr "YouTube zajednica (1:1)"
 
-#: crates/bigiris/src/gui.rs:4379
+#: crates/bigiris/src/gui/dialogs/extent.rs:13
 msgid "Instagram feed (4:5)"
 msgstr "Sažetak za Instagram (4:5)"
 
-#: crates/bigiris/src/gui.rs:4380
+#: crates/bigiris/src/gui/dialogs/extent.rs:14
 msgid "Stories / Shorts (9:16)"
 msgstr "Priče / kratki filmovi (9:16)"
 
-#: crates/bigiris/src/gui.rs:4381
+#: crates/bigiris/src/gui/dialogs/extent.rs:15
 msgid "Widescreen (16:9)"
 msgstr "Široki zaslon (16:9)"
 
-#: crates/bigiris/src/gui.rs:4382
+#: crates/bigiris/src/gui/dialogs/extent.rs:16
 msgid "Personalizado…"
 msgstr "Prilagođeno…"
 
-#: crates/bigiris/src/gui.rs:4388
+#: crates/bigiris/src/gui/dialogs/extent.rs:22
 msgid "Preto suave (#0d0e12)"
 msgstr "Meka crna (# 0d0e12)"
 
-#: crates/bigiris/src/gui.rs:4389
+#: crates/bigiris/src/gui/dialogs/extent.rs:23
 msgid "Preto puro (#000000)"
 msgstr "Čista crna (# 000. 010)"
 
-#: crates/bigiris/src/gui.rs:4390
+#: crates/bigiris/src/gui/dialogs/extent.rs:24
 msgid "Branco (#ffffff)"
 msgstr "Bijela (# ffffff)"
 
-#: crates/bigiris/src/gui.rs:4391
+#: crates/bigiris/src/gui/dialogs/extent.rs:25
 msgid "Transparente"
 msgstr "Prozirno"
 
-#: crates/bigiris/src/gui.rs:4392
+#: crates/bigiris/src/gui/dialogs/extent.rs:26
 msgid "Personalizada (hex)"
 msgstr "Prilagođeno (heksadecimalno)"
 
-#: crates/bigiris/src/gui.rs:4399
+#: crates/bigiris/src/gui/dialogs/extent.rs:33
 msgid "Centro"
 msgstr "Središte"
 
-#: crates/bigiris/src/gui.rs:4399
+#: crates/bigiris/src/gui/dialogs/extent.rs:33
 msgid "Topo"
 msgstr "Gornji rub"
 
-#: crates/bigiris/src/gui.rs:4399
+#: crates/bigiris/src/gui/dialogs/extent.rs:33
 msgid "Base"
 msgstr "Donji rub"
 
-#: crates/bigiris/src/gui.rs:4417
+#: crates/bigiris/src/gui/dialogs/extent.rs:49
 msgid "Letterbox — Prisma"
 msgstr "Poštanski sandučić — Prisma"
 
-#: crates/bigiris/src/gui.rs:4430
+#: crates/bigiris/src/gui/dialogs/extent.rs:62
 msgid "Letterbox"
 msgstr "Letterbox"
 
-#: crates/bigiris/src/gui.rs:4453
+#: crates/bigiris/src/gui/dialogs/extent.rs:63
+msgid "Prisma · sem corte"
+msgstr "Prisma · bez obrezivanja"
+
+#: crates/bigiris/src/gui/dialogs/extent.rs:85
 msgid ""
 "Estende a tela em volta da imagem para encaixá-la num formato fixo (post de "
 "YouTube, feed do Instagram, Stories…) sem cortar nenhum pixel. A imagem "
@@ -786,341 +943,303 @@ msgstr ""
 "YouTubeu, feedovi na Instagramu, Priče…) bez obrezivanja piksela.Izvorna "
 "slika je centrirana, a preostalo područje ispunjeno je odabranom bojom."
 
-#: crates/bigiris/src/gui.rs:4476
+#: crates/bigiris/src/gui/dialogs/extent.rs:104
 msgid "Proporção alvo"
 msgstr "Ciljni omjer prikaza"
 
-#: crates/bigiris/src/gui.rs:4483
+#: crates/bigiris/src/gui/dialogs/extent.rs:111
 msgid "Razão W"
 msgstr "Omjer širine"
 
-#: crates/bigiris/src/gui.rs:4486
+#: crates/bigiris/src/gui/dialogs/extent.rs:114
 msgid "Razão H"
 msgstr "Omjer visina"
 
-#: crates/bigiris/src/gui.rs:4496
+#: crates/bigiris/src/gui/dialogs/extent.rs:124
 msgid "Cor de fundo"
 msgstr "Boja pozadine"
 
-#: crates/bigiris/src/gui.rs:4502
+#: crates/bigiris/src/gui/dialogs/extent.rs:130
 msgid "Hex (#RRGGBB)"
 msgstr "Heksadecimalan (# RRGGBB)"
 
-#: crates/bigiris/src/gui.rs:4510
+#: crates/bigiris/src/gui/dialogs/extent.rs:138
 msgid "Posição da imagem"
 msgstr "Pozicija slike"
 
-#: crates/bigiris/src/gui.rs:4516 crates/bigiris/src/gui.rs:4835
+#: crates/bigiris/src/gui/dialogs/extent.rs:144
+#: crates/bigiris/src/gui/dialogs/upscale.rs:89
 msgid "Destino previsto"
 msgstr "Predviđeno odredište"
 
-#: crates/bigiris/src/gui.rs:4555
+#: crates/bigiris/src/gui/dialogs/extent.rs:171
 msgid "Estender"
 msgstr "Proširi"
 
-#: crates/bigiris/src/gui.rs:4634
+#: crates/bigiris/src/gui/dialogs/extent.rs:240
 msgid "—"
 msgstr "—"
 
-#: crates/bigiris/src/gui.rs:4726
+#: crates/bigiris/src/gui/dialogs/extent.rs:326
 msgid "Estendendo…"
 msgstr "Proširujem…"
 
-#: crates/bigiris/src/gui.rs:4732
+#: crates/bigiris/src/gui/dialogs/extent.rs:332
 msgid "Estendendo"
 msgstr "Proširenje"
 
-#: crates/bigiris/src/gui.rs:4765
-msgid "Aumentar resolução — Prisma"
-msgstr "Vrhunski — Prisma"
-
-#: crates/bigiris/src/gui.rs:4778
-msgid "Aumentar resolução"
-msgstr "Povećaj veličinu slike"
-
-#: crates/bigiris/src/gui.rs:4829
-msgid "Fator"
-msgstr "Faktor"
-
-#: crates/bigiris/src/gui.rs:4886
-msgid "Aumentar"
-msgstr "Povećaj veličinu slike"
-
-#: crates/bigiris/src/gui.rs:4956
-msgid "Aumentando…"
-msgstr "Povećanje veličine…"
-
-#: crates/bigiris/src/gui.rs:4965
-msgid "Aumentando"
-msgstr "Povećanje"
-
-#: crates/bigiris/src/gui.rs:4993
+#: crates/bigiris/src/gui/dialogs/flip.rs:20
 msgid "Espelhar imagens — Prisma"
 msgstr "Preokretanje slika — Prisma"
 
-#: crates/bigiris/src/gui.rs:4997 crates/bigiris/src/gui.rs:5036
+#: crates/bigiris/src/gui/dialogs/flip.rs:24
+#: crates/bigiris/src/gui/dialogs/flip.rs:47
 #: crates/bigimage-integrations/src/action.rs:87
 #: data/nautilus/bigiris-menu.py:142
 msgid "Espelhar"
 msgstr "Okrenuti sliku"
 
-#: crates/bigiris/src/gui.rs:4999
+#: crates/bigiris/src/gui/dialogs/flip.rs:26
 msgid "Horizontal (esquerda ↔ direita)"
 msgstr "Vodoravno (lijevo ↔ desno)"
 
-#: crates/bigiris/src/gui.rs:4999
+#: crates/bigiris/src/gui/dialogs/flip.rs:26
 msgid "Vertical (cima ↔ baixo)"
 msgstr "Okomito (gornji ↔ donji)"
 
-#: crates/bigiris/src/gui.rs:5002
+#: crates/bigiris/src/gui/dialogs/flip.rs:29
 msgid "Eixo"
 msgstr "Os"
 
-#: crates/bigiris/src/gui.rs:5092
+#: crates/bigiris/src/gui/dialogs/flip.rs:87
 msgid "Espelhando…"
 msgstr "Okretam…"
 
-#: crates/bigiris/src/gui.rs:5098
+#: crates/bigiris/src/gui/dialogs/flip.rs:93
 msgid "Espelhando"
 msgstr "Flip"
 
-#: crates/bigiris/src/gui.rs:5126
-msgid "Ajustar cores — Prisma"
-msgstr "Prilagodba boja — Prisma"
+#: crates/bigiris/src/gui/dialogs/mod.rs:64
+#: crates/bigimage-integrations/src/action.rs:150
+#: data/nautilus/bigiris-menu.py:104
+msgid "PNG"
+msgstr "PNG"
 
-#: crates/bigiris/src/gui.rs:5141
-#: crates/bigimage-integrations/src/action.rs:91
-#: data/nautilus/bigiris-menu.py:153
-msgid "Ajustar cores"
-msgstr "Prilagodba boja"
+#: crates/bigiris/src/gui/dialogs/mod.rs:65
+msgid "JPG (JPEG)"
+msgstr "JPG (JPEG)"
 
-#: crates/bigiris/src/gui.rs:5144
-msgid "Brilho"
-msgstr "Svjetlina"
+#: crates/bigiris/src/gui/dialogs/mod.rs:66
+#: crates/bigimage-integrations/src/action.rs:166
+#: data/nautilus/bigiris-menu.py:106
+msgid "WebP"
+msgstr "WebP"
 
-#: crates/bigiris/src/gui.rs:5145
-msgid "-100 escuro · 0 neutro · +100 claro"
-msgstr "-100 tamno · 0 neutralno · +101 svijetlo"
+#: crates/bigiris/src/gui/dialogs/mod.rs:67
+#: crates/bigimage-integrations/src/action.rs:174
+#: data/nautilus/bigiris-menu.py:107
+msgid "AVIF"
+msgstr "AVIF"
 
-#: crates/bigiris/src/gui.rs:5149
-msgid "Contraste"
-msgstr "Kontrast"
+#: crates/bigiris/src/gui/dialogs/mod.rs:68
+#: crates/bigimage-integrations/src/action.rs:182
+#: data/nautilus/bigiris-menu.py:108
+msgid "TIFF"
+msgstr "TIFF"
 
-#: crates/bigiris/src/gui.rs:5150
-msgid "-100 plano · 0 neutro · +100 agressivo"
-msgstr "-100 ravnomjerno · 0 neutralno · +101 snažno"
+#: crates/bigiris/src/gui/dialogs/mod.rs:69
+msgid "BMP"
+msgstr "BMP"
 
-#: crates/bigiris/src/gui.rs:5154
-msgid "Saturação"
-msgstr "Zasićenost"
+#: crates/bigiris/src/gui/dialogs/mod.rs:70
+msgid "GIF"
+msgstr "GIF"
 
-#: crates/bigiris/src/gui.rs:5155
-msgid "-100 cinza · 0 neutro · +100 vibrante"
-msgstr "-100 siva · 0 neutralna · +101 živopisna"
+#: crates/bigiris/src/gui/dialogs/mod.rs:71
+msgid "ICO (até 256 × 256)"
+msgstr "ICO (do 256 × 264)"
 
-#: crates/bigiris/src/gui.rs:5159
-msgid "Gamma"
-msgstr "Gama"
+#: crates/bigiris/src/gui/dialogs/mod.rs:72
+msgid "PNM (Netpbm)"
+msgstr "PNM (Netpbm)"
 
-#: crates/bigiris/src/gui.rs:5161
-msgid "Abaixo de 1 clareia os meios-tons · 1 mantém · acima de 1 escurece"
-msgstr ""
-"Ispod 1 posvjetljuje srednje tonove · 1 ih zadržava · iznad 1 zamračuje ih"
+#: crates/bigiris/src/gui/dialogs/mod.rs:73
+msgid "TGA"
+msgstr "TGA"
 
-#: crates/bigiris/src/gui.rs:5189
-msgid "Tom"
-msgstr "Tone"
+#: crates/bigiris/src/gui/dialogs/mod.rs:74
+msgid "QOI"
+msgstr "QOI"
 
-#: crates/bigiris/src/gui.rs:5194
-msgid "Cor"
-msgstr "Boja"
+#: crates/bigiris/src/gui/dialogs/mod.rs:75
+msgid "HDR"
+msgstr "HDR"
 
-#: crates/bigiris/src/gui.rs:5197 crates/bigiris/src/gui.rs:6697
-msgid "Saída"
-msgstr "Izlaz"
+#: crates/bigiris/src/gui/dialogs/mod.rs:76
+msgid "OpenEXR"
+msgstr "OpenEXR"
 
-#: crates/bigiris/src/gui.rs:5205
-msgid "Aplicar"
-msgstr "Primijeni"
+#: crates/bigiris/src/gui/dialogs/mod.rs:100
+msgid "Pular se já existir"
+msgstr "Preskoči postojeće datoteke"
 
-#: crates/bigiris/src/gui.rs:5328
-msgid "Ajustando…"
-msgstr "Prilagodba…"
+#: crates/bigiris/src/gui/dialogs/mod.rs:101
+msgid "Sobrescrever o arquivo"
+msgstr "Prepiši datoteku"
 
-#: crates/bigiris/src/gui.rs:5334
-msgid "Ajustando"
-msgstr "Prilagodba"
+#: crates/bigiris/src/gui/dialogs/mod.rs:102
+msgid "Incrementar (_1, _2, …)"
+msgstr "Dodavanje sufiksa (_1, _2, …)"
 
-#: crates/bigiris/src/gui.rs:5433
-msgid "Privacidade"
-msgstr "Privatnost"
+#: crates/bigiris/src/gui/dialogs/mod.rs:123
+#: crates/bigiris/src/gui/dialogs/mod.rs:138
+msgid "Formato de destino"
+msgstr "Ciljni format"
 
-#: crates/bigiris/src/gui.rs:5509
-msgid "Imagem"
-msgstr "Slika"
+#: crates/bigiris/src/gui/dialogs/mod.rs:134
+msgid "Manter o formato original"
+msgstr "Zadrži izvorni format"
 
-#: crates/bigiris/src/gui.rs:5678
-msgid "Comparar imagens — Íris"
-msgstr "Usporedite slike — Iris"
+#: crates/bigiris/src/gui/dialogs/mod.rs:156
+msgid "Se o arquivo de saída existir"
+msgstr "Ako izlazna datoteka postoji"
 
-#: crates/bigiris/src/gui.rs:5713
-msgid "Arraste o divisor para comparar · Esc fecha"
-msgstr "Povucite razdjelnik za usporedbu · Esc za zatvaranje"
+#: crates/bigiris/src/gui/dialogs/mod.rs:216
+msgid "{first} e mais {count}"
+msgstr "{first} i još {count}"
 
-#: crates/bigiris/src/gui.rs:5874
-msgid "Prisma — Lote"
-msgstr "Prisma — serija"
-
-#: crates/bigiris/src/gui.rs:5878
-msgid "Conversão em lote"
-msgstr "Batch pretvorba"
-
-#: crates/bigiris/src/gui.rs:5888
-msgid "Arquivos"
-msgstr "Datoteke"
-
-#: crates/bigiris/src/gui.rs:5892 crates/bigiris/src/gui.rs:6224
-msgid "Adicionar arquivos"
-msgstr "Dodaj datoteke"
-
-#: crates/bigiris/src/gui.rs:5898
-msgid "Adicionar pasta (imagens)"
-msgstr "Dodaj mapu (slike)"
-
-#: crates/bigiris/src/gui.rs:5967
-msgid "Aguardando. Clique em Processar para iniciar."
-msgstr "Kliknite Procesiraj da biste započeli."
-
-#: crates/bigiris/src/gui.rs:5978
-msgid "Processar"
-msgstr "Slike procesa"
-
-#: crates/bigiris/src/gui.rs:6102
-msgid "Adicione ao menos uma imagem para processar."
-msgstr "Dodajte barem jednu sliku za obradu."
-
-#: crates/bigiris/src/gui.rs:6112
-msgid "Iniciando…"
-msgstr "Počinjem…"
-
-#: crates/bigiris/src/gui.rs:6113
-msgid "Processando…"
-msgstr "Obrađujem…"
-
-#: crates/bigiris/src/gui.rs:6175
-msgid "Cancelado"
-msgstr "Otkazano"
-
-#: crates/bigiris/src/gui.rs:6177 crates/bigiris/src/gui.rs:6911
-msgid "Concluído"
-msgstr "Gotovo"
-
-#: crates/bigiris/src/gui.rs:6268
-msgid "Adicionar pasta com imagens"
-msgstr "Dodaj mapu sa slikama"
-
-#: crates/bigiris/src/gui.rs:6330
+#: crates/bigiris/src/gui/dialogs/mod.rs:231
 msgid "Escolher pasta de saída"
 msgstr "Odaberite izlaznu mapu"
 
-#: crates/bigiris/src/gui.rs:6362
-msgid "Criar GIF animado — Prisma"
-msgstr "Napravite animirani GIF — Prisma"
+#: crates/bigiris/src/gui/dialogs/properties.rs:92
+msgid "Privacidade"
+msgstr "Privatnost"
 
-#: crates/bigiris/src/gui.rs:6366
-msgid "Criar GIF animado"
-msgstr "Napravite animirani GIF"
+#: crates/bigiris/src/gui/dialogs/properties.rs:96
+msgid "Coordenadas GPS presentes"
+msgstr "GPS koordinate prisutne"
 
-#: crates/bigiris/src/gui.rs:6380
-msgid "Selecione pelo menos 2 imagens"
-msgstr "Odaberite najmanje 2 slike"
+#: crates/bigiris/src/gui/dialogs/properties.rs:98
+msgid "Identificação de câmera/software presente"
+msgstr "Identifikacija fotoaparata/softvera prisutna"
 
-#: crates/bigiris/src/gui.rs:6381
-msgid "Informe vários arquivos de uma vez para montar a animação."
-msgstr "Odaberite više datoteka za izradu animacije."
+#: crates/bigiris/src/gui/dialogs/properties.rs:100
+msgid "Remova antes de publicar se for sensível."
+msgstr "Uklonite prije objave ako je osjetljivo."
 
-#: crates/bigiris/src/gui.rs:6402
-msgid "Atraso por quadro (ms)"
-msgstr "Kašnjenje okvira (ms)"
+#: crates/bigiris/src/gui/dialogs/properties.rs:128
+msgid "Nome"
+msgstr "Naziv"
 
-#: crates/bigiris/src/gui.rs:6403
-msgid "100 ≈ 10 fps · 40 ≈ 25 fps · 1000 = 1 s"
-msgstr "100 = 1 fps · 40 ≈ 25 fps • 1.000=1 s"
+#: crates/bigiris/src/gui/dialogs/properties.rs:133
+msgid "Pasta"
+msgstr "Mapa"
 
-#: crates/bigiris/src/gui.rs:6408
-msgid "Loop"
-msgstr "Ponavljanje animacije"
+#: crates/bigiris/src/gui/dialogs/properties.rs:151
+#: crates/bigiris/src/gui/dialogs/properties.rs:158
+#: crates/bigiris/src/gui/dialogs/properties.rs:159
+msgid "Formato"
+msgstr "Format"
 
-#: crates/bigiris/src/gui.rs:6410
-msgid "Infinito (padrão)"
-msgstr "Beskonačno (zadano)"
+#: crates/bigiris/src/gui/dialogs/properties.rs:153
+msgid "{format} (extensão: {extension})"
+msgstr "{format} (nastavak: {extension})"
 
-#: crates/bigiris/src/gui.rs:6411
-msgid "Uma vez"
-msgstr "Jednom."
+#: crates/bigiris/src/gui/dialogs/properties.rs:165
+#: crates/bigiris/src/gui/dialogs/properties.rs:172
+msgid "Tamanho"
+msgstr "Veličina"
 
-#: crates/bigiris/src/gui.rs:6412
-msgid "2 vezes"
-msgstr "2 puta"
+#: crates/bigiris/src/gui/dialogs/properties.rs:167
+msgid "Modificado"
+msgstr "Izmijenjeno"
 
-#: crates/bigiris/src/gui.rs:6413
-msgid "5 vezes"
-msgstr "5 puta."
+#: crates/bigiris/src/gui/dialogs/properties.rs:173
+msgid "(indisponível: {error})"
+msgstr "(nedostupno: {error})"
 
-#: crates/bigiris/src/gui.rs:6414
-msgid "10 vezes"
-msgstr "10 puta."
+#: crates/bigiris/src/gui/dialogs/properties.rs:182
+msgid "Imagem"
+msgstr "Slika"
 
-#: crates/bigiris/src/gui.rs:6419
-msgid "Velocidade do encoder"
-msgstr "Brzina enkodera"
+#: crates/bigiris/src/gui/dialogs/properties.rs:199
+#: crates/bigiris/src/gui/dialogs/properties.rs:216
+msgid "Dimensões"
+msgstr "Dimenzije"
 
-#: crates/bigiris/src/gui.rs:6420
-msgid "maior = mais rápido, paleta um pouco pior · padrão 10"
-msgstr "Više = brže, malo niža kvaliteta palete · default 10"
+#: crates/bigiris/src/gui/dialogs/properties.rs:203
+msgid "Megapixels"
+msgstr "Megapikseli"
 
-#: crates/bigiris/src/gui.rs:6430
-msgid "Arquivo de saída (.gif)"
-msgstr "Izlazna datoteka (.gif)"
+#: crates/bigiris/src/gui/dialogs/properties.rs:207
+msgid "Razão de aspecto"
+msgstr "Omjer slike"
 
-#: crates/bigiris/src/gui.rs:6436
-msgid "Quadros"
-msgstr "Okviri"
+#: crates/bigiris/src/gui/dialogs/properties.rs:210
+msgid "Modo de cor"
+msgstr "Način boja"
 
-#: crates/bigiris/src/gui.rs:6453
-msgid "Criar GIF"
-msgstr "Napravi GIF"
+#: crates/bigiris/src/gui/dialogs/properties.rs:211
+msgid "Bits por canal"
+msgstr "Bitova po kanalu"
 
-#: crates/bigiris/src/gui.rs:6503
-msgid "Montando GIF…"
-msgstr "Izgradnja GIF- a…"
+#: crates/bigiris/src/gui/dialogs/properties.rs:217
+msgid "(falha: não foi possível identificar o formato pelo conteúdo)"
+msgstr "(pogreška: format nije moguće prepoznati prema sadržaju)"
 
-#: crates/bigiris/src/gui.rs:6521
-msgid "Pronto"
-msgstr "Spremno"
+#: crates/bigiris/src/gui/dialogs/properties.rs:227
+msgid "Orientação EXIF"
+msgstr "EXIF orijentacija"
 
-#: crates/bigiris/src/gui.rs:6527
-msgid "Falha"
-msgstr "Neuspjeh"
+#: crates/bigiris/src/gui/dialogs/properties.rs:229
+msgid "{orientation} · use Girar ▸ Automático pra corrigir"
+msgstr "{orientation} · za ispravak upotrijebite Rotiraj sliku ▸ Automatski"
 
-#: crates/bigiris/src/gui.rs:6608
+#: crates/bigiris/src/gui/dialogs/properties.rs:244
+msgid "Tons de cinza"
+msgstr "Sivi tonovi"
+
+#: crates/bigiris/src/gui/dialogs/properties.rs:245
+msgid "Tons de cinza + alfa"
+msgstr "Sivi tonovi + alfa"
+
+#: crates/bigiris/src/gui/dialogs/properties.rs:282
+msgid "Campos presentes: {count}"
+msgstr "Prisutna polja: {count}"
+
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:68
 msgid "Remover fundo — Prisma"
 msgstr "Ukloni pozadinu — Prisma"
 
-#: crates/bigiris/src/gui.rs:6613 crates/bigiris/src/gui.rs:6726
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:73
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:173
 msgid "Remover fundo"
 msgstr "Ukloni pozadinu"
 
-#: crates/bigiris/src/gui.rs:6630
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:74
+msgid "Prisma · BiRefNet-lite"
+msgstr "Prisma · BiRefNet-lite"
+
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:90
+#: crates/bigiris/src/gui/previews.rs:223
 msgid "Nenhuma imagem selecionada"
 msgstr "Nema odabrane slike"
 
-#: crates/bigiris/src/gui.rs:6631
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:91
 msgid "Informe um ou mais arquivos ao abrir o diálogo."
 msgstr ""
 "Odaberite jednu ili više datoteka prilikom otvaranja dijaloškog okvira."
 
-#: crates/bigiris/src/gui.rs:6668
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:112
+msgid ""
+"Esta build não inclui IA. Recompile com `cargo build --features ai` e "
+"instale `onnxruntime` (Arch: `pacman -S onnxruntime`)."
+msgstr ""
+"Ova verzija ne uključuje AI. Ponovno prevedite s `cargo build --features ai` "
+"i instalirajte `onnxruntime` (Arch: `pacman -S onnxruntime`)."
+
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:122
 msgid ""
 "Remoção de fundo: requer 8 GiB de RAM livre para iniciar. Este recurso é "
 "opcional."
@@ -1128,29 +1247,245 @@ msgstr ""
 "Za pokretanje uklanjanja pozadine potrebno je 8 GiB dostupnog RAM-a. Ova "
 "značajka nije obavezna."
 
-#: crates/bigiris/src/gui.rs:6686
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:136
 msgid "Modelo"
 msgstr "UI model"
 
-#: crates/bigiris/src/gui.rs:6704
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:137
+msgid "BiRefNet-lite (MIT) · roda offline no seu computador"
+msgstr "BiRefNet-lite (MIT) · radi izvanmrežno na vašem računalu"
+
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:149
+msgid ""
+"«origem»_nobg.png · PNG com alfa, sem sobrescrever (_1, _2… se já existir)"
+msgstr ""
+"„izvor”_nobg.png · PNG s alfom, bez prepisivanja (_1, _2… ako već postoji)"
+
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:156
 msgid "Remover fundo com IA local"
 msgstr "Uklonite pozadinu s lokalnom AI"
 
-#: crates/bigiris/src/gui.rs:6780
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:157
+msgid ""
+"O modelo roda inteiramente no seu computador. Nenhuma imagem sai do disco — "
+"sem upload, sem conta, sem API externa."
+msgstr ""
+"Model radi u potpunosti na vašem računalu. Nijedna slika ne napušta disk — "
+"bez prijenosa, bez računa, bez vanjskog API-ja."
+
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:215
 msgid "Preparando…"
 msgstr "Pripremam…"
 
-#: crates/bigiris/src/gui.rs:6910 crates/bigiris/src/gui.rs:6933
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:340
+msgid "Baixando modelo (uma vez só): {done} / {total}"
+msgstr "Preuzimanje modela (samo jednom): {done} / {total}"
+
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:349
+msgid "Processando {current}/{total} — {file}"
+msgstr "Obrada {current}/{total} — {file}"
+
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:366
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:388
 msgid "Imagens gravadas"
 msgstr "Spremljene slike"
 
-#: crates/bigiris/src/gui.rs:6934
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:389
 msgid "Falhas"
 msgstr "Neuspjeh"
 
-#: crates/bigiris/src/gui.rs:6936
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:391
 msgid "Com erros"
 msgstr "S pogreškama"
+
+#: crates/bigiris/src/gui/dialogs/resize.rs:8
+msgid "Lanczos3 (padrão)"
+msgstr "Lanczos3 (zadano)"
+
+#: crates/bigiris/src/gui/dialogs/resize.rs:9
+msgid "Mitchell"
+msgstr "Mitchell"
+
+#: crates/bigiris/src/gui/dialogs/resize.rs:10
+msgid "CatmullRom"
+msgstr "CatmullRom"
+
+#: crates/bigiris/src/gui/dialogs/resize.rs:11
+msgid "Bilinear"
+msgstr "Bilinear"
+
+#: crates/bigiris/src/gui/dialogs/resize.rs:12
+msgid "Nearest (sem anti-aliasing)"
+msgstr "Najbliže (bez glačanja)"
+
+#: crates/bigiris/src/gui/dialogs/resize.rs:29
+msgid "Redimensionar imagens — Prisma"
+msgstr "Promjena veličine slika — Prisma"
+
+#: crates/bigiris/src/gui/dialogs/resize.rs:41
+#: crates/bigiris/src/gui/dialogs/resize.rs:144
+#: crates/bigimage-integrations/src/action.rs:79
+#: data/nautilus/bigiris-menu.py:115
+msgid "Redimensionar"
+msgstr "Promjena veličine slika"
+
+#: crates/bigiris/src/gui/dialogs/resize.rs:47
+#: crates/bigiris/src/gui/dialogs/resize.rs:61
+msgid "Aresta máxima"
+msgstr "Maksimalni rub"
+
+#: crates/bigiris/src/gui/dialogs/resize.rs:48
+msgid "Escala (%)"
+msgstr "Skala (%)"
+
+#: crates/bigiris/src/gui/dialogs/resize.rs:49
+msgid "Dimensão exata (WxH)"
+msgstr "Točna veličina (WxH)"
+
+#: crates/bigiris/src/gui/dialogs/resize.rs:50
+msgid "Encaixar em (WxH)"
+msgstr "Prilagođava se unutar (WxH)"
+
+#: crates/bigiris/src/gui/dialogs/resize.rs:54
+msgid "Modo"
+msgstr "Način"
+
+#: crates/bigiris/src/gui/dialogs/resize.rs:62
+msgid "pixels (lado maior)"
+msgstr "piksela (najduži rub)"
+
+#: crates/bigiris/src/gui/dialogs/resize.rs:66
+msgid "Porcentagem"
+msgstr "Postotak"
+
+#: crates/bigiris/src/gui/dialogs/resize.rs:67
+msgid "100 = tamanho original"
+msgstr "100 = originalna veličina"
+
+#: crates/bigiris/src/gui/dialogs/resize.rs:71
+msgid "Largura"
+msgstr "Širina"
+
+#: crates/bigiris/src/gui/dialogs/resize.rs:74
+msgid "Altura"
+msgstr "Visina"
+
+#: crates/bigiris/src/gui/dialogs/resize.rs:78
+msgid "Largura máxima"
+msgstr "Maksimalna širina"
+
+#: crates/bigiris/src/gui/dialogs/resize.rs:81
+msgid "Altura máxima"
+msgstr "Maksimalna visina"
+
+#: crates/bigiris/src/gui/dialogs/resize.rs:120
+msgid "Kernel de interpolação"
+msgstr "Interpolacijska jezgra"
+
+#: crates/bigiris/src/gui/dialogs/resize.rs:134
+msgid "Modo de redimensionamento"
+msgstr "Način promjene veličine"
+
+#: crates/bigiris/src/gui/dialogs/resize.rs:137
+msgid "Opções"
+msgstr "Opcije"
+
+#: crates/bigiris/src/gui/dialogs/resize.rs:292
+msgid "Redimensionando…"
+msgstr "Promjena veličine…"
+
+#: crates/bigiris/src/gui/dialogs/resize.rs:298
+msgid "Redimensionando"
+msgstr "Promjena veličine"
+
+#: crates/bigiris/src/gui/dialogs/rotate.rs:25
+msgid "Girar imagens — Prisma"
+msgstr "Rotiraj slike — Prisma"
+
+#: crates/bigiris/src/gui/dialogs/rotate.rs:29
+#: crates/bigiris/src/gui/dialogs/rotate.rs:52
+#: crates/bigimage-integrations/src/action.rs:83
+#: data/nautilus/bigiris-menu.py:129
+msgid "Girar"
+msgstr "Rotiraj sliku"
+
+#: crates/bigiris/src/gui/dialogs/rotate.rs:31
+msgid "90° (horário)"
+msgstr "90° (u smjeru kazaljke na satu)"
+
+#: crates/bigiris/src/gui/dialogs/rotate.rs:31
+#: crates/bigimage-integrations/src/action.rs:259
+#: data/nautilus/bigiris-menu.py:134
+msgid "180°"
+msgstr "180°"
+
+#: crates/bigiris/src/gui/dialogs/rotate.rs:31
+msgid "270° (anti-horário)"
+msgstr "270° (suprotno od kazaljke na satu)"
+
+#: crates/bigiris/src/gui/dialogs/rotate.rs:34
+msgid "Rotação"
+msgstr "Rotacija"
+
+#: crates/bigiris/src/gui/dialogs/rotate.rs:93
+msgid "Girando…"
+msgstr "Rotacija…"
+
+#: crates/bigiris/src/gui/dialogs/rotate.rs:99
+msgid "Girando"
+msgstr "Rotacija"
+
+#: crates/bigiris/src/gui/dialogs/upscale.rs:26
+msgid "Aumentar resolução — Prisma"
+msgstr "Vrhunski — Prisma"
+
+#: crates/bigiris/src/gui/dialogs/upscale.rs:39
+msgid "Aumentar resolução"
+msgstr "Povećaj veličinu slike"
+
+#: crates/bigiris/src/gui/dialogs/upscale.rs:62
+msgid ""
+"Motor: Lanczos3 (CPU). O modo IA (Real-ESRGAN) será habilitado "
+"automaticamente quando um modelo ONNX FOSS estiver disponível."
+msgstr ""
+"Pogon: Lanczos3 (CPU). AI način (Real-ESRGAN) bit će automatski omogućen "
+"kada bude dostupan FOSS ONNX model."
+
+#: crates/bigiris/src/gui/dialogs/upscale.rs:83
+msgid "Fator"
+msgstr "Faktor"
+
+#: crates/bigiris/src/gui/dialogs/upscale.rs:98
+msgid "× {factor} (tamanho indisponível)"
+msgstr "× {factor} (veličina nedostupna)"
+
+#: crates/bigiris/src/gui/dialogs/upscale.rs:128
+msgid "Aumentar"
+msgstr "Povećaj veličinu slike"
+
+#: crates/bigiris/src/gui/dialogs/upscale.rs:182
+msgid "Aumentando…"
+msgstr "Povećanje veličine…"
+
+#: crates/bigiris/src/gui/dialogs/upscale.rs:191
+msgid "Aumentando"
+msgstr "Povećanje"
+
+#: crates/bigiris/src/gui/previews.rs:32
+msgid "Pré-visualização"
+msgstr "Pregled"
+
+#: crates/bigiris/src/gui/previews.rs:38
+msgid "Original: {width}×{height} px"
+msgstr "Izvornik: {width}×{height} px"
+
+#: crates/bigiris/src/gui/previews.rs:201
+msgid "Preparando pré-visualização…"
+msgstr "Priprema pregleda…"
+
+#: crates/bigiris/src/gui/previews.rs:249
+msgid "A preparação foi interrompida"
+msgstr "Priprema je prekinuta"
 
 #: crates/bigiris/src/gui/transfers.rs:86
 msgid "A seleção é muito grande. Abra menos arquivos por vez."

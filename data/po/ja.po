@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: bigiris 0.1.0\n"
 "Report-Msgid-Bugs-To: https://github.com/big-comm/bigiris/issues\n"
-"POT-Creation-Date: 2026-10-14 01:35-0300\n"
+"POT-Creation-Date: 2026-11-02 16:42-0300\n"
 "PO-Revision-Date: 2026-10-14 01:36-0300\n"
 "Last-Translator: BigCommunity Team\n"
 "Language-Team: BigCommunity Team\n"
@@ -16,1129 +16,1473 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
 
-#: crates/bigiris/src/gui.rs:110
-msgid "BigIris — abrindo imagens"
-msgstr "BigIris — 画像を開く"
-
-#: crates/bigiris/src/gui.rs:551
+#: crates/bigiris/src/gui.rs:640
 msgid "BigIris"
 msgstr "BigIris"
 
-#: crates/bigiris/src/gui.rs:746
-msgid "Aguarde o salvamento terminar"
-msgstr "保存が完了するまで待つ"
-
-#: crates/bigiris/src/gui.rs:757
-msgid "Descartar alterações?"
-msgstr "変更を削除しますか？"
-
-#: crates/bigiris/src/gui.rs:758
-msgid "A imagem tem edições que ainda não foram salvas."
-msgstr "この画像には未保存の変更が含まれています。"
-
-#: crates/bigiris/src/gui.rs:760
-msgid "Continuar editando"
-msgstr "編集を続ける"
-
-#: crates/bigiris/src/gui.rs:761
-msgid "Descartar"
-msgstr "変更を削除"
-
-#: crates/bigiris/src/gui.rs:820
-msgid "Abrir imagens (Ctrl+O)"
-msgstr "画像を開く (Ctrl+O)"
-
-#: crates/bigiris/src/gui.rs:825
-msgid "Imagem anterior"
-msgstr "前の画像"
-
-#: crates/bigiris/src/gui.rs:831
-msgid "Próxima imagem"
-msgstr "次の画像"
-
-#: crates/bigiris/src/gui.rs:837
-msgid "Propriedades da imagem (Ctrl+I)"
-msgstr "画像のプロパティ (Ctrl+I)"
-
-#: crates/bigiris/src/gui.rs:848
-msgid "Tela cheia (F11)"
-msgstr "フルスクリーン (F11)"
-
-#: crates/bigiris/src/gui.rs:854
-msgid "Aproximar"
-msgstr "拡大"
-
-#: crates/bigiris/src/gui.rs:860 crates/bigiris/src/gui.rs:2704
-msgid "Ajustar à janela"
-msgstr "ウィンドウに合わせる"
-
-#: crates/bigiris/src/gui.rs:866
-msgid "Afastar"
-msgstr "ズームアウト"
-
-#: crates/bigiris/src/gui.rs:1638
-msgid "Slideshow: pausado"
-msgstr "スライドショー: 一時停止"
-
-#: crates/bigiris/src/gui.rs:1870
-msgid ""
-"O arquivo será sobrescrito. JPEG é recodificado a cada gravação; isso pode "
-"reduzir a qualidade."
-msgstr "ファイルは上書きされます。JPEG は保存するたびに再エンコーディングされますので、画質が低下する可能性があります。"
-
-#: crates/bigiris/src/gui.rs:1872
-msgid "O arquivo será sobrescrito."
-msgstr "ファイルは上書きされます。"
-
-#: crates/bigiris/src/gui.rs:1875
-msgid "Salvar alterações?"
-msgstr "変更を保存しますか？"
-
-#: crates/bigiris/src/gui.rs:1876 crates/bigiris/src/gui.rs:2668
-#: crates/bigiris/src/gui.rs:3232 crates/bigiris/src/gui.rs:3537
-#: crates/bigiris/src/gui.rs:3798 crates/bigiris/src/gui.rs:4276
-#: crates/bigiris/src/gui.rs:4554 crates/bigiris/src/gui.rs:4885
-#: crates/bigiris/src/gui.rs:5035 crates/bigiris/src/gui.rs:5204
-#: crates/bigiris/src/gui.rs:5981 crates/bigiris/src/gui.rs:6110
-#: crates/bigiris/src/gui.rs:6183 crates/bigiris/src/gui.rs:6452
-#: crates/bigiris/src/gui.rs:6725 crates/bigiris/src/gui.rs:6777
-msgid "Cancelar"
-msgstr "キャンセル"
-
-#: crates/bigiris/src/gui.rs:1877
-msgid "Salvar"
-msgstr "保存"
-
-#: crates/bigiris/src/gui.rs:1922
-msgid "Salvo"
-msgstr "ファイルを保存しました。"
-
-#: crates/bigiris/src/gui.rs:1925
-msgid "Falha ao salvar"
-msgstr "保存に失敗"
-
-#: crates/bigiris/src/gui.rs:2007
-msgid "Salve ou desfaça as alterações antes de navegar"
-msgstr "ナビゲートする前に変更を保存または無効にします"
-
-#: crates/bigiris/src/gui.rs:2050
+#: crates/bigiris/src/gui.rs:675 crates/bigiris/src/gui/previews.rs:240
 msgid "Não foi possível abrir a imagem"
 msgstr "画像を開けませんでした"
 
-#: crates/bigiris/src/gui.rs:2065 crates/bigiris/src/gui.rs:2887
-#: crates/bigiris/src/gui.rs:7714
+#: crates/bigiris/src/gui.rs:883 crates/bigiris/src/gui.rs:2989
+msgid "Aguarde o salvamento terminar"
+msgstr "保存が完了するまで待つ"
+
+#: crates/bigiris/src/gui.rs:894
+msgid "Descartar alterações?"
+msgstr "変更を削除しますか？"
+
+#: crates/bigiris/src/gui.rs:895
+msgid "A imagem tem edições que ainda não foram salvas."
+msgstr "この画像には未保存の変更が含まれています。"
+
+#: crates/bigiris/src/gui.rs:897
+msgid "Continuar editando"
+msgstr "編集を続ける"
+
+#: crates/bigiris/src/gui.rs:898
+msgid "Descartar"
+msgstr "変更を削除"
+
+#: crates/bigiris/src/gui.rs:967
+msgid "Imagem anterior"
+msgstr "前の画像"
+
+#: crates/bigiris/src/gui.rs:968
+msgid "Próxima imagem"
+msgstr "次の画像"
+
+#: crates/bigiris/src/gui.rs:980
+msgid "Propriedades da imagem (Ctrl+I)"
+msgstr "画像のプロパティ (Ctrl+I)"
+
+#: crates/bigiris/src/gui.rs:986
+msgid "Tela cheia (F11)"
+msgstr "フルスクリーン (F11)"
+
+#: crates/bigiris/src/gui.rs:995
+msgid "Afastar"
+msgstr "ズームアウト"
+
+#: crates/bigiris/src/gui.rs:999 crates/bigiris/src/gui.rs:3318
+msgid "Ajustar à janela"
+msgstr "ウィンドウに合わせる"
+
+#: crates/bigiris/src/gui.rs:1000 crates/bigiris/src/gui.rs:3319
+msgid "Tamanho real (100%)"
+msgstr "実際のサイズ (100%)"
+
+#: crates/bigiris/src/gui.rs:1009 crates/bigiris/src/gui.rs:3315
+msgid "Zoom"
+msgstr "ズーム"
+
+#: crates/bigiris/src/gui.rs:1013
+msgid "Aproximar"
+msgstr "拡大"
+
+#: crates/bigiris/src/gui.rs:1956
+msgid "Slideshow: pausado"
+msgstr "スライドショー: 一時停止"
+
+#: crates/bigiris/src/gui.rs:1984
+msgid "Slideshow: a cada {interval} s"
+msgstr "スライドショー：{interval} 秒ごと"
+
+#: crates/bigiris/src/gui.rs:2006
+msgid "Histograma ligado"
+msgstr "ヒストグラム オン"
+
+#: crates/bigiris/src/gui.rs:2008
+msgid "Histograma desligado"
+msgstr "ヒストグラム オフ"
+
+#: crates/bigiris/src/gui.rs:2187
+msgid ""
+"O arquivo será sobrescrito. JPEG é recodificado a cada gravação; isso pode "
+"reduzir a qualidade."
+msgstr ""
+"ファイルは上書きされます。JPEG は保存するたびに再エンコーディングされますの"
+"で、画質が低下する可能性があります。"
+
+#: crates/bigiris/src/gui.rs:2189
+msgid "O arquivo será sobrescrito."
+msgstr "ファイルは上書きされます。"
+
+#: crates/bigiris/src/gui.rs:2197
+msgid ""
+"Este formato não guarda todos os metadados da foto (data, câmera, perfil de "
+"cor); o que ele não suportar será removido ou convertido."
+msgstr ""
+"この形式では写真のメタデータ（日付、カメラ、カラープロファイル）をすべて保持"
+"できません。サポートされない情報は削除または変換されます。"
+
+#: crates/bigiris/src/gui.rs:2200
+msgid "Salvar alterações?"
+msgstr "変更を保存しますか？"
+
+#: crates/bigiris/src/gui.rs:2201 crates/bigiris/src/gui.rs:3223
+#: crates/bigiris/src/gui/dialogs/animate.rs:187
+#: crates/bigiris/src/gui/dialogs/batch.rs:131
+#: crates/bigiris/src/gui/dialogs/batch.rs:269
+#: crates/bigiris/src/gui/dialogs/batch.rs:362
+#: crates/bigiris/src/gui/dialogs/mod.rs:184
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:212
+#: crates/bigiris/src/gui/previews.rs:202
+msgid "Cancelar"
+msgstr "キャンセル"
+
+#: crates/bigiris/src/gui.rs:2202
+msgid "Salvar"
+msgstr "保存"
+
+#: crates/bigiris/src/gui.rs:2240
+msgid "Salvo"
+msgstr "ファイルを保存しました。"
+
+#: crates/bigiris/src/gui.rs:2243
+msgid "Falha ao salvar"
+msgstr "保存に失敗"
+
+#: crates/bigiris/src/gui.rs:2522
+msgid "Salve ou desfaça as alterações antes de navegar"
+msgstr "ナビゲートする前に変更を保存または無効にします"
+
+#: crates/bigiris/src/gui.rs:2601 crates/bigiris/src/gui.rs:3471
+#: crates/bigiris/src/gui.rs:4452 crates/bigiris/src/gui.rs:4587
 msgid "Abrir imagens…"
 msgstr "画像を開く…"
 
-#: crates/bigiris/src/gui.rs:2066 crates/bigiris/src/gui.rs:2738
+#: crates/bigiris/src/gui.rs:2602 crates/bigiris/src/gui.rs:3352
 msgid "Colar arquivos de imagem"
 msgstr "画像ファイルを貼り付け"
 
-#: crates/bigiris/src/gui.rs:2068 crates/bigiris/src/gui.rs:2737
+#: crates/bigiris/src/gui.rs:2604 crates/bigiris/src/gui.rs:3351
 msgid "Copiar imagem"
 msgstr "画像をコピー"
 
-#: crates/bigiris/src/gui.rs:2069
+#: crates/bigiris/src/gui.rs:2605
 msgid "Imprimir…"
 msgstr "印刷…"
 
-#: crates/bigiris/src/gui.rs:2071 crates/bigiris/src/gui.rs:2899
-#: crates/bigiris/src/gui.rs:7714
+#: crates/bigiris/src/gui.rs:2607 crates/bigiris/src/gui.rs:3483
+#: crates/bigiris/src/gui.rs:4452
 msgid "Processar uma pasta…"
 msgstr "このフォルダーを処理…"
 
-#: crates/bigiris/src/gui.rs:2076 crates/bigiris/src/gui.rs:2723
+#: crates/bigiris/src/gui.rs:2612 crates/bigiris/src/gui.rs:3337
 msgid "Desfazer"
 msgstr "元に戻す"
 
-#: crates/bigiris/src/gui.rs:2077 crates/bigiris/src/gui.rs:2724
+#: crates/bigiris/src/gui.rs:2613 crates/bigiris/src/gui.rs:3338
 msgid "Refazer"
 msgstr "やり直す"
 
-#: crates/bigiris/src/gui.rs:2079 crates/bigiris/src/gui.rs:2725
+#: crates/bigiris/src/gui.rs:2615 crates/bigiris/src/gui.rs:3339
 msgid "Girar à direita"
 msgstr "右に回転"
 
-#: crates/bigiris/src/gui.rs:2080 crates/bigiris/src/gui.rs:2726
+#: crates/bigiris/src/gui.rs:2616 crates/bigiris/src/gui.rs:3340
 msgid "Girar à esquerda"
 msgstr "左に回転"
 
-#: crates/bigiris/src/gui.rs:2081
+#: crates/bigiris/src/gui.rs:2617
 msgid "Girar 180°"
 msgstr "180度回転"
 
-#: crates/bigiris/src/gui.rs:2082
+#: crates/bigiris/src/gui.rs:2618
 msgid "Espelhar horizontal"
 msgstr "水平に反転"
 
-#: crates/bigiris/src/gui.rs:2083
+#: crates/bigiris/src/gui.rs:2619
 msgid "Espelhar vertical"
 msgstr "垂直方向の反転"
 
-#: crates/bigiris/src/gui.rs:2084 crates/bigiris/src/gui.rs:2727
+#: crates/bigiris/src/gui.rs:2620 crates/bigiris/src/gui.rs:3341
 msgid "Recortar…"
 msgstr "切り取り…"
 
-#: crates/bigiris/src/gui.rs:2086
+#: crates/bigiris/src/gui.rs:2622
 msgid "Editar imagem"
 msgstr "画像を編集"
 
-#: crates/bigiris/src/gui.rs:2088 crates/bigiris/src/gui.rs:2728
+#: crates/bigiris/src/gui.rs:2624 crates/bigiris/src/gui.rs:3342
 msgid "Remover fundo (IA)…"
 msgstr "背景を削除 (AI)…"
 
-#: crates/bigiris/src/gui.rs:2089 crates/bigiris/src/gui.rs:2729
+#: crates/bigiris/src/gui.rs:2625 crates/bigiris/src/gui.rs:3343
 msgid "Aumentar resolução…"
 msgstr "アップスケール…"
 
-#: crates/bigiris/src/gui.rs:2090
+#: crates/bigiris/src/gui.rs:2626
 msgid "Ferramentas"
 msgstr "ツール"
 
-#: crates/bigiris/src/gui.rs:2092 crates/bigiris/src/gui.rs:2730
+#: crates/bigiris/src/gui.rs:2628 crates/bigiris/src/gui.rs:3344
 msgid "Salvar alterações"
 msgstr "変更を保存"
 
-#: crates/bigiris/src/gui.rs:2093 crates/bigiris/src/gui.rs:2741
+#: crates/bigiris/src/gui.rs:2629 crates/bigiris/src/gui.rs:3355
 msgid "Mover para a lixeira"
 msgstr "ごみ箱に移動"
 
-#: crates/bigiris/src/gui.rs:2097
+#: crates/bigiris/src/gui.rs:2633
 msgid "Atalhos do teclado"
 msgstr "キーボードショートカット"
 
-#: crates/bigiris/src/gui.rs:2098
+#: crates/bigiris/src/gui.rs:2634
 msgid "Sobre o BigIris"
 msgstr "ビッグアイリス (BigIris)"
 
-#: crates/bigiris/src/gui.rs:2103
+#: crates/bigiris/src/gui.rs:2639
 msgid "Menu principal"
 msgstr "メインメニュー"
 
-#: crates/bigiris/src/gui.rs:2452 crates/bigiris/src/gui.rs:2944
-#: crates/bigiris/src/gui.rs:6226 crates/bigiris/src/gui.rs:6678
+#: crates/bigiris/src/gui.rs:2991
+msgid "Salve ou desfaça as alterações antes de usar esta ferramenta"
+msgstr "このツールを使う前に変更を保存するか元に戻してください"
+
+#: crates/bigiris/src/gui.rs:3007 crates/bigiris/src/gui.rs:3528
+#: crates/bigiris/src/gui/dialogs/batch.rs:404
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:130
 msgid "Imagens"
 msgstr "イメージ"
 
-#: crates/bigiris/src/gui.rs:2458 crates/bigiris/src/gui.rs:2736
+#: crates/bigiris/src/gui.rs:3013 crates/bigiris/src/gui.rs:3350
 msgid "Abrir imagens"
 msgstr "画像を開く"
 
-#: crates/bigiris/src/gui.rs:2576
+#: crates/bigiris/src/gui.rs:3077
+msgid "O preparo da impressão falhou"
+msgstr "印刷の準備に失敗しました"
+
+#: crates/bigiris/src/gui.rs:3095
+msgid "Não foi possível preparar a página"
+msgstr "ページを準備できませんでした"
+
+#: crates/bigiris/src/gui.rs:3117
 msgid "Não foi possível imprimir"
 msgstr "印刷できませんでした"
 
-#: crates/bigiris/src/gui.rs:2579 crates/bigiris/src/gui.rs:2717
-#: crates/bigiris/src/gui.rs:6181 crates/bigiris/src/gui.rs:6386
-#: crates/bigiris/src/gui.rs:6636 crates/bigiris/src/gui.rs:6939
+#: crates/bigiris/src/gui.rs:3120 crates/bigiris/src/gui.rs:3249
+#: crates/bigiris/src/gui/dialogs/animate.rs:53
+#: crates/bigiris/src/gui/dialogs/batch.rs:360
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:96
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:327
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:394
 #: crates/bigiris/src/gui/transfers.rs:99
 msgid "Fechar"
 msgstr "閉じる"
 
-#: crates/bigiris/src/gui.rs:2660
+#: crates/bigiris/src/gui.rs:3215
 msgid "Mover para a lixeira?"
 msgstr "ごみ箱に移動しますか？"
 
-#: crates/bigiris/src/gui.rs:2664
+#: crates/bigiris/src/gui.rs:3219
 msgid ""
 "O arquivo será movido para a lixeira do sistema. Você pode restaurá-lo "
 "depois."
 msgstr "ファイルはごみ箱に移動されます。後で復元できます。"
 
-#: crates/bigiris/src/gui.rs:2669
+#: crates/bigiris/src/gui.rs:3224
 msgid "Mover"
 msgstr "移動"
 
-#: crates/bigiris/src/gui.rs:2693
+#: crates/bigiris/src/gui.rs:3246
+msgid "Não foi possível mover para a lixeira"
+msgstr "ごみ箱に移動できませんでした"
+
+#: crates/bigiris/src/gui.rs:3307
 msgid "Navegação"
 msgstr "ナビゲーション"
 
-#: crates/bigiris/src/gui.rs:2695
+#: crates/bigiris/src/gui.rs:3309
 msgid "Anterior / próximo"
 msgstr "前 / 次"
 
-#: crates/bigiris/src/gui.rs:2696
+#: crates/bigiris/src/gui.rs:3310
 msgid "Primeiro / último"
 msgstr "最初/最後"
 
-#: crates/bigiris/src/gui.rs:2697
+#: crates/bigiris/src/gui.rs:3311
 msgid "Slideshow (auto-avanço)"
 msgstr "スライドショー"
 
-#: crates/bigiris/src/gui.rs:2701
-msgid "Zoom"
-msgstr "ズーム"
-
-#: crates/bigiris/src/gui.rs:2703
+#: crates/bigiris/src/gui.rs:3317
 msgid "Aproximar / afastar"
 msgstr "拡大/縮小"
 
-#: crates/bigiris/src/gui.rs:2705
-msgid "Tamanho real (100%)"
-msgstr "実際のサイズ (100%)"
-
-#: crates/bigiris/src/gui.rs:2706
+#: crates/bigiris/src/gui.rs:3320
 msgid "Zoom contínuo"
 msgstr "連続ズーム"
 
-#: crates/bigiris/src/gui.rs:2710
+#: crates/bigiris/src/gui.rs:3324
 msgid "Janela"
 msgstr "ウィンドウ(W)"
 
-#: crates/bigiris/src/gui.rs:2712
+#: crates/bigiris/src/gui.rs:3326
 msgid "Tela cheia"
 msgstr "フルスクリーン"
 
-#: crates/bigiris/src/gui.rs:2713
+#: crates/bigiris/src/gui.rs:3327
 msgid "Modo teatro"
 msgstr "シアターモード"
 
-#: crates/bigiris/src/gui.rs:2714
+#: crates/bigiris/src/gui.rs:3328
 msgid "Fita de miniaturas"
 msgstr "サムネイル"
 
-#: crates/bigiris/src/gui.rs:2715
+#: crates/bigiris/src/gui.rs:3329
 msgid "Histograma RGB"
 msgstr "RGB ヒストグラム"
 
-#: crates/bigiris/src/gui.rs:2716
+#: crates/bigiris/src/gui.rs:3330
 msgid "Fixar barras visíveis"
 msgstr "コントロールを表示させる"
 
-#: crates/bigiris/src/gui.rs:2721
+#: crates/bigiris/src/gui.rs:3331
+msgid "Sair da tela cheia ou fechar"
+msgstr "全画面表示を終了、または閉じる"
+
+#: crates/bigiris/src/gui.rs:3335
 msgid "Edição"
 msgstr "編集"
 
-#: crates/bigiris/src/gui.rs:2734 crates/bigiris/src/gui.rs:5463
+#: crates/bigiris/src/gui.rs:3348
+#: crates/bigiris/src/gui/dialogs/properties.rs:122
 msgid "Arquivo"
 msgstr "ファイル"
 
-#: crates/bigiris/src/gui.rs:2739
+#: crates/bigiris/src/gui.rs:3353
 msgid "Imprimir"
 msgstr "印刷"
 
-#: crates/bigiris/src/gui.rs:2740 crates/bigiris/src/gui.rs:5378
-#: crates/bigiris/src/gui.rs:5423
+#: crates/bigiris/src/gui.rs:3354
+#: crates/bigiris/src/gui/dialogs/properties.rs:38
+#: crates/bigiris/src/gui/dialogs/properties.rs:82
 msgid "Propriedades"
 msgstr "プロパティ"
 
-#: crates/bigiris/src/gui.rs:2745
+#: crates/bigiris/src/gui.rs:3359
 msgid "Ajuda"
 msgstr "ヘルプ"
 
-#: crates/bigiris/src/gui.rs:2746
+#: crates/bigiris/src/gui.rs:3360
 msgid "Este diálogo"
 msgstr "このダイアログ"
 
-#: crates/bigiris/src/gui.rs:2746
+#: crates/bigiris/src/gui.rs:3360
 msgid "Sobre"
 msgstr "情報"
 
-#: crates/bigiris/src/gui.rs:2753
-msgid "Categoria dos atalhos"
-msgstr "ショートカットカテゴリ"
-
-#: crates/bigiris/src/gui.rs:2770
+#: crates/bigiris/src/gui.rs:3370
 msgid "Roda do mouse"
 msgstr "マウスホイール"
 
-#: crates/bigiris/src/gui.rs:2821
+#: crates/bigiris/src/gui.rs:3398
 msgid "Atalhos de teclado"
 msgstr "キーボードショートカット"
 
-#: crates/bigiris/src/gui.rs:2847
+#: crates/bigiris/src/gui.rs:3424
 msgid ""
 "Visualizador e conversor de imagens para Linux. Rápido, acessível por "
 "teclado e integrado ao gerenciador de arquivos."
-msgstr "Linux 用の画像ビューアとコンバータ。高速でキーボードアクセス可能で、ファイルマネージャと統合されています。"
+msgstr ""
+"Linux 用の画像ビューアとコンバータ。高速でキーボードアクセス可能で、ファイル"
+"マネージャと統合されています。"
 
-#: crates/bigiris/src/gui.rs:2874
+#: crates/bigiris/src/gui.rs:3457
 msgid "Abra suas imagens"
 msgstr "画像を開く"
 
-#: crates/bigiris/src/gui.rs:2879
+#: crates/bigiris/src/gui.rs:3462
 msgid "Arraste imagens para cá ou cole arquivos com Ctrl+V."
 msgstr "ここに画像をドラッグまたは Ctrl+V でファイルを貼り付けてください。"
 
-#: crates/bigiris/src/gui.rs:2921
+#: crates/bigiris/src/gui.rs:3505
 msgid "Selecionar pasta com imagens"
 msgstr "画像を含むフォルダを選択"
 
-#: crates/bigiris/src/gui.rs:2941
+#: crates/bigiris/src/gui.rs:3525
 msgid "Selecionar imagens"
 msgstr "画像を選択"
 
-#: crates/bigiris/src/gui.rs:3075
-#: crates/bigimage-integrations/src/action.rs:150
-#: data/nautilus/bigiris-menu.py:104
-msgid "PNG"
-msgstr "PNG"
+#: crates/bigiris/src/gui.rs:3572
+msgid "{current} de {total}"
+msgstr "{current} / {total}"
 
-#: crates/bigiris/src/gui.rs:3076
-msgid "JPG (JPEG)"
-msgstr "JPG (JPEG)"
+#: crates/bigiris/src/gui/batch_runner.rs:82
+msgid "≈ mesmo tamanho"
+msgstr "≈ 同じサイズ"
 
-#: crates/bigiris/src/gui.rs:3077
-#: crates/bigimage-integrations/src/action.rs:166
-#: data/nautilus/bigiris-menu.py:106
-msgid "WebP"
-msgstr "WebP"
+#: crates/bigiris/src/gui/batch_runner.rs:160
+msgid "{written} gravado(s), {skipped} ignorado(s), {failed} falha(s)"
+msgstr "書き込み: {written}、スキップ: {skipped}、失敗: {failed}"
 
-#: crates/bigiris/src/gui.rs:3078
-#: crates/bigimage-integrations/src/action.rs:174
-#: data/nautilus/bigiris-menu.py:107
-msgid "AVIF"
-msgstr "AVIF"
+#: crates/bigiris/src/gui/batch_runner.rs:190
+msgid "Concluído em {time} · {counts}"
+msgstr "{time} で完了 · {counts}"
 
-#: crates/bigiris/src/gui.rs:3079
-#: crates/bigimage-integrations/src/action.rs:182
-#: data/nautilus/bigiris-menu.py:108
-msgid "TIFF"
-msgstr "TIFF"
-
-#: crates/bigiris/src/gui.rs:3080
-msgid "BMP"
-msgstr "BMP"
-
-#: crates/bigiris/src/gui.rs:3081
-msgid "GIF"
-msgstr "GIF"
-
-#: crates/bigiris/src/gui.rs:3082
-msgid "ICO (até 256 × 256)"
-msgstr "ICO (最大 256 × 240)"
-
-#: crates/bigiris/src/gui.rs:3083
-msgid "PNM (Netpbm)"
-msgstr "PNM (Netpbm)"
-
-#: crates/bigiris/src/gui.rs:3084
-msgid "TGA"
-msgstr "TGA"
-
-#: crates/bigiris/src/gui.rs:3085
-msgid "QOI"
-msgstr "QOI"
-
-#: crates/bigiris/src/gui.rs:3086
-msgid "HDR"
-msgstr "HDR"
-
-#: crates/bigiris/src/gui.rs:3087
-msgid "OpenEXR"
-msgstr "OpenEXR"
-
-#: crates/bigiris/src/gui.rs:3111
-msgid "Pular se já existir"
-msgstr "既存のファイルをスキップ"
-
-#: crates/bigiris/src/gui.rs:3112
-msgid "Sobrescrever o arquivo"
-msgstr "ファイルを上書き"
-
-#: crates/bigiris/src/gui.rs:3113
-msgid "Incrementar (_1, _2, …)"
-msgstr "接尾辞を追加 (_1, _2,...)"
-
-#: crates/bigiris/src/gui.rs:3118
-msgid "Lanczos3 (padrão)"
-msgstr "Lanczos3 (デフォルト)"
-
-#: crates/bigiris/src/gui.rs:3119
-msgid "Mitchell"
-msgstr "Mitchell"
-
-#: crates/bigiris/src/gui.rs:3120
-msgid "CatmullRom"
-msgstr "CatmullRom"
-
-#: crates/bigiris/src/gui.rs:3121
-msgid "Bilinear"
-msgstr "Bilinear"
-
-#: crates/bigiris/src/gui.rs:3122
-msgid "Nearest (sem anti-aliasing)"
-msgstr "最も近い (アンチエイリアスなし)"
-
-#: crates/bigiris/src/gui.rs:3141
-msgid "Converter imagens — Prisma"
-msgstr "画像を変換 — Prisma"
-
-#: crates/bigiris/src/gui.rs:3153 crates/bigiris/src/gui.rs:3233
-#: crates/bigimage-integrations/src/action.rs:75
-#: data/nautilus/bigiris-menu.py:100
-msgid "Converter"
-msgstr "画像を変換"
-
-#: crates/bigiris/src/gui.rs:3159 crates/bigiris/src/gui.rs:3505
-#: crates/bigiris/src/gui.rs:3773 crates/bigiris/src/gui.rs:4251
-#: crates/bigiris/src/gui.rs:4524 crates/bigiris/src/gui.rs:4860
-#: crates/bigiris/src/gui.rs:5010 crates/bigiris/src/gui.rs:5170
-#: crates/bigiris/src/gui.rs:5912
-msgid "Formato de destino"
-msgstr "ターゲットフォーマット"
-
-#: crates/bigiris/src/gui.rs:3166 crates/bigiris/src/gui.rs:3512
-#: crates/bigiris/src/gui.rs:3779 crates/bigiris/src/gui.rs:4257
-#: crates/bigiris/src/gui.rs:4530 crates/bigiris/src/gui.rs:4866
-#: crates/bigiris/src/gui.rs:5016 crates/bigiris/src/gui.rs:5176
-#: crates/bigiris/src/gui.rs:5935
-msgid "Se o arquivo de saída existir"
-msgstr "出力ファイルが存在する場合"
-
-#: crates/bigiris/src/gui.rs:3172 crates/bigiris/src/gui.rs:3518
-#: crates/bigiris/src/gui.rs:3785 crates/bigiris/src/gui.rs:4219
-#: crates/bigiris/src/gui.rs:4462 crates/bigiris/src/gui.rs:4812
-#: crates/bigiris/src/gui.rs:5022 crates/bigiris/src/gui.rs:5182
-#: crates/bigiris/src/gui.rs:6211
-msgid "Arquivos selecionados"
-msgstr "選択したファイル"
-
-#: crates/bigiris/src/gui.rs:3177 crates/bigiris/src/gui.rs:5918
-msgid "Qualidade (JPEG/AVIF)"
-msgstr "品質 (JPEG/AVIF)"
-
-#: crates/bigiris/src/gui.rs:3178 crates/bigiris/src/gui.rs:5919
-msgid "1 menor qualidade · 85 equilíbrio · 100 maior qualidade"
-msgstr "1低品質、85バランス、100高品質"
-
-#: crates/bigiris/src/gui.rs:3183 crates/bigiris/src/gui.rs:5925
-msgid "Otimizar tamanho"
-msgstr "サイズを最適化"
-
-#: crates/bigiris/src/gui.rs:3190
-msgid "Avançado"
-msgstr "詳細設定"
-
-#: crates/bigiris/src/gui.rs:3191
-msgid "Otimização do encoder"
-msgstr "エンコーダ最適化"
-
-#: crates/bigiris/src/gui.rs:3197 crates/bigiris/src/gui.rs:5908
-msgid "Conversão"
-msgstr "変換"
-
-#: crates/bigiris/src/gui.rs:3204 crates/bigiris/src/gui.rs:5932
-msgid "Destino"
-msgstr "目的地"
-
-#: crates/bigiris/src/gui.rs:3212 crates/bigiris/src/gui.rs:5943
-msgid "Pasta de saída"
-msgstr "出力フォルダ"
-
-#: crates/bigiris/src/gui.rs:3213 crates/bigiris/src/gui.rs:3315
-#: crates/bigiris/src/gui.rs:6057
-msgid "Mesma pasta do arquivo de origem"
-msgstr "ソースファイルと同じフォルダ"
-
-#: crates/bigiris/src/gui.rs:3221 crates/bigiris/src/gui.rs:5952
-msgid "Usar a mesma pasta do arquivo de origem"
-msgstr "ソースファイルのフォルダを使う"
-
-#: crates/bigiris/src/gui.rs:3249
+#: crates/bigiris/src/gui/batch_runner.rs:199
 msgid ""
-"Esta imagem tem transparência — JPEG perde o canal alfa. Considere PNG ou "
-"WebP."
-msgstr "この画像には透明度があります。JPEG はアルファチャンネルを削除します。 PNG または WebP を試してください。"
-
-#: crates/bigiris/src/gui.rs:3372
-msgid "Convertendo…"
-msgstr "変換中…"
-
-#: crates/bigiris/src/gui.rs:3378
-msgid "Convertendo"
-msgstr "変換"
-
-#: crates/bigiris/src/gui.rs:3406
-msgid "Redimensionar imagens — Prisma"
-msgstr "画像のサイズを変更 — Prisma"
-
-#: crates/bigiris/src/gui.rs:3418 crates/bigiris/src/gui.rs:3538
-#: crates/bigimage-integrations/src/action.rs:79
-#: data/nautilus/bigiris-menu.py:115
-msgid "Redimensionar"
-msgstr "画像のサイズを変更"
-
-#: crates/bigiris/src/gui.rs:3424 crates/bigiris/src/gui.rs:3438
-msgid "Aresta máxima"
-msgstr "マックスエッジ"
-
-#: crates/bigiris/src/gui.rs:3425
-msgid "Escala (%)"
-msgstr "スケール (%)"
-
-#: crates/bigiris/src/gui.rs:3426
-msgid "Dimensão exata (WxH)"
-msgstr "正確なサイズ (WxH)"
-
-#: crates/bigiris/src/gui.rs:3427
-msgid "Encaixar em (WxH)"
-msgstr "幅x高さに合わせる (WxH)"
-
-#: crates/bigiris/src/gui.rs:3431
-msgid "Modo"
-msgstr "モード"
-
-#: crates/bigiris/src/gui.rs:3439
-msgid "pixels (lado maior)"
-msgstr "ピクセル (最長辺)"
-
-#: crates/bigiris/src/gui.rs:3443
-msgid "Porcentagem"
-msgstr "パーセント"
-
-#: crates/bigiris/src/gui.rs:3444
-msgid "100 = tamanho original"
-msgstr "100 = 本来のサイズ"
-
-#: crates/bigiris/src/gui.rs:3448
-msgid "Largura"
-msgstr "幅"
-
-#: crates/bigiris/src/gui.rs:3451
-msgid "Altura"
-msgstr "高さ"
-
-#: crates/bigiris/src/gui.rs:3455
-msgid "Largura máxima"
-msgstr "最大幅"
-
-#: crates/bigiris/src/gui.rs:3458
-msgid "Altura máxima"
-msgstr "最大高さ"
-
-#: crates/bigiris/src/gui.rs:3497
-msgid "Kernel de interpolação"
-msgstr "補間カーネル"
-
-#: crates/bigiris/src/gui.rs:3526
-msgid "Modo de redimensionamento"
-msgstr "サイズ変更モード"
-
-#: crates/bigiris/src/gui.rs:3529
-msgid "Opções"
-msgstr "オプション"
-
-#: crates/bigiris/src/gui.rs:3702
-msgid "Redimensionando…"
-msgstr "リサイズ…"
-
-#: crates/bigiris/src/gui.rs:3708
-msgid "Redimensionando"
-msgstr "リサイズ"
-
-#: crates/bigiris/src/gui.rs:3756
-msgid "Girar imagens — Prisma"
-msgstr "画像を回転 — Prisma"
-
-#: crates/bigiris/src/gui.rs:3760 crates/bigiris/src/gui.rs:3799
-#: crates/bigimage-integrations/src/action.rs:83
-#: data/nautilus/bigiris-menu.py:129
-msgid "Girar"
-msgstr "回転"
-
-#: crates/bigiris/src/gui.rs:3762
-msgid "90° (horário)"
-msgstr "90度 (時計回り)"
-
-#: crates/bigiris/src/gui.rs:3762
-#: crates/bigimage-integrations/src/action.rs:259
-#: data/nautilus/bigiris-menu.py:134
-msgid "180°"
-msgstr "180°"
-
-#: crates/bigiris/src/gui.rs:3762
-msgid "270° (anti-horário)"
-msgstr "270度 (反時計回り)"
-
-#: crates/bigiris/src/gui.rs:3765
-msgid "Rotação"
-msgstr "回転"
-
-#: crates/bigiris/src/gui.rs:3856
-msgid "Girando…"
-msgstr "回転中…"
-
-#: crates/bigiris/src/gui.rs:3862
-msgid "Girando"
-msgstr "回転"
-
-#: crates/bigiris/src/gui.rs:4182
-msgid "Recortar — Prisma"
-msgstr "カット - プリズマ (Prisma)"
-
-#: crates/bigiris/src/gui.rs:4194 crates/bigiris/src/gui.rs:4278
-msgid "Recortar"
-msgstr "画像をカット"
-
-#: crates/bigiris/src/gui.rs:4225 crates/bigiris/src/gui.rs:4468
-#: crates/bigiris/src/gui.rs:4818
-msgid "Tamanho original"
-msgstr "オリジナルサイズ"
-
-#: crates/bigiris/src/gui.rs:4226 crates/bigiris/src/gui.rs:4469
-#: crates/bigiris/src/gui.rs:4822
-msgid "Primeiro arquivo"
-msgstr "最初のファイル"
-
-#: crates/bigiris/src/gui.rs:4232
-msgid "X (px)"
-msgstr "X (ピクセル)"
-
-#: crates/bigiris/src/gui.rs:4236
-msgid "Y (px)"
-msgstr "Y (ピクセル)"
-
-#: crates/bigiris/src/gui.rs:4240
-msgid "Largura (px)"
-msgstr "幅 (px)"
-
-#: crates/bigiris/src/gui.rs:4244
-msgid "Altura (px)"
-msgstr "高さ (px)"
-
-#: crates/bigiris/src/gui.rs:4277
-msgid "Centro 50%"
-msgstr "中央 50%"
-
-#: crates/bigiris/src/gui.rs:4354
-msgid "Recortando…"
-msgstr "切り取り中…"
-
-#: crates/bigiris/src/gui.rs:4360
-msgid "Recortando"
-msgstr "クロッピング"
-
-#: crates/bigiris/src/gui.rs:4378
-msgid "YouTube community (1:1)"
-msgstr "YouTubeコミュニティ (1:1)"
-
-#: crates/bigiris/src/gui.rs:4379
-msgid "Instagram feed (4:5)"
-msgstr "インスタグラムフィード (Instagram)"
-
-#: crates/bigiris/src/gui.rs:4380
-msgid "Stories / Shorts (9:16)"
-msgstr "ストーリー/ショート（9:16）"
-
-#: crates/bigiris/src/gui.rs:4381
-msgid "Widescreen (16:9)"
-msgstr "ワイドスクリーン (16:9)"
-
-#: crates/bigiris/src/gui.rs:4382
-msgid "Personalizado…"
-msgstr "カスタム…"
-
-#: crates/bigiris/src/gui.rs:4388
-msgid "Preto suave (#0d0e12)"
-msgstr "ソフトブラック (#d0e12)"
-
-#: crates/bigiris/src/gui.rs:4389
-msgid "Preto puro (#000000)"
-msgstr "純黒 (#000,001)"
-
-#: crates/bigiris/src/gui.rs:4390
-msgid "Branco (#ffffff)"
-msgstr "白 (#ffffff)"
-
-#: crates/bigiris/src/gui.rs:4391
-msgid "Transparente"
-msgstr "透明"
-
-#: crates/bigiris/src/gui.rs:4392
-msgid "Personalizada (hex)"
-msgstr "カスタム (十六進法)"
-
-#: crates/bigiris/src/gui.rs:4399
-msgid "Centro"
-msgstr "センター"
-
-#: crates/bigiris/src/gui.rs:4399
-msgid "Topo"
-msgstr "上縁"
-
-#: crates/bigiris/src/gui.rs:4399
-msgid "Base"
-msgstr "ボトムエッジ"
-
-#: crates/bigiris/src/gui.rs:4417
-msgid "Letterbox — Prisma"
-msgstr "レターボックス (Prisma)"
-
-#: crates/bigiris/src/gui.rs:4430
-msgid "Letterbox"
-msgstr "Letterbox"
-
-#: crates/bigiris/src/gui.rs:4453
-msgid ""
-"Estende a tela em volta da imagem para encaixá-la num formato fixo (post de "
-"YouTube, feed do Instagram, Stories…) sem cortar nenhum pixel. A imagem "
-"original é centralizada e o resto é preenchido com a cor escolhida."
+"{before} → {after} ({delta}) · média por arquivo {average_before} → "
+"{average_after}"
 msgstr ""
-"画像の周りのキャンバスをピクセルを切り取らずに固定フォーマット (YouTube ポスト、Instagram フィード、ストーリーなど) "
-"に合わせて拡張します。元の画像は中心になり、残りの領域は選択した色で埋めます。"
+"{before} → {after} ({delta}) · ファイルあたり平均 {average_before} → "
+"{average_after}"
 
-#: crates/bigiris/src/gui.rs:4476
-msgid "Proporção alvo"
-msgstr "ターゲットアスペクト比"
+#: crates/bigiris/src/gui/batch_runner.rs:222
+#: crates/bigiris/src/gui/dialogs/animate.rs:323
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:324
+msgid "O processamento terminou inesperadamente. Tente novamente."
+msgstr "処理が予期せず終了しました。もう一度お試しください。"
 
-#: crates/bigiris/src/gui.rs:4483
-msgid "Razão W"
-msgstr "幅比"
+#: crates/bigiris/src/gui/batch_runner.rs:311
+msgid "falha inesperada no worker"
+msgstr "worker で予期しないエラー"
 
-#: crates/bigiris/src/gui.rs:4486
-msgid "Razão H"
-msgstr "高さ比"
+#: crates/bigiris/src/gui/batch_runner.rs:359
+msgid "um worker terminou inesperadamente"
+msgstr "worker が予期せず終了しました"
 
-#: crates/bigiris/src/gui.rs:4496
-msgid "Cor de fundo"
-msgstr "背景色"
-
-#: crates/bigiris/src/gui.rs:4502
-msgid "Hex (#RRGGBB)"
-msgstr "ヘキサデシマル (#RRGGBB)"
-
-#: crates/bigiris/src/gui.rs:4510
-msgid "Posição da imagem"
-msgstr "画像の位置"
-
-#: crates/bigiris/src/gui.rs:4516 crates/bigiris/src/gui.rs:4835
-msgid "Destino previsto"
-msgstr "予測目的地"
-
-#: crates/bigiris/src/gui.rs:4555
-msgid "Estender"
-msgstr "拡張"
-
-#: crates/bigiris/src/gui.rs:4634
-msgid "—"
-msgstr "—"
-
-#: crates/bigiris/src/gui.rs:4726
-msgid "Estendendo…"
-msgstr "拡張中…"
-
-#: crates/bigiris/src/gui.rs:4732
-msgid "Estendendo"
-msgstr "拡張"
-
-#: crates/bigiris/src/gui.rs:4765
-msgid "Aumentar resolução — Prisma"
-msgstr "アップスケール (Prisma)"
-
-#: crates/bigiris/src/gui.rs:4778
-msgid "Aumentar resolução"
-msgstr "アップスケール画像"
-
-#: crates/bigiris/src/gui.rs:4829
-msgid "Fator"
-msgstr "因子"
-
-#: crates/bigiris/src/gui.rs:4886
-msgid "Aumentar"
-msgstr "アップスケール画像"
-
-#: crates/bigiris/src/gui.rs:4956
-msgid "Aumentando…"
-msgstr "アップスケール中…"
-
-#: crates/bigiris/src/gui.rs:4965
-msgid "Aumentando"
-msgstr "アップスケール"
-
-#: crates/bigiris/src/gui.rs:4993
-msgid "Espelhar imagens — Prisma"
-msgstr "プリズマ (Prisma)"
-
-#: crates/bigiris/src/gui.rs:4997 crates/bigiris/src/gui.rs:5036
-#: crates/bigimage-integrations/src/action.rs:87
-#: data/nautilus/bigiris-menu.py:142
-msgid "Espelhar"
-msgstr "画像を反転"
-
-#: crates/bigiris/src/gui.rs:4999
-msgid "Horizontal (esquerda ↔ direita)"
-msgstr "水平 (左→右)"
-
-#: crates/bigiris/src/gui.rs:4999
-msgid "Vertical (cima ↔ baixo)"
-msgstr "垂直 (上から下へ)"
-
-#: crates/bigiris/src/gui.rs:5002
-msgid "Eixo"
-msgstr "軸"
-
-#: crates/bigiris/src/gui.rs:5092
-msgid "Espelhando…"
-msgstr "フリップ中…"
-
-#: crates/bigiris/src/gui.rs:5098
-msgid "Espelhando"
-msgstr "フリッピング"
-
-#: crates/bigiris/src/gui.rs:5126
+#: crates/bigiris/src/gui/dialogs/adjust.rs:20
 msgid "Ajustar cores — Prisma"
 msgstr "色を調整 — Prisma"
 
-#: crates/bigiris/src/gui.rs:5141
+#: crates/bigiris/src/gui/dialogs/adjust.rs:35
 #: crates/bigimage-integrations/src/action.rs:91
 #: data/nautilus/bigiris-menu.py:153
 msgid "Ajustar cores"
 msgstr "色を調整"
 
-#: crates/bigiris/src/gui.rs:5144
+#: crates/bigiris/src/gui/dialogs/adjust.rs:38
 msgid "Brilho"
 msgstr "明るさ"
 
-#: crates/bigiris/src/gui.rs:5145
+#: crates/bigiris/src/gui/dialogs/adjust.rs:39
 msgid "-100 escuro · 0 neutro · +100 claro"
 msgstr "-100 暗い、0 中性、+101 明るい"
 
-#: crates/bigiris/src/gui.rs:5149
+#: crates/bigiris/src/gui/dialogs/adjust.rs:43
 msgid "Contraste"
 msgstr "コントラスト"
 
-#: crates/bigiris/src/gui.rs:5150
+#: crates/bigiris/src/gui/dialogs/adjust.rs:44
 msgid "-100 plano · 0 neutro · +100 agressivo"
 msgstr "-100 平坦 · 0 中立 · +101 強力"
 
-#: crates/bigiris/src/gui.rs:5154
+#: crates/bigiris/src/gui/dialogs/adjust.rs:48
 msgid "Saturação"
 msgstr "飽和度"
 
-#: crates/bigiris/src/gui.rs:5155
+#: crates/bigiris/src/gui/dialogs/adjust.rs:49
 msgid "-100 cinza · 0 neutro · +100 vibrante"
 msgstr "-100 グレー, 0 ニュートラル, +101 鮮やか"
 
-#: crates/bigiris/src/gui.rs:5159
+#: crates/bigiris/src/gui/dialogs/adjust.rs:53
 msgid "Gamma"
 msgstr "ガンマ"
 
-#: crates/bigiris/src/gui.rs:5161
+#: crates/bigiris/src/gui/dialogs/adjust.rs:55
 msgid "Abaixo de 1 clareia os meios-tons · 1 mantém · acima de 1 escurece"
 msgstr "1 以下は中間色を明るく、1 以上は暗くします。"
 
-#: crates/bigiris/src/gui.rs:5189
+#: crates/bigiris/src/gui/dialogs/adjust.rs:64
+#: crates/bigiris/src/gui/dialogs/batch.rs:389
+#: crates/bigiris/src/gui/dialogs/convert.rs:39
+#: crates/bigiris/src/gui/dialogs/crop.rs:344
+#: crates/bigiris/src/gui/dialogs/extent.rs:92
+#: crates/bigiris/src/gui/dialogs/flip.rs:37
+#: crates/bigiris/src/gui/dialogs/resize.rs:128
+#: crates/bigiris/src/gui/dialogs/rotate.rs:42
+#: crates/bigiris/src/gui/dialogs/upscale.rs:68
+msgid "Arquivos selecionados"
+msgstr "選択したファイル"
+
+#: crates/bigiris/src/gui/dialogs/adjust.rs:69
 msgid "Tom"
 msgstr "トーン"
 
-#: crates/bigiris/src/gui.rs:5194
+#: crates/bigiris/src/gui/dialogs/adjust.rs:74
 msgid "Cor"
 msgstr "カラー"
 
-#: crates/bigiris/src/gui.rs:5197 crates/bigiris/src/gui.rs:6697
+#: crates/bigiris/src/gui/dialogs/adjust.rs:77
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:147
 msgid "Saída"
 msgstr "出力"
 
-#: crates/bigiris/src/gui.rs:5205
+#: crates/bigiris/src/gui/dialogs/adjust.rs:83
 msgid "Aplicar"
 msgstr "適用(A)"
 
-#: crates/bigiris/src/gui.rs:5328
+#: crates/bigiris/src/gui/dialogs/adjust.rs:190
 msgid "Ajustando…"
 msgstr "調整中…"
 
-#: crates/bigiris/src/gui.rs:5334
+#: crates/bigiris/src/gui/dialogs/adjust.rs:196
 msgid "Ajustando"
 msgstr "調整"
 
-#: crates/bigiris/src/gui.rs:5433
-msgid "Privacidade"
-msgstr "プライバシー"
-
-#: crates/bigiris/src/gui.rs:5509
-msgid "Imagem"
-msgstr "画像"
-
-#: crates/bigiris/src/gui.rs:5678
-msgid "Comparar imagens — Íris"
-msgstr "アイリス"
-
-#: crates/bigiris/src/gui.rs:5713
-msgid "Arraste o divisor para comparar · Esc fecha"
-msgstr "分割器をドラッグして比較します。閉じるには Esc を押します。"
-
-#: crates/bigiris/src/gui.rs:5874
-msgid "Prisma — Lote"
-msgstr "Prisma — プリズマ - バッチ"
-
-#: crates/bigiris/src/gui.rs:5878
-msgid "Conversão em lote"
-msgstr "バッチ変換"
-
-#: crates/bigiris/src/gui.rs:5888
-msgid "Arquivos"
-msgstr "ファイル"
-
-#: crates/bigiris/src/gui.rs:5892 crates/bigiris/src/gui.rs:6224
-msgid "Adicionar arquivos"
-msgstr "ファイルを追加"
-
-#: crates/bigiris/src/gui.rs:5898
-msgid "Adicionar pasta (imagens)"
-msgstr "フォルダを追加 (画像)"
-
-#: crates/bigiris/src/gui.rs:5967
-msgid "Aguardando. Clique em Processar para iniciar."
-msgstr "準備完了。プロセスをクリックして開始します。"
-
-#: crates/bigiris/src/gui.rs:5978
-msgid "Processar"
-msgstr "プロセス画像"
-
-#: crates/bigiris/src/gui.rs:6102
-msgid "Adicione ao menos uma imagem para processar."
-msgstr "処理する画像を少なくとも一つ追加してください。"
-
-#: crates/bigiris/src/gui.rs:6112
-msgid "Iniciando…"
-msgstr "起動中…"
-
-#: crates/bigiris/src/gui.rs:6113
-msgid "Processando…"
-msgstr "処理中…"
-
-#: crates/bigiris/src/gui.rs:6175
-msgid "Cancelado"
-msgstr "キャンセル"
-
-#: crates/bigiris/src/gui.rs:6177 crates/bigiris/src/gui.rs:6911
-msgid "Concluído"
-msgstr "完了"
-
-#: crates/bigiris/src/gui.rs:6268
-msgid "Adicionar pasta com imagens"
-msgstr "画像フォルダを追加"
-
-#: crates/bigiris/src/gui.rs:6330
-msgid "Escolher pasta de saída"
-msgstr "出力フォルダを選択"
-
-#: crates/bigiris/src/gui.rs:6362
+#: crates/bigiris/src/gui/dialogs/animate.rs:29
 msgid "Criar GIF animado — Prisma"
 msgstr "アニメーションGIFを作成 — Prisma"
 
-#: crates/bigiris/src/gui.rs:6366
+#: crates/bigiris/src/gui/dialogs/animate.rs:33
 msgid "Criar GIF animado"
 msgstr "アニメーションGIFを作成"
 
-#: crates/bigiris/src/gui.rs:6380
+#: crates/bigiris/src/gui/dialogs/animate.rs:47
 msgid "Selecione pelo menos 2 imagens"
 msgstr "少なくとも 2 枚の画像を選択"
 
-#: crates/bigiris/src/gui.rs:6381
+#: crates/bigiris/src/gui/dialogs/animate.rs:48
 msgid "Informe vários arquivos de uma vez para montar a animação."
 msgstr "アニメーションを作成する複数のファイルを選択します。"
 
-#: crates/bigiris/src/gui.rs:6402
+#: crates/bigiris/src/gui/dialogs/animate.rs:66
 msgid "Atraso por quadro (ms)"
 msgstr "フレーム遅延 (ms)"
 
-#: crates/bigiris/src/gui.rs:6403
+#: crates/bigiris/src/gui/dialogs/animate.rs:67
 msgid "100 ≈ 10 fps · 40 ≈ 25 fps · 1000 = 1 s"
 msgstr "100 ≈ 15 fps x 40 = 25 fPS x 1,000=1秒"
 
-#: crates/bigiris/src/gui.rs:6408
+#: crates/bigiris/src/gui/dialogs/animate.rs:72
 msgid "Loop"
 msgstr "リピートアニメーション"
 
-#: crates/bigiris/src/gui.rs:6410
+#: crates/bigiris/src/gui/dialogs/animate.rs:74
 msgid "Infinito (padrão)"
 msgstr "無限 (デフォルト)"
 
-#: crates/bigiris/src/gui.rs:6411
+#: crates/bigiris/src/gui/dialogs/animate.rs:75
 msgid "Uma vez"
 msgstr "一度だけ"
 
-#: crates/bigiris/src/gui.rs:6412
+#: crates/bigiris/src/gui/dialogs/animate.rs:76
 msgid "2 vezes"
 msgstr "2回"
 
-#: crates/bigiris/src/gui.rs:6413
+#: crates/bigiris/src/gui/dialogs/animate.rs:77
 msgid "5 vezes"
 msgstr "5回"
 
-#: crates/bigiris/src/gui.rs:6414
+#: crates/bigiris/src/gui/dialogs/animate.rs:78
 msgid "10 vezes"
 msgstr "10回"
 
-#: crates/bigiris/src/gui.rs:6419
+#: crates/bigiris/src/gui/dialogs/animate.rs:83
 msgid "Velocidade do encoder"
 msgstr "エンコーダ速度"
 
-#: crates/bigiris/src/gui.rs:6420
+#: crates/bigiris/src/gui/dialogs/animate.rs:84
 msgid "maior = mais rápido, paleta um pouco pior · padrão 10"
 msgstr "高い = 速く、パレットの品質が少し低い デフォルトは10"
 
-#: crates/bigiris/src/gui.rs:6430
+#: crates/bigiris/src/gui/dialogs/animate.rs:94
 msgid "Arquivo de saída (.gif)"
 msgstr "出力ファイル (.gif)"
 
-#: crates/bigiris/src/gui.rs:6436
+#: crates/bigiris/src/gui/dialogs/animate.rs:98
 msgid "Quadros"
 msgstr "フレーム"
 
-#: crates/bigiris/src/gui.rs:6453
+#: crates/bigiris/src/gui/dialogs/animate.rs:111
 msgid "Criar GIF"
 msgstr "GIF を作成"
 
-#: crates/bigiris/src/gui.rs:6503
+#: crates/bigiris/src/gui/dialogs/animate.rs:184
+msgid "Substituir arquivo existente?"
+msgstr "既存のファイルを置き換えますか？"
+
+#: crates/bigiris/src/gui/dialogs/animate.rs:188
+msgid "Substituir"
+msgstr "置き換える"
+
+#: crates/bigiris/src/gui/dialogs/animate.rs:206
+msgid "Informe o arquivo de saída."
+msgstr "出力ファイルを指定してください。"
+
+#: crates/bigiris/src/gui/dialogs/animate.rs:215
+msgid "O arquivo de saída não pode ser uma pasta."
+msgstr "出力ファイルにフォルダーは指定できません。"
+
+#: crates/bigiris/src/gui/dialogs/animate.rs:219
+msgid "O arquivo de saída não pode ser um dos quadros."
+msgstr "出力ファイルにフレームのいずれかは指定できません。"
+
+#: crates/bigiris/src/gui/dialogs/animate.rs:255
 msgid "Montando GIF…"
 msgstr "GIF を作成…"
 
-#: crates/bigiris/src/gui.rs:6521
+#: crates/bigiris/src/gui/dialogs/animate.rs:305
+#: crates/bigiris/src/gui/dialogs/batch.rs:111
 msgid "Pronto"
 msgstr "準備完了"
 
-#: crates/bigiris/src/gui.rs:6527
+#: crates/bigiris/src/gui/dialogs/animate.rs:310
+msgid "O arquivo {file} passou a existir e foi mantido; nada foi gravado."
+msgstr ""
+"ファイル {file} が途中で作成されたため保持しました。何も書き込まれていませ"
+"ん。"
+
+#: crates/bigiris/src/gui/dialogs/animate.rs:317
 msgid "Falha"
 msgstr "失敗"
 
-#: crates/bigiris/src/gui.rs:6608
+#: crates/bigiris/src/gui/dialogs/batch.rs:35
+msgid "Prisma — Lote"
+msgstr "Prisma — プリズマ - バッチ"
+
+#: crates/bigiris/src/gui/dialogs/batch.rs:39
+msgid "Conversão em lote"
+msgstr "バッチ変換"
+
+#: crates/bigiris/src/gui/dialogs/batch.rs:46
+msgid "Arquivos"
+msgstr "ファイル"
+
+#: crates/bigiris/src/gui/dialogs/batch.rs:50
+#: crates/bigiris/src/gui/dialogs/batch.rs:402
+msgid "Adicionar arquivos"
+msgstr "ファイルを追加"
+
+#: crates/bigiris/src/gui/dialogs/batch.rs:56
+msgid "Adicionar pasta (imagens)"
+msgstr "フォルダを追加 (画像)"
+
+#: crates/bigiris/src/gui/dialogs/batch.rs:66
+#: crates/bigiris/src/gui/dialogs/convert.rs:62
+msgid "Conversão"
+msgstr "変換"
+
+#: crates/bigiris/src/gui/dialogs/batch.rs:72
+#: crates/bigiris/src/gui/dialogs/convert.rs:42
+msgid "Qualidade (JPEG/AVIF)"
+msgstr "品質 (JPEG/AVIF)"
+
+#: crates/bigiris/src/gui/dialogs/batch.rs:73
+#: crates/bigiris/src/gui/dialogs/convert.rs:43
+msgid "1 menor qualidade · 85 equilíbrio · 100 maior qualidade"
+msgstr "1低品質、85バランス、100高品質"
+
+#: crates/bigiris/src/gui/dialogs/batch.rs:79
+#: crates/bigiris/src/gui/dialogs/convert.rs:48
+msgid "Otimizar tamanho"
+msgstr "サイズを最適化"
+
+#: crates/bigiris/src/gui/dialogs/batch.rs:80
+#: crates/bigiris/src/gui/dialogs/convert.rs:49
+msgid "PNG com compressão máxima; AVIF mais lento; arquivo menor"
+msgstr "PNG は最大圧縮、AVIF は低速、ファイルは小さく"
+
+#: crates/bigiris/src/gui/dialogs/batch.rs:86
+#: crates/bigiris/src/gui/dialogs/convert.rs:69
+msgid "Destino"
+msgstr "目的地"
+
+#: crates/bigiris/src/gui/dialogs/batch.rs:93
+#: crates/bigiris/src/gui/dialogs/convert.rs:77
+msgid "Pasta de saída"
+msgstr "出力フォルダ"
+
+#: crates/bigiris/src/gui/dialogs/batch.rs:94
+#: crates/bigiris/src/gui/dialogs/batch.rs:216
+#: crates/bigiris/src/gui/dialogs/convert.rs:78
+#: crates/bigiris/src/gui/dialogs/convert.rs:165
+msgid "Mesma pasta do arquivo de origem"
+msgstr "ソースファイルと同じフォルダ"
+
+#: crates/bigiris/src/gui/dialogs/batch.rs:102
+#: crates/bigiris/src/gui/dialogs/convert.rs:86
+msgid "Usar a mesma pasta do arquivo de origem"
+msgstr "ソースファイルのフォルダを使う"
+
+#: crates/bigiris/src/gui/dialogs/batch.rs:117
+msgid "Aguardando. Clique em Processar para iniciar."
+msgstr "準備完了。プロセスをクリックして開始します。"
+
+#: crates/bigiris/src/gui/dialogs/batch.rs:128
+msgid "Processar"
+msgstr "プロセス画像"
+
+#: crates/bigiris/src/gui/dialogs/batch.rs:259
+msgid "Adicione ao menos uma imagem para processar."
+msgstr "処理する画像を少なくとも一つ追加してください。"
+
+#: crates/bigiris/src/gui/dialogs/batch.rs:271
+msgid "Iniciando…"
+msgstr "起動中…"
+
+#: crates/bigiris/src/gui/dialogs/batch.rs:272
+msgid "Processando…"
+msgstr "処理中…"
+
+#: crates/bigiris/src/gui/dialogs/batch.rs:316
+msgid ""
+"Cancelado após {done}/{total} em {timing}. {ok} gravado(s), {skip} "
+"ignorado(s), {fail} falha(s)."
+msgstr ""
+"{done}/{total} 件処理後、{timing} でキャンセルしました。書き込み: {ok}、ス"
+"キップ: {skip}、失敗: {fail}。"
+
+#: crates/bigiris/src/gui/dialogs/batch.rs:318
+msgid ""
+"Concluído em {timing}. {ok} gravado(s), {skip} ignorado(s), {fail} falha(s)."
+msgstr ""
+"{timing} で完了しました。書き込み: {ok}、スキップ: {skip}、失敗: {fail}。"
+
+#: crates/bigiris/src/gui/dialogs/batch.rs:338
+msgid ""
+"{before} → {after} ({delta}) · média por arquivo {avg_before} → {avg_after}"
+msgstr ""
+"{before} → {after} ({delta}) · ファイルあたり平均 {avg_before} → {avg_after}"
+
+#: crates/bigiris/src/gui/dialogs/batch.rs:354
+msgid "Cancelado"
+msgstr "キャンセル"
+
+#: crates/bigiris/src/gui/dialogs/batch.rs:356
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:367
+msgid "Concluído"
+msgstr "完了"
+
+#: crates/bigiris/src/gui/dialogs/batch.rs:446
+msgid "Adicionar pasta com imagens"
+msgstr "画像フォルダを追加"
+
+#: crates/bigiris/src/gui/dialogs/compare.rs:31
+msgid "Comparar imagens — Íris"
+msgstr "アイリス"
+
+#: crates/bigiris/src/gui/dialogs/compare.rs:43
+msgid "Comparar imagens"
+msgstr "画像を比較"
+
+#: crates/bigiris/src/gui/dialogs/compare.rs:45
+msgid "Antes: {before}  ·  Depois: {after}"
+msgstr "前: {before}  ·  後: {after}"
+
+#: crates/bigiris/src/gui/dialogs/compare.rs:69
+msgid "Arraste o divisor para comparar · Esc fecha"
+msgstr "分割器をドラッグして比較します。閉じるには Esc を押します。"
+
+#: crates/bigiris/src/gui/dialogs/convert.rs:20
+msgid "Converter imagens — Prisma"
+msgstr "画像を変換 — Prisma"
+
+#: crates/bigiris/src/gui/dialogs/convert.rs:32
+#: crates/bigiris/src/gui/dialogs/convert.rs:96
+#: crates/bigimage-integrations/src/action.rs:75
+#: data/nautilus/bigiris-menu.py:100
+msgid "Converter"
+msgstr "画像を変換"
+
+#: crates/bigiris/src/gui/dialogs/convert.rs:55
+msgid "Avançado"
+msgstr "詳細設定"
+
+#: crates/bigiris/src/gui/dialogs/convert.rs:56
+msgid "Otimização do encoder"
+msgstr "エンコーダ最適化"
+
+#: crates/bigiris/src/gui/dialogs/convert.rs:102
+msgid ""
+"Esta imagem tem transparência — JPEG perde o canal alfa. Considere PNG ou "
+"WebP."
+msgstr ""
+"この画像には透明度があります。JPEG はアルファチャンネルを削除します。 PNG ま"
+"たは WebP を試してください。"
+
+#: crates/bigiris/src/gui/dialogs/convert.rs:123
+msgid ""
+"Esta imagem contém GPS (localização) no EXIF. Atenção ao compartilhar "
+"publicamente — nosso pipeline remove o EXIF automaticamente no re-encode."
+msgstr ""
+"この画像の EXIF には GPS（位置情報）が含まれています。公開する際は注意してく"
+"ださい — 再エンコード時に EXIF は自動的に削除されます。"
+
+#: crates/bigiris/src/gui/dialogs/convert.rs:217
+msgid "Convertendo…"
+msgstr "変換中…"
+
+#: crates/bigiris/src/gui/dialogs/convert.rs:223
+msgid "Convertendo"
+msgstr "変換"
+
+#: crates/bigiris/src/gui/dialogs/crop.rs:284
+msgid ""
+"Arraste nos cantos para redimensionar · dentro do recorte para mover · fora "
+"dele para uma nova seleção."
+msgstr "角をドラッグでサイズ変更 · 切り抜きの内側で移動 · 外側で新しい選択。"
+
+#: crates/bigiris/src/gui/dialogs/crop.rs:309
+msgid "Recortar — Prisma"
+msgstr "カット - プリズマ (Prisma)"
+
+#: crates/bigiris/src/gui/dialogs/crop.rs:321
+#: crates/bigiris/src/gui/dialogs/crop.rs:389
+msgid "Recortar"
+msgstr "画像をカット"
+
+#: crates/bigiris/src/gui/dialogs/crop.rs:348
+#: crates/bigiris/src/gui/dialogs/extent.rs:96
+#: crates/bigiris/src/gui/dialogs/upscale.rs:72
+msgid "Tamanho original"
+msgstr "オリジナルサイズ"
+
+#: crates/bigiris/src/gui/dialogs/crop.rs:349
+#: crates/bigiris/src/gui/dialogs/extent.rs:97
+#: crates/bigiris/src/gui/dialogs/upscale.rs:76
+msgid "Primeiro arquivo"
+msgstr "最初のファイル"
+
+#: crates/bigiris/src/gui/dialogs/crop.rs:355
+msgid "X (px)"
+msgstr "X (ピクセル)"
+
+#: crates/bigiris/src/gui/dialogs/crop.rs:359
+msgid "Y (px)"
+msgstr "Y (ピクセル)"
+
+#: crates/bigiris/src/gui/dialogs/crop.rs:363
+msgid "Largura (px)"
+msgstr "幅 (px)"
+
+#: crates/bigiris/src/gui/dialogs/crop.rs:367
+msgid "Altura (px)"
+msgstr "高さ (px)"
+
+#: crates/bigiris/src/gui/dialogs/crop.rs:388
+msgid "Centro 50%"
+msgstr "中央 50%"
+
+#: crates/bigiris/src/gui/dialogs/crop.rs:449
+msgid "Recortando…"
+msgstr "切り取り中…"
+
+#: crates/bigiris/src/gui/dialogs/crop.rs:455
+msgid "Recortando"
+msgstr "クロッピング"
+
+#: crates/bigiris/src/gui/dialogs/extent.rs:12
+msgid "YouTube community (1:1)"
+msgstr "YouTubeコミュニティ (1:1)"
+
+#: crates/bigiris/src/gui/dialogs/extent.rs:13
+msgid "Instagram feed (4:5)"
+msgstr "インスタグラムフィード (Instagram)"
+
+#: crates/bigiris/src/gui/dialogs/extent.rs:14
+msgid "Stories / Shorts (9:16)"
+msgstr "ストーリー/ショート（9:16）"
+
+#: crates/bigiris/src/gui/dialogs/extent.rs:15
+msgid "Widescreen (16:9)"
+msgstr "ワイドスクリーン (16:9)"
+
+#: crates/bigiris/src/gui/dialogs/extent.rs:16
+msgid "Personalizado…"
+msgstr "カスタム…"
+
+#: crates/bigiris/src/gui/dialogs/extent.rs:22
+msgid "Preto suave (#0d0e12)"
+msgstr "ソフトブラック (#d0e12)"
+
+#: crates/bigiris/src/gui/dialogs/extent.rs:23
+msgid "Preto puro (#000000)"
+msgstr "純黒 (#000,001)"
+
+#: crates/bigiris/src/gui/dialogs/extent.rs:24
+msgid "Branco (#ffffff)"
+msgstr "白 (#ffffff)"
+
+#: crates/bigiris/src/gui/dialogs/extent.rs:25
+msgid "Transparente"
+msgstr "透明"
+
+#: crates/bigiris/src/gui/dialogs/extent.rs:26
+msgid "Personalizada (hex)"
+msgstr "カスタム (十六進法)"
+
+#: crates/bigiris/src/gui/dialogs/extent.rs:33
+msgid "Centro"
+msgstr "センター"
+
+#: crates/bigiris/src/gui/dialogs/extent.rs:33
+msgid "Topo"
+msgstr "上縁"
+
+#: crates/bigiris/src/gui/dialogs/extent.rs:33
+msgid "Base"
+msgstr "ボトムエッジ"
+
+#: crates/bigiris/src/gui/dialogs/extent.rs:49
+msgid "Letterbox — Prisma"
+msgstr "レターボックス (Prisma)"
+
+#: crates/bigiris/src/gui/dialogs/extent.rs:62
+msgid "Letterbox"
+msgstr "Letterbox"
+
+#: crates/bigiris/src/gui/dialogs/extent.rs:63
+msgid "Prisma · sem corte"
+msgstr "Prisma · 切り抜きなし"
+
+#: crates/bigiris/src/gui/dialogs/extent.rs:85
+msgid ""
+"Estende a tela em volta da imagem para encaixá-la num formato fixo (post de "
+"YouTube, feed do Instagram, Stories…) sem cortar nenhum pixel. A imagem "
+"original é centralizada e o resto é preenchido com a cor escolhida."
+msgstr ""
+"画像の周りのキャンバスをピクセルを切り取らずに固定フォーマット (YouTube ポス"
+"ト、Instagram フィード、ストーリーなど) に合わせて拡張します。元の画像は中心"
+"になり、残りの領域は選択した色で埋めます。"
+
+#: crates/bigiris/src/gui/dialogs/extent.rs:104
+msgid "Proporção alvo"
+msgstr "ターゲットアスペクト比"
+
+#: crates/bigiris/src/gui/dialogs/extent.rs:111
+msgid "Razão W"
+msgstr "幅比"
+
+#: crates/bigiris/src/gui/dialogs/extent.rs:114
+msgid "Razão H"
+msgstr "高さ比"
+
+#: crates/bigiris/src/gui/dialogs/extent.rs:124
+msgid "Cor de fundo"
+msgstr "背景色"
+
+#: crates/bigiris/src/gui/dialogs/extent.rs:130
+msgid "Hex (#RRGGBB)"
+msgstr "ヘキサデシマル (#RRGGBB)"
+
+#: crates/bigiris/src/gui/dialogs/extent.rs:138
+msgid "Posição da imagem"
+msgstr "画像の位置"
+
+#: crates/bigiris/src/gui/dialogs/extent.rs:144
+#: crates/bigiris/src/gui/dialogs/upscale.rs:89
+msgid "Destino previsto"
+msgstr "予測目的地"
+
+#: crates/bigiris/src/gui/dialogs/extent.rs:171
+msgid "Estender"
+msgstr "拡張"
+
+#: crates/bigiris/src/gui/dialogs/extent.rs:240
+msgid "—"
+msgstr "—"
+
+#: crates/bigiris/src/gui/dialogs/extent.rs:326
+msgid "Estendendo…"
+msgstr "拡張中…"
+
+#: crates/bigiris/src/gui/dialogs/extent.rs:332
+msgid "Estendendo"
+msgstr "拡張"
+
+#: crates/bigiris/src/gui/dialogs/flip.rs:20
+msgid "Espelhar imagens — Prisma"
+msgstr "プリズマ (Prisma)"
+
+#: crates/bigiris/src/gui/dialogs/flip.rs:24
+#: crates/bigiris/src/gui/dialogs/flip.rs:47
+#: crates/bigimage-integrations/src/action.rs:87
+#: data/nautilus/bigiris-menu.py:142
+msgid "Espelhar"
+msgstr "画像を反転"
+
+#: crates/bigiris/src/gui/dialogs/flip.rs:26
+msgid "Horizontal (esquerda ↔ direita)"
+msgstr "水平 (左→右)"
+
+#: crates/bigiris/src/gui/dialogs/flip.rs:26
+msgid "Vertical (cima ↔ baixo)"
+msgstr "垂直 (上から下へ)"
+
+#: crates/bigiris/src/gui/dialogs/flip.rs:29
+msgid "Eixo"
+msgstr "軸"
+
+#: crates/bigiris/src/gui/dialogs/flip.rs:87
+msgid "Espelhando…"
+msgstr "フリップ中…"
+
+#: crates/bigiris/src/gui/dialogs/flip.rs:93
+msgid "Espelhando"
+msgstr "フリッピング"
+
+#: crates/bigiris/src/gui/dialogs/mod.rs:64
+#: crates/bigimage-integrations/src/action.rs:150
+#: data/nautilus/bigiris-menu.py:104
+msgid "PNG"
+msgstr "PNG"
+
+#: crates/bigiris/src/gui/dialogs/mod.rs:65
+msgid "JPG (JPEG)"
+msgstr "JPG (JPEG)"
+
+#: crates/bigiris/src/gui/dialogs/mod.rs:66
+#: crates/bigimage-integrations/src/action.rs:166
+#: data/nautilus/bigiris-menu.py:106
+msgid "WebP"
+msgstr "WebP"
+
+#: crates/bigiris/src/gui/dialogs/mod.rs:67
+#: crates/bigimage-integrations/src/action.rs:174
+#: data/nautilus/bigiris-menu.py:107
+msgid "AVIF"
+msgstr "AVIF"
+
+#: crates/bigiris/src/gui/dialogs/mod.rs:68
+#: crates/bigimage-integrations/src/action.rs:182
+#: data/nautilus/bigiris-menu.py:108
+msgid "TIFF"
+msgstr "TIFF"
+
+#: crates/bigiris/src/gui/dialogs/mod.rs:69
+msgid "BMP"
+msgstr "BMP"
+
+#: crates/bigiris/src/gui/dialogs/mod.rs:70
+msgid "GIF"
+msgstr "GIF"
+
+#: crates/bigiris/src/gui/dialogs/mod.rs:71
+msgid "ICO (até 256 × 256)"
+msgstr "ICO (最大 256 × 240)"
+
+#: crates/bigiris/src/gui/dialogs/mod.rs:72
+msgid "PNM (Netpbm)"
+msgstr "PNM (Netpbm)"
+
+#: crates/bigiris/src/gui/dialogs/mod.rs:73
+msgid "TGA"
+msgstr "TGA"
+
+#: crates/bigiris/src/gui/dialogs/mod.rs:74
+msgid "QOI"
+msgstr "QOI"
+
+#: crates/bigiris/src/gui/dialogs/mod.rs:75
+msgid "HDR"
+msgstr "HDR"
+
+#: crates/bigiris/src/gui/dialogs/mod.rs:76
+msgid "OpenEXR"
+msgstr "OpenEXR"
+
+#: crates/bigiris/src/gui/dialogs/mod.rs:100
+msgid "Pular se já existir"
+msgstr "既存のファイルをスキップ"
+
+#: crates/bigiris/src/gui/dialogs/mod.rs:101
+msgid "Sobrescrever o arquivo"
+msgstr "ファイルを上書き"
+
+#: crates/bigiris/src/gui/dialogs/mod.rs:102
+msgid "Incrementar (_1, _2, …)"
+msgstr "接尾辞を追加 (_1, _2,...)"
+
+#: crates/bigiris/src/gui/dialogs/mod.rs:123
+#: crates/bigiris/src/gui/dialogs/mod.rs:138
+msgid "Formato de destino"
+msgstr "ターゲットフォーマット"
+
+#: crates/bigiris/src/gui/dialogs/mod.rs:134
+msgid "Manter o formato original"
+msgstr "元の形式を維持"
+
+#: crates/bigiris/src/gui/dialogs/mod.rs:156
+msgid "Se o arquivo de saída existir"
+msgstr "出力ファイルが存在する場合"
+
+#: crates/bigiris/src/gui/dialogs/mod.rs:216
+msgid "{first} e mais {count}"
+msgstr "{first} ほか {count} 件"
+
+#: crates/bigiris/src/gui/dialogs/mod.rs:231
+msgid "Escolher pasta de saída"
+msgstr "出力フォルダを選択"
+
+#: crates/bigiris/src/gui/dialogs/properties.rs:92
+msgid "Privacidade"
+msgstr "プライバシー"
+
+#: crates/bigiris/src/gui/dialogs/properties.rs:96
+msgid "Coordenadas GPS presentes"
+msgstr "GPS 座標あり"
+
+#: crates/bigiris/src/gui/dialogs/properties.rs:98
+msgid "Identificação de câmera/software presente"
+msgstr "カメラ/ソフトウェアの識別情報あり"
+
+#: crates/bigiris/src/gui/dialogs/properties.rs:100
+msgid "Remova antes de publicar se for sensível."
+msgstr "機密性がある場合は公開前に削除してください。"
+
+#: crates/bigiris/src/gui/dialogs/properties.rs:128
+msgid "Nome"
+msgstr "名前"
+
+#: crates/bigiris/src/gui/dialogs/properties.rs:133
+msgid "Pasta"
+msgstr "フォルダー"
+
+#: crates/bigiris/src/gui/dialogs/properties.rs:151
+#: crates/bigiris/src/gui/dialogs/properties.rs:158
+#: crates/bigiris/src/gui/dialogs/properties.rs:159
+msgid "Formato"
+msgstr "形式"
+
+#: crates/bigiris/src/gui/dialogs/properties.rs:153
+msgid "{format} (extensão: {extension})"
+msgstr "{format} (拡張子: {extension})"
+
+#: crates/bigiris/src/gui/dialogs/properties.rs:165
+#: crates/bigiris/src/gui/dialogs/properties.rs:172
+msgid "Tamanho"
+msgstr "サイズ"
+
+#: crates/bigiris/src/gui/dialogs/properties.rs:167
+msgid "Modificado"
+msgstr "更新日時"
+
+#: crates/bigiris/src/gui/dialogs/properties.rs:173
+msgid "(indisponível: {error})"
+msgstr "(利用不可: {error})"
+
+#: crates/bigiris/src/gui/dialogs/properties.rs:182
+msgid "Imagem"
+msgstr "画像"
+
+#: crates/bigiris/src/gui/dialogs/properties.rs:199
+#: crates/bigiris/src/gui/dialogs/properties.rs:216
+msgid "Dimensões"
+msgstr "寸法"
+
+#: crates/bigiris/src/gui/dialogs/properties.rs:203
+msgid "Megapixels"
+msgstr "メガピクセル"
+
+#: crates/bigiris/src/gui/dialogs/properties.rs:207
+msgid "Razão de aspecto"
+msgstr "アスペクト比"
+
+#: crates/bigiris/src/gui/dialogs/properties.rs:210
+msgid "Modo de cor"
+msgstr "カラーモード"
+
+#: crates/bigiris/src/gui/dialogs/properties.rs:211
+msgid "Bits por canal"
+msgstr "チャンネルあたりのビット数"
+
+#: crates/bigiris/src/gui/dialogs/properties.rs:217
+msgid "(falha: não foi possível identificar o formato pelo conteúdo)"
+msgstr "(失敗: 内容から形式を判別できませんでした)"
+
+#: crates/bigiris/src/gui/dialogs/properties.rs:227
+msgid "Orientação EXIF"
+msgstr "EXIF の向き"
+
+#: crates/bigiris/src/gui/dialogs/properties.rs:229
+msgid "{orientation} · use Girar ▸ Automático pra corrigir"
+msgstr "{orientation} · 回転 ▸ 自動 で修正できます"
+
+#: crates/bigiris/src/gui/dialogs/properties.rs:244
+msgid "Tons de cinza"
+msgstr "グレースケール"
+
+#: crates/bigiris/src/gui/dialogs/properties.rs:245
+msgid "Tons de cinza + alfa"
+msgstr "グレースケール + アルファ"
+
+#: crates/bigiris/src/gui/dialogs/properties.rs:282
+msgid "Campos presentes: {count}"
+msgstr "存在するフィールド: {count}"
+
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:68
 msgid "Remover fundo — Prisma"
 msgstr "背景を削除 — Prisma"
 
-#: crates/bigiris/src/gui.rs:6613 crates/bigiris/src/gui.rs:6726
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:73
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:173
 msgid "Remover fundo"
 msgstr "背景を削除"
 
-#: crates/bigiris/src/gui.rs:6630
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:74
+msgid "Prisma · BiRefNet-lite"
+msgstr "Prisma · BiRefNet-lite"
+
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:90
+#: crates/bigiris/src/gui/previews.rs:223
 msgid "Nenhuma imagem selecionada"
 msgstr "画像が選択されていません"
 
-#: crates/bigiris/src/gui.rs:6631
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:91
 msgid "Informe um ou mais arquivos ao abrir o diálogo."
 msgstr "ダイアログを開くときに一つまたは複数のファイルを選択します。"
 
-#: crates/bigiris/src/gui.rs:6668
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:112
+msgid ""
+"Esta build não inclui IA. Recompile com `cargo build --features ai` e "
+"instale `onnxruntime` (Arch: `pacman -S onnxruntime`)."
+msgstr ""
+"このビルドには AI が含まれていません。`cargo build --features ai` で再コンパ"
+"イルし、`onnxruntime` をインストールしてください (Arch: `pacman -S "
+"onnxruntime`)。"
+
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:122
 msgid ""
 "Remoção de fundo: requer 8 GiB de RAM livre para iniciar. Este recurso é "
 "opcional."
-msgstr "バックグラウンドを削除するには 8 GiB の RAM が必要です。この機能はオプションです。"
+msgstr ""
+"バックグラウンドを削除するには 8 GiB の RAM が必要です。この機能はオプション"
+"です。"
 
-#: crates/bigiris/src/gui.rs:6686
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:136
 msgid "Modelo"
 msgstr "モデル"
 
-#: crates/bigiris/src/gui.rs:6704
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:137
+msgid "BiRefNet-lite (MIT) · roda offline no seu computador"
+msgstr "BiRefNet-lite (MIT) · お使いのコンピューター上でオフライン動作"
+
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:149
+msgid ""
+"«origem»_nobg.png · PNG com alfa, sem sobrescrever (_1, _2… se já existir)"
+msgstr ""
+"「元の名前」_nobg.png · アルファ付き PNG、上書きなし (既に存在する場合は _1、"
+"_2…)"
+
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:156
 msgid "Remover fundo com IA local"
 msgstr "ローカル AI で背景を削除"
 
-#: crates/bigiris/src/gui.rs:6780
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:157
+msgid ""
+"O modelo roda inteiramente no seu computador. Nenhuma imagem sai do disco — "
+"sem upload, sem conta, sem API externa."
+msgstr ""
+"モデルは完全にお使いのコンピューター上で動作します。画像がディスクから出るこ"
+"とはありません — アップロードなし、アカウント不要、外部 API なし。"
+
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:215
 msgid "Preparando…"
 msgstr "準備中…"
 
-#: crates/bigiris/src/gui.rs:6910 crates/bigiris/src/gui.rs:6933
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:340
+msgid "Baixando modelo (uma vez só): {done} / {total}"
+msgstr "モデルをダウンロード中 (初回のみ): {done} / {total}"
+
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:349
+msgid "Processando {current}/{total} — {file}"
+msgstr "処理中 {current}/{total} — {file}"
+
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:366
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:388
 msgid "Imagens gravadas"
 msgstr "保存された画像"
 
-#: crates/bigiris/src/gui.rs:6934
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:389
 msgid "Falhas"
 msgstr "失敗"
 
-#: crates/bigiris/src/gui.rs:6936
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:391
 msgid "Com erros"
 msgstr "エラーを含む"
+
+#: crates/bigiris/src/gui/dialogs/resize.rs:8
+msgid "Lanczos3 (padrão)"
+msgstr "Lanczos3 (デフォルト)"
+
+#: crates/bigiris/src/gui/dialogs/resize.rs:9
+msgid "Mitchell"
+msgstr "Mitchell"
+
+#: crates/bigiris/src/gui/dialogs/resize.rs:10
+msgid "CatmullRom"
+msgstr "CatmullRom"
+
+#: crates/bigiris/src/gui/dialogs/resize.rs:11
+msgid "Bilinear"
+msgstr "Bilinear"
+
+#: crates/bigiris/src/gui/dialogs/resize.rs:12
+msgid "Nearest (sem anti-aliasing)"
+msgstr "最も近い (アンチエイリアスなし)"
+
+#: crates/bigiris/src/gui/dialogs/resize.rs:29
+msgid "Redimensionar imagens — Prisma"
+msgstr "画像のサイズを変更 — Prisma"
+
+#: crates/bigiris/src/gui/dialogs/resize.rs:41
+#: crates/bigiris/src/gui/dialogs/resize.rs:144
+#: crates/bigimage-integrations/src/action.rs:79
+#: data/nautilus/bigiris-menu.py:115
+msgid "Redimensionar"
+msgstr "画像のサイズを変更"
+
+#: crates/bigiris/src/gui/dialogs/resize.rs:47
+#: crates/bigiris/src/gui/dialogs/resize.rs:61
+msgid "Aresta máxima"
+msgstr "マックスエッジ"
+
+#: crates/bigiris/src/gui/dialogs/resize.rs:48
+msgid "Escala (%)"
+msgstr "スケール (%)"
+
+#: crates/bigiris/src/gui/dialogs/resize.rs:49
+msgid "Dimensão exata (WxH)"
+msgstr "正確なサイズ (WxH)"
+
+#: crates/bigiris/src/gui/dialogs/resize.rs:50
+msgid "Encaixar em (WxH)"
+msgstr "幅x高さに合わせる (WxH)"
+
+#: crates/bigiris/src/gui/dialogs/resize.rs:54
+msgid "Modo"
+msgstr "モード"
+
+#: crates/bigiris/src/gui/dialogs/resize.rs:62
+msgid "pixels (lado maior)"
+msgstr "ピクセル (最長辺)"
+
+#: crates/bigiris/src/gui/dialogs/resize.rs:66
+msgid "Porcentagem"
+msgstr "パーセント"
+
+#: crates/bigiris/src/gui/dialogs/resize.rs:67
+msgid "100 = tamanho original"
+msgstr "100 = 本来のサイズ"
+
+#: crates/bigiris/src/gui/dialogs/resize.rs:71
+msgid "Largura"
+msgstr "幅"
+
+#: crates/bigiris/src/gui/dialogs/resize.rs:74
+msgid "Altura"
+msgstr "高さ"
+
+#: crates/bigiris/src/gui/dialogs/resize.rs:78
+msgid "Largura máxima"
+msgstr "最大幅"
+
+#: crates/bigiris/src/gui/dialogs/resize.rs:81
+msgid "Altura máxima"
+msgstr "最大高さ"
+
+#: crates/bigiris/src/gui/dialogs/resize.rs:120
+msgid "Kernel de interpolação"
+msgstr "補間カーネル"
+
+#: crates/bigiris/src/gui/dialogs/resize.rs:134
+msgid "Modo de redimensionamento"
+msgstr "サイズ変更モード"
+
+#: crates/bigiris/src/gui/dialogs/resize.rs:137
+msgid "Opções"
+msgstr "オプション"
+
+#: crates/bigiris/src/gui/dialogs/resize.rs:292
+msgid "Redimensionando…"
+msgstr "リサイズ…"
+
+#: crates/bigiris/src/gui/dialogs/resize.rs:298
+msgid "Redimensionando"
+msgstr "リサイズ"
+
+#: crates/bigiris/src/gui/dialogs/rotate.rs:25
+msgid "Girar imagens — Prisma"
+msgstr "画像を回転 — Prisma"
+
+#: crates/bigiris/src/gui/dialogs/rotate.rs:29
+#: crates/bigiris/src/gui/dialogs/rotate.rs:52
+#: crates/bigimage-integrations/src/action.rs:83
+#: data/nautilus/bigiris-menu.py:129
+msgid "Girar"
+msgstr "回転"
+
+#: crates/bigiris/src/gui/dialogs/rotate.rs:31
+msgid "90° (horário)"
+msgstr "90度 (時計回り)"
+
+#: crates/bigiris/src/gui/dialogs/rotate.rs:31
+#: crates/bigimage-integrations/src/action.rs:259
+#: data/nautilus/bigiris-menu.py:134
+msgid "180°"
+msgstr "180°"
+
+#: crates/bigiris/src/gui/dialogs/rotate.rs:31
+msgid "270° (anti-horário)"
+msgstr "270度 (反時計回り)"
+
+#: crates/bigiris/src/gui/dialogs/rotate.rs:34
+msgid "Rotação"
+msgstr "回転"
+
+#: crates/bigiris/src/gui/dialogs/rotate.rs:93
+msgid "Girando…"
+msgstr "回転中…"
+
+#: crates/bigiris/src/gui/dialogs/rotate.rs:99
+msgid "Girando"
+msgstr "回転"
+
+#: crates/bigiris/src/gui/dialogs/upscale.rs:26
+msgid "Aumentar resolução — Prisma"
+msgstr "アップスケール (Prisma)"
+
+#: crates/bigiris/src/gui/dialogs/upscale.rs:39
+msgid "Aumentar resolução"
+msgstr "アップスケール画像"
+
+#: crates/bigiris/src/gui/dialogs/upscale.rs:62
+msgid ""
+"Motor: Lanczos3 (CPU). O modo IA (Real-ESRGAN) será habilitado "
+"automaticamente quando um modelo ONNX FOSS estiver disponível."
+msgstr ""
+"エンジン: Lanczos3 (CPU)。FOSS の ONNX モデルが利用可能になると、AI モード "
+"(Real-ESRGAN) が自動的に有効になります。"
+
+#: crates/bigiris/src/gui/dialogs/upscale.rs:83
+msgid "Fator"
+msgstr "因子"
+
+#: crates/bigiris/src/gui/dialogs/upscale.rs:98
+msgid "× {factor} (tamanho indisponível)"
+msgstr "× {factor} (サイズ不明)"
+
+#: crates/bigiris/src/gui/dialogs/upscale.rs:128
+msgid "Aumentar"
+msgstr "アップスケール画像"
+
+#: crates/bigiris/src/gui/dialogs/upscale.rs:182
+msgid "Aumentando…"
+msgstr "アップスケール中…"
+
+#: crates/bigiris/src/gui/dialogs/upscale.rs:191
+msgid "Aumentando"
+msgstr "アップスケール"
+
+#: crates/bigiris/src/gui/previews.rs:32
+msgid "Pré-visualização"
+msgstr "プレビュー"
+
+#: crates/bigiris/src/gui/previews.rs:38
+msgid "Original: {width}×{height} px"
+msgstr "元のサイズ: {width}×{height} px"
+
+#: crates/bigiris/src/gui/previews.rs:201
+msgid "Preparando pré-visualização…"
+msgstr "プレビューを準備中…"
+
+#: crates/bigiris/src/gui/previews.rs:249
+msgid "A preparação foi interrompida"
+msgstr "準備が中断されました"
 
 #: crates/bigiris/src/gui/transfers.rs:86
 msgid "A seleção é muito grande. Abra menos arquivos por vez."

@@ -750,9 +750,11 @@ fn run_extent(
         .map_err(|e| color_eyre::eyre::eyre!("--bg inválido: {e}"))?;
     let opts = ExtentOptions { size, background, gravity };
     tracing::info!(?opts, ?target, ?policy, count = files.len(), "extent");
-    run_per_file(files, "extent", Naming::image(target, policy), |f| {
-        bigimage_core::extent_file(f, opts, target, policy)
-    })
+    let naming = Naming {
+        per_image_suffix: matches!(size, ExtentSize::Aspect { .. }),
+        ..Naming::image(target, policy)
+    };
+    run_per_file(files, "extent", naming, |f| bigimage_core::extent_file(f, opts, target, policy))
 }
 
 fn run_adjust(
@@ -779,19 +781,29 @@ fn parse_optional_target(to: Option<&str>) -> color_eyre::Result<Option<Format>>
 }
 
 /// How a command names outputs: `<dir>/<stem><suffix>.<ext>`. The suffix is
-/// fixed per invocation, so inputs sharing directory, stem and extension
-/// resolve to the same file.
+/// usually fixed per invocation, so inputs sharing directory, stem and
+/// extension resolve to the same file.
 #[derive(Clone, Copy)]
 struct Naming<'a> {
     output_dir: Option<&'a Path>,
     /// `None` keeps each input's own format.
     extension: Option<&'static str>,
     policy: OverwritePolicy,
+    /// The suffix depends on each image (`extent --aspect` names the output
+    /// after the resulting canvas), so a shared stem is only a possible
+    /// collision: it is not refused up front, and [`run_per_file`] reports
+    /// an input that really replaced an earlier output.
+    per_image_suffix: bool,
 }
 
 impl Naming<'_> {
     fn image(target: Option<Format>, policy: OverwritePolicy) -> Naming<'static> {
-        Naming { output_dir: None, extension: target.map(|format| format.extension()), policy }
+        Naming {
+            output_dir: None,
+            extension: target.map(|format| format.extension()),
+            policy,
+            per_image_suffix: false,
+        }
     }
 }
 
@@ -839,7 +851,10 @@ fn plan_outputs(files: &[PathBuf], naming: Naming) -> color_eyre::Result<Vec<Vec
         }
     }
     let collisions: Vec<_> = groups.iter().filter(|group| group.len() > 1).collect();
-    if !collisions.is_empty() && naming.policy != OverwritePolicy::Increment {
+    if !collisions.is_empty()
+        && naming.policy != OverwritePolicy::Increment
+        && !naming.per_image_suffix
+    {
         let mut message = String::from("várias entradas gravariam o mesmo arquivo de saída:");
         for group in collisions {
             let names: Vec<_> = group.iter().map(|path| path.display().to_string()).collect();
@@ -867,9 +882,21 @@ where
     let mut written = 0usize;
     let mut skipped = 0usize;
     let mut failed = 0usize;
+    // Outputs of this run, to catch per-image names that still collided.
+    let mut outputs = std::collections::HashSet::new();
 
     for f in groups.iter().flatten() {
         match op(f) {
+            Ok(ConvertOutcome::Written { output })
+                if naming.per_image_suffix && !outputs.insert(output.clone()) =>
+            {
+                failed += 1;
+                eprintln!(
+                    "err {}: substituiu a saída de outra entrada: {}",
+                    f.display(),
+                    codec::sanitize_text(&output.display().to_string())
+                );
+            }
             Ok(ConvertOutcome::Written { output }) => {
                 written += 1;
                 println!("ok  {} -> {}", f.display(), output.display());
@@ -906,7 +933,7 @@ fn run_remove_bg(
              `pacman -S onnxruntime`)."
         ));
     }
-    let naming = Naming { output_dir: None, extension: Some(Format::Png.extension()), policy };
+    let naming = Naming::image(Some(Format::Png), policy);
     let groups = plan_outputs(files, naming)?;
 
     let mut ok = 0usize;
@@ -1090,6 +1117,7 @@ fn run_batch(profile: &std::path::Path, inputs: &[PathBuf]) -> color_eyre::Resul
         output_dir: profile.output_dir.as_deref(),
         extension: Some(format.extension()),
         policy,
+        per_image_suffix: false,
     };
     // Each group shares one destination and runs in order on one worker,
     // which keeps `increment` numbering deterministic.
@@ -1195,7 +1223,8 @@ fn run_to_pdf(
              (ex.: `sudo pacman -S libreoffice-fresh`)."
         )
     })?;
-    let naming = Naming { output_dir: None, extension: Some("pdf"), policy };
+    let naming =
+        Naming { output_dir: None, extension: Some("pdf"), policy, per_image_suffix: false };
     let groups = plan_outputs(files, naming)?;
 
     let mut ok = 0usize;

@@ -441,6 +441,28 @@ fn inherited_descriptors_do_not_break_the_sandboxed_codec() {
 }
 
 #[test]
+fn extent_aspect_names_outputs_per_image() {
+    if !sandbox_available() {
+        return;
+    }
+    let dir = tempfile::tempdir().unwrap();
+    sized_fixture(dir.path(), "a.png", 32, 24);
+    sized_fixture(dir.path(), "a.jpg", 16, 12);
+    // Different canvases, different names: no false collision refusal.
+    let args = ["extent", "--aspect", "1:1", "--to", "png", "a.png", "a.jpg"];
+    success(run(dir.path(), &args));
+    assert!(dir.path().join("a_extent-32x32.png").exists());
+    assert!(dir.path().join("a_extent-16x16.png").exists());
+    // Same canvas under replace: the second input is reported, not silent.
+    sized_fixture(dir.path(), "b.png", 16, 12);
+    sized_fixture(dir.path(), "b.jpg", 16, 12);
+    let args = ["extent", "--aspect", "1:1", "--to", "png", "--overwrite", "replace"];
+    let output = run(dir.path(), &[&args[..], &["b.png", "b.jpg"]].concat());
+    assert_eq!(output.status.code(), Some(2));
+    assert!(String::from_utf8_lossy(&output.stderr).contains("b.jpg"));
+}
+
+#[test]
 fn collisions_are_planned_by_content_not_extension() {
     let dir = tempfile::tempdir().unwrap();
     sized_fixture(dir.path(), "a.png", 32, 24);

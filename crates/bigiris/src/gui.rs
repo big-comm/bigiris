@@ -2233,6 +2233,12 @@ fn save_edits(state: &Rc<RefCell<ViewerState>>) {
         }
         (s.window().clone(), s.files[s.idx].clone(), s.pending_ops.clone())
     };
+    // Known before asking for confirmation: no point in a dialog that can
+    // only end in a failure.
+    if save_format(&path).is_none() {
+        present_save_failure(state, &SaveFailure::NoEncoder);
+        return;
+    }
     let name = path
         .file_name()
         .map(|n| n.to_string_lossy().into_owned())
@@ -2247,9 +2253,7 @@ fn save_edits(state: &Rc<RefCell<ViewerState>>) {
     } else {
         format!("\"{name}\"\n\n{}", gettext("O arquivo será sobrescrito."))
     };
-    let keeps_metadata = image::ImageFormat::from_path(&path)
-        .ok()
-        .and_then(Format::from_image_format)
+    let keeps_metadata = save_format(&path)
         .is_some_and(|format| bigimage_core::metadata::preserved_by(format).is_complete());
     if !keeps_metadata {
         body.push_str("\n\n");
@@ -2274,16 +2278,16 @@ fn save_edits(state: &Rc<RefCell<ViewerState>>) {
 
         let worker_path = path.clone();
         let worker_ops = ops.clone();
-        let job = gio::spawn_blocking(move || {
-            write_edits_to_disk(&worker_path, &worker_ops).map_err(|e| e.to_string())
-        });
+        let job = gio::spawn_blocking(move || write_edits_to_disk(&worker_path, &worker_ops));
 
         // Awaited on the GTK loop instead of polled on a timer.
         let state = state.clone();
         let path = path.clone();
         glib::MainContext::default().spawn_local(async move {
             // A panicking encoder ends the save as a failure.
-            let result = job.await.unwrap_or_else(|_| Err("save worker panicked".to_string()));
+            let result = job
+                .await
+                .unwrap_or_else(|_| Err(SaveFailure::Other("save worker panicked".to_string())));
             {
                 let mut s = state.borrow_mut();
                 s.saving = false;
@@ -2296,16 +2300,132 @@ fn save_edits(state: &Rc<RefCell<ViewerState>>) {
             refresh_title(&state);
             sync_edit_actions(&state);
             match result {
-                Ok(()) => state.borrow().osd_label.set_text(&gettext("Salvo")),
-                Err(error) => {
-                    tracing::error!(?path, %error, "save: falha ao gravar edições");
-                    state.borrow().osd_label.set_text(&gettext("Falha ao salvar"));
+                Ok(()) => {
+                    adopt_saved_frame(&state, &path);
+                    state.borrow().osd_label.set_text(&gettext("Salvo"));
+                    pulse_osd(&state);
+                }
+                Err(failure) => {
+                    tracing::error!(?path, ?failure, "save: falha ao gravar edições");
+                    present_save_failure(&state, &failure);
                 }
             }
-            pulse_osd(&state);
         });
     });
     alert.present(Some(&window));
+}
+
+/// The texture on screen is now what the file holds: cache it under the
+/// new modification time, show it in the film strip and resume the
+/// neighbour prefetch that pending edits had paused.
+fn adopt_saved_frame(state: &Rc<RefCell<ViewerState>>, path: &Path) {
+    {
+        let mut s = state.borrow_mut();
+        let current = s.files.get(s.idx).is_some_and(|p| p == path);
+        if let (true, Some(texture)) = (current, s.texture.clone()) {
+            s.shown_path = Some(path.to_path_buf());
+            paint_current_thumb(&s, &texture);
+            let frame = CachedFrame {
+                path: path.to_path_buf(),
+                modified: file_modified(path),
+                texture,
+                natural: s.natural,
+                histogram: s.histogram,
+            };
+            remember_frame(&mut s, frame);
+        }
+    }
+    schedule_prefetch(state);
+}
+
+/// Why an in-place save did not happen, in terms the user can act on.
+#[derive(Debug)]
+enum SaveFailure {
+    /// Animated or multi-page file (or one that cannot be inspected):
+    /// re-encoding a single frame would destroy the rest.
+    NotStatic,
+    /// No encoder for this extension.
+    NoEncoder,
+    PermissionDenied,
+    Other(String),
+}
+
+impl SaveFailure {
+    fn from_core(error: bigimage_core::BigImageError) -> Self {
+        match &error {
+            bigimage_core::BigImageError::Io(io)
+                if io.kind() == std::io::ErrorKind::PermissionDenied =>
+            {
+                Self::PermissionDenied
+            }
+            _ => Self::Other(error.to_string()),
+        }
+    }
+
+    fn from_image(error: image::ImageError) -> Self {
+        match error {
+            image::ImageError::IoError(io) => Self::from_io(io),
+            other => Self::Other(other.to_string()),
+        }
+    }
+
+    fn from_io(error: std::io::Error) -> Self {
+        if error.kind() == std::io::ErrorKind::PermissionDenied {
+            Self::PermissionDenied
+        } else {
+            Self::Other(error.to_string())
+        }
+    }
+
+    fn message(&self) -> String {
+        match self {
+            Self::NotStatic => gettext("Este arquivo é animado, tem várias páginas ou não pôde ser verificado. Girar ou espelhar e salvar descartaria os outros quadros, então ele não foi alterado."),
+            Self::NoEncoder => gettext("O BigIris não sabe gravar este formato. As alterações não podem ser salvas no próprio arquivo."),
+            Self::PermissionDenied => gettext("Sem permissão para alterar este arquivo ou a pasta dele."),
+            Self::Other(detail) => fill(
+                &gettext("O arquivo não foi alterado. Detalhes: {detail}"),
+                &[("detail", detail)],
+            ),
+        }
+    }
+}
+
+/// Explain a failed save and offer a way out: navigation stays blocked
+/// while edits are pending, so the user can discard them from here.
+fn present_save_failure(state: &Rc<RefCell<ViewerState>>, failure: &SaveFailure) {
+    let window = state.borrow().window();
+    let alert = adw::AlertDialog::builder()
+        .heading(gettext("Não foi possível salvar"))
+        .body(failure.message())
+        .build();
+    alert.add_response("keep", &gettext("Manter alterações"));
+    alert.add_response("discard", &gettext("Descartar alterações"));
+    alert.set_response_appearance("discard", adw::ResponseAppearance::Destructive);
+    alert.set_default_response(Some("keep"));
+    alert.set_close_response("keep");
+    let weak = Rc::downgrade(state);
+    alert.connect_response(Some("discard"), move |_, _| {
+        if let Some(state) = weak.upgrade() {
+            discard_edits(&state);
+        }
+    });
+    alert.present(Some(&window));
+}
+
+/// Drop every pending edit and show the file as it is on disk.
+fn discard_edits(state: &Rc<RefCell<ViewerState>>) {
+    let path = {
+        let mut s = state.borrow_mut();
+        if s.saving || s.files.is_empty() {
+            return;
+        }
+        s.pending_ops.clear();
+        s.redo_ops.clear();
+        s.files[s.idx].clone()
+    };
+    rebuild_edited_texture(state, &path);
+    refresh_title(state);
+    sync_edit_actions(state);
 }
 
 /// Grava em arquivo temporário no mesmo diretório, sincroniza e só então
@@ -2313,17 +2433,23 @@ fn save_edits(state: &Rc<RefCell<ViewerState>>) {
 /// deixa o original intacto. Permissões existentes são preservadas, assim
 /// como EXIF (com orientação zerada) e o perfil de cor original quando o
 /// formato os suporta — as edições são só geométricas.
-fn write_edits_to_disk(path: &Path, ops: &[EditOp]) -> Result<(), Box<dyn std::error::Error>> {
-    let target = if path.symlink_metadata()?.file_type().is_symlink() {
-        path.canonicalize()?
+fn write_edits_to_disk(path: &Path, ops: &[EditOp]) -> Result<(), SaveFailure> {
+    let target = if path.symlink_metadata().map_err(SaveFailure::from_io)?.file_type().is_symlink()
+    {
+        path.canonicalize().map_err(SaveFailure::from_io)?
     } else {
         path.to_path_buf()
     };
-    bigimage_core::content::ensure_static(&target)?;
-    let (img, source) = bigimage_core::open_image_for_resave(&target)?;
+    let format = save_format(&target).ok_or(SaveFailure::NoEncoder)?;
+    // The confined decoder reports animation as a generic decode error,
+    // so any failure here is presented as "not a static image".
+    bigimage_core::content::ensure_static(&target).map_err(|error| {
+        tracing::warn!(%error, "save: arquivo não é estático");
+        SaveFailure::NotStatic
+    })?;
+    let (img, source) =
+        bigimage_core::open_image_for_resave(&target).map_err(SaveFailure::from_image)?;
     let edited = ops.iter().fold(img, |acc, op| apply_op_to_image(acc, *op));
-    let format = Format::from_image_format(image::ImageFormat::from_path(&target)?)
-        .ok_or("formato sem encoder suportado")?;
     bigimage_core::save_image_preserving_metadata(
         edited,
         target,
@@ -2331,8 +2457,14 @@ fn write_edits_to_disk(path: &Path, ops: &[EditOp]) -> Result<(), Box<dyn std::e
         &EncodeOptions::default(),
         OverwritePolicy::Replace,
         &source,
-    )?;
+    )
+    .map_err(SaveFailure::from_core)?;
     Ok(())
+}
+
+/// Encoder for an in-place save of `path`, chosen by its extension.
+fn save_format(path: &Path) -> Option<Format> {
+    image::ImageFormat::from_path(path).ok().and_then(Format::from_image_format)
 }
 
 /// Zoom level as the user sees it. Fitting shows the actual percentage,

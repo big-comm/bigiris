@@ -518,3 +518,106 @@ fn documented_depth_and_alpha_policy_holds() {
     let extended = bigimage_core::extent::apply_to(&gray16, &extent).unwrap();
     assert_eq!(save(extended, "extent-gray.png", Format::Png).color(), image::ColorType::L16);
 }
+
+/// Append an `irot` property to `ipco`, associate it with the single item
+/// in `ipma` (as the encoder writes it), grow the enclosing box sizes and
+/// shift the `iloc` offsets that point past the insertion.
+fn add_primary_irot(file: &[u8], angle: u8) -> Vec<u8> {
+    fn find(bytes: &[u8], kind: &[u8; 4]) -> usize {
+        bytes.windows(4).position(|w| w == kind).expect("box present") - 4
+    }
+    fn size(bytes: &[u8], at: usize) -> usize {
+        u32::from_be_bytes(bytes[at..at + 4].try_into().unwrap()) as usize
+    }
+    fn grow(bytes: &mut [u8], at: usize, by: usize) {
+        let new = (size(bytes, at) + by) as u32;
+        bytes[at..at + 4].copy_from_slice(&new.to_be_bytes());
+    }
+    let mut out = file.to_vec();
+    let (meta, iprp, ipco, ipma) =
+        (find(file, b"meta"), find(file, b"iprp"), find(file, b"ipco"), find(file, b"ipma"));
+    assert!(ipco < ipma, "encoder layout changed");
+    // ipma v0, flags 0: entry_count(4) item_ID(2) count(1) assoc(1)...
+    assert_eq!(&file[ipma + 12..ipma + 16], &[0, 0, 0, 1]);
+    // The new property's 1-based index is the current child count + 1.
+    let mut count = 0;
+    let mut p = ipco + 8;
+    while p < ipco + size(file, ipco) {
+        count += 1;
+        p += size(file, p);
+    }
+    let ipma_end = ipma + size(file, ipma);
+    out.insert(ipma_end, 0x80 | (count + 1) as u8);
+    out[ipma + 18] += 1;
+    grow(&mut out, ipma, 1);
+    let ipco_end = ipco + size(file, ipco);
+    let irot = [0, 0, 0, 9, b'i', b'r', b'o', b't', angle];
+    out.splice(ipco_end..ipco_end, irot);
+    grow(&mut out, ipco, 9);
+    grow(&mut out, iprp, 10);
+    grow(&mut out, meta, 10);
+    // iloc v0: offset/length sizes, base_offset size, item_count(2), then
+    // per item: id(2) data_ref(2) base_offset(n) extent_count(2) extents.
+    let iloc = find(&out, b"iloc");
+    assert!(iloc < ipco, "iloc must precede the insertion");
+    assert_eq!(out[iloc + 8], 0, "iloc version");
+    let (offset_size, length_size) =
+        ((out[iloc + 12] >> 4) as usize, (out[iloc + 12] & 15) as usize);
+    let base_size = (out[iloc + 13] >> 4) as usize;
+    let items = u16::from_be_bytes([out[iloc + 14], out[iloc + 15]]);
+    let mut cursor = iloc + 16;
+    let bump = |bytes: &mut [u8], at: usize, n: usize| {
+        if n == 0 {
+            return;
+        }
+        let mut value = 0u64;
+        for b in &bytes[at..at + n] {
+            value = value << 8 | u64::from(*b);
+        }
+        value += 10;
+        for i in 0..n {
+            bytes[at + n - 1 - i] = (value >> (8 * i)) as u8;
+        }
+    };
+    for _ in 0..items {
+        cursor += 4;
+        bump(&mut out, cursor, base_size);
+        cursor += base_size;
+        let extents = u16::from_be_bytes([out[cursor], out[cursor + 1]]);
+        cursor += 2;
+        for _ in 0..extents {
+            if base_size == 0 {
+                bump(&mut out, cursor, offset_size);
+            }
+            cursor += offset_size + length_size;
+        }
+    }
+    out
+}
+
+#[test]
+fn avif_irot_property_of_primary_item_is_applied_on_decode() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("rotated.avif");
+    // 4x2: left half red, right half blue.
+    let source =
+        RgbImage::from_fn(4, 2, |x, _| if x < 2 { Rgb([255, 0, 0]) } else { Rgb([0, 0, 255]) });
+    bigimage_core::save_image(
+        DynamicImage::ImageRgb8(source),
+        &path,
+        Format::Avif,
+        &EncodeOptions { quality: Some(100), ..EncodeOptions::default() },
+        OverwritePolicy::Replace,
+    )
+    .unwrap();
+    let bytes = add_primary_irot(&std::fs::read(&path).unwrap(), 1);
+    std::fs::write(&path, &bytes).unwrap();
+
+    let decoded = open_image(&path).unwrap().to_rgb8();
+    assert_eq!(decoded.dimensions(), (2, 4));
+    // Anticlockwise: the right (blue) half ends up on top.
+    let top = decoded.get_pixel(0, 0).0;
+    let bottom = decoded.get_pixel(0, 3).0;
+    assert!(top[2] > 200 && top[0] < 60, "top {top:?}");
+    assert!(bottom[0] > 200 && bottom[2] < 60, "bottom {bottom:?}");
+}

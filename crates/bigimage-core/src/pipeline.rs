@@ -112,6 +112,15 @@ pub(crate) fn decode_local(input: &Path) -> image::ImageResult<(DynamicImage, Op
         reader = ImageReader::with_format(data, image::ImageFormat::Gif);
         reader.limits(limits.clone());
     }
+    let mut avif_transform = crate::container_bounds::ItemTransform::default();
+    if format == Some(Format::Avif) {
+        use std::io::{Seek, SeekFrom};
+        let mut data = reader.into_inner();
+        avif_transform = crate::container_bounds::primary_item_transform(&mut data)?;
+        data.seek(SeekFrom::Start(0))?;
+        reader = ImageReader::with_format(data, image::ImageFormat::Avif);
+        reader.limits(limits.clone());
+    }
     let mut decoder = reader.into_decoder()?;
     let (w, h) = decoder.dimensions();
     if w == 0 || h == 0 || u64::from(w) * u64::from(h) > MAX_PIXELS {
@@ -123,6 +132,7 @@ pub(crate) fn decode_local(input: &Path) -> image::ImageResult<(DynamicImage, Op
     let icc = decoder.icc_profile()?;
     let mut image = DynamicImage::from_decoder(decoder)?;
     image.apply_orientation(orientation);
+    image = avif_transform.apply(image);
     if let Some(icc) = icc.filter(|profile| !profile.is_empty()) {
         crate::color::normalize_srgb(&mut image, &icc)?;
     }

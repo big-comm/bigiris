@@ -21,6 +21,11 @@ pub struct FmOutcome {
     pub files: Vec<PathBuf>,
     /// Populated only on failure; the rest of the FMs still run.
     pub error: Option<String>,
+    /// User install only: the distribution package already ships this
+    /// integration system-wide, so nothing was written (a personal copy
+    /// would shadow the packaged one and go stale on upgrades) and copies
+    /// written by earlier user installs were removed.
+    pub packaged: bool,
 }
 
 /// Aggregate report across all FMs.
@@ -56,6 +61,11 @@ pub enum InstallError {
 }
 
 /// Install BigIris service menus for every supported file manager.
+///
+/// In `Scope::User` a file manager whose integration the distribution
+/// package already ships under `/usr/share` is skipped and our stale
+/// personal copies of it are removed, so on a packaged system a user
+/// install only adds what packages cannot ship (Thunar's `uca.xml`).
 /// For `Scope::User` also installs app launcher (`.desktop`), icon SVG,
 /// and AppStream metainfo — so running the binary from a dev build plus
 /// `install-integrations --user` gives the full "registered app"
@@ -110,86 +120,117 @@ enum InstallOp {
     Uninstall,
 }
 
-fn run_all(paths: &ScopePaths, op: InstallOp, detected_only: bool) -> Report {
-    let mut report = Report::default();
-    report.outcomes.push(run_one(
-        FileManager::Dolphin,
-        "dolphin",
-        paths,
-        op,
-        detected_only,
-        dolphin::install,
-        dolphin::uninstall,
-    ));
-    report.outcomes.push(run_one(
-        FileManager::Nautilus,
-        "nautilus",
-        paths,
-        op,
-        detected_only,
-        nautilus::install,
-        nautilus::uninstall,
-    ));
-    report.outcomes.push(run_one(
-        FileManager::Nemo,
-        "nemo",
-        paths,
-        op,
-        detected_only,
-        nemo::install,
-        nemo::uninstall,
-    ));
-    report.outcomes.push(run_one(
-        FileManager::Thunar,
-        "thunar",
-        paths,
-        op,
-        detected_only,
-        thunar::install,
-        thunar::uninstall,
-    ));
-    report.outcomes.push(run_one(
-        FileManager::PcmanfmQt,
-        "pcmanfm-qt",
-        paths,
-        op,
-        detected_only,
-        pcmanfm_qt::install,
-        pcmanfm_qt::uninstall,
-    ));
-    report.outcomes.push(run_one(
-        FileManager::Pantheon,
-        "io.elementary.files",
-        paths,
-        op,
-        detected_only,
-        pantheon::install,
-        pantheon::uninstall,
-    ));
-    report
+/// A [`ScopePaths`] directory getter, such as [`ScopePaths::nemo_actions`].
+type DirOf = fn(&ScopePaths) -> PathBuf;
+
+/// One row of the orchestration table.
+struct FmSpec {
+    fm: FileManager,
+    detection_bin: &'static str,
+    install: fn(&ScopePaths) -> io::Result<Vec<PathBuf>>,
+    uninstall: fn(&ScopePaths) -> io::Result<Vec<PathBuf>>,
+    /// Directory (relative to a data root) and file suffix of the copies a
+    /// distribution package installs. `None` for Thunar, which packages
+    /// never ship (see `thunar` module docs).
+    packaged: Option<(DirOf, &'static str)>,
 }
 
-fn run_one(
-    fm: FileManager,
-    detection_bin: &str,
-    paths: &ScopePaths,
-    op: InstallOp,
-    detected_only: bool,
-    install_fn: fn(&ScopePaths) -> io::Result<Vec<PathBuf>>,
-    uninstall_fn: fn(&ScopePaths) -> io::Result<Vec<PathBuf>>,
-) -> FmOutcome {
-    let detected = is_on_path(detection_bin);
+const FILE_MANAGERS: [FmSpec; 6] = [
+    FmSpec {
+        fm: FileManager::Dolphin,
+        detection_bin: "dolphin",
+        install: dolphin::install,
+        uninstall: dolphin::uninstall,
+        packaged: Some((ScopePaths::kio_servicemenus, ".desktop")),
+    },
+    FmSpec {
+        fm: FileManager::Nautilus,
+        detection_bin: "nautilus",
+        install: nautilus::install,
+        uninstall: nautilus::uninstall,
+        packaged: Some((ScopePaths::nautilus_python_extensions, ".py")),
+    },
+    FmSpec {
+        fm: FileManager::Nemo,
+        detection_bin: "nemo",
+        install: nemo::install,
+        uninstall: nemo::uninstall,
+        packaged: Some((ScopePaths::nemo_actions, ".nemo_action")),
+    },
+    FmSpec {
+        fm: FileManager::Thunar,
+        detection_bin: "thunar",
+        install: thunar::install,
+        uninstall: thunar::uninstall,
+        packaged: None,
+    },
+    FmSpec {
+        fm: FileManager::PcmanfmQt,
+        detection_bin: "pcmanfm-qt",
+        install: pcmanfm_qt::install,
+        uninstall: pcmanfm_qt::uninstall,
+        packaged: Some((ScopePaths::libfm_actions, ".desktop")),
+    },
+    FmSpec {
+        fm: FileManager::Pantheon,
+        detection_bin: "io.elementary.files",
+        install: pantheon::install,
+        uninstall: pantheon::uninstall,
+        packaged: Some((ScopePaths::contractor, ".contract")),
+    },
+];
+
+fn run_all(paths: &ScopePaths, op: InstallOp, detected_only: bool) -> Report {
+    let outcomes =
+        FILE_MANAGERS.iter().map(|spec| run_one(spec, paths, op, detected_only)).collect();
+    Report { outcomes, app_files: Vec::new() }
+}
+
+fn run_one(spec: &FmSpec, paths: &ScopePaths, op: InstallOp, detected_only: bool) -> FmOutcome {
+    let detected = is_on_path(spec.detection_bin);
+    let outcome = |result: io::Result<Vec<PathBuf>>, packaged: bool| match result {
+        Ok(files) => FmOutcome { fm: spec.fm, detected, files, error: None, packaged },
+        Err(e) => FmOutcome {
+            fm: spec.fm,
+            detected,
+            files: Vec::new(),
+            error: Some(e.to_string()),
+            packaged,
+        },
+    };
+    if matches!(op, InstallOp::Install) && is_packaged(spec, paths) {
+        // Drop what earlier user installs wrote; the package's copy wins.
+        return outcome((spec.uninstall)(paths).map(|_| Vec::new()), true);
+    }
     if matches!(op, InstallOp::Install) && detected_only && !detected {
-        return FmOutcome { fm, detected, files: Vec::new(), error: None };
+        return outcome(Ok(Vec::new()), false);
     }
     let result = match op {
-        InstallOp::Install => install_fn(paths),
-        InstallOp::Uninstall => uninstall_fn(paths),
+        InstallOp::Install => (spec.install)(paths),
+        InstallOp::Uninstall => (spec.uninstall)(paths),
     };
-    match result {
-        Ok(files) => FmOutcome { fm, detected, files, error: None },
-        Err(e) => FmOutcome { fm, detected, files: Vec::new(), error: Some(e.to_string()) },
-    }
+    outcome(result, false)
+}
+
+/// Does a user install find this integration already shipped by the
+/// distribution package under [`ScopePaths::package_data`]?
+fn is_packaged(spec: &FmSpec, paths: &ScopePaths) -> bool {
+    let (Scope::User, Some(data), Some((dir_of, suffix))) =
+        (paths.scope, paths.package_data.as_ref(), spec.packaged)
+    else {
+        return false;
+    };
+    let system = ScopePaths { data: data.clone(), ..paths.clone() };
+    let Ok(entries) = std::fs::read_dir(dir_of(&system)) else {
+        return false;
+    };
+    entries.flatten().any(|entry| {
+        let name = entry.file_name();
+        let name = name.to_string_lossy();
+        name.starts_with("bigiris-")
+            && name.ends_with(suffix)
+            && entry.file_type().is_ok_and(|t| t.is_file())
+    })
 }
 
 // ─── App-level assets (desktop entry, icon, metainfo) ──────────────────
@@ -428,6 +469,38 @@ mod tests {
             assert!(body.starts_with("<?xml"), "XML declaration must stay first");
             assert_eq!(body.lines().nth(1), Some(XML_MARKER));
         }
+    }
+
+    #[test]
+    fn user_install_skips_packaged_fms_and_removes_stale_copies() {
+        let tmp = TempDir::new().unwrap();
+        let package = tmp.path().join("root");
+        assert!(install_to_destdir(&package).is_success());
+        let mut paths = ScopePaths::rooted_at(tmp.path().join("home"));
+        // A user install from before the package was installed …
+        assert!(install_with_paths(&paths).is_success());
+        let mine = paths.kio_servicemenus().join("bigiris-mine.desktop");
+        std::fs::write(&mine, "[Desktop Entry]\nExec=gimp %F\n").unwrap();
+
+        paths.package_data = Some(package.join("usr/share"));
+        let report = install_with_paths(&paths);
+        assert!(report.is_success());
+        for o in &report.outcomes {
+            let thunar = matches!(o.fm, FileManager::Thunar);
+            assert_eq!(o.packaged, !thunar, "{:?}", o.fm);
+            assert_eq!(o.files.is_empty(), !thunar, "{:?} wrote {:?}", o.fm, o.files);
+        }
+        for dir in [
+            paths.nemo_actions(),
+            paths.libfm_actions(),
+            paths.contractor(),
+            paths.nautilus_python_extensions(),
+        ] {
+            let left: Vec<_> = std::fs::read_dir(&dir).into_iter().flatten().flatten().collect();
+            assert!(left.is_empty(), "stale user copies kept in {}", dir.display());
+        }
+        assert!(mine.exists(), "user's own file removed");
+        assert!(paths.thunar_uca().exists());
     }
 
     #[test]

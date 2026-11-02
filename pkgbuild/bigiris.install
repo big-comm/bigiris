@@ -17,7 +17,9 @@ _refresh_caches() {
 _thunar_hint() {
   command -v thunar &>/dev/null || return 0
   echo '==> Thunar: run "bigiris install-integrations --user" as your user'
-  echo '    to add the BigIris actions to the Thunar context menu.'
+  echo '    to add the BigIris actions to the Thunar context menu. It only'
+  echo '    writes ~/.config/Thunar/uca.xml; the other file managers use the'
+  echo '    copies this package installs in /usr/share.'
   # Older BigIris packages owned /etc/xdg/Thunar/uca.xml (only possible with
   # a forced install over thunar); removing that package drops the file.
   if [ ! -e /etc/xdg/Thunar/uca.xml ] && pacman -Qq thunar &>/dev/null; then

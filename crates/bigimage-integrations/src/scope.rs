@@ -44,6 +44,11 @@ pub struct ScopePaths {
     /// that Thunar falls back to when the user has no `uca.xml`. Only set
     /// for a real user install; empty means "none" (tests, system scope).
     pub xdg_config_dirs: Vec<PathBuf>,
+    /// Where the distro package installs system-wide integrations
+    /// (`/usr/share`). A user install skips every file manager the package
+    /// already covers there, since a personal copy would shadow the packaged
+    /// one and go stale on upgrade. `None` for tests and system scope.
+    pub package_data: Option<PathBuf>,
 }
 
 impl ScopePaths {
@@ -58,6 +63,7 @@ impl ScopePaths {
                     data: base.data_dir().to_path_buf(),
                     config: base.config_dir().to_path_buf(),
                     xdg_config_dirs: config_dirs_from(std::env::var_os("XDG_CONFIG_DIRS")),
+                    package_data: Some(PathBuf::from("/usr/share")),
                 })
             }
             Scope::System => Ok(Self {
@@ -66,6 +72,7 @@ impl ScopePaths {
                 data: PathBuf::from("/usr/share"),
                 config: PathBuf::from("/etc/xdg"),
                 xdg_config_dirs: Vec::new(),
+                package_data: None,
             }),
         }
     }
@@ -76,7 +83,14 @@ impl ScopePaths {
         let home: PathBuf = home.into();
         let data = home.join(".local/share");
         let config = home.join(".config");
-        Self { scope: Scope::User, home, data, config, xdg_config_dirs: Vec::new() }
+        Self {
+            scope: Scope::User,
+            home,
+            data,
+            config,
+            xdg_config_dirs: Vec::new(),
+            package_data: None,
+        }
     }
 
     /// System-wide scope prefixed with a `DESTDIR` for packaging. Ensures
@@ -90,6 +104,7 @@ impl ScopePaths {
             data: destdir.join("usr/share"),
             config: destdir.join("etc/xdg"),
             xdg_config_dirs: Vec::new(),
+            package_data: None,
         }
     }
 

@@ -145,10 +145,17 @@ cargo build --locked --release --features "gui ai" -p bigiris
 
 As ações do Thunar são sempre por usuário: `bigiris install-integrations --user`
 mescla as entradas do BigIris em `~/.config/Thunar/uca.xml`, preservando as
-ações que você já tinha. Os pacotes não instalam mais `/etc/xdg/Thunar/uca.xml`:
-esse arquivo pertence ao pacote `thunar` e substituí-lo apagaria as ações padrão
-do sistema. Quem usa Thunar deve rodar o comando acima uma vez por usuário
-(`install.sh` já faz isso).
+ações que você já tinha. Se você ainda não tem esse arquivo, ele começa como
+cópia de `/etc/xdg/Thunar/uca.xml` (como o próprio Thunar faz), para não esconder
+as ações padrão do sistema. Os pacotes não instalam `/etc/xdg/Thunar/uca.xml`:
+esse arquivo pertence ao pacote `thunar`. Quem usa Thunar deve rodar o comando
+acima uma vez por usuário (`install.sh` já faz isso).
+
+Com o pacote instalado, `install-integrations --user` não grava cópias pessoais
+das integrações que o pacote já fornece em `/usr/share` (Dolphin, Nautilus, Nemo,
+PCManFM-Qt, elementary Files, atalho e ícone) e apaga cópias pessoais antigas
+delas, que de outro modo sombreariam as do pacote e ficariam desatualizadas.
+Na prática, só as ações do Thunar são gravadas.
 
 Para remover as integrações pessoais antes de apagar o binário:
 

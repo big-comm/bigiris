@@ -124,11 +124,8 @@ pub fn run_viewer(files: Vec<PathBuf>) -> i32 {
         let input = files.clone();
         let cancel = Arc::new(AtomicBool::new(false));
         let worker_cancel = cancel.clone();
-        let (tx, rx) = mpsc::sync_channel(1);
-        std::thread::spawn(move || {
-            let _ = tx.send(expand_to_folder_cancellable(input, &worker_cancel));
-        });
-        (rx, cancel)
+        let scan = gio::spawn_blocking(move || expand_to_folder_cancellable(input, &worker_cancel));
+        (scan, cancel)
     });
     let startup = RefCell::new(Some((files, preload, folder)));
     app.connect_activate(move |app| {
@@ -136,17 +133,13 @@ pub fn run_viewer(files: Vec<PathBuf>) -> i32 {
         let Some((files, preload, folder)) = startup.borrow_mut().take() else { return };
         let (window, state) = build_window_preloaded(app, Rc::new(files), 0, preload);
         window.present();
-        let Some((rx, cancel)) = folder else { return };
+        let Some((scan, cancel)) = folder else { return };
         window.connect_unrealize(move |_| cancel.store(true, Ordering::Release));
-        glib::timeout_add_local(Duration::from_millis(16), move || {
-            let Some(state) = state.upgrade() else { return glib::ControlFlow::Break };
-            match rx.try_recv() {
-                Ok((files, index)) => {
-                    adopt_folder(&state, files, index);
-                    glib::ControlFlow::Break
-                }
-                Err(mpsc::TryRecvError::Empty) => glib::ControlFlow::Continue,
-                Err(mpsc::TryRecvError::Disconnected) => glib::ControlFlow::Break,
+        // Awaited instead of polled: nothing wakes the loop until the scan ends.
+        glib::MainContext::default().spawn_local(async move {
+            let Ok((files, index)) = scan.await else { return };
+            if let Some(state) = state.upgrade() {
+                adopt_folder(&state, files, index);
             }
         });
     });
@@ -485,6 +478,8 @@ struct ViewerLoader {
     pending: Arc<(Mutex<Option<LoadRequest>>, Condvar)>,
     results: Arc<Mutex<Option<DecodedFrame>>>,
     stopped: Arc<AtomicBool>,
+    /// Signalled for every published result; closed when the worker stops.
+    wake: viewer::Wake,
 }
 
 impl ViewerLoader {
@@ -495,6 +490,8 @@ impl ViewerLoader {
         let worker_pending = pending.clone();
         let worker_results = results.clone();
         let worker_stopped = stopped.clone();
+        let wake = viewer::Wake::default();
+        let worker_wake = wake.clone();
         std::thread::Builder::new()
             .name("bigiris-viewer-decode".to_string())
             .spawn(move || loop {
@@ -533,9 +530,10 @@ impl ViewerLoader {
                     edited,
                     pixels,
                 });
+                worker_wake.notify();
             })
             .expect("could not start viewer decoder");
-        Self { pending, results, stopped }
+        Self { pending, results, stopped, wake }
     }
 
     fn request(&self, request: LoadRequest) {
@@ -555,6 +553,7 @@ impl ViewerLoader {
         self.stopped.store(true, Ordering::Relaxed);
         *slot = None;
         ready.notify_one();
+        self.wake.close();
     }
 }
 
@@ -1019,25 +1018,35 @@ fn build_window_preloaded(
         });
     }
 
-    // Poll decoded frames without blocking GTK. At most the newest valid
+    // Decoded frames are applied when the worker signals one, without
+    // blocking GTK or waking it on a timer. At most the newest valid
     // generation is painted, so fast directory navigation remains smooth.
-    {
-        let state = state.clone();
-        glib::timeout_add_local(std::time::Duration::from_millis(16), move || {
-            if state.borrow().window_weak.upgrade().is_none_or(|window| !window.is_visible()) {
-                state.borrow().loader.stop();
-                state.borrow().prefetcher.stop();
-                return glib::ControlFlow::Break;
+    // The tasks hold the state weakly and end when the loaders stop.
+    for prefetch in [false, true] {
+        let wake = {
+            let s = state.borrow();
+            if prefetch {
+                s.prefetcher.wake.clone()
+            } else {
+                s.loader.wake.clone()
             }
-            let frame = state.borrow().loader.take_result();
-            if let Some(frame) = frame {
-                apply_decoded_frame(&state, frame);
+        };
+        let weak = Rc::downgrade(&state);
+        glib::MainContext::default().spawn_local(async move {
+            while wake.wait().await {
+                let Some(state) = weak.upgrade() else { break };
+                if prefetch {
+                    let frame = state.borrow().prefetcher.take_result();
+                    if let Some(frame) = frame {
+                        apply_prefetched_frame(&state, frame);
+                    }
+                } else {
+                    let frame = state.borrow().loader.take_result();
+                    if let Some(frame) = frame {
+                        apply_decoded_frame(&state, frame);
+                    }
+                }
             }
-            let prefetched = state.borrow().prefetcher.take_result();
-            if let Some(frame) = prefetched {
-                apply_prefetched_frame(&state, frame);
-            }
-            glib::ControlFlow::Continue
         });
     }
 
@@ -1252,7 +1261,7 @@ fn decode_thumbnail(path: &Path) -> Result<(Vec<u8>, u32, u32), Box<dyn std::err
 /// independently of folder size; the window is centred on the current file.
 fn rebuild_film_strip(state: &Rc<RefCell<ViewerState>>) {
     const PAGE: usize = viewer::FILM_STRIP_PAGE;
-    let (container, files, start, cancel, window) = {
+    let (container, files, start, cancel) = {
         let mut s = state.borrow_mut();
         s.thumbnail_cancel.store(true, Ordering::Release);
         s.thumbnail_cancel = Arc::new(AtomicBool::new(false));
@@ -1260,13 +1269,7 @@ fn rebuild_film_strip(state: &Rc<RefCell<ViewerState>>) {
         s.film_strip_active = None;
         let container = s.film_strip_box.clone();
         s.film_strip_buttons.clear();
-        (
-            container,
-            s.files.clone(),
-            s.film_strip_start,
-            s.thumbnail_cancel.clone(),
-            s.window().downgrade(),
-        )
+        (container, s.files.clone(), s.film_strip_start, s.thumbnail_cancel.clone())
     };
     while let Some(child) = container.first_child() {
         container.remove(&child);
@@ -1321,7 +1324,7 @@ fn rebuild_film_strip(state: &Rc<RefCell<ViewerState>>) {
                 }
             }
         }
-        start_thumbnail_decoding(paths, current, cancel, weak_buttons, window);
+        start_thumbnail_decoding(paths, current, cancel, weak_buttons);
     };
     let mut s = state.borrow_mut();
     if s.first_frame_shown {
@@ -1337,41 +1340,31 @@ fn start_thumbnail_decoding(
     skip: Option<usize>,
     cancel: Arc<AtomicBool>,
     weak_buttons: Vec<glib::WeakRef<gtk::Button>>,
-    window: glib::WeakRef<adw::ApplicationWindow>,
 ) {
-    let (tx, rx) = mpsc::sync_channel(2);
-    std::thread::spawn(move || {
-        crate::codec::with_cancel(cancel.clone(), || {
-            for (index, path) in paths.iter().enumerate() {
-                if cancel.load(Ordering::Acquire) {
-                    break;
-                }
-                if Some(index) == skip {
-                    continue;
-                }
-                if let Ok((raw, w, h)) = decode_thumbnail(path) {
-                    if tx.send((index, raw, w, h)).is_err() {
-                        break;
-                    }
-                }
+    // One thumbnail at a time on GIO's worker pool, awaited from the GTK
+    // loop: no timer runs while waiting. `cancel` is raised when the strip
+    // is rebuilt or the window goes away.
+    glib::MainContext::default().spawn_local(async move {
+        for (index, path) in paths.into_iter().enumerate() {
+            if cancel.load(Ordering::Acquire) {
+                break;
             }
-        })
-    });
-    glib::timeout_add_local(Duration::from_millis(32), move || {
-        if window.upgrade().is_none_or(|w| !w.is_visible()) {
-            return glib::ControlFlow::Break;
-        }
-        loop {
-            match rx.try_recv() {
-                Ok((index, raw, w, h)) => {
-                    if let Some(button) = weak_buttons.get(index).and_then(|w| w.upgrade()) {
-                        if let Some(picture) = thumb_picture(&button) {
-                            picture.set_paintable(Some(&texture_from_rgba(raw, w, h)));
-                        }
-                    }
+            if Some(index) == skip {
+                continue;
+            }
+            let worker_cancel = cancel.clone();
+            let decoded = gio::spawn_blocking(move || {
+                crate::codec::with_cancel(worker_cancel, || decode_thumbnail(&path).ok())
+            })
+            .await;
+            if cancel.load(Ordering::Acquire) {
+                break;
+            }
+            let Ok(Some((raw, w, h))) = decoded else { continue };
+            if let Some(button) = weak_buttons.get(index).and_then(|w| w.upgrade()) {
+                if let Some(picture) = thumb_picture(&button) {
+                    picture.set_paintable(Some(&texture_from_rgba(raw, w, h)));
                 }
-                Err(mpsc::TryRecvError::Empty) => return glib::ControlFlow::Continue,
-                Err(mpsc::TryRecvError::Disconnected) => return glib::ControlFlow::Break,
             }
         }
     });
@@ -2182,54 +2175,37 @@ fn save_edits(state: &Rc<RefCell<ViewerState>>) {
         }
         sync_edit_actions(&state);
 
-        let (tx, rx) = mpsc::channel();
         let worker_path = path.clone();
         let worker_ops = ops.clone();
-        std::thread::Builder::new()
-            .name("bigiris-save".to_string())
-            .spawn(move || {
-                let result =
-                    write_edits_to_disk(&worker_path, &worker_ops).map_err(|e| e.to_string());
-                let _ = tx.send(result);
-            })
-            .expect("could not start save worker");
+        let job = gio::spawn_blocking(move || {
+            write_edits_to_disk(&worker_path, &worker_ops).map_err(|e| e.to_string())
+        });
 
+        // Awaited on the GTK loop instead of polled on a timer.
         let state = state.clone();
         let path = path.clone();
-        glib::timeout_add_local(std::time::Duration::from_millis(32), move || {
-            match rx.try_recv() {
-                Ok(result) => {
-                    {
-                        let mut s = state.borrow_mut();
-                        s.saving = false;
-                        s.loading_spinner.set_visible(false);
-                        if result.is_ok() {
-                            s.pending_ops.clear();
-                            s.redo_ops.clear();
-                        }
-                    }
-                    refresh_title(&state);
-                    sync_edit_actions(&state);
-                    match result {
-                        Ok(()) => state.borrow().osd_label.set_text(&gettext("Salvo")),
-                        Err(error) => {
-                            tracing::error!(?path, %error, "save: falha ao gravar edições");
-                            state.borrow().osd_label.set_text(&gettext("Falha ao salvar"));
-                        }
-                    }
-                    pulse_osd(&state);
-                    glib::ControlFlow::Break
-                }
-                Err(mpsc::TryRecvError::Empty) => glib::ControlFlow::Continue,
-                Err(mpsc::TryRecvError::Disconnected) => {
-                    let mut s = state.borrow_mut();
-                    s.saving = false;
-                    s.loading_spinner.set_visible(false);
-                    drop(s);
-                    sync_edit_actions(&state);
-                    glib::ControlFlow::Break
+        glib::MainContext::default().spawn_local(async move {
+            // A panicking encoder ends the save as a failure.
+            let result = job.await.unwrap_or_else(|_| Err("save worker panicked".to_string()));
+            {
+                let mut s = state.borrow_mut();
+                s.saving = false;
+                s.loading_spinner.set_visible(false);
+                if result.is_ok() {
+                    s.pending_ops.clear();
+                    s.redo_ops.clear();
                 }
             }
+            refresh_title(&state);
+            sync_edit_actions(&state);
+            match result {
+                Ok(()) => state.borrow().osd_label.set_text(&gettext("Salvo")),
+                Err(error) => {
+                    tracing::error!(?path, %error, "save: falha ao gravar edições");
+                    state.borrow().osd_label.set_text(&gettext("Falha ao salvar"));
+                }
+            }
+            pulse_osd(&state);
         });
     });
     alert.present(Some(&window));
@@ -3052,35 +3028,26 @@ fn print_current(state: &Rc<RefCell<ViewerState>>) {
     let closing = cancel.clone();
     let closing_handler = window.connect_unrealize(move |_| closing.store(true, Ordering::Release));
     let input = path.clone();
-    let (tx, rx) = mpsc::sync_channel(1);
     window.set_cursor_from_name(Some("wait"));
-    std::thread::spawn(move || {
+    let job = gio::spawn_blocking(move || {
         crate::codec::with_cancel(cancel, || {
-            let result = bigimage_core::open_image(input)
+            bigimage_core::open_image(input)
                 .map(|image| {
                     let rgba = image.to_rgba8();
                     let size = rgba.dimensions();
                     (premultiply_for_cairo(rgba.into_raw()), size)
                 })
-                .map_err(|e| e.to_string());
-            let _ = tx.send(result);
-        });
+                .map_err(|e| e.to_string())
+        })
     });
     let weak = window.downgrade();
-    let mut closing_handler = Some(closing_handler);
-    glib::timeout_add_local(Duration::from_millis(16), move || {
-        let Some(window) = weak.upgrade() else { return glib::ControlFlow::Break };
+    glib::MainContext::default().spawn_local(async move {
+        let result = job.await.unwrap_or_else(|_| Err(gettext("O preparo da impressão falhou")));
+        let Some(window) = weak.upgrade() else { return };
         if !window.is_visible() {
-            return glib::ControlFlow::Break;
+            return;
         }
-        let result = match rx.try_recv() {
-            Ok(result) => result,
-            Err(mpsc::TryRecvError::Empty) => return glib::ControlFlow::Continue,
-            Err(mpsc::TryRecvError::Disconnected) => Err("O preparo da impressão falhou".into()),
-        };
-        if let Some(handler) = closing_handler.take() {
-            window.disconnect(handler);
-        }
+        window.disconnect(closing_handler);
         window.set_cursor(None);
         match result {
             Ok((pixels, (width, height))) => {
@@ -3098,7 +3065,6 @@ fn print_current(state: &Rc<RefCell<ViewerState>>) {
             }
             Err(error) => show_print_error(&window, &error),
         }
-        glib::ControlFlow::Break
     });
 }
 

@@ -1,8 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-//! Pure helpers behind the viewer window: film-strip geometry and the
-//! freedesktop thumbnail cache lookup.
+//! Pure helpers behind the viewer window: film-strip geometry, the
+//! freedesktop thumbnail cache lookup and a cross-thread wake-up used to
+//! hand decoded frames back to the GTK loop without polling.
 
+use std::future::Future;
 use std::path::{Path, PathBuf};
+use std::pin::Pin;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, Mutex};
+use std::task::{Context, Poll, Waker};
 
 /// Thumbnails built at once in the film strip, independently of folder size.
 pub(super) const FILM_STRIP_PAGE: usize = 41;
@@ -113,6 +119,70 @@ fn png_thumbnail_matches(bytes: &[u8], uri: &str, mtime: &str) -> bool {
         rest = &rest[(12 + length).min(rest.len())..];
     }
     uri_ok && mtime_ok
+}
+
+/// One-slot, cross-thread wake-up. A worker thread calls [`Wake::notify`]
+/// after publishing a result; a `spawn_local` task awaits [`Wake::wait`]
+/// on the GTK thread, so nothing runs on a timer while the viewer is idle.
+#[derive(Clone, Default)]
+pub(super) struct Wake(Arc<WakeInner>);
+
+#[derive(Default)]
+struct WakeInner {
+    signalled: AtomicBool,
+    closed: AtomicBool,
+    waker: Mutex<Option<Waker>>,
+}
+
+impl Wake {
+    pub(super) fn notify(&self) {
+        self.0.signalled.store(true, Ordering::Release);
+        self.wake();
+    }
+
+    /// Ends every current and future wait.
+    pub(super) fn close(&self) {
+        self.0.closed.store(true, Ordering::Release);
+        self.wake();
+    }
+
+    fn wake(&self) {
+        let waker = self.0.waker.lock().map(|mut slot| slot.take()).unwrap_or(None);
+        if let Some(waker) = waker {
+            waker.wake();
+        }
+    }
+
+    /// Resolves to `true` after the next notification, `false` once closed.
+    pub(super) fn wait(&self) -> impl Future<Output = bool> + 'static {
+        Waiting(self.0.clone())
+    }
+}
+
+struct Waiting(Arc<WakeInner>);
+
+impl Future for Waiting {
+    type Output = bool;
+
+    fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<bool> {
+        let ready = |inner: &WakeInner| {
+            if inner.closed.load(Ordering::Acquire) {
+                Some(false)
+            } else if inner.signalled.swap(false, Ordering::AcqRel) {
+                Some(true)
+            } else {
+                None
+            }
+        };
+        if let Some(result) = ready(&self.0) {
+            return Poll::Ready(result);
+        }
+        if let Ok(mut slot) = self.0.waker.lock() {
+            *slot = Some(cx.waker().clone());
+        }
+        // A notification that raced with registering the waker is not lost.
+        ready(&self.0).map_or(Poll::Pending, Poll::Ready)
+    }
 }
 
 #[cfg(test)]
@@ -226,5 +296,24 @@ mod tests {
         )
         .unwrap();
         assert_eq!(cached_thumbnail_in(&cache, &image), Some(entry));
+    }
+
+    #[test]
+    fn wake_delivers_notifications_across_threads_and_closes() {
+        let wake = Wake::default();
+        let context = gtk4::glib::MainContext::new();
+        let worker = wake.clone();
+        wake.notify();
+        let handle = std::thread::spawn(move || {
+            std::thread::sleep(std::time::Duration::from_millis(20));
+            worker.close();
+        });
+        let results = context.block_on(async {
+            let first = wake.wait().await;
+            let second = wake.wait().await;
+            (first, second)
+        });
+        handle.join().unwrap();
+        assert_eq!(results, (true, false));
     }
 }

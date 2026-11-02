@@ -398,6 +398,8 @@ fn viewer_second_review_fixes() {
             "saved frame not cached"
         );
         assert_eq!(s.shown_path.as_ref(), Some(&png));
+        // Nothing was dropped: the plain confirmation, no metadata notice.
+        assert_eq!(s.osd_label.label().as_str(), gettext("Salvo"));
     }
     assert_eq!(current_thumb_width(&state), Some(32), "cell kept the pre-save thumbnail");
     wait(&context, "prefetch after save", &|| {
@@ -436,4 +438,40 @@ fn viewer_second_review_fixes() {
     window.destroy();
     drop(window);
     wait(&context, "second viewer released", &|| witness.upgrade().is_none());
+
+    // A save that cannot keep the source EXIF says so instead of "Salvo":
+    // JPEG pixels with EXIF under a `.bmp` name are written back as BMP.
+    let bmp = dir.path().join("c-camera.bmp");
+    {
+        use image::ImageEncoder;
+        let mut encoder = image::codecs::jpeg::JpegEncoder::new_with_quality(
+            std::fs::File::create(&bmp).unwrap(),
+            90,
+        );
+        encoder.set_exif_metadata(b"II*\0\x08\0\0\0\0\0\0\0\0\0".to_vec()).unwrap();
+        let pixels = image::RgbImage::from_pixel(24, 16, image::Rgb([20, 120, 220]));
+        encoder.write_image(pixels.as_raw(), 24, 16, image::ExtendedColorType::Rgb8).unwrap();
+    }
+    let (window, witness) = build_window_tracked(&app, Rc::new(vec![bmp.clone()]), 0);
+    window.present();
+    let state = witness.upgrade().unwrap();
+    wait(&context, "camera frame", &|| state.borrow().current_ready);
+    apply_edit(&state, EditOp::RotateCw);
+    wait(&context, "edited camera frame", &|| state.borrow().current_ready);
+    save_edits(&state);
+    settle(&context, 100);
+    answer(&window, "save");
+    wait(&context, "camera save done", &|| {
+        let s = state.borrow();
+        !s.saving && s.pending_ops.is_empty()
+    });
+    assert_eq!(
+        state.borrow().osd_label.label().as_str(),
+        metadata_loss_notice(&[bigimage_core::MetadataLoss::ExifUnsupported]).unwrap()
+    );
+    assert!(state.borrow().osd_revealer.reveals_child(), "notice not shown");
+    drop(state);
+    window.destroy();
+    drop(window);
+    wait(&context, "third viewer released", &|| witness.upgrade().is_none());
 }

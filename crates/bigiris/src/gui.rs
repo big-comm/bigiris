@@ -47,6 +47,8 @@ const BOTTOM_EDGE_PX: f64 = 110.0;
 const DEFAULT_EDGE_HIDE_MS: u64 = 1500;
 /// OSD pill visible duration after a nav/zoom pulse, mpv-style.
 const OSD_PULSE_MS: u64 = 1200;
+/// How long a save notice about dropped metadata stays on screen.
+const OSD_NOTICE_MS: u64 = 6000;
 /// Idle time before the cursor itself blinks out (mouse still, no key).
 const CURSOR_HIDE_MS: u64 = 2000;
 /// Slideshow step between auto-advances (Space toggles).
@@ -688,6 +690,11 @@ fn build_window_preloaded(
     let osd_label = gtk::Label::builder()
         .label("")
         .css_classes(["osd", "title-4"])
+        // Long notices (dropped metadata after a save) wrap instead of
+        // widening the pill past the window.
+        .wrap(true)
+        .max_width_chars(60)
+        .justify(gtk::Justification::Center)
         .margin_start(12)
         .margin_end(12)
         .margin_top(6)
@@ -1730,6 +1737,11 @@ fn cancel_bottom_hide(state: &Rc<RefCell<ViewerState>>) {
 /// is bottom-centered above the strip area so it's visible without any
 /// chrome taking over.
 fn pulse_osd(state: &Rc<RefCell<ViewerState>>) {
+    pulse_osd_for(state, OSD_PULSE_MS);
+}
+
+/// [`pulse_osd`] for `millis`, for notices that take longer to read.
+fn pulse_osd_for(state: &Rc<RefCell<ViewerState>>, millis: u64) {
     {
         let s = state.borrow();
         if s.osd_label.label().is_empty() {
@@ -1742,13 +1754,12 @@ fn pulse_osd(state: &Rc<RefCell<ViewerState>>) {
         return;
     }
     let weak = Rc::downgrade(state);
-    let id =
-        glib::timeout_add_local_once(std::time::Duration::from_millis(OSD_PULSE_MS), move || {
-            if let Some(state) = weak.upgrade() {
-                state.borrow_mut().osd_hide_source = None;
-                hide_osd(&state);
-            }
-        });
+    let id = glib::timeout_add_local_once(std::time::Duration::from_millis(millis), move || {
+        if let Some(state) = weak.upgrade() {
+            state.borrow_mut().osd_hide_source = None;
+            hide_osd(&state);
+        }
+    });
     state.borrow_mut().osd_hide_source = Some(id);
 }
 
@@ -2290,6 +2301,7 @@ fn save_edits(state: &Rc<RefCell<ViewerState>>) {
             let result = job
                 .await
                 .unwrap_or_else(|_| Err(SaveFailure::Other("save worker panicked".to_string())));
+            let dropped = result.as_ref().ok().cloned().unwrap_or_default();
             {
                 let mut s = state.borrow_mut();
                 s.saving = false;
@@ -2302,10 +2314,19 @@ fn save_edits(state: &Rc<RefCell<ViewerState>>) {
             refresh_title(&state);
             sync_edit_actions(&state);
             match result {
-                Ok(()) => {
+                Ok(_) => {
                     adopt_saved_frame(&state, &path);
-                    state.borrow().osd_label.set_text(&gettext("Salvo"));
-                    pulse_osd(&state);
+                    match metadata_loss_notice(&dropped) {
+                        Some(notice) => {
+                            tracing::info!(?path, ?dropped, "save: metadados descartados");
+                            state.borrow().osd_label.set_text(&notice);
+                            pulse_osd_for(&state, OSD_NOTICE_MS);
+                        }
+                        None => {
+                            state.borrow().osd_label.set_text(&gettext("Salvo"));
+                            pulse_osd(&state);
+                        }
+                    }
                 }
                 Err(failure) => {
                     tracing::error!(?path, ?failure, "save: falha ao gravar edições");
@@ -2434,8 +2455,13 @@ fn discard_edits(state: &Rc<RefCell<ViewerState>>) {
 /// renomeia por cima do destino. Assim, queda de energia ou falha do encoder
 /// deixa o original intacto. Permissões existentes são preservadas, assim
 /// como EXIF (com orientação zerada) e o perfil de cor original quando o
-/// formato os suporta — as edições são só geométricas.
-fn write_edits_to_disk(path: &Path, ops: &[EditOp]) -> Result<(), SaveFailure> {
+/// formato os suporta — as edições são só geométricas. JPEG é regravado na
+/// qualidade estimada do original (não no padrão 75), para que cada Ctrl+S
+/// não degrade a foto. Devolve os metadados que não puderam ser mantidos.
+fn write_edits_to_disk(
+    path: &Path,
+    ops: &[EditOp],
+) -> Result<Vec<bigimage_core::MetadataLoss>, SaveFailure> {
     let target = if path.symlink_metadata().map_err(SaveFailure::from_io)?.file_type().is_symlink()
     {
         path.canonicalize().map_err(SaveFailure::from_io)?
@@ -2449,19 +2475,58 @@ fn write_edits_to_disk(path: &Path, ops: &[EditOp]) -> Result<(), SaveFailure> {
         tracing::warn!(%error, "save: arquivo não é estático");
         SaveFailure::NotStatic
     })?;
-    let (img, source) =
-        bigimage_core::open_image_for_resave(&target).map_err(SaveFailure::from_image)?;
+    let (img, source, quality) =
+        crate::codec::open_for_resave(&target).map_err(SaveFailure::from_image)?;
     let edited = ops.iter().fold(img, |acc, op| apply_op_to_image(acc, *op));
-    bigimage_core::save_image_preserving_metadata(
+    let report = bigimage_core::save_image_preserving_metadata_report(
         edited,
         target,
         format,
-        &EncodeOptions::default(),
+        &resave_options(format, quality),
         OverwritePolicy::Replace,
         &source,
     )
     .map_err(SaveFailure::from_core)?;
-    Ok(())
+    Ok(report.dropped)
+}
+
+/// Encoder options for an in-place save: a JPEG keeps the quality its
+/// source was estimated at; everything else uses the defaults.
+fn resave_options(format: Format, source_quality: Option<u8>) -> EncodeOptions {
+    let default = EncodeOptions::default();
+    match format {
+        Format::Jpeg => EncodeOptions { quality: source_quality.or(default.quality), ..default },
+        _ => default,
+    }
+}
+
+/// OSD notice after a save that could not keep some source metadata, or
+/// `None` when everything survived.
+fn metadata_loss_notice(dropped: &[bigimage_core::MetadataLoss]) -> Option<String> {
+    use bigimage_core::MetadataLoss;
+    let mut reasons: Vec<String> = Vec::new();
+    for loss in dropped {
+        let reason = match loss {
+            MetadataLoss::ExifUnsupported => gettext("o formato não guarda EXIF"),
+            MetadataLoss::ExifTooLarge => gettext("EXIF grande demais para JPEG"),
+            MetadataLoss::ExifInvalid => gettext("EXIF inválido"),
+            MetadataLoss::IccUnsupported
+            | MetadataLoss::IccTooLarge
+            | MetadataLoss::IccMismatched => gettext("perfil de cor convertido para sRGB"),
+            MetadataLoss::IccDiscarded => gettext("perfil de cor inválido ignorado"),
+            _ => gettext("metadados não suportados"),
+        };
+        if !reasons.contains(&reason) {
+            reasons.push(reason);
+        }
+    }
+    if reasons.is_empty() {
+        return None;
+    }
+    Some(fill(
+        &gettext("Salvo. Alguns metadados não puderam ser mantidos: {list}"),
+        &[("list", &reasons.join("; "))],
+    ))
 }
 
 /// Encoder for an in-place save of `path`, chosen by its extension.
@@ -3970,6 +4035,34 @@ mod anchor_tests {
             .filter(|entry| entry.file_name().to_string_lossy().contains(".bigiris-"))
             .collect();
         assert!(leftovers.is_empty(), "atomic save left a temporary file behind");
+    }
+
+    #[test]
+    fn in_place_jpeg_save_keeps_the_source_quality() {
+        use super::resave_options;
+        use bigimage_core::{EncodeOptions, Format};
+        assert_eq!(resave_options(Format::Jpeg, Some(92)).quality, Some(92));
+        assert_eq!(resave_options(Format::Jpeg, None).quality, EncodeOptions::default().quality);
+        // Only JPEG is lossy-by-quality here; others keep their defaults.
+        assert_eq!(resave_options(Format::Png, Some(92)).quality, EncodeOptions::default().quality);
+    }
+
+    #[test]
+    fn dropped_metadata_is_explained_once_per_reason() {
+        use super::metadata_loss_notice;
+        use bigimage_core::MetadataLoss;
+        assert_eq!(metadata_loss_notice(&[]), None);
+        let notice = metadata_loss_notice(&[
+            MetadataLoss::IccUnsupported,
+            MetadataLoss::IccMismatched,
+            MetadataLoss::ExifTooLarge,
+        ])
+        .unwrap();
+        assert_eq!(
+            notice,
+            "Salvo. Alguns metadados não puderam ser mantidos: \
+             perfil de cor convertido para sRGB; EXIF grande demais para JPEG"
+        );
     }
 
     #[test]

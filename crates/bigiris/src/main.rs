@@ -671,8 +671,9 @@ fn init_i18n() {
 fn self_test() -> color_eyre::Result<()> {
     codec::self_test()?;
     println!(
-        "bigiris self-test OK [sandbox + decode]  (bigiris={}  core={}  ai={} [onnx={}]  integrations={})",
+        "bigiris self-test OK [sandbox + decode]  (bigiris={}+{}  core={}  ai={} [onnx={}]  integrations={})",
         env!("CARGO_PKG_VERSION"),
+        env!("BIGIRIS_BUILD_ID"),
         bigimage_core::version(),
         bigimage_ai::version(),
         bigimage_ai::onnx_available(),

@@ -46,8 +46,8 @@ pub fn self_test() -> color_eyre::Result<()> {
     if image.dimensions() != (2, 3) {
         return Err(color_eyre::eyre::eyre!("invalid sandbox decode"));
     }
-    let output = execute(input.path(), "attest")?;
-    if output.metadata()?.len() != 0 {
+    let attested = run(input.path(), "attest", |output| Ok(output.metadata()?.len() == 0))?;
+    if !attested {
         return Err(color_eyre::eyre::eyre!("invalid sandbox attestation"));
     }
     Ok(())
@@ -90,7 +90,7 @@ const DEADLINE: Duration = Duration::from_secs(60);
 #[cfg(test)]
 thread_local! {
     /// Test-only replacement for the worker binary (never compiled in releases).
-    static TEST_EXECUTABLE: RefCell<Option<(PathBuf, Duration)>> = const { RefCell::new(None) };
+    static TEST_EXECUTABLE: RefCell<Option<(PathBuf, Duration, bool)>> = const { RefCell::new(None) };
 }
 
 /// Path that starts a fresh BigIris process. After an upgrade `/proc/self/exe`
@@ -118,8 +118,8 @@ pub(crate) fn installed_executable() -> std::io::Result<(PathBuf, bool)> {
 
 fn worker_executable() -> std::io::Result<(PathBuf, bool, Duration)> {
     #[cfg(test)]
-    if let Some((path, deadline)) = TEST_EXECUTABLE.with(|slot| slot.borrow().clone()) {
-        return Ok((path, false, deadline));
+    if let Some((path, deadline, replaced)) = TEST_EXECUTABLE.with(|slot| slot.borrow().clone()) {
+        return Ok((path, replaced, deadline));
     }
     installed_executable().map(|(path, replaced)| (path, replaced, DEADLINE))
 }
@@ -296,7 +296,36 @@ pub(crate) fn sanitize_text(text: &str) -> String {
         .collect()
 }
 
-fn execute(path: &Path, mode: &str) -> ImageResult<std::fs::File> {
+/// Appended to worker failures when the executable was replaced on disk.
+const RESTART_HINT: &str = " (o BigIris foi atualizado; reinicie-o)";
+
+/// Identity a worker must match: the protocol magic, the crate version and
+/// the build id from `build.rs`. The version alone never changes between
+/// packaged builds, so it cannot detect an upgrade.
+const WORKER_ID: &str =
+    concat!("BIGIRIS2+", env!("CARGO_PKG_VERSION"), "+", env!("BIGIRIS_BUILD_ID"));
+
+/// Run one isolated codec job and parse its output. When the installed
+/// executable was replaced while we were running, a different build may have
+/// served the request, so any failure (spawn, exit status or protocol) says
+/// that restarting BigIris fixes it.
+fn run<T>(
+    path: &Path,
+    mode: &str,
+    parse: impl FnOnce(std::fs::File) -> ImageResult<T>,
+) -> ImageResult<T> {
+    let mut replaced = false;
+    execute(path, mode, &mut replaced).and_then(parse).map_err(|error| {
+        if replaced && !cancelled() {
+            invalid(format!("{error}{RESTART_HINT}"))
+        } else {
+            error
+        }
+    })
+}
+
+/// `replaced` reports whether failures still need the restart hint.
+fn execute(path: &Path, mode: &str, replaced: &mut bool) -> ImageResult<std::fs::File> {
     if cancelled() {
         return Err(invalid("operação cancelada"));
     }
@@ -314,7 +343,8 @@ fn execute(path: &Path, mode: &str) -> ImageResult<std::fs::File> {
         .and_then(|e| Format::parse(e).ok())
         .map_or("img", |format| format.extension());
     let sandbox_input = format!("/input.{extension}");
-    let (executable, replaced, budget) = worker_executable()?;
+    let (executable, is_replaced, budget) = worker_executable()?;
+    *replaced = is_replaced;
     // Only pixel modes need large outputs; everything else is tiny.
     let output_limit = match mode {
         "pixels" | "preview" => MAX_BYTES + HEADER as u64,
@@ -379,7 +409,7 @@ fn execute(path: &Path, mode: &str) -> ImageResult<std::fs::File> {
             "2",
             "/app/bigiris",
             "--codec-worker",
-            env!("CARGO_PKG_VERSION"),
+            WORKER_ID,
         ])
         .arg(mode)
         .arg(&sandbox_input)
@@ -393,6 +423,8 @@ fn execute(path: &Path, mode: &str) -> ImageResult<std::fs::File> {
     let diagnostics = child.0.stderr.take().map(drain_diagnostics);
     let status = wait_child(&mut child.0, Instant::now() + budget, true)?;
     if !status.success() {
+        // Both messages below already carry the restart advice.
+        let hint = if std::mem::take(replaced) { RESTART_HINT } else { "" };
         if status.code() == Some(VERSION_MISMATCH) {
             return Err(invalid("o BigIris foi atualizado enquanto estava aberto; reinicie-o"));
         }
@@ -400,7 +432,6 @@ fn execute(path: &Path, mode: &str) -> ImageResult<std::fs::File> {
             .and_then(|rx| rx.recv_timeout(Duration::from_secs(2)).ok())
             .unwrap_or_default();
         let details = sanitize_text(String::from_utf8_lossy(&details).trim());
-        let hint = if replaced { " (o BigIris foi atualizado; reinicie-o)" } else { "" };
         return Err(invalid(format!("codec isolado recusou a imagem ({status}){hint}: {details}")));
     }
     let mut output = output;
@@ -561,16 +592,18 @@ fn read_samples<const N: usize, T>(
     Ok(samples)
 }
 fn decode(path: &Path) -> ImageResult<backend::Decoded> {
-    let pixels = receive(execute(path, "pixels")?)?;
+    let pixels = run(path, "pixels", receive)?;
     Ok((pixels.image, pixels.format))
 }
 /// Pixels in the source colour space plus its EXIF/ICC, for in-place saves.
 fn resave(path: &Path) -> ImageResult<backend::ResaveDecoded> {
-    let (pixels, source) = receive_with(execute(path, "resave")?, true)?;
+    let (pixels, source) = run(path, "resave", |output| receive_with(output, true))?;
     Ok((pixels.image, pixels.format, source))
 }
 fn dimensions(path: &Path) -> ImageResult<(u32, u32)> {
-    let mut output = execute(path, "dimensions")?;
+    run(path, "dimensions", read_dimensions)
+}
+fn read_dimensions(mut output: std::fs::File) -> ImageResult<(u32, u32)> {
     if output.metadata()?.len() != 8 {
         return Err(invalid("dimensões inválidas"));
     }
@@ -586,11 +619,8 @@ fn dimensions(path: &Path) -> ImageResult<(u32, u32)> {
     Ok(size)
 }
 fn preview(path: &Path) -> bigimage_core::Result<PreviewSession> {
-    let pixels = receive(
-        execute(path, "preview")
-            .map_err(|source| BigImageError::Decode { path: path.into(), source })?,
-    )
-    .map_err(|source| BigImageError::Decode { path: path.into(), source })?;
+    let pixels = run(path, "preview", receive)
+        .map_err(|source| BigImageError::Decode { path: path.into(), source })?;
     PreviewSession::from_cached(
         path.into(),
         pixels.natural,
@@ -602,18 +632,12 @@ fn preview(path: &Path) -> bigimage_core::Result<PreviewSession> {
     )
 }
 fn ensure_static(path: &Path) -> bigimage_core::Result<()> {
-    execute(path, "static")
-        .map(|_| ())
+    run(path, "static", |_| Ok(()))
         .map_err(|source| BigImageError::Decode { path: path.into(), source })
 }
 fn metadata(path: &Path) -> bigimage_core::Result<Metadata> {
-    let output = execute(path, "metadata")
-        .map_err(|source| BigImageError::Decode { path: path.into(), source })?;
-    if output.metadata().map_err(BigImageError::Io)?.len() > MAX_METADATA {
-        return Err(BigImageError::Other("metadados excessivos".into()));
-    }
-    serde_json::from_reader(std::io::BufReader::new(output))
-        .map_err(|error| BigImageError::Other(error.to_string()))
+    run(path, "metadata", read_json)
+        .map_err(|source| BigImageError::Decode { path: path.into(), source })
 }
 
 #[derive(serde::Serialize, serde::Deserialize)]
@@ -660,12 +684,15 @@ pub fn information(path: &Path) -> ImageResult<Information> {
     return Ok(information_local(path));
     #[cfg(not(test))]
     {
-        let output = execute(path, "information")?;
-        if output.metadata()?.len() > MAX_METADATA {
-            return Err(invalid("metadados excessivos"));
-        }
-        serde_json::from_reader(std::io::BufReader::new(output)).map_err(|e| invalid(e.to_string()))
+        run(path, "information", read_json)
     }
+}
+/// Bounded JSON answer of the `metadata` and `information` modes.
+fn read_json<T: serde::de::DeserializeOwned>(output: std::fs::File) -> ImageResult<T> {
+    if output.metadata()?.len() > MAX_METADATA {
+        return Err(invalid("metadados excessivos"));
+    }
+    serde_json::from_reader(std::io::BufReader::new(output)).map_err(|e| invalid(e.to_string()))
 }
 
 fn send(
@@ -768,7 +795,7 @@ pub fn worker() -> color_eyre::Result<()> {
     if args.len() != 5 {
         return Err(color_eyre::eyre::eyre!("invalid worker arguments"));
     }
-    if args[2] != env!("CARGO_PKG_VERSION") {
+    if args[2] != WORKER_ID {
         eprintln!("bigiris worker version mismatch");
         std::process::exit(VERSION_MISMATCH);
     }
@@ -904,7 +931,7 @@ mod tests {
             assert!(container, "codec sandbox unavailable outside a container");
             return None;
         }
-        TEST_EXECUTABLE.with(|slot| *slot.borrow_mut() = Some((worker, budget)));
+        TEST_EXECUTABLE.with(|slot| *slot.borrow_mut() = Some((worker, budget, false)));
         let result = work();
         TEST_EXECUTABLE.with(|slot| *slot.borrow_mut() = None);
         Some(result)
@@ -930,6 +957,28 @@ mod tests {
         if let Some(result) = result {
             assert!(result.is_err());
         }
+    }
+
+    #[test]
+    fn replaced_executable_adds_the_restart_hint_to_protocol_errors() {
+        let file = input();
+        let Some(result) = with_worker("printf '%040d' 0", DEADLINE, || {
+            TEST_EXECUTABLE.with(|slot| slot.borrow_mut().as_mut().unwrap().2 = true);
+            decode(file.path())
+        }) else {
+            return;
+        };
+        let message = result.unwrap_err().to_string();
+        assert!(message.contains("protocolo") && message.ends_with(RESTART_HINT), "{message}");
+        // A worker that already explains the upgrade is not hinted twice.
+        let Some(result) = with_worker("exit 86", DEADLINE, || {
+            TEST_EXECUTABLE.with(|slot| slot.borrow_mut().as_mut().unwrap().2 = true);
+            decode(file.path())
+        }) else {
+            return;
+        };
+        let message = result.unwrap_err().to_string();
+        assert!(message.contains("reinicie") && !message.ends_with(RESTART_HINT), "{message}");
     }
 
     #[test]

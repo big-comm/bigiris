@@ -101,10 +101,10 @@ fn read_existing(path: &Path) -> io::Result<Option<String>> {
         return Err(io::Error::new(
             io::ErrorKind::InvalidData,
             format!(
-                "{} has no closing </actions> tag (truncated or edited by hand?); \
-                 it was left untouched so your custom actions are not lost. \
-                 Repair it, or move it aside (for example to uca.xml.bak) to start over, \
-                 then run the command again",
+                "{} não tem a tag de fechamento </actions> (truncado ou editado à mão?); \
+                 ele não foi alterado, para não perder as suas ações personalizadas. \
+                 Corrija o arquivo ou mova-o (por exemplo para uca.xml.bak) para recomeçar \
+                 e rode o comando de novo",
                 path.display()
             ),
         ));

@@ -335,7 +335,7 @@ class BigIrisMenuProvider(GObject.GObject, Nautilus.MenuProvider):
             for label, args, icon in _TOP_LEVEL_ACTIONS:
                 item = Nautilus.MenuItem(
                     name=f"BigIrisExtension::Top::{label}",
-                    label=label,
+                    label=_(label),
                     icon=icon,
                 )
                 item.connect("activate", self._run_action, list(args), list(image_paths))

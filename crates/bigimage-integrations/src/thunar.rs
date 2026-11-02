@@ -217,7 +217,7 @@ fn render_action(action: &Action) -> String {
          \t<command>{cmd}</command>\n\
          \t<description>BigIris — {label}</description>\n{localized_descriptions}\
          \t<range>0</range>\n\
-         \t<patterns>*</patterns>\n\
+         \t<patterns>{patterns}</patterns>\n\
          \t{filter}\n\
          </action>",
         localized_names = crate::i18n::xml_labels("name", action.label),
@@ -227,6 +227,7 @@ fn render_action(action: &Action) -> String {
         submenu = escape_xml(&submenu_path),
         id = action.id,
         cmd = escape_xml(&safe_cmd),
+        patterns = escape_xml(&patterns(action.mime_types)),
         filter = file_filter,
     )
 }
@@ -241,6 +242,55 @@ fn wrap_for_shell(action: &Action) -> String {
     // contain a single quote, but escape anyway: `'` → `'\''`.
     let escaped = body.replace('\'', r"'\''");
     format!("sh -c '{escaped} -- \"$@\"' bigiris-{id} %F", id = action.id)
+}
+
+/// File-name extensions for the concrete MIME types we list; `None` for
+/// wildcards (`image/*`), directories and anything not mapped here.
+fn extensions_for(mime: &str) -> Option<&'static [&'static str]> {
+    Some(match mime {
+        "application/vnd.oasis.opendocument.text" => &["odt", "ott", "fodt"],
+        "application/vnd.oasis.opendocument.spreadsheet" => &["ods", "ots", "fods"],
+        "application/vnd.oasis.opendocument.presentation" => &["odp", "otp", "fodp"],
+        "application/vnd.oasis.opendocument.graphics" => &["odg", "otg", "fodg"],
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document" => &["docx"],
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" => &["xlsx"],
+        "application/vnd.openxmlformats-officedocument.presentationml.presentation" => &["pptx"],
+        "application/msword" => &["doc"],
+        "application/vnd.ms-excel" => &["xls"],
+        "application/vnd.ms-powerpoint" => &["ppt", "pps"],
+        "application/rtf" => &["rtf"],
+        "text/plain" => &["txt"],
+        "text/markdown" => &["md", "markdown"],
+        "text/csv" => &["csv"],
+        "text/html" => &["html", "htm"],
+        "application/xhtml+xml" => &["xhtml"],
+        _ => return None,
+    })
+}
+
+/// The `<patterns>` value. Thunar ANDs it with the file-class elements
+/// from [`file_filters`], and those classes are coarse: `<other-files/>`
+/// alone would offer "Convert to PDF" on every `.zip`, `.iso` or `.sh`.
+/// So when every MIME type maps to known extensions we list them; Thunar
+/// matches with `g_pattern_match_simple`, which is case-sensitive, hence
+/// the lower- and upper-case variant of each (mixed case like `.Docx` is
+/// not matched). Wildcard MIME lists keep `*`.
+fn patterns(mime_types: &[&str]) -> String {
+    let mut out: Vec<String> = Vec::new();
+    for mime in mime_types {
+        let Some(exts) = extensions_for(mime) else {
+            return "*".to_string();
+        };
+        for ext in exts {
+            out.push(format!("*.{ext}"));
+            out.push(format!("*.{}", ext.to_ascii_uppercase()));
+        }
+    }
+    if out.is_empty() {
+        "*".to_string()
+    } else {
+        out.join(";")
+    }
 }
 
 /// Map MIME patterns onto Thunar's appearance-condition elements. Thunar
@@ -621,6 +671,27 @@ mod tests {
         std::fs::write(paths.thunar_uca(), "\n").unwrap();
         install(&paths).unwrap();
         assert!(read(&paths.thunar_uca()).contains("bigiris-view"));
+    }
+
+    #[test]
+    fn document_action_lists_extensions_in_both_cases() {
+        let a = ACTIONS.iter().find(|a| a.id == "pdf-convert").unwrap();
+        let xml = render_action(a);
+        let pat = xml.split("<patterns>").nth(1).unwrap().split("</patterns>").next().unwrap();
+        let pats: Vec<&str> = pat.split(';').collect();
+        for p in ["*.docx", "*.DOCX", "*.odt", "*.ODT", "*.txt", "*.md", "*.csv", "*.html"] {
+            assert!(pats.contains(&p), "{p} missing from {pat}");
+        }
+        assert!(!pats.contains(&"*"), "PDF action shown on every file: {pat}");
+        assert!(!pats.iter().any(|p| p.ends_with(".zip") || p.ends_with(".iso")));
+    }
+
+    #[test]
+    fn wildcard_actions_keep_star_pattern() {
+        assert_eq!(patterns(&["image/*"]), "*");
+        assert_eq!(patterns(&["inode/directory"]), "*");
+        assert_eq!(patterns(&["application/pdf", "text/plain"]), "*", "unmapped MIME → *");
+        assert_eq!(patterns(&["text/csv"]), "*.csv;*.CSV");
     }
 
     #[test]

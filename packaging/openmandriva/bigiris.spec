@@ -51,6 +51,9 @@ done < data/po/LINGUAS
 export CARGO_HOME="%{_builddir}/cargo-home"
 export CARGO_TARGET_DIR="%{_builddir}/target"
 export CARGO_NET_OFFLINE=true
+# Must match %%build: different RUSTFLAGS invalidate every cached crate
+# and rebuild the whole workspace from scratch.
+export RUSTFLAGS="-C debuginfo=2"
 # Same gate as the Arch PKGBUILD: codec self-test, then the full test suite.
 # Inside a build container that forbids nested namespaces, only the three
 # sandbox-dependent CLI tests are filtered (native CI still runs them).
@@ -79,6 +82,17 @@ done < data/po/LINGUAS
 
 "%{_builddir}/target/release/bigiris" install-integrations --system \
     --destdir="%{buildroot}"
+
+%post
+# Thunar keeps custom actions in /etc/xdg/Thunar/uca.xml, which belongs to
+# the thunar package, so BigIris cannot ship them system-wide. Each user
+# merges them into ~/.config/Thunar/uca.xml instead.
+if command -v thunar >/dev/null 2>&1; then
+    echo 'Thunar: run "bigiris install-integrations --user" as your user to add'
+    echo 'the BigIris actions to the Thunar context menu. It only writes'
+    echo '~/.config/Thunar/uca.xml; the other file managers use the copies this'
+    echo 'package installs in /usr/share.'
+fi
 
 %files
 %license LICENSE

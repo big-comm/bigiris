@@ -32,7 +32,7 @@ pub mod resources;
 pub mod rotate;
 
 pub use adjust::{adjust_file, AdjustOps};
-pub use animate::{make_gif, AnimateOptions, LoopMode};
+pub use animate::{make_gif, make_gif_with_policy, AnimateOptions, LoopMode};
 pub use convert::{convert_file, convert_file_to, ConvertOutcome, OverwritePolicy};
 pub use crop::{crop_file, CropRect};
 pub use encode::EncodeOptions;

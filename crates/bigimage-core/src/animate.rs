@@ -10,7 +10,7 @@ use image::codecs::gif::{GifEncoder, Repeat};
 use image::{DynamicImage, Frame, RgbaImage};
 
 use crate::pipeline;
-use crate::{BigImageError, Result};
+use crate::{BigImageError, ConvertOutcome, OverwritePolicy, Result};
 
 /// Loop behaviour for an animated GIF.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -63,9 +63,28 @@ impl Default for AnimateOptions {
 /// frames are normalised to the first frame's dimensions (later frames
 /// shorter/narrower get letter-boxed transparent; larger frames get
 /// resized with Lanczos3 via `resize::apply_to`).
+///
+/// An existing `output` is replaced; see [`make_gif_with_policy`] to skip or
+/// pick a free name instead.
 pub fn make_gif(frames: &[PathBuf], output: &Path, opts: AnimateOptions) -> Result<PathBuf> {
+    make_gif_with_policy(frames, output, opts, OverwritePolicy::Replace)
+        .map(|outcome| outcome.path().to_path_buf())
+}
+
+/// Like [`make_gif`], honouring `policy` when `output` already exists:
+/// `Skip` returns [`ConvertOutcome::Skipped`] without decoding any frame,
+/// `Increment` publishes to `name_1.gif`, `name_2.gif`, … atomically.
+pub fn make_gif_with_policy(
+    frames: &[PathBuf],
+    output: &Path,
+    opts: AnimateOptions,
+    policy: OverwritePolicy,
+) -> Result<ConvertOutcome> {
     if frames.is_empty() {
         return Err(BigImageError::InvalidInput("nenhum quadro informado".to_string()));
+    }
+    if matches!(policy, OverwritePolicy::Skip) && output.symlink_metadata().is_ok() {
+        return Ok(ConvertOutcome::Skipped { output: output.to_path_buf() });
     }
 
     let mut temp = pipeline::output_temp(output)?;
@@ -97,9 +116,7 @@ pub fn make_gif(frames: &[PathBuf], output: &Path, opts: AnimateOptions) -> Resu
     drop(encoder);
     std::io::Write::flush(&mut writer).map_err(BigImageError::Io)?;
     drop(writer);
-    let outcome =
-        pipeline::publish_temp(temp, output.to_path_buf(), crate::OverwritePolicy::Replace)?;
-    Ok(outcome.path().to_path_buf())
+    pipeline::publish_temp(temp, output.to_path_buf(), policy)
 }
 
 /// Bring an arbitrarily-sized `img` to the canonical `w × h` canvas used
@@ -183,6 +200,24 @@ mod tests {
             let (numer, denom) = frame.delay().numer_denom_ms();
             assert_eq!(numer / denom, MIN_DELAY_MS);
         }
+    }
+
+    #[test]
+    fn policy_variant_skips_or_increments_existing_output() {
+        let dir = TempDir::new().unwrap();
+        let f = fixture(dir.path(), "f.png", 8, 8, [9; 3]);
+        let out = dir.path().join("anim.gif");
+        std::fs::write(&out, b"keep").unwrap();
+        let frames = [f];
+        let opts = AnimateOptions::default();
+        let skipped = make_gif_with_policy(&frames, &out, opts, OverwritePolicy::Skip).unwrap();
+        assert!(matches!(skipped, ConvertOutcome::Skipped { .. }));
+        let next = make_gif_with_policy(&frames, &out, opts, OverwritePolicy::Increment).unwrap();
+        assert_eq!(next.path(), dir.path().join("anim_1.gif"));
+        assert_eq!(std::fs::read(&out).unwrap(), b"keep");
+        let replaced = make_gif_with_policy(&frames, &out, opts, OverwritePolicy::Replace).unwrap();
+        assert_eq!(replaced.path(), out);
+        image::open(&out).unwrap();
     }
 
     #[test]

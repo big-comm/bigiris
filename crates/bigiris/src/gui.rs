@@ -409,7 +409,9 @@ struct ViewerState {
     loading_spinner: adw::Spinner,
     /// Dialog de propriedades atualmente aberto, se houver. Evita que
     /// cliques repetidos no botão `i` empilhem janelas.
-    props_dialog: Option<(adw::ApplicationWindow, PathBuf)>,
+    /// The modification time is part of the key: after an in-place save
+    /// the same path describes different pixels and metadata.
+    props_dialog: Option<(adw::ApplicationWindow, PathBuf, Option<std::time::SystemTime>)>,
     /// Edições pendentes (rotate/flip) aplicadas in-memory sobre a
     /// imagem decodificada. Vazio = arquivo "limpo". `Ctrl+S` grava e
     /// limpa; a navegação é bloqueada enquanto houver alterações.
@@ -3364,11 +3366,14 @@ fn show_metadata_for_current(state: &Rc<RefCell<ViewerState>>) {
     // Se já existe uma janela aberta para esta imagem, traz pra frente em
     // vez de empilhar. Depois de navegar, ela descreveria a imagem errada:
     // fecha e monta uma nova.
+    // An in-place save keeps the path but changes the file, so the
+    // modification time is compared too.
+    let modified = file_modified(&path);
     let existing = state.borrow_mut().props_dialog.take();
-    if let Some((dialog, shown)) = existing {
-        if shown == path {
+    if let Some((dialog, shown, shown_modified)) = existing {
+        if shown == path && shown_modified == modified {
             dialog.present();
-            state.borrow_mut().props_dialog = Some((dialog, shown));
+            state.borrow_mut().props_dialog = Some((dialog, shown, shown_modified));
             return;
         }
         dialog.destroy();
@@ -3385,14 +3390,14 @@ fn show_metadata_for_current(state: &Rc<RefCell<ViewerState>>) {
         dialog.connect_close_request(move |closing| {
             if let Some(state) = state.upgrade() {
                 let mut s = state.borrow_mut();
-                if s.props_dialog.as_ref().is_some_and(|(open, _)| open == closing) {
+                if s.props_dialog.as_ref().is_some_and(|(open, ..)| open == closing) {
                     s.props_dialog = None;
                 }
             }
             glib::Propagation::Proceed
         });
     }
-    state.borrow_mut().props_dialog = Some((dialog.clone(), path));
+    state.borrow_mut().props_dialog = Some((dialog.clone(), path, modified));
     dialog.present();
 }
 

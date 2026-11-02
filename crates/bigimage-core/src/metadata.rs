@@ -115,6 +115,115 @@ pub(crate) fn upright_exif(exif: &[u8]) -> Option<Vec<u8>> {
     Some(tiff)
 }
 
+/// Estimated IJG quality (`1..=100`) of the JPEG at `path`, from its
+/// luminance quantization table: the quality to pass in
+/// [`crate::EncodeOptions::quality`] so an in-place resave of a JPEG keeps
+/// roughly its original size and fidelity instead of falling back to 75.
+///
+/// The table is compared with the standard IJG luminance table scaled for
+/// every quality (`q < 50`: `5000/q` %, otherwise `200 - 2q` %) and the
+/// closest match wins. Encoders using other tables (some cameras,
+/// Photoshop) get the nearest IJG-equivalent quality. Only the marker
+/// segments before the first scan are read (no codec runs, sizes are
+/// bounded); returns `None` for anything that is not a JPEG with a
+/// luminance table.
+pub fn estimate_jpeg_quality(path: impl AsRef<Path>) -> Option<u8> {
+    use std::os::unix::fs::OpenOptionsExt;
+    let file = std::fs::OpenOptions::new()
+        .read(true)
+        .custom_flags(rustix::fs::OFlags::NONBLOCK.bits() as i32)
+        .open(path)
+        .ok()?;
+    if !file.metadata().ok()?.is_file() {
+        return None;
+    }
+    estimate_jpeg_quality_from_reader(&mut std::io::BufReader::new(file))
+}
+
+/// [`estimate_jpeg_quality`] over any seekable reader positioned at the
+/// start of a JPEG stream.
+pub fn estimate_jpeg_quality_from_reader(
+    reader: &mut (impl std::io::Read + std::io::Seek),
+) -> Option<u8> {
+    use std::io::SeekFrom;
+    fn byte(reader: &mut impl std::io::Read) -> Option<u8> {
+        let mut b = [0];
+        reader.read_exact(&mut b).ok()?;
+        Some(b[0])
+    }
+    if (byte(reader)?, byte(reader)?) != (0xff, 0xd8) {
+        return None;
+    }
+    for _ in 0..4096 {
+        if byte(reader)? != 0xff {
+            return None;
+        }
+        let mut marker = byte(reader)?;
+        while marker == 0xff {
+            marker = byte(reader)?;
+        }
+        match marker {
+            0x01 | 0xd0..=0xd7 => continue,
+            0xd9 | 0xda => return None,
+            _ => {}
+        }
+        let len = u16::from_be_bytes([byte(reader)?, byte(reader)?]).checked_sub(2)?;
+        if marker != 0xdb {
+            reader.seek(SeekFrom::Current(i64::from(len))).ok()?;
+            continue;
+        }
+        let mut payload = vec![0; usize::from(len)];
+        reader.read_exact(&mut payload).ok()?;
+        let mut rest = payload.as_slice();
+        while let Some((&info, tail)) = rest.split_first() {
+            let wide = info >> 4 == 1;
+            let size = if wide { 128 } else { 64 };
+            let table = tail.get(..size)?;
+            if info & 0x0f == 0 {
+                let values: Vec<u16> = if wide {
+                    table.as_chunks::<2>().0.iter().map(|b| u16::from_be_bytes(*b)).collect()
+                } else {
+                    table.iter().map(|&v| u16::from(v)).collect()
+                };
+                return Some(closest_ijg_quality(&values));
+            }
+            rest = &tail[size..];
+        }
+    }
+    None
+}
+
+/// IJG quality whose scaled standard luminance table is closest to `table`
+/// (64 values in zig-zag order, as stored in DQT).
+fn closest_ijg_quality(table: &[u16]) -> u8 {
+    // ITU T.81 Annex K.1 luminance table, natural (row-major) order.
+    const STD_LUMA: [u16; 64] = [
+        16, 11, 10, 16, 24, 40, 51, 61, 12, 12, 14, 19, 26, 58, 60, 55, 14, 13, 16, 24, 40, 57, 69,
+        56, 14, 17, 22, 29, 51, 87, 80, 62, 18, 22, 37, 56, 68, 109, 103, 77, 24, 35, 55, 64, 81,
+        104, 113, 92, 49, 64, 78, 87, 103, 121, 120, 101, 72, 92, 95, 98, 112, 100, 103, 99,
+    ];
+    const ZIGZAG: [usize; 64] = [
+        0, 1, 8, 16, 9, 2, 3, 10, 17, 24, 32, 25, 18, 11, 4, 5, 12, 19, 26, 33, 40, 48, 41, 34, 27,
+        20, 13, 6, 7, 14, 21, 28, 35, 42, 49, 56, 57, 50, 43, 36, 29, 22, 15, 23, 30, 37, 44, 51,
+        58, 59, 52, 45, 38, 31, 39, 46, 53, 60, 61, 54, 47, 55, 62, 63,
+    ];
+    (1..=100u8)
+        .min_by_key(|&quality| {
+            let q = u32::from(quality);
+            let scale = if q < 50 { 5000 / q } else { 200 - 2 * q };
+            ZIGZAG
+                .iter()
+                .zip(table)
+                .map(|(&natural, &actual)| {
+                    let expected =
+                        ((u32::from(STD_LUMA[natural]) * scale + 50) / 100).clamp(1, 255);
+                    expected.abs_diff(u32::from(actual))
+                })
+                .sum::<u32>()
+        })
+        .unwrap_or(75)
+}
+
 /// Read EXIF from `path`. Returns an empty [`Metadata`] when the file
 /// has no EXIF segment (very common for PNG/WebP/GIF outputs from
 /// non-camera sources) — the caller decides whether that's notable.
@@ -236,6 +345,27 @@ mod tests {
         assert_eq!(upright_exif(b"not exif"), None);
         // Truncated IFD: rejected instead of panicking.
         assert_eq!(upright_exif(&le[..20]), None);
+    }
+
+    #[test]
+    fn jpeg_quality_is_estimated_from_the_luminance_table() {
+        let noise = image::RgbImage::from_fn(32, 32, |x, y| {
+            image::Rgb([(x * 7 + y) as u8, (x ^ y) as u8 * 5, (y * 9) as u8])
+        });
+        for quality in [10u8, 30, 50, 75, 85, 92, 100] {
+            let mut bytes = Vec::new();
+            image::codecs::jpeg::JpegEncoder::new_with_quality(&mut bytes, quality)
+                .encode_image(&noise)
+                .unwrap();
+            let estimate =
+                estimate_jpeg_quality_from_reader(&mut std::io::Cursor::new(&bytes)).unwrap();
+            assert!(estimate.abs_diff(quality) <= 1, "q{quality} estimated as {estimate}");
+        }
+        let dir = TempDir::new().unwrap();
+        let png = write_plain_png(dir.path());
+        assert_eq!(estimate_jpeg_quality(&png), None);
+        assert_eq!(estimate_jpeg_quality_from_reader(&mut std::io::Cursor::new(b"\xff\xd8")), None);
+        assert_eq!(estimate_jpeg_quality(dir.path()), None);
     }
 
     #[test]

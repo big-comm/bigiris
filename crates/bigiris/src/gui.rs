@@ -1223,11 +1223,22 @@ fn thumb_picture(button: &gtk::Button) -> Option<gtk::Picture> {
     button.child().and_downcast::<gtk::Overlay>()?.last_child().and_downcast::<gtk::Picture>()
 }
 
-/// Decode a small film-strip frame off the GTK thread. The source codec may
-/// still need to read the full image, but only the downscaled RGBA buffer is
-/// handed to GDK/GPU memory.
+/// Decode a small film-strip frame off the GTK thread. A valid entry of the
+/// shared freedesktop thumbnail cache is used when another application
+/// already made one; otherwise the source codec may still need to read the
+/// full image. Both go through `open_image`, i.e. the sandboxed decoder:
+/// cache files are written by other programs and are untrusted too. Only
+/// the downscaled RGBA buffer is handed to GDK/GPU memory.
 fn decode_thumbnail(path: &Path) -> Result<(Vec<u8>, u32, u32), Box<dyn std::error::Error>> {
-    let img = bigimage_core::open_image(path)?;
+    let cached = viewer::cached_thumbnail(path).and_then(|entry| {
+        bigimage_core::open_image(&entry)
+            .inspect_err(|error| tracing::debug!(?entry, %error, "miniatura em cache ilegível"))
+            .ok()
+    });
+    let img = match cached {
+        Some(img) => img,
+        None => bigimage_core::open_image(path)?,
+    };
     // Cells crop to a square, so the short side must cover the cell; twice
     // the cell keeps thumbnails sharp on HiDPI screens. Never upscale and
     // cap the long side: extreme aspect ratios must not allocate gigabytes.

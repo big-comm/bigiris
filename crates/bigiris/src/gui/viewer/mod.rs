@@ -1,5 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-//! Pure helpers behind the viewer window.
+//! Pure helpers behind the viewer window: film-strip geometry and the
+//! freedesktop thumbnail cache lookup.
+
+use std::path::{Path, PathBuf};
 
 /// Thumbnails built at once in the film strip, independently of folder size.
 pub(super) const FILM_STRIP_PAGE: usize = 41;
@@ -25,6 +28,91 @@ pub(super) fn thumbnail_dimensions(width: u32, height: u32, cover: u32) -> (u32,
     let scale = (f64::from(cover) / short).min(1.0);
     let side = |value: u32| ((f64::from(value) * scale).ceil() as u32).clamp(1, max_long);
     (side(width), side(height))
+}
+
+/// Largest thumbnail file accepted from the shared cache. Spec sizes go up
+/// to 1024 px; anything bigger is not a cache entry we want to read.
+const CACHE_MAX_BYTES: u64 = 4 * 1024 * 1024;
+const CACHE_MAX_EDGE: u32 = 1024;
+
+/// A valid entry of the freedesktop thumbnail cache for `path`, if another
+/// application already created one. Only the PNG chunk headers and the
+/// `Thumb::URI` / `Thumb::MTime` text chunks are read here; the pixels are
+/// decoded by the caller through the same sandboxed path as any other file,
+/// because the cache is written by other programs and is untrusted input.
+pub(super) fn cached_thumbnail(path: &Path) -> Option<PathBuf> {
+    cached_thumbnail_in(&gtk4::glib::user_cache_dir().join("thumbnails"), path)
+}
+
+pub(super) fn cached_thumbnail_in(cache: &Path, path: &Path) -> Option<PathBuf> {
+    let absolute = std::path::absolute(path).ok()?;
+    let modified = std::fs::metadata(&absolute)
+        .ok()?
+        .modified()
+        .ok()?
+        .duration_since(std::time::UNIX_EPOCH)
+        .ok()?
+        .as_secs();
+    let uri = gtk4::glib::filename_to_uri(&absolute, None).ok()?;
+    let name = format!(
+        "{}.png",
+        gtk4::glib::compute_checksum_for_string(gtk4::glib::ChecksumType::Md5, &uri)?
+    );
+    // Sizes that cover a 128 px cell first; "normal" (128 px long side) is
+    // still better than a full decode.
+    ["large", "x-large", "normal"].iter().map(|size| cache.join(size).join(&name)).find(|entry| {
+        read_bounded(entry)
+            .is_some_and(|bytes| png_thumbnail_matches(&bytes, uri.as_str(), &modified.to_string()))
+    })
+}
+
+fn read_bounded(path: &Path) -> Option<Vec<u8>> {
+    use std::io::Read;
+    // Never follow a symlink or read a device out of the cache directory.
+    let meta = std::fs::symlink_metadata(path).ok()?;
+    if !meta.is_file() || meta.len() > CACHE_MAX_BYTES {
+        return None;
+    }
+    let mut bytes = Vec::with_capacity(meta.len() as usize);
+    std::fs::File::open(path).ok()?.take(CACHE_MAX_BYTES + 1).read_to_end(&mut bytes).ok()?;
+    (bytes.len() as u64 <= CACHE_MAX_BYTES).then_some(bytes)
+}
+
+/// Walk the PNG chunk list without decompressing anything. Accepts the
+/// entry only when its header is sane and both text keys match the file.
+fn png_thumbnail_matches(bytes: &[u8], uri: &str, mtime: &str) -> bool {
+    const SIGNATURE: &[u8] = b"\x89PNG\r\n\x1a\n";
+    let Some(mut rest) = bytes.strip_prefix(SIGNATURE) else { return false };
+    let (mut uri_ok, mut mtime_ok, mut first) = (false, false, true);
+    while rest.len() >= 12 {
+        let length = u32::from_be_bytes([rest[0], rest[1], rest[2], rest[3]]) as usize;
+        let kind = &rest[4..8];
+        let Some(data) = rest.get(8..8 + length) else { return false };
+        if first {
+            if kind != b"IHDR" || length != 13 {
+                return false;
+            }
+            let width = u32::from_be_bytes([data[0], data[1], data[2], data[3]]);
+            let height = u32::from_be_bytes([data[4], data[5], data[6], data[7]]);
+            if width == 0 || height == 0 || width > CACHE_MAX_EDGE || height > CACHE_MAX_EDGE {
+                return false;
+            }
+            first = false;
+        } else if kind == b"tEXt" {
+            if let Some(split) = data.iter().position(|b| *b == 0) {
+                let (key, value) = (&data[..split], &data[split + 1..]);
+                match key {
+                    b"Thumb::URI" => uri_ok = value == uri.as_bytes(),
+                    b"Thumb::MTime" => mtime_ok = value == mtime.as_bytes(),
+                    _ => {}
+                }
+            }
+        } else if kind == b"IEND" {
+            break;
+        }
+        rest = &rest[(12 + length).min(rest.len())..];
+    }
+    uri_ok && mtime_ok
 }
 
 #[cfg(test)]
@@ -66,5 +154,77 @@ mod tests {
                 assert_eq!(end - start, len.min(41), "partial window len={len} idx={idx}");
             }
         }
+    }
+
+    fn png_with_text(width: u32, height: u32, text: &[(&str, &str)]) -> Vec<u8> {
+        let mut png = b"\x89PNG\r\n\x1a\n".to_vec();
+        let mut chunk = |kind: &[u8], data: &[u8]| {
+            png.extend((data.len() as u32).to_be_bytes());
+            png.extend(kind);
+            png.extend(data);
+            png.extend([0; 4]);
+        };
+        let mut ihdr = width.to_be_bytes().to_vec();
+        ihdr.extend(height.to_be_bytes());
+        ihdr.extend([8, 6, 0, 0, 0]);
+        chunk(b"IHDR", &ihdr);
+        for (key, value) in text {
+            chunk(b"tEXt", format!("{key}\0{value}").as_bytes());
+        }
+        chunk(b"IDAT", &[]);
+        chunk(b"IEND", &[]);
+        png
+    }
+
+    #[test]
+    fn cache_entry_requires_matching_uri_mtime_and_sane_header() {
+        let ok = [("Thumb::URI", "file:///a.png"), ("Thumb::MTime", "42")];
+        assert!(png_thumbnail_matches(&png_with_text(256, 192, &ok), "file:///a.png", "42"));
+        assert!(!png_thumbnail_matches(&png_with_text(256, 192, &ok), "file:///b.png", "42"));
+        assert!(!png_thumbnail_matches(&png_with_text(256, 192, &ok), "file:///a.png", "43"));
+        assert!(!png_thumbnail_matches(&png_with_text(4096, 1, &ok), "file:///a.png", "42"));
+        assert!(!png_thumbnail_matches(&png_with_text(0, 1, &ok), "file:///a.png", "42"));
+        let no_mtime = [("Thumb::URI", "file:///a.png")];
+        assert!(!png_thumbnail_matches(&png_with_text(64, 64, &no_mtime), "file:///a.png", "42"));
+        // Truncated or garbage input never panics.
+        let full = png_with_text(256, 192, &ok);
+        for cut in 0..full.len() {
+            let _ = png_thumbnail_matches(&full[..cut], "file:///a.png", "42");
+        }
+        assert!(!png_thumbnail_matches(b"not a png", "file:///a.png", "42"));
+    }
+
+    #[test]
+    fn cache_lookup_follows_the_freedesktop_layout() {
+        let dir = tempfile::tempdir().unwrap();
+        let image = dir.path().join("photo 1.png");
+        std::fs::write(&image, b"x").unwrap();
+        let uri = gtk4::glib::filename_to_uri(&image, None).unwrap();
+        let mtime = std::fs::metadata(&image)
+            .unwrap()
+            .modified()
+            .unwrap()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_secs()
+            .to_string();
+        let md5 =
+            gtk4::glib::compute_checksum_for_string(gtk4::glib::ChecksumType::Md5, &uri).unwrap();
+        let cache = dir.path().join("thumbnails");
+        assert_eq!(cached_thumbnail_in(&cache, &image), None);
+        std::fs::create_dir_all(cache.join("normal")).unwrap();
+        let entry = cache.join("normal").join(format!("{md5}.png"));
+        std::fs::write(
+            &entry,
+            png_with_text(128, 96, &[("Thumb::URI", &uri), ("Thumb::MTime", "1")]),
+        )
+        .unwrap();
+        assert_eq!(cached_thumbnail_in(&cache, &image), None, "stale entry accepted");
+        std::fs::write(
+            &entry,
+            png_with_text(128, 96, &[("Thumb::URI", &uri), ("Thumb::MTime", &mtime)]),
+        )
+        .unwrap();
+        assert_eq!(cached_thumbnail_in(&cache, &image), Some(entry));
     }
 }

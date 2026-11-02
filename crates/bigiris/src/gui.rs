@@ -1952,7 +1952,9 @@ fn toggle_slideshow(state: &Rc<RefCell<ViewerState>>) {
     });
     state.borrow_mut().slideshow_source = Some(id);
     let s = state.borrow();
-    s.osd_label.set_text(&format!("Slideshow: {interval}s"));
+    s.osd_label.set_text(
+        &gettext("Slideshow: a cada {interval} s").replace("{interval}", &interval.to_string()),
+    );
     drop(s);
     pulse_osd(state);
 }
@@ -1972,10 +1974,10 @@ fn toggle_histogram(state: &Rc<RefCell<ViewerState>>) {
     };
     {
         let s = state.borrow();
-        s.osd_label.set_text(if now_visible {
-            "Histograma: ligado"
+        s.osd_label.set_text(&if now_visible {
+            gettext("Histograma ligado")
         } else {
-            "Histograma: desligado"
+            gettext("Histograma desligado")
         });
     }
     pulse_osd(state);
@@ -3060,7 +3062,7 @@ fn print_current(state: &Rc<RefCell<ViewerState>>) {
                 ) {
                     present_print_dialog(&window, &path, surface);
                 } else {
-                    show_print_error(&window, "Não foi possível preparar a página");
+                    show_print_error(&window, &gettext("Não foi possível preparar a página"));
                 }
             }
             Err(error) => show_print_error(&window, &error),
@@ -3537,7 +3539,9 @@ fn refresh_title(state: &Rc<RefCell<ViewerState>>) {
         .unwrap_or_else(|| path.display().to_string());
     // `•` à esquerda sinaliza edições pendentes. Convenção Loupe/TextEditor.
     let name = if s.pending_ops.is_empty() { base_name } else { format!("• {base_name}") };
-    let subtitle = format!("{} de {}", s.idx + 1, s.files.len());
+    let subtitle = gettext("{current} de {total}")
+        .replace("{current}", &(s.idx + 1).to_string())
+        .replace("{total}", &s.files.len().to_string());
     s.title.set_title(&name);
     s.title.set_subtitle(&subtitle);
     s.zoom_level.set_label(&zoom_percent_label(&s));

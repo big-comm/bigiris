@@ -359,6 +359,11 @@ struct ViewerState {
     bottom_hide_source: Option<glib::SourceId>,
     osd_hide_source: Option<glib::SourceId>,
     cursor_hide_source: Option<glib::SourceId>,
+    /// Last pointer motion. The cursor timer is armed once and, when it
+    /// fires early, re-arms for the remaining time, instead of being
+    /// destroyed and recreated on every motion event.
+    last_motion: std::time::Instant,
+    cursor_hidden: bool,
     /// Slideshow auto-advance tick (Space toggles). `None` = stopped.
     slideshow_source: Option<glib::SourceId>,
     /// DrawingArea com o overlay de histograma (canto inferior-direito).
@@ -825,6 +830,8 @@ fn build_window_preloaded(
         bottom_hide_source: None,
         osd_hide_source: None,
         cursor_hide_source: None,
+        last_motion: std::time::Instant::now(),
+        cursor_hidden: false,
         slideshow_source: None,
         histogram_area: histogram_area.clone(),
         zoom_level: {
@@ -1529,13 +1536,20 @@ fn refresh_osd(state: &Rc<RefCell<ViewerState>>) {
 /// Pointer moved — route to the appropriate zone. Called on every motion
 /// event, so keep the work cheap: it's mostly math + timer juggling.
 fn on_pointer_motion(state: &Rc<RefCell<ViewerState>>, y: f64) {
-    // Always restore the cursor and restart its own idle timer.
-    {
-        let s = state.borrow();
-        s.window().set_cursor(None);
+    // Restore the cursor and push its idle deadline back. The pending
+    // timer, if any, notices the newer motion and re-arms itself.
+    let armed = {
+        let mut s = state.borrow_mut();
+        s.last_motion = std::time::Instant::now();
+        if s.cursor_hidden {
+            s.cursor_hidden = false;
+            s.window().set_cursor(None);
+        }
+        s.cursor_hide_source.is_some()
+    };
+    if !armed {
+        schedule_cursor_hide(state);
     }
-    cancel_cursor_hide(state);
-    schedule_cursor_hide(state);
 
     let (window_h, pinned) = {
         let s = state.borrow();
@@ -1690,6 +1704,11 @@ fn cancel_osd_hide(state: &Rc<RefCell<ViewerState>>) {
 }
 
 fn schedule_cursor_hide(state: &Rc<RefCell<ViewerState>>) {
+    let delay = std::time::Duration::from_millis(CURSOR_HIDE_MS);
+    arm_cursor_hide(state, delay);
+}
+
+fn arm_cursor_hide(state: &Rc<RefCell<ViewerState>>, delay: std::time::Duration) {
     let s = state.borrow();
     if s.ui_pinned || !s.autohide_ui || adw::StyleManager::default().is_high_contrast() {
         return;
@@ -1703,23 +1722,32 @@ fn schedule_cursor_hide(state: &Rc<RefCell<ViewerState>>) {
         return;
     }
     drop(s);
-    let clone = state.clone();
-    let id =
-        glib::timeout_add_local_once(std::time::Duration::from_millis(CURSOR_HIDE_MS), move || {
-            // Double-check na hora do disparo: user pode ter aberto um
-            // diálogo nos últimos CURSOR_HIDE_MS ms.
-            let s = clone.borrow_mut();
-            if s.window().visible_dialog().is_some() {
-                drop(s);
-                clone.borrow_mut().cursor_hide_source = None;
-                return;
-            }
-            let cursor = gdk::Cursor::from_name("none", None);
-            s.window().set_cursor(cursor.as_ref());
+    let weak = Rc::downgrade(state);
+    let id = glib::timeout_add_local_once(delay, move || {
+        let Some(state) = weak.upgrade() else { return };
+        let mut s = state.borrow_mut();
+        s.cursor_hide_source = None;
+        // The pointer moved since this timer was armed: wait the rest.
+        let idle = s.last_motion.elapsed();
+        let full = std::time::Duration::from_millis(CURSOR_HIDE_MS);
+        if idle < full {
             drop(s);
-            clone.borrow_mut().cursor_hide_source = None;
-        });
-    state.borrow_mut().cursor_hide_source = Some(id);
+            arm_cursor_hide(&state, full - idle);
+            return;
+        }
+        // Double-check na hora do disparo: user pode ter aberto um
+        // diálogo nos últimos CURSOR_HIDE_MS ms.
+        let window = s.window();
+        if window.visible_dialog().is_some() {
+            return;
+        }
+        let cursor = gdk::Cursor::from_name("none", None);
+        window.set_cursor(cursor.as_ref());
+        s.cursor_hidden = true;
+    });
+    if let Some(old) = state.borrow_mut().cursor_hide_source.replace(id) {
+        old.remove();
+    }
 }
 
 fn cancel_cursor_hide(state: &Rc<RefCell<ViewerState>>) {

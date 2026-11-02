@@ -388,7 +388,7 @@ pub(in crate::gui) fn build_remove_bg_dialog(
 /// Called right after a successful single-file remove-bg so the user
 /// sees original vs. result side-by-side.
 fn spawn_compare_viewer(original: &Path, result: &Path) {
-    let Ok(exe) = std::env::current_exe() else { return };
+    let flag = std::ffi::OsStr::new("--dialog=compare");
     let _ =
-        std::process::Command::new(exe).arg("--dialog=compare").arg(original).arg(result).spawn();
+        super::super::transfers::spawn_bigiris([flag, original.as_os_str(), result.as_os_str()]);
 }

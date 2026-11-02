@@ -2905,9 +2905,8 @@ fn install_viewer_actions(
                 return;
             };
             let Some(path) = path_for_external_tool(&state) else { return };
-            if let Ok(exe) = std::env::current_exe() {
-                let _ = std::process::Command::new(exe).arg("--dialog=crop").arg(path).spawn();
-            }
+            let _ =
+                transfers::spawn_bigiris([std::ffi::OsStr::new("--dialog=crop"), path.as_os_str()]);
         });
     }
     window.add_action(&crop);
@@ -2924,12 +2923,8 @@ fn install_viewer_actions(
                 return;
             };
             let Some(path) = path_for_external_tool(&state) else { return };
-            if let Ok(exe) = std::env::current_exe() {
-                let _ = std::process::Command::new(exe)
-                    .arg(format!("--dialog={dialog}"))
-                    .arg(path)
-                    .spawn();
-            }
+            let flag = std::ffi::OsString::from(format!("--dialog={dialog}"));
+            let _ = transfers::spawn_bigiris([flag.as_os_str(), path.as_os_str()]);
         });
         window.add_action(&action);
     }
@@ -3022,19 +3017,15 @@ fn open_file_chooser(window: &adw::ApplicationWindow) {
 
     dialog.open_multiple(Some(window), gio::Cancellable::NONE, move |result| {
         let Ok(list) = result else { return };
-        let mut paths: Vec<String> = Vec::new();
-        for i in 0..list.n_items() {
-            if let Some(file) = list.item(i).and_downcast::<gio::File>() {
-                if let Some(p) = file.path() {
-                    paths.push(p.to_string_lossy().into_owned());
-                }
-            }
-        }
+        let paths: Vec<std::ffi::OsString> = (0..list.n_items())
+            .filter_map(|i| list.item(i).and_downcast::<gio::File>()?.path())
+            .map(PathBuf::into_os_string)
+            .collect();
         if paths.is_empty() {
             return;
         }
-        let exe = std::env::current_exe().unwrap_or_else(|_| PathBuf::from("bigiris"));
-        let _ = std::process::Command::new(exe).args(&paths).spawn();
+        // "--" keeps a file named like an option from being parsed as one.
+        let _ = transfers::spawn_bigiris(std::iter::once("--".into()).chain(paths));
     });
 }
 
@@ -3519,8 +3510,8 @@ fn open_batch_folder_dialog(window: &adw::ApplicationWindow) {
     dialog.select_folder(Some(&parent), gio::Cancellable::NONE, move |result| {
         let Ok(folder) = result else { return };
         let Some(path) = folder.path() else { return };
-        let Ok(exe) = std::env::current_exe() else { return };
-        if std::process::Command::new(exe).arg("--dialog=batch").arg(path).spawn().is_ok() {
+        let args = [std::ffi::OsStr::new("--dialog=batch"), path.as_os_str()];
+        if transfers::spawn_bigiris(args).is_ok() {
             window.close();
         }
     });

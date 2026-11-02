@@ -6,9 +6,17 @@ set -euo pipefail
 # Use Ubuntu's packaged policy, including the child profile that denies
 # capabilities. Do not disable AppArmor or the global userns restriction.
 # https://discourse.ubuntu.com/t/understanding-apparmor-user-namespace-restriction/58007
-sudo apt-get install -y --no-install-recommends apparmor-profiles
-profile=/usr/share/apparmor/extra-profiles/bwrap-userns-restrict
-test -f "$profile"
+# Ubuntu 26.04 ships the profile in `apparmor` under /etc/apparmor.d;
+# Ubuntu 24.04 only has it in `apparmor-profiles` as an extra profile.
+profile=/etc/apparmor.d/bwrap-userns-restrict
+if [ ! -f "$profile" ]; then
+  sudo apt-get install -y --no-install-recommends apparmor-profiles
+  profile=/usr/share/apparmor/extra-profiles/bwrap-userns-restrict
+fi
+if [ ! -f "$profile" ]; then
+  echo "bwrap-userns-restrict AppArmor profile not found" >&2
+  exit 1
+fi
 sudo apparmor_parser --replace "$profile"
 sudo grep -qx 'bwrap (enforce)' /sys/kernel/security/apparmor/profiles
 sudo grep -qx 'unpriv_bwrap (enforce)' /sys/kernel/security/apparmor/profiles

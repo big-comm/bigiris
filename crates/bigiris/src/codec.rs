@@ -61,7 +61,7 @@ pub fn with_cancel<T>(cancel: Arc<AtomicBool>, work: impl FnOnce() -> T) -> T {
 fn invalid(message: impl Into<String>) -> ImageError {
     ImageError::IoError(std::io::Error::new(std::io::ErrorKind::InvalidData, message.into()))
 }
-fn cancelled() -> bool {
+pub(crate) fn cancelled() -> bool {
     CANCEL.with(|slot| slot.borrow().as_ref().is_some_and(|flag| flag.load(Ordering::Acquire)))
 }
 struct ChildGuard(Child);
@@ -70,6 +70,172 @@ impl Drop for ChildGuard {
         let _ = self.0.kill();
         let _ = self.0.wait();
     }
+}
+
+/// Exit status a worker uses when the parent expects another build. Old
+/// processes keep running after a package upgrade replaces the executable.
+const VERSION_MISMATCH: i32 = 86;
+/// Bytes of worker diagnostics kept; the rest is drained and discarded.
+const MAX_DIAGNOSTIC: usize = 4096;
+/// Hard wall-clock budget for one isolated codec run.
+const DEADLINE: Duration = Duration::from_secs(60);
+
+#[cfg(test)]
+thread_local! {
+    /// Test-only replacement for the worker binary (never compiled in releases).
+    static TEST_EXECUTABLE: RefCell<Option<(PathBuf, Duration)>> = const { RefCell::new(None) };
+}
+
+/// Path that starts a fresh BigIris process. After an upgrade `/proc/self/exe`
+/// reads `/usr/bin/bigiris (deleted)`; the installed replacement is used then.
+/// The bool reports that the path may hold a different build.
+pub(crate) fn installed_executable() -> std::io::Result<(PathBuf, bool)> {
+    use std::os::unix::ffi::OsStrExt;
+    let exe = std::env::current_exe()?;
+    if exe.is_file() {
+        return Ok((exe, false));
+    }
+    let replaced = exe
+        .as_os_str()
+        .as_bytes()
+        .strip_suffix(b" (deleted)")
+        .map(|bytes| PathBuf::from(std::ffi::OsStr::from_bytes(bytes)))
+        .filter(|path| path.is_file());
+    replaced.map(|path| (path, true)).ok_or_else(|| {
+        std::io::Error::new(
+            std::io::ErrorKind::NotFound,
+            "o executável do BigIris foi removido; reinicie o BigIris",
+        )
+    })
+}
+
+fn worker_executable() -> std::io::Result<(PathBuf, bool, Duration)> {
+    #[cfg(test)]
+    if let Some((path, deadline)) = TEST_EXECUTABLE.with(|slot| slot.borrow().clone()) {
+        return Ok((path, false, deadline));
+    }
+    installed_executable().map(|(path, replaced)| (path, replaced, DEADLINE))
+}
+
+/// Prevent the codec from creating further user namespaces when this bwrap
+/// supports it (>= 0.8). Probed once, so distro policies that reject it (for
+/// example AppArmor rules or containers without user namespaces) keep the
+/// established sandbox instead of failing every decode.
+fn userns_hardening() -> bool {
+    static SUPPORTED: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    *SUPPORTED.get_or_init(|| {
+        let Ok(child) = Command::new("/usr/bin/bwrap")
+            .env_clear()
+            .args([
+                "--unshare-all",
+                "--unshare-user",
+                "--disable-userns",
+                "--assert-userns-disabled",
+                "--die-with-parent",
+                "--ro-bind",
+                "/usr",
+                "/usr",
+                "--symlink",
+                "usr/lib",
+                "/lib",
+                "--symlink",
+                "usr/lib64",
+                "/lib64",
+                "--proc",
+                "/proc",
+                "--dev",
+                "/dev",
+                "/usr/bin/true",
+            ])
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .spawn()
+        else {
+            return false;
+        };
+        let mut child = ChildGuard(child);
+        matches!(
+            wait_child(&mut child.0, Instant::now() + Duration::from_secs(10), false),
+            Ok(status) if status.success()
+        )
+    })
+}
+
+/// Wait without busy polling: a pidfd wakes us on exit, while short poll
+/// slices keep deadline and cancellation checks responsive.
+fn wait_child(
+    child: &mut Child,
+    deadline: Instant,
+    cancellable: bool,
+) -> ImageResult<std::process::ExitStatus> {
+    use rustix::event::{poll, PollFd, PollFlags, Timespec};
+    let pidfd = rustix::process::pidfd_open(
+        rustix::process::Pid::from_child(child),
+        rustix::process::PidfdFlags::empty(),
+    )
+    .ok();
+    loop {
+        if cancellable && cancelled() {
+            return Err(invalid("operação cancelada"));
+        }
+        if let Some(status) = child.try_wait()? {
+            return Ok(status);
+        }
+        let now = Instant::now();
+        if now >= deadline {
+            return Err(invalid("codec excedeu o limite de tempo"));
+        }
+        let slice = (deadline - now).min(Duration::from_millis(50));
+        match &pidfd {
+            Some(fd) => {
+                let timeout = Timespec { tv_sec: 0, tv_nsec: i64::from(slice.subsec_nanos()) };
+                let mut fds = [PollFd::new(fd, PollFlags::IN)];
+                // EINTR and spurious wakeups are handled by the loop.
+                let _ = poll(&mut fds, Some(&timeout));
+            }
+            // Kernels before 5.3 lack pidfd; fall back to a gentle poll.
+            None => std::thread::sleep(slice.min(Duration::from_millis(10))),
+        }
+    }
+}
+
+/// Keep diagnostics bounded in memory; never let them reach a host file.
+fn drain_diagnostics(stderr: std::process::ChildStderr) -> std::sync::mpsc::Receiver<Vec<u8>> {
+    let (tx, rx) = std::sync::mpsc::sync_channel(1);
+    std::thread::spawn(move || {
+        let mut stderr = stderr;
+        let mut kept = Vec::with_capacity(MAX_DIAGNOSTIC);
+        let mut buffer = [0u8; 4096];
+        loop {
+            match stderr.read(&mut buffer) {
+                Ok(0) => break,
+                Ok(n) => {
+                    let room = MAX_DIAGNOSTIC - kept.len();
+                    kept.extend_from_slice(&buffer[..n.min(room)]);
+                }
+                Err(error) if error.kind() == std::io::ErrorKind::Interrupted => {}
+                Err(_) => break,
+            }
+        }
+        let _ = tx.send(kept);
+    });
+    rx
+}
+
+/// Worker output is untrusted: drop terminal control sequences and bidi
+/// overrides so it cannot rewrite the user's terminal or the GUI text.
+pub(crate) fn sanitize_text(text: &str) -> String {
+    text.chars()
+        .map(|c| {
+            let bidi = matches!(c, '\u{202A}'..='\u{202E}' | '\u{2066}'..='\u{2069}');
+            if (c.is_control() && c != '\n') || bidi {
+                '\u{FFFD}'
+            } else {
+                c
+            }
+        })
+        .collect()
 }
 
 fn execute(path: &Path, mode: &str) -> ImageResult<std::fs::File> {
@@ -90,18 +256,24 @@ fn execute(path: &Path, mode: &str) -> ImageResult<std::fs::File> {
         .and_then(|e| Format::parse(e).ok())
         .map_or("img", |format| format.extension());
     let sandbox_input = format!("/input.{extension}");
-    let executable = std::env::current_exe()?;
+    let (executable, replaced, budget) = worker_executable()?;
+    // Only pixel modes need large outputs; everything else is tiny.
+    let output_limit = match mode {
+        "pixels" | "preview" => MAX_BYTES + HEADER as u64,
+        _ => MAX_METADATA + 4096,
+    };
     let output = tempfile::tempfile()?;
-    let diagnostic = tempfile::tempfile()?;
     let mut command = Command::new("/usr/bin/prlimit");
     command
         .env_clear()
         .args(["--as=2147483648", "--cpu=30", "--nofile=64", "--core=0"])
-        .arg(format!("--fsize={}", MAX_BYTES + HEADER as u64))
+        .arg(format!("--fsize={output_limit}"))
+        .args(["--", "/usr/bin/bwrap", "--unshare-all"]);
+    if userns_hardening() {
+        command.args(["--unshare-user", "--disable-userns"]);
+    }
+    command
         .args([
-            "--",
-            "/usr/bin/bwrap",
-            "--unshare-all",
             "--die-with-parent",
             "--new-session",
             "--clearenv",
@@ -148,41 +320,33 @@ fn execute(path: &Path, mode: &str) -> ImageResult<std::fs::File> {
             "2",
             "/app/bigiris",
             "--codec-worker",
+            env!("CARGO_PKG_VERSION"),
         ])
         .arg(mode)
         .arg(&sandbox_input)
         .stdin(Stdio::from(input))
         .stdout(Stdio::from(output.try_clone()?))
-        .stderr(Stdio::from(diagnostic.try_clone()?));
+        .stderr(Stdio::piped());
     let child = command.spawn().map_err(|error| {
         invalid(format!("sandbox indisponível: instale bubblewrap e util-linux; {error}"))
     })?;
     let mut child = ChildGuard(child);
-    let deadline = Instant::now() + Duration::from_secs(60);
-    loop {
-        if cancelled() {
-            return Err(invalid("operação cancelada"));
+    let diagnostics = child.0.stderr.take().map(drain_diagnostics);
+    let status = wait_child(&mut child.0, Instant::now() + budget, true)?;
+    if !status.success() {
+        if status.code() == Some(VERSION_MISMATCH) {
+            return Err(invalid("o BigIris foi atualizado enquanto estava aberto; reinicie-o"));
         }
-        if Instant::now() >= deadline {
-            return Err(invalid("codec excedeu o limite de 60 segundos"));
-        }
-        if let Some(status) = child.0.try_wait()? {
-            if !status.success() {
-                let mut details = String::new();
-                let mut diagnostic = diagnostic;
-                diagnostic.seek(SeekFrom::Start(0))?;
-                diagnostic.take(4096).read_to_string(&mut details).ok();
-                return Err(invalid(format!(
-                    "codec isolado recusou a imagem ({status}): {}",
-                    details.trim()
-                )));
-            }
-            let mut output = output;
-            output.seek(SeekFrom::Start(0))?;
-            return Ok(output);
-        }
-        std::thread::sleep(Duration::from_millis(5));
+        let details = diagnostics
+            .and_then(|rx| rx.recv_timeout(Duration::from_secs(2)).ok())
+            .unwrap_or_default();
+        let details = sanitize_text(String::from_utf8_lossy(&details).trim());
+        let hint = if replaced { " (o BigIris foi atualizado; reinicie-o)" } else { "" };
+        return Err(invalid(format!("codec isolado recusou a imagem ({status}){hint}: {details}")));
     }
+    let mut output = output;
+    output.seek(SeekFrom::Start(0))?;
+    Ok(output)
 }
 
 struct Pixels {
@@ -231,14 +395,9 @@ fn receive(mut output: std::fs::File) -> ImageResult<Pixels> {
     } else {
         Some(*Format::all().get(header[9] as usize).ok_or_else(|| invalid("formato inválido"))?)
     };
-    let mut raw = vec![0; length as usize];
-    output.read_exact(&mut raw)?;
-    let shorts = || {
-        raw.as_chunks::<2>().0.iter().map(|bytes| u16::from_ne_bytes(*bytes)).collect::<Vec<_>>()
-    };
-    let floats = || {
-        raw.as_chunks::<4>().0.iter().map(|bytes| f32::from_ne_bytes(*bytes)).collect::<Vec<_>>()
-    };
+    let length = length as usize;
+    // Decode wide samples straight into their typed buffer through a small
+    // scratch chunk, so peak memory stays at one copy of the pixels.
     macro_rules! buffer {
         ($data:expr, $variant:ident) => {
             DynamicImage::$variant(
@@ -246,20 +405,55 @@ fn receive(mut output: std::fs::File) -> ImageResult<Pixels> {
             )
         };
     }
+    macro_rules! bytes {
+        () => {{
+            let mut raw = vec![0; length];
+            output.read_exact(&mut raw)?;
+            raw
+        }};
+    }
+    macro_rules! shorts {
+        () => {
+            read_samples::<2, u16>(&mut output, length, u16::from_ne_bytes)?
+        };
+    }
+    macro_rules! floats {
+        () => {
+            read_samples::<4, f32>(&mut output, length, f32::from_ne_bytes)?
+        };
+    }
     let image = match color {
-        ColorType::L8 => buffer!(raw, ImageLuma8),
-        ColorType::La8 => buffer!(raw, ImageLumaA8),
-        ColorType::Rgb8 => buffer!(raw, ImageRgb8),
-        ColorType::Rgba8 => buffer!(raw, ImageRgba8),
-        ColorType::L16 => buffer!(shorts(), ImageLuma16),
-        ColorType::La16 => buffer!(shorts(), ImageLumaA16),
-        ColorType::Rgb16 => buffer!(shorts(), ImageRgb16),
-        ColorType::Rgba16 => buffer!(shorts(), ImageRgba16),
-        ColorType::Rgb32F => buffer!(floats(), ImageRgb32F),
-        ColorType::Rgba32F => buffer!(floats(), ImageRgba32F),
+        ColorType::L8 => buffer!(bytes!(), ImageLuma8),
+        ColorType::La8 => buffer!(bytes!(), ImageLumaA8),
+        ColorType::Rgb8 => buffer!(bytes!(), ImageRgb8),
+        ColorType::Rgba8 => buffer!(bytes!(), ImageRgba8),
+        ColorType::L16 => buffer!(shorts!(), ImageLuma16),
+        ColorType::La16 => buffer!(shorts!(), ImageLumaA16),
+        ColorType::Rgb16 => buffer!(shorts!(), ImageRgb16),
+        ColorType::Rgba16 => buffer!(shorts!(), ImageRgba16),
+        ColorType::Rgb32F => buffer!(floats!(), ImageRgb32F),
+        ColorType::Rgba32F => buffer!(floats!(), ImageRgba32F),
         _ => return Err(invalid("tipo de pixels inválido")),
     };
     Ok(Pixels { image, format, natural, gps: header[10] == 1 })
+}
+/// Read `length` bytes of native-endian `N`-byte samples without first
+/// materializing the whole byte buffer.
+fn read_samples<const N: usize, T>(
+    reader: &mut impl Read,
+    length: usize,
+    convert: fn([u8; N]) -> T,
+) -> std::io::Result<Vec<T>> {
+    let mut samples = Vec::with_capacity(length / N);
+    let mut chunk = vec![0u8; 64 * 1024];
+    let mut remaining = length;
+    while remaining > 0 {
+        let take = remaining.min(chunk.len());
+        reader.read_exact(&mut chunk[..take])?;
+        samples.extend(chunk[..take].as_chunks::<N>().0.iter().map(|bytes| convert(*bytes)));
+        remaining -= take;
+    }
+    Ok(samples)
 }
 fn decode(path: &Path) -> ImageResult<backend::Decoded> {
     let pixels = receive(execute(path, "pixels")?)?;
@@ -308,7 +502,8 @@ fn metadata(path: &Path) -> bigimage_core::Result<Metadata> {
     if output.metadata().map_err(BigImageError::Io)?.len() > MAX_METADATA {
         return Err(BigImageError::Other("metadados excessivos".into()));
     }
-    serde_json::from_reader(output).map_err(|error| BigImageError::Other(error.to_string()))
+    serde_json::from_reader(std::io::BufReader::new(output))
+        .map_err(|error| BigImageError::Other(error.to_string()))
 }
 
 #[derive(serde::Serialize, serde::Deserialize)]
@@ -359,7 +554,7 @@ pub fn information(path: &Path) -> ImageResult<Information> {
         if output.metadata()?.len() > MAX_METADATA {
             return Err(invalid("metadados excessivos"));
         }
-        serde_json::from_reader(output).map_err(|e| invalid(e.to_string()))
+        serde_json::from_reader(std::io::BufReader::new(output)).map_err(|e| invalid(e.to_string()))
     }
 }
 
@@ -400,13 +595,37 @@ fn send(
     output.flush()?;
     Ok(())
 }
+/// Descriptors above stdio that leaked into the sandbox. bwrap does not close
+/// inherited descriptors, so any non-CLOEXEC host fd would reach the codec.
+fn inherited_descriptors() -> std::io::Result<Vec<u32>> {
+    let numbers: Vec<u32> = std::fs::read_dir("/proc/self/fd")?
+        .filter_map(|entry| entry.ok()?.file_name().to_str()?.parse().ok())
+        .collect();
+    // The directory handle used for listing is closed by now; skip it.
+    Ok(numbers
+        .into_iter()
+        .filter(|fd| {
+            *fd > 2 && Path::new(&format!("/proc/self/fd/{fd}")).symlink_metadata().is_ok()
+        })
+        .collect())
+}
+
 pub fn worker() -> color_eyre::Result<()> {
     let args: Vec<_> = std::env::args_os().collect();
-    if args.len() != 4 {
+    if args.len() != 5 {
         return Err(color_eyre::eyre::eyre!("invalid worker arguments"));
     }
-    let mode = args[2].to_str().unwrap_or("");
-    let path = PathBuf::from(&args[3]);
+    if args[2] != env!("CARGO_PKG_VERSION") {
+        eprintln!("bigiris worker version mismatch");
+        std::process::exit(VERSION_MISMATCH);
+    }
+    // Fail closed before touching untrusted input.
+    let leaked = inherited_descriptors()?;
+    if !leaked.is_empty() {
+        return Err(color_eyre::eyre::eyre!("inherited file descriptors: {leaked:?}"));
+    }
+    let mode = args[3].to_str().unwrap_or("");
+    let path = PathBuf::from(&args[4]);
     match mode {
         "pixels" => {
             let (image, format) = backend::decode_in_process(&path)?;
@@ -479,5 +698,110 @@ mod tests {
         file.write_all(&header).unwrap();
         file.rewind().unwrap();
         assert!(receive(file).is_err());
+    }
+
+    #[test]
+    fn wide_samples_are_read_across_chunk_boundaries() {
+        let values: Vec<u16> = (0..70_000u32).map(|v| v as u16).collect();
+        let bytes: Vec<u8> = values.iter().flat_map(|v| v.to_ne_bytes()).collect();
+        let read = read_samples::<2, u16>(&mut bytes.as_slice(), bytes.len(), u16::from_ne_bytes);
+        assert_eq!(read.unwrap(), values);
+    }
+
+    #[test]
+    fn untrusted_text_cannot_drive_the_terminal() {
+        let text = sanitize_text("ok\x1b]0;pwned\x07\r\u{202E}line\nnext\u{9b}2J");
+        assert!(!text.chars().any(|c| c.is_control() && c != '\n'), "{text:?}");
+        assert!(!text.contains('\u{202E}'));
+        assert!(text.contains("\nnext"));
+    }
+
+    /// Run `execute` against a shell script standing in for the worker
+    /// binary, inside the real sandbox. `None` if this host forbids the
+    /// sandbox (packaging containers); native CI must run these.
+    fn with_worker<T>(script: &str, budget: Duration, work: impl FnOnce() -> T) -> Option<T> {
+        use std::os::unix::fs::PermissionsExt;
+        let probe = Command::new("/usr/bin/bwrap")
+            .args(["--unshare-all", "--ro-bind", "/usr", "/usr", "--symlink", "usr/lib", "/lib"])
+            .args(["--symlink", "usr/lib64", "/lib64", "/usr/bin/true"])
+            .status();
+        if !probe.is_ok_and(|status| status.success()) {
+            let container =
+                Path::new("/.dockerenv").exists() || Path::new("/run/.containerenv").exists();
+            assert!(container, "codec sandbox unavailable outside a container");
+            return None;
+        }
+        let dir = tempfile::tempdir().unwrap();
+        let worker = dir.path().join("worker");
+        std::fs::write(&worker, format!("#!/usr/bin/sh\n{script}\n")).unwrap();
+        std::fs::set_permissions(&worker, std::fs::Permissions::from_mode(0o755)).unwrap();
+        TEST_EXECUTABLE.with(|slot| *slot.borrow_mut() = Some((worker, budget)));
+        let result = work();
+        TEST_EXECUTABLE.with(|slot| *slot.borrow_mut() = None);
+        Some(result)
+    }
+
+    fn input() -> tempfile::NamedTempFile {
+        let file = tempfile::Builder::new().suffix(".png").tempfile().unwrap();
+        image::RgbImage::new(2, 2).save(file.path()).unwrap();
+        file
+    }
+
+    fn process_running(marker: &str) -> bool {
+        std::fs::read_dir("/proc").unwrap().flatten().any(|entry| {
+            std::fs::read(entry.path().join("cmdline"))
+                .is_ok_and(|cmdline| String::from_utf8_lossy(&cmdline).contains(marker))
+        })
+    }
+
+    #[test]
+    fn hostile_worker_header_is_rejected() {
+        let file = input();
+        let result = with_worker("printf 'BIGIRIS2garbage'", DEADLINE, || decode(file.path()));
+        if let Some(result) = result {
+            assert!(result.is_err());
+        }
+    }
+
+    #[test]
+    fn hostile_worker_diagnostics_are_bounded_and_sanitized() {
+        let file = input();
+        let script =
+            "i=0; while [ $i -lt 2000 ]; do printf '\\033]0;owned\\007\\033[2J%0500d' 0 >&2; \
+                      i=$((i+1)); done; exit 1";
+        let Some(result) = with_worker(script, DEADLINE, || decode(file.path())) else { return };
+        let message = result.unwrap_err().to_string();
+        assert!(message.len() < MAX_DIAGNOSTIC * 4, "{} bytes", message.len());
+        assert!(!message.contains('\x1b') && !message.contains('\x07'));
+    }
+
+    #[test]
+    fn deadline_and_cancel_stop_the_sandboxed_worker() {
+        let file = input();
+        let started = Instant::now();
+        let script = "exec /usr/bin/sleep 30.31337";
+        let Some(result) = with_worker(script, Duration::from_millis(500), || decode(file.path()))
+        else {
+            return;
+        };
+        assert!(result.unwrap_err().to_string().contains("limite"));
+        assert!(started.elapsed() < Duration::from_secs(10));
+
+        let flag = Arc::new(AtomicBool::new(false));
+        let trigger = flag.clone();
+        std::thread::spawn(move || {
+            std::thread::sleep(Duration::from_millis(300));
+            trigger.store(true, Ordering::Release);
+        });
+        let started = Instant::now();
+        let result = with_worker(script, DEADLINE, || with_cancel(flag, || decode(file.path())));
+        assert!(result.unwrap().unwrap_err().to_string().contains("cancelada"));
+        assert!(started.elapsed() < Duration::from_secs(10));
+        // --die-with-parent tears the sandbox down with bwrap.
+        let deadline = Instant::now() + Duration::from_secs(5);
+        while process_running("30.31337") && Instant::now() < deadline {
+            std::thread::sleep(Duration::from_millis(50));
+        }
+        assert!(!process_running("30.31337"), "sandboxed worker outlived its parent");
     }
 }

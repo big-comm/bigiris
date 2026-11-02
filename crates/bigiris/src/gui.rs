@@ -1082,6 +1082,17 @@ fn build_window_preloaded(
             let Some(scroller) = scroller.upgrade() else {
                 return glib::Propagation::Proceed;
             };
+            // Without an image (start page, error page) or with an in-window
+            // dialog open, the wheel must scroll that content instead.
+            {
+                let s = state.borrow();
+                if s.texture.is_none()
+                    || s.stack.visible_child_name().as_deref() != Some("picture")
+                    || s.window().visible_dialog().is_some()
+                {
+                    return glib::Propagation::Proceed;
+                }
+            }
             // The scroll controller lives on the window, so event.position()
             // is in window-root coords. Convert to scroller-local coords so
             // adjust_zoom can anchor the re-scroll on the pixel under the

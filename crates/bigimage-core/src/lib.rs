@@ -43,7 +43,7 @@ pub use extent::{
 };
 pub use flip::{flip_file, flip_file_with_options, FlipAxis};
 pub use format::Format;
-pub use metadata::{Metadata, MetadataSupport, SourceMetadata};
+pub use metadata::{Metadata, MetadataLoss, MetadataSupport, SourceMetadata};
 pub use preview::{PreviewOp, PreviewSession};
 pub use resize::{resize_file, Filter, ResizeMode};
 pub use rotate::{
@@ -161,8 +161,18 @@ pub fn open_image_for_resave(
 /// re-attached with `Orientation` reset to 1. Where the target cannot embed
 /// that profile (or its colour model does not match the written pixels),
 /// pixels are converted to sRGB instead. What each format keeps is reported
-/// by [`metadata::preserved_by`]. `options.strip_metadata` is ignored: the
-/// whole point of this call is to keep the user's own metadata.
+/// by [`metadata::preserved_by`]; what a particular save dropped, by
+/// [`save_image_preserving_metadata_report`]. `options.strip_metadata` is
+/// ignored: the whole point of this call is to keep the user's own metadata.
+///
+/// EXIF `PixelXDimension`/`PixelYDimension` are updated to the saved size
+/// and the embedded IFD1 thumbnail (which would show the image before the
+/// edit) is dropped. XMP is not carried: the vendored encoders cannot write
+/// it.
+///
+/// `options` is used as given. For an in-place JPEG save pass the source's
+/// quality, e.g. `quality: metadata::estimate_jpeg_quality(path)`, or the
+/// encoder default (75) re-compresses a high-quality original.
 pub fn save_image_preserving_metadata(
     image: image::DynamicImage,
     output: impl AsRef<std::path::Path>,
@@ -171,12 +181,39 @@ pub fn save_image_preserving_metadata(
     policy: OverwritePolicy,
     source: &SourceMetadata,
 ) -> Result<ConvertOutcome> {
+    save_image_preserving_metadata_report(image, output, target, options, policy, source)
+        .map(|report| report.outcome)
+}
+
+/// Result of [`save_image_preserving_metadata_report`].
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ResaveOutcome {
+    /// What happened to the output file.
+    pub outcome: ConvertOutcome,
+    /// Source metadata that is not in the written file (empty when
+    /// everything was kept or the source had none).
+    pub dropped: Vec<metadata::MetadataLoss>,
+}
+
+/// [`save_image_preserving_metadata`], also reporting which source
+/// metadata could not be written, so the UI can tell the user (e.g. "the
+/// colour profile was converted to sRGB", "EXIF too large for JPEG").
+pub fn save_image_preserving_metadata_report(
+    image: image::DynamicImage,
+    output: impl AsRef<std::path::Path>,
+    target: Format,
+    options: &EncodeOptions,
+    policy: OverwritePolicy,
+    source: &SourceMetadata,
+) -> Result<ResaveOutcome> {
+    use metadata::MetadataLoss;
     const MAX_BLOB: usize = 4 * 1024 * 1024;
     // JPEG APP1 segments hold at most 65533 bytes, including `Exif\0\0`.
     const MAX_JPEG_EXIF: usize = 65_533 - 6;
     let mut image = image;
     let support = metadata::preserved_by(target);
     let mut extras = pipeline::Extras::default();
+    let mut dropped = Vec::new();
     if let Some(icc) = source.icc.as_deref().filter(|icc| !icc.is_empty()) {
         let gray = convert::writes_gray(image.color(), target);
         let matches_pixels = match icc.get(16..20) {
@@ -186,26 +223,38 @@ pub fn save_image_preserving_metadata(
         };
         if support.icc && matches_pixels && icc.len() <= MAX_BLOB {
             extras.icc = Some(icc.to_vec());
-        } else if let Err(error) = color::normalize_srgb(&mut image, icc) {
-            tracing::warn!(%error, "perfil ICC de origem descartado ao regravar");
+        } else {
+            let loss = match color::normalize_srgb_applied(&mut image, icc) {
+                Ok(true) if !support.icc => MetadataLoss::IccUnsupported,
+                Ok(true) if icc.len() > MAX_BLOB => MetadataLoss::IccTooLarge,
+                Ok(true) => MetadataLoss::IccMismatched,
+                Ok(false) => MetadataLoss::IccDiscarded,
+                Err(error) => {
+                    tracing::warn!(%error, "perfil ICC de origem descartado ao regravar");
+                    MetadataLoss::IccDiscarded
+                }
+            };
+            dropped.push(loss);
         }
     }
-    if support.exif {
+    if let Some(exif) = source.exif.as_deref().filter(|exif| !exif.is_empty()) {
         let limit = if target == Format::Jpeg { MAX_JPEG_EXIF } else { MAX_BLOB };
-        extras.exif = source
-            .exif
-            .as_deref()
-            .and_then(metadata::upright_exif)
-            .filter(|exif| exif.len() <= limit);
+        match metadata::resave_exif(exif, Some((image.width(), image.height()))) {
+            _ if !support.exif => dropped.push(MetadataLoss::ExifUnsupported),
+            None => dropped.push(MetadataLoss::ExifInvalid),
+            Some(exif) if exif.len() > limit => dropped.push(MetadataLoss::ExifTooLarge),
+            Some(exif) => extras.exif = Some(exif),
+        }
     }
-    pipeline::encode_and_cleanup_with(
+    let outcome = pipeline::encode_and_cleanup_with(
         image,
         output.as_ref().to_path_buf(),
         target,
         options,
         policy,
         &extras,
-    )
+    )?;
+    Ok(ResaveOutcome { outcome, dropped })
 }
 
 /// Errors returned by core pipelines.

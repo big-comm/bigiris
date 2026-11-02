@@ -64,6 +64,33 @@ impl MetadataSupport {
     }
 }
 
+/// Source metadata a [`crate::save_image_preserving_metadata_report`] call
+/// could not carry into the written file, so the UI can tell the user.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[non_exhaustive]
+pub enum MetadataLoss {
+    /// The target format cannot store EXIF (see [`preserved_by`]).
+    ExifUnsupported,
+    /// The EXIF block exceeds what the target can hold (64 KiB for JPEG,
+    /// 4 MiB elsewhere).
+    ExifTooLarge,
+    /// The EXIF block is not TIFF-structured and could not be rewritten.
+    ExifInvalid,
+    /// The target cannot embed the source colour profile; pixels were
+    /// converted to sRGB (wide-gamut colours may be clipped).
+    IccUnsupported,
+    /// The profile exceeds 4 MiB; pixels were converted to sRGB.
+    IccTooLarge,
+    /// The profile's colour model does not match the written pixels (e.g. a
+    /// GRAY profile on pixels an edit made RGB); pixels were converted to
+    /// sRGB.
+    IccMismatched,
+    /// The profile is malformed or of a kind that cannot be applied (CMYK,
+    /// Lab…): it was dropped and the pixels written unchanged.
+    IccDiscarded,
+}
+
 /// Metadata preserved for `format` by the vendored encoders: JPEG, PNG and
 /// WebP keep both; AVIF keeps EXIF only; TIFF keeps the ICC profile only;
 /// every other format keeps neither.
@@ -78,7 +105,13 @@ pub fn preserved_by(format: crate::Format) -> MetadataSupport {
 /// Normalise an EXIF blob for re-attachment: drop an `Exif\0\0` prefix and
 /// reset IFD0 `Orientation` to 1, because the pixels being saved are already
 /// upright. Returns `None` for blobs that are not TIFF-structured.
-pub(crate) fn upright_exif(exif: &[u8]) -> Option<Vec<u8>> {
+///
+/// With `size` (the saved pixels, after rotate/crop/extent),
+/// `PixelXDimension`/`PixelYDimension` in the Exif IFD are set to it and
+/// the IFD1 thumbnail is unlinked (IFD0's next-IFD offset set to 0): it
+/// shows the image before the edit, and file managers display it instead
+/// of the real pixels. With `size = None` only the orientation changes.
+pub(crate) fn resave_exif(exif: &[u8], size: Option<(u32, u32)>) -> Option<Vec<u8>> {
     let mut tiff = exif.strip_prefix(b"Exif\0\0").unwrap_or(exif).to_vec();
     let little = match tiff.get(..4)? {
         [b'I', b'I', 42, 0] => true,
@@ -101,15 +134,61 @@ pub(crate) fn upright_exif(exif: &[u8]) -> Option<Vec<u8>> {
             u32::from_be_bytes(b)
         }
     };
+    let put_word = |v: u16| if little { v.to_le_bytes() } else { v.to_be_bytes() };
+    let put_long = |v: u32| if little { v.to_le_bytes() } else { v.to_be_bytes() };
     let ifd = usize::try_from(long(tiff.get(4..8)?)).ok()?;
     let count = usize::from(word(tiff.get(ifd..ifd + 2)?));
+    let mut exif_ifd = None;
     for entry in 0..count {
         let at = ifd + 2 + entry * 12;
-        let field = tiff.get(at..at + 12)?;
+        let field: [u8; 12] = tiff.get(at..at + 12)?.try_into().ok()?;
+        let (tag, kind, n) = (word(&field[..2]), word(&field[2..4]), long(&field[4..8]));
         // Orientation, SHORT, count 1: value is inline in the first 2 bytes.
-        if word(&field[..2]) == 0x0112 && word(&field[2..4]) == 3 && long(&field[4..8]) == 1 {
-            let one = if little { 1u16.to_le_bytes() } else { 1u16.to_be_bytes() };
-            tiff[at + 8..at + 10].copy_from_slice(&one);
+        if tag == 0x0112 && kind == 3 && n == 1 {
+            tiff[at + 8..at + 10].copy_from_slice(&put_word(1));
+        }
+        // Exif IFD pointer (LONG or IFD type).
+        if tag == 0x8769 && (kind == 4 || kind == 13) && n == 1 {
+            exif_ifd = usize::try_from(long(&field[8..12])).ok();
+        }
+    }
+    let Some((width, height)) = size else {
+        return Some(tiff);
+    };
+    let next = ifd + 2 + count * 12;
+    tiff.get(next..next + 4)?;
+    tiff[next..next + 4].copy_from_slice(&put_long(0));
+    let Some(sub) = exif_ifd else {
+        return Some(tiff);
+    };
+    let Some(sub_count) = tiff.get(sub..sub + 2).map(|b| usize::from(word(b))) else {
+        return Some(tiff);
+    };
+    for entry in 0..sub_count {
+        let at = sub + 2 + entry * 12;
+        let Some(field) = tiff.get(at..at + 12).and_then(|f| <[u8; 12]>::try_from(f).ok()) else {
+            break;
+        };
+        let (tag, kind, n) = (word(&field[..2]), word(&field[2..4]), long(&field[4..8]));
+        let value = match tag {
+            0xa002 => width,
+            0xa003 => height,
+            _ => continue,
+        };
+        if n != 1 || !(kind == 3 || kind == 4) {
+            continue;
+        }
+        // SHORT or LONG, inline. A SHORT too small for the new size
+        // becomes a LONG (both fit the 4-byte value field).
+        match u16::try_from(value) {
+            Ok(short) if kind == 3 => {
+                tiff[at + 8..at + 10].copy_from_slice(&put_word(short));
+                tiff[at + 10..at + 12].fill(0);
+            }
+            _ => {
+                tiff[at + 2..at + 4].copy_from_slice(&put_word(4));
+                tiff[at + 8..at + 12].copy_from_slice(&put_long(value));
+            }
         }
     }
     Some(tiff)
@@ -332,7 +411,7 @@ mod tests {
             0x12, 0x01, 3, 0, 1, 0, 0, 0, 6, 0, 0, 0, // Orientation = 6
             0, 0, 0, 0,
         ];
-        let fixed = upright_exif(le).unwrap();
+        let fixed = resave_exif(le, None).unwrap();
         assert_eq!(&fixed[..2], b"II", "Exif prefix dropped");
         assert_eq!(&fixed[30..32], &[1, 0]);
         assert_eq!(&fixed[18..22], &[b'A', b'B', b'C', 0], "other tags untouched");
@@ -341,10 +420,52 @@ mod tests {
             0x01, 0x12, 0, 3, 0, 0, 0, 1, 0, 8, 0, 0, // Orientation = 8
             0, 0, 0, 0,
         ];
-        assert_eq!(&upright_exif(be).unwrap()[18..20], &[0, 1]);
-        assert_eq!(upright_exif(b"not exif"), None);
+        assert_eq!(&resave_exif(be, None).unwrap()[18..20], &[0, 1]);
+        assert_eq!(resave_exif(b"not exif", None), None);
         // Truncated IFD: rejected instead of panicking.
-        assert_eq!(upright_exif(&le[..20]), None);
+        assert_eq!(resave_exif(&le[..20], None), None);
+    }
+
+    /// IFD0: Orientation 6 + Exif IFD pointer, next IFD → IFD1 (thumbnail).
+    /// Exif IFD: PixelXDimension SHORT 4000, PixelYDimension LONG 3000.
+    fn exif_with_dimensions_and_thumbnail() -> Vec<u8> {
+        let mut t = vec![b'I', b'I', 42, 0, 8, 0, 0, 0, 2, 0];
+        t.extend_from_slice(&[0x12, 0x01, 3, 0, 1, 0, 0, 0, 6, 0, 0, 0]);
+        t.extend_from_slice(&[0x69, 0x87, 4, 0, 1, 0, 0, 0, 38, 0, 0, 0]);
+        t.extend_from_slice(&[68, 0, 0, 0]); // next IFD (IFD1) at 68
+        assert_eq!(t.len(), 38);
+        t.extend_from_slice(&[2, 0]);
+        t.extend_from_slice(&[0x02, 0xa0, 3, 0, 1, 0, 0, 0, 0xa0, 0x0f, 0, 0]);
+        t.extend_from_slice(&[0x03, 0xa0, 4, 0, 1, 0, 0, 0, 0xb8, 0x0b, 0, 0]);
+        t.extend_from_slice(&[0, 0, 0, 0]);
+        assert_eq!(t.len(), 68);
+        // IFD1: JPEGInterchangeFormatLength = 0, no next IFD.
+        t.extend_from_slice(&[1, 0, 0x02, 0x02, 4, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
+        t
+    }
+
+    #[test]
+    fn resave_exif_refreshes_dimensions_and_drops_the_stale_thumbnail() {
+        let source = exif_with_dimensions_and_thumbnail();
+        let parse = |tiff: Vec<u8>| exif::Reader::new().read_raw(tiff).unwrap();
+        let before = parse(source.clone());
+        assert!(before.fields().any(|f| f.ifd_num == exif::In::THUMBNAIL));
+
+        let fixed = resave_exif(&source, Some((70_000, 20))).unwrap();
+        let after = parse(fixed);
+        let value = |tag| after.get_field(tag, exif::In::PRIMARY).unwrap().value.get_uint(0);
+        assert_eq!(value(exif::Tag::Orientation), Some(1));
+        assert_eq!(value(exif::Tag::PixelXDimension), Some(70_000), "SHORT widened to LONG");
+        assert_eq!(value(exif::Tag::PixelYDimension), Some(20));
+        assert!(after.fields().all(|f| f.ifd_num != exif::In::THUMBNAIL));
+
+        let small = parse(resave_exif(&source, Some((300, 200))).unwrap());
+        let field = small.get_field(exif::Tag::PixelXDimension, exif::In::PRIMARY).unwrap();
+        assert!(matches!(field.value, exif::Value::Short(_)), "fitting SHORT stays SHORT");
+        assert_eq!(field.value.get_uint(0), Some(300));
+        // Without a size, only the orientation changes.
+        let kept = parse(resave_exif(&source, None).unwrap());
+        assert!(kept.fields().any(|f| f.ifd_num == exif::In::THUMBNAIL));
     }
 
     #[test]

@@ -303,3 +303,50 @@ fn preserving_save_matches_profile_to_pixels_or_falls_back_to_srgb() {
     assert!(!metadata::preserved_by(Format::Bmp).exif);
     assert!(metadata::preserved_by(Format::Jpeg).is_complete());
 }
+
+#[test]
+fn preserving_save_reports_what_it_dropped() {
+    use bigimage_core::{save_image_preserving_metadata_report, MetadataLoss, SourceMetadata};
+    let dir = tempfile::tempdir().unwrap();
+    let p3 = moxcms::ColorProfile::new_display_p3().encode().unwrap();
+    let gray = moxcms::ColorProfile::new_gray_with_gamma(1.8).encode().unwrap();
+    let mut cmyk = p3.clone();
+    cmyk[16..20].copy_from_slice(b"CMYK");
+    let rgb = DynamicImage::ImageRgb8(image::RgbImage::from_pixel(4, 3, image::Rgb([90, 90, 90])));
+    let report = |name: &str, format: Format, exif: Option<Vec<u8>>, icc: &[u8]| {
+        let source = SourceMetadata { exif, icc: Some(icc.to_vec()) };
+        let result = save_image_preserving_metadata_report(
+            rgb.clone(),
+            dir.path().join(name),
+            format,
+            &EncodeOptions::default(),
+            OverwritePolicy::Replace,
+            &source,
+        )
+        .unwrap();
+        assert!(matches!(result.outcome, bigimage_core::ConvertOutcome::Written { .. }));
+        result.dropped
+    };
+    assert_eq!(report("all.jpg", Format::Jpeg, Some(camera_exif()), &p3), []);
+    assert_eq!(
+        report("none.bmp", Format::Bmp, Some(camera_exif()), &p3),
+        [MetadataLoss::IccUnsupported, MetadataLoss::ExifUnsupported]
+    );
+    // An edit made gray pixels RGB: the GRAY profile no longer fits.
+    let out = dir.path().join("mismatch.png");
+    assert_eq!(report("mismatch.png", Format::Png, None, &gray), [MetadataLoss::IccMismatched]);
+    let px = open_image(&out).unwrap().to_rgb8().get_pixel(0, 0).0;
+    assert!(px[0] > 90 && px[0] == px[1] && px[1] == px[2], "gamma 1.8 gray → sRGB: {px:?}");
+    assert_eq!(report("cmyk.png", Format::Png, None, &cmyk), [MetadataLoss::IccDiscarded]);
+    assert_eq!(
+        report("bad.png", Format::Png, Some(b"not exif".to_vec()), &p3),
+        [MetadataLoss::ExifInvalid]
+    );
+    let mut huge = camera_exif();
+    huge.resize(70_000, 0);
+    assert_eq!(
+        report("huge.jpg", Format::Jpeg, Some(huge.clone()), &p3),
+        [MetadataLoss::ExifTooLarge]
+    );
+    assert_eq!(report("huge.png", Format::Png, Some(huge), &p3), []);
+}

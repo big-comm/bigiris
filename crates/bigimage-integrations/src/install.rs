@@ -258,14 +258,29 @@ const XML_MARKER: &str = "<!-- X-BigIris-Generated: written by bigiris install-i
 #[derive(Clone, Copy)]
 enum AssetKind {
     Desktop,
-    Xml,
+    Icon,
+    Metainfo,
+}
+
+/// FNV-1a 64 and length of every icon BigIris released before the marker
+/// existed and that differs from the current asset (the history of
+/// `data/icons/hicolor/scalable/apps/com.biglinux.Iris.svg`: b82d47a).
+/// The icon carries no textual id to recognize it by, so only these exact
+/// files count as ours. FNV is not a security boundary here: the file sits
+/// in the user's own home under our application id.
+const LEGACY_ICONS: &[(u64, usize)] = &[(0x93fc_7d95_f6c0_5abf, 4560)];
+
+fn fnv1a64(bytes: &[u8]) -> u64 {
+    bytes
+        .iter()
+        .fold(0xcbf2_9ce4_8422_2325, |h, &b| (h ^ u64::from(b)).wrapping_mul(0x100_0000_01b3))
 }
 
 fn app_assets(paths: &ScopePaths) -> [(PathBuf, &'static [u8], AssetKind); 3] {
     [
         (paths.applications_dir().join(APP_DESKTOP_NAME), APP_DESKTOP, AssetKind::Desktop),
-        (paths.app_icon_dir().join(APP_ICON_NAME), APP_ICON_SVG, AssetKind::Xml),
-        (paths.metainfo_dir().join(APP_METAINFO_NAME), APP_METAINFO, AssetKind::Xml),
+        (paths.app_icon_dir().join(APP_ICON_NAME), APP_ICON_SVG, AssetKind::Icon),
+        (paths.metainfo_dir().join(APP_METAINFO_NAME), APP_METAINFO, AssetKind::Metainfo),
     ]
 }
 
@@ -274,7 +289,7 @@ fn app_assets(paths: &ScopePaths) -> [(PathBuf, &'static [u8], AssetKind); 3] {
 fn with_marker(content: &[u8], kind: AssetKind) -> Vec<u8> {
     let marker = match kind {
         AssetKind::Desktop => crate::scope::GENERATED_MARKER,
-        AssetKind::Xml => XML_MARKER,
+        AssetKind::Icon | AssetKind::Metainfo => XML_MARKER,
     };
     let split = content.iter().position(|&b| b == b'\n').map_or(content.len(), |i| i + 1);
     let mut out = Vec::with_capacity(content.len() + marker.len() + 2);
@@ -288,17 +303,37 @@ fn with_marker(content: &[u8], kind: AssetKind) -> Vec<u8> {
     out
 }
 
-/// Did we write `body`? Either it carries our marker or it is a verbatim
-/// copy of the asset (as `install.sh` and pre-marker releases wrote it).
+/// Did we write `body`? It carries our marker, or it is a copy written
+/// before the marker existed (by `install.sh` or an older release), which
+/// is recognized per format because those assets change every release:
+///
+/// - launcher: `Exec=bigiris …` plus `Icon=com.biglinux.Iris`, unless it
+///   hides or disables the entry (`NoDisplay=`/`Hidden=`), which only a
+///   user's menu-editor override does;
+/// - metainfo: the AppStream component id `com.biglinux.Iris`;
+/// - icon: a byte copy of the current or a previously released icon.
+///
+/// Anything else is left alone.
 fn is_our_app_file(body: &[u8], original: &[u8], kind: AssetKind) -> bool {
     if body == original {
         return true;
     }
+    let text = String::from_utf8_lossy(body);
     match kind {
-        AssetKind::Desktop => String::from_utf8_lossy(body)
-            .lines()
-            .any(|line| line.trim() == crate::scope::GENERATED_MARKER),
-        AssetKind::Xml => body.windows(XML_MARKER.len()).any(|w| w == XML_MARKER.as_bytes()),
+        AssetKind::Desktop => {
+            let lines: Vec<&str> = text.lines().map(str::trim).collect();
+            let has = |pred: fn(&str) -> bool| lines.iter().any(|l| pred(l));
+            has(|l| l == crate::scope::GENERATED_MARKER)
+                || (has(|l| l == "Exec=bigiris" || l.starts_with("Exec=bigiris "))
+                    && has(|l| l == "Icon=com.biglinux.Iris")
+                    && !has(|l| l.starts_with("NoDisplay=") || l.starts_with("Hidden=")))
+        }
+        AssetKind::Metainfo => {
+            text.contains(XML_MARKER) || text.contains("<id>com.biglinux.Iris</id>")
+        }
+        AssetKind::Icon => {
+            text.contains(XML_MARKER) || LEGACY_ICONS.contains(&(fnv1a64(body), body.len()))
+        }
     }
 }
 
@@ -435,6 +470,47 @@ mod tests {
         for (target, _, _) in app_assets(&paths) {
             assert!(!target.exists(), "stale {} kept", target.display());
         }
+    }
+
+    #[test]
+    fn pre_marker_copies_from_older_releases_are_recognized() {
+        let tmp = TempDir::new().unwrap();
+        let system = tmp.path().join("system.desktop");
+        std::fs::write(&system, "[Desktop Entry]\n").unwrap();
+        let paths = ScopePaths::rooted_at(tmp.path().join("home"));
+        let [(desktop, _, _), (icon, _, _), (metainfo, _, _)] = app_assets(&paths);
+        for p in [&desktop, &icon, &metainfo] {
+            std::fs::create_dir_all(p.parent().unwrap()).unwrap();
+        }
+        // As the first release's install.sh wrote them (no marker).
+        std::fs::write(
+            &desktop,
+            "[Desktop Entry]\nName=BigIris\nExec=bigiris %U\nIcon=com.biglinux.Iris\n",
+        )
+        .unwrap();
+        std::fs::write(
+            &metainfo,
+            "<?xml version=\"1.0\"?>\n<component>\n  <id>com.biglinux.Iris</id>\n</component>\n",
+        )
+        .unwrap();
+        // An unknown SVG under our name is not provably ours.
+        std::fs::write(&icon, "<svg>someone else's com.biglinux.Iris</svg>").unwrap();
+
+        install_app_files_with_system(&paths, &system);
+        assert!(!desktop.exists() && !metainfo.exists(), "legacy copies kept");
+        assert!(icon.exists(), "unknown icon removed");
+    }
+
+    #[test]
+    fn launcher_overrides_and_foreign_files_are_not_ours() {
+        let marker_less = |s: &str, kind| is_our_app_file(s.as_bytes(), b"", kind);
+        let hidden = "[Desktop Entry]\nExec=bigiris %F\nIcon=com.biglinux.Iris\nNoDisplay=true\n";
+        assert!(!marker_less(hidden, AssetKind::Desktop));
+        let other_icon = "[Desktop Entry]\nExec=bigiris %F\nIcon=my-icon\n";
+        assert!(!marker_less(other_icon, AssetKind::Desktop));
+        assert!(!marker_less("<component><id>org.other</id></component>", AssetKind::Metainfo));
+        // Reference FNV-1a 64 vector, so the legacy icon table stays valid.
+        assert_eq!(fnv1a64(b"a"), 0xaf63_dc4c_8601_ec8c);
     }
 
     #[test]

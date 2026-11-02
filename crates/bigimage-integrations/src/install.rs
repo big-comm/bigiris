@@ -206,21 +206,97 @@ const APP_DESKTOP_NAME: &str = "com.biglinux.Iris.desktop";
 const APP_METAINFO_NAME: &str = "com.biglinux.Iris.metainfo.xml";
 const APP_ICON_NAME: &str = "com.biglinux.Iris.svg";
 
+/// Desktop entry shipped by the distro package. When it exists, the
+/// package owns the launcher, icon and metainfo system-wide.
+const SYSTEM_APP_DESKTOP: &str = "/usr/share/applications/com.biglinux.Iris.desktop";
+
+/// Marker comment placed after the XML declaration of the copies we write,
+/// so cleanup can tell them apart from files the user put there.
+const XML_MARKER: &str = "<!-- X-BigIris-Generated: written by bigiris install-integrations -->";
+
+#[derive(Clone, Copy)]
+enum AssetKind {
+    Desktop,
+    Xml,
+}
+
+fn app_assets(paths: &ScopePaths) -> [(PathBuf, &'static [u8], AssetKind); 3] {
+    [
+        (paths.applications_dir().join(APP_DESKTOP_NAME), APP_DESKTOP, AssetKind::Desktop),
+        (paths.app_icon_dir().join(APP_ICON_NAME), APP_ICON_SVG, AssetKind::Xml),
+        (paths.metainfo_dir().join(APP_METAINFO_NAME), APP_METAINFO, AssetKind::Xml),
+    ]
+}
+
+/// Insert our marker after the first line (`[Desktop Entry]` / the XML
+/// declaration), where it is valid for each format.
+fn with_marker(content: &[u8], kind: AssetKind) -> Vec<u8> {
+    let marker = match kind {
+        AssetKind::Desktop => crate::scope::GENERATED_MARKER,
+        AssetKind::Xml => XML_MARKER,
+    };
+    let split = content.iter().position(|&b| b == b'\n').map_or(content.len(), |i| i + 1);
+    let mut out = Vec::with_capacity(content.len() + marker.len() + 2);
+    out.extend_from_slice(&content[..split]);
+    if !out.ends_with(b"\n") {
+        out.push(b'\n');
+    }
+    out.extend_from_slice(marker.as_bytes());
+    out.push(b'\n');
+    out.extend_from_slice(&content[split..]);
+    out
+}
+
+/// Did we write `body`? Either it carries our marker or it is a verbatim
+/// copy of the asset (as `install.sh` and pre-marker releases wrote it).
+fn is_our_app_file(body: &[u8], original: &[u8], kind: AssetKind) -> bool {
+    if body == original {
+        return true;
+    }
+    match kind {
+        AssetKind::Desktop => String::from_utf8_lossy(body)
+            .lines()
+            .any(|line| line.trim() == crate::scope::GENERATED_MARKER),
+        AssetKind::Xml => body.windows(XML_MARKER.len()).any(|w| w == XML_MARKER.as_bytes()),
+    }
+}
+
+/// Remove `path` only if it is a regular file we wrote.
+fn remove_if_ours(path: &std::path::Path, original: &[u8], kind: AssetKind) -> bool {
+    let is_file = std::fs::symlink_metadata(path).is_ok_and(|m| m.is_file());
+    is_file
+        && std::fs::read(path).is_ok_and(|body| is_our_app_file(&body, original, kind))
+        && std::fs::remove_file(path).is_ok()
+}
+
 /// Escreve `.desktop`, ícone SVG e metainfo para os paths XDG do usuário.
 /// Falhas individuais não interrompem — a função retorna apenas os que
 /// foram gravados com sucesso. Diretórios ausentes são criados.
+///
+/// When the distro package already installed the launcher system-wide,
+/// a personal copy would shadow it and go stale on the next package
+/// upgrade, so nothing is written and copies we wrote earlier are removed.
 fn install_app_files(paths: &ScopePaths) -> Vec<PathBuf> {
+    install_app_files_with_system(paths, std::path::Path::new(SYSTEM_APP_DESKTOP))
+}
+
+fn install_app_files_with_system(
+    paths: &ScopePaths,
+    system_desktop: &std::path::Path,
+) -> Vec<PathBuf> {
     let mut written = Vec::new();
-    for (dir, name, content) in [
-        (paths.applications_dir(), APP_DESKTOP_NAME, APP_DESKTOP),
-        (paths.app_icon_dir(), APP_ICON_NAME, APP_ICON_SVG),
-        (paths.metainfo_dir(), APP_METAINFO_NAME, APP_METAINFO),
-    ] {
-        if std::fs::create_dir_all(&dir).is_err() {
+    if paths.scope == Scope::User && system_desktop.exists() {
+        for (target, content, kind) in app_assets(paths) {
+            remove_if_ours(&target, content, kind);
+        }
+        return written;
+    }
+    for (target, content, kind) in app_assets(paths) {
+        let Some(dir) = target.parent() else { continue };
+        if std::fs::create_dir_all(dir).is_err() {
             continue;
         }
-        let target = dir.join(name);
-        if crate::safe_fs::safe_write(&target, content).is_ok() {
+        if crate::safe_fs::safe_write(&target, with_marker(content, kind)).is_ok() {
             written.push(target);
         }
     }
@@ -270,25 +346,89 @@ fn refresh_xdg_caches(paths: &ScopePaths) {
 
 /// Remove os arquivos instalados por [`install_app_files`]. Não remove
 /// diretórios — deixa isso para o sistema. Arquivos ausentes são
-/// ignorados (idempotente).
+/// ignorados (idempotente). Files the user placed there themselves (for
+/// example a menu-editor override of the launcher) are kept.
 fn uninstall_app_files(paths: &ScopePaths) -> Vec<PathBuf> {
-    let mut removed = Vec::new();
-    for path in [
-        paths.applications_dir().join(APP_DESKTOP_NAME),
-        paths.app_icon_dir().join(APP_ICON_NAME),
-        paths.metainfo_dir().join(APP_METAINFO_NAME),
-    ] {
-        if path.exists() && std::fs::remove_file(&path).is_ok() {
-            removed.push(path);
-        }
-    }
-    removed
+    app_assets(paths)
+        .into_iter()
+        .filter(|(path, content, kind)| remove_if_ours(path, content, *kind))
+        .map(|(path, _, _)| path)
+        .collect()
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use tempfile::TempDir;
+
+    const NO_SYSTEM: &str = "/nonexistent/bigiris-test/com.biglinux.Iris.desktop";
+
+    fn install_app_files(paths: &ScopePaths) -> Vec<PathBuf> {
+        install_app_files_with_system(paths, std::path::Path::new(NO_SYSTEM))
+    }
+
+    #[test]
+    fn user_install_skips_app_files_the_package_provides() {
+        let tmp = TempDir::new().unwrap();
+        let system = tmp.path().join("system.desktop");
+        std::fs::write(&system, "[Desktop Entry]\n").unwrap();
+        let paths = ScopePaths::rooted_at(tmp.path().join("home"));
+        assert!(install_app_files_with_system(&paths, &system).is_empty());
+        for (target, _, _) in app_assets(&paths) {
+            assert!(!target.exists(), "{} shadows the packaged copy", target.display());
+        }
+    }
+
+    #[test]
+    fn user_install_removes_our_stale_copies_when_package_is_present() {
+        let tmp = TempDir::new().unwrap();
+        let system = tmp.path().join("system.desktop");
+        std::fs::write(&system, "[Desktop Entry]\n").unwrap();
+        let paths = ScopePaths::rooted_at(tmp.path().join("home"));
+        // A copy written by an older install-integrations run (marker) …
+        install_app_files(&paths);
+        // … and a verbatim copy, as install.sh writes it.
+        let icon = paths.app_icon_dir().join(APP_ICON_NAME);
+        std::fs::write(&icon, APP_ICON_SVG).unwrap();
+        install_app_files_with_system(&paths, &system);
+        for (target, _, _) in app_assets(&paths) {
+            assert!(!target.exists(), "stale {} kept", target.display());
+        }
+    }
+
+    #[test]
+    fn user_customized_launcher_is_never_removed() {
+        let tmp = TempDir::new().unwrap();
+        let system = tmp.path().join("system.desktop");
+        std::fs::write(&system, "[Desktop Entry]\n").unwrap();
+        let paths = ScopePaths::rooted_at(tmp.path().join("home"));
+        let desktop = paths.applications_dir().join(APP_DESKTOP_NAME);
+        std::fs::create_dir_all(desktop.parent().unwrap()).unwrap();
+        let custom = "[Desktop Entry]\nName=Iris\nExec=bigiris %F\nNoDisplay=true\n";
+        std::fs::write(&desktop, custom).unwrap();
+        install_app_files_with_system(&paths, &system);
+        assert!(uninstall_app_files(&paths).is_empty());
+        assert_eq!(std::fs::read_to_string(&desktop).unwrap(), custom);
+    }
+
+    #[test]
+    fn written_app_files_carry_marker_and_stay_valid() {
+        let tmp = TempDir::new().unwrap();
+        let paths = ScopePaths::rooted_at(tmp.path());
+        install_app_files(&paths);
+        let desktop =
+            std::fs::read_to_string(paths.applications_dir().join(APP_DESKTOP_NAME)).unwrap();
+        assert!(
+            desktop.starts_with(&format!("[Desktop Entry]\n{}\n", crate::scope::GENERATED_MARKER))
+        );
+        for path in
+            [paths.app_icon_dir().join(APP_ICON_NAME), paths.metainfo_dir().join(APP_METAINFO_NAME)]
+        {
+            let body = std::fs::read_to_string(&path).unwrap();
+            assert!(body.starts_with("<?xml"), "XML declaration must stay first");
+            assert_eq!(body.lines().nth(1), Some(XML_MARKER));
+        }
+    }
 
     #[test]
     fn install_writes_all_fms() {

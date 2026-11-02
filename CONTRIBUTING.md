@@ -201,6 +201,17 @@ BIGIRIS_LOCALE_DIR="$PWD/target/review-locale" LANGUAGE=fr ./target/release/bigi
   Não documente o que um nome bem escolhido já comunica.
 - **Errors**: `bigimage-core` define `BigImageError`; binário
   converte para `color_eyre::Result` na borda.
+- **Códigos de saída da CLI**: todo comando segue a mesma convenção
+  (`EXIT_CODES` em `crates/bigiris/src/main.rs`, exibida no `--help`):
+  `0` sucesso (arquivos ignorados por já existirem contam como sucesso),
+  `1` uso inválido ou erro fatal antes de gravar qualquer coisa, `2` um ou
+  mais arquivos de entrada falharam. Comandos novos que gravam arquivos
+  aceitam `--overwrite skip|replace|increment` com `skip` como padrão e são
+  cobertos em `crates/bigiris/tests/cli.rs`.
+- **Integrações do Thunar**: só existem no escopo do usuário
+  (`bigiris install-integrations --user` mescla em
+  `~/.config/Thunar/uca.xml`). Não empacote `/etc/xdg/Thunar/uca.xml`: ele
+  pertence ao pacote `thunar`, e os PKGBUILDs falham se ele aparecer.
 - **No `unsafe`**: todos os crates têm `#![forbid(unsafe_code)]`.
 - **GPL-3.0-or-later**: todo arquivo `.rs`/`.py` começa com
   `// SPDX-License-Identifier: GPL-3.0-or-later`.

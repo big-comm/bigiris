@@ -283,6 +283,7 @@ dependencies = [
  "gtk4",
  "image",
  "libadwaita",
+ "libc",
  "mimalloc",
  "moxcms",
  "rustix",

@@ -124,6 +124,57 @@ fn worker_executable() -> std::io::Result<(PathBuf, bool, Duration)> {
     installed_executable().map(|(path, replaced)| (path, replaced, DEADLINE))
 }
 
+/// Keep the parent's descriptors out of `command`'s process tree.
+///
+/// Rust opens its own files close-on-exec, but libraries do not always:
+/// after GTK/Mesa start, the GUI holds descriptors such as `/dev/udmabuf` or
+/// `memfd:lp_dma_buf` without `FD_CLOEXEC`, and a shell may hand the CLI a
+/// stray `3<file`. bwrap does not close inherited descriptors, so they would
+/// reach the sandboxed codec (which refuses to run with any) or a launched
+/// BigIris window. Every descriptor above stdio is marked close-on-exec in
+/// the child just before `exec`, so the parent's own state is untouched.
+#[allow(unsafe_code)]
+pub(crate) fn close_inherited_descriptors(command: &mut Command) -> &mut Command {
+    use std::os::unix::process::CommandExt;
+    // SAFETY: the hook runs in the forked child before `exec`. It only issues
+    // raw, async-signal-safe syscalls (close_range, getrlimit, fcntl): no
+    // allocation, no locks and no access to memory shared with other threads.
+    // Marking descriptors close-on-exec (rather than closing them) keeps the
+    // pipe std uses to report `exec` failures working until `exec` itself.
+    unsafe {
+        command.pre_exec(|| {
+            mark_descriptors_cloexec();
+            Ok(())
+        })
+    }
+}
+
+/// Body of the `pre_exec` hook; see [`close_inherited_descriptors`].
+#[allow(unsafe_code)]
+fn mark_descriptors_cloexec() {
+    // SAFETY: plain syscalls on integer descriptors; failures are ignored
+    // because the worker re-checks its descriptor table and fails closed.
+    unsafe {
+        // Linux >= 5.11: one syscall for the whole range.
+        if libc::syscall(libc::SYS_close_range, 3u32, u32::MAX, libc::CLOSE_RANGE_CLOEXEC) == 0 {
+            return;
+        }
+        // Older kernels: walk the descriptor table up to the soft limit.
+        let mut limit = libc::rlimit { rlim_cur: 0, rlim_max: 0 };
+        let top = if libc::getrlimit(libc::RLIMIT_NOFILE, &mut limit) == 0 {
+            limit.rlim_cur.min(1 << 16) as libc::c_int
+        } else {
+            1024
+        };
+        for fd in 3..top {
+            let flags = libc::fcntl(fd, libc::F_GETFD);
+            if flags >= 0 && flags & libc::FD_CLOEXEC == 0 {
+                libc::fcntl(fd, libc::F_SETFD, flags | libc::FD_CLOEXEC);
+            }
+        }
+    }
+}
+
 /// Prevent the codec from creating further user namespaces when this bwrap
 /// supports it (>= 0.8). Probed once, so distro policies that reject it (for
 /// example AppArmor rules or containers without user namespaces) keep the
@@ -131,7 +182,7 @@ fn worker_executable() -> std::io::Result<(PathBuf, bool, Duration)> {
 fn userns_hardening() -> bool {
     static SUPPORTED: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
     *SUPPORTED.get_or_init(|| {
-        let Ok(child) = Command::new("/usr/bin/bwrap")
+        let Ok(child) = close_inherited_descriptors(&mut Command::new("/usr/bin/bwrap"))
             .env_clear()
             .args([
                 "--unshare-all",
@@ -272,7 +323,7 @@ fn execute(path: &Path, mode: &str) -> ImageResult<std::fs::File> {
     };
     let output = tempfile::tempfile()?;
     let mut command = Command::new("/usr/bin/prlimit");
-    command
+    close_inherited_descriptors(&mut command)
         .env_clear()
         .args(["--as=2147483648", "--cpu=30", "--nofile=64", "--core=0"])
         .arg(format!("--fsize={output_limit}"))
@@ -696,7 +747,9 @@ fn bound_resave_metadata(
     Ok(())
 }
 /// Descriptors above stdio that leaked into the sandbox. bwrap does not close
-/// inherited descriptors, so any non-CLOEXEC host fd would reach the codec.
+/// inherited descriptors; the parent marks them close-on-exec before
+/// spawning ([`close_inherited_descriptors`]), and this is the fail-closed
+/// backstop in case that ever regresses.
 fn inherited_descriptors() -> std::io::Result<Vec<u32>> {
     let numbers: Vec<u32> = std::fs::read_dir("/proc/self/fd")?
         .filter_map(|entry| entry.ok()?.file_name().to_str()?.parse().ok())
@@ -1047,6 +1100,23 @@ mod tests {
         let file = std::io::BufReader::new(std::fs::File::open(&path).unwrap());
         let icc = image::codecs::jpeg::JpegDecoder::new(file).unwrap().icc_profile().unwrap();
         assert_eq!(icc.as_deref(), Some(&p3[..]));
+    }
+
+    #[test]
+    fn sandboxed_decode_survives_inherited_descriptors() {
+        let Some(binary) = built_worker() else {
+            eprintln!("skipped: build the bigiris binary (cargo test --all-targets)");
+            return;
+        };
+        // Like the GUI after Mesa starts: a host descriptor without CLOEXEC.
+        let leaked = tempfile::tempfile().unwrap();
+        rustix::io::fcntl_setfd(&leaked, rustix::io::FdFlags::empty()).unwrap();
+        let file = input();
+        let Some(result) = with_executable(binary, DEADLINE, || decode(file.path())) else {
+            return;
+        };
+        assert_eq!(result.unwrap().0.dimensions(), (2, 2));
+        drop(leaked);
     }
 
     #[test]

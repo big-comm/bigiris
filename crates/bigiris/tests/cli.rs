@@ -409,3 +409,21 @@ fn animate_keeps_an_existing_output_unless_asked() {
     success(run(dir.path(), &replace));
     assert!(image::open(&gif).is_ok());
 }
+
+#[test]
+fn inherited_descriptors_do_not_break_the_sandboxed_codec() {
+    if !sandbox_available() {
+        return;
+    }
+    let dir = tempfile::tempdir().unwrap();
+    fixture(dir.path(), "a.png");
+    // A shell (or a GUI with Mesa memfds) hands over a non-CLOEXEC fd 3.
+    let output = Command::new("/bin/sh")
+        .args(["-c", "exec 3</dev/null; exec \"$0\" rotate --degrees 90 a.png"])
+        .arg(env!("CARGO_BIN_EXE_bigiris"))
+        .current_dir(dir.path())
+        .output()
+        .unwrap();
+    success(output);
+    assert_eq!(image::image_dimensions(dir.path().join("a_rot90.png")).unwrap(), (24, 32));
+}

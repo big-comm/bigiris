@@ -6,7 +6,9 @@
 //! 2. Dialog: `bigiris --dialog=<name> [FILE...]` (used by file-manager service menus)
 //! 3. Headless CLI: `bigiris <subcommand> ...` (used by CI/CD and quick service-menu actions)
 
-#![forbid(unsafe_code)]
+// `deny`, not `forbid`: exactly one audited `unsafe` block is allowed, the
+// `pre_exec` hook in `codec::close_inherited_descriptors`.
+#![deny(unsafe_code)]
 
 // Faster allocator for the multi-thread batch path. ~5-15% wall-clock
 // win on a 100-file convert batch on a 16-thread CPU per the perf
@@ -1246,7 +1248,7 @@ fn to_pdf_one(
     let staging = tempfile::Builder::new().prefix(".bigiris-pdf-").tempdir_in(dir)?;
     let profile = tempfile::Builder::new().prefix("bigiris-soffice-").tempdir()?;
     let started = std::time::SystemTime::now();
-    let mut child = std::process::Command::new(soffice)
+    let mut child = codec::close_inherited_descriptors(&mut std::process::Command::new(soffice))
         .arg(format!("-env:UserInstallation={}", file_url(profile.path())))
         .args(["--headless", "--norestore", "--nolockcheck", "--convert-to", "pdf", "--outdir"])
         .arg(staging.path())

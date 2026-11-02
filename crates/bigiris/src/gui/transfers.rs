@@ -110,7 +110,9 @@ where
     S: AsRef<std::ffi::OsStr>,
 {
     let (exe, _) = crate::codec::installed_executable()?;
-    let mut child = std::process::Command::new(exe).args(args).spawn()?;
+    // The GUI holds non-CLOEXEC GPU descriptors; the new window must not.
+    let mut command = std::process::Command::new(exe);
+    let mut child = crate::codec::close_inherited_descriptors(&mut command).args(args).spawn()?;
     std::thread::spawn(move || {
         let _ = child.wait();
     });

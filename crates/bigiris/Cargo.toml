@@ -32,6 +32,9 @@ toml.workspace = true
 serde_json = "1"
 tempfile = "3"
 rustix = { version = "1", features = ["fs", "process", "event"] }
+# Raw close_range/fcntl syscalls for the fork-to-exec hook that stops host
+# descriptors (GTK/Mesa memfds) leaking into child processes.
+libc = "0.2"
 # i18n: libintl wrapper. Always-on (no extra system deps — libintl is in
 # glibc on Linux). Translations live under data/po; .mo files are
 # compiled by the PKGBUILD and loaded from /usr/share/locale.

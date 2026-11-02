@@ -8,7 +8,7 @@
 
 use std::path::Path;
 
-use image::{DynamicImage, GenericImageView, Rgba};
+use image::DynamicImage;
 
 use crate::convert::{ConvertOutcome, OverwritePolicy};
 use crate::{pipeline, BigImageError, Format, Result};
@@ -139,73 +139,119 @@ pub fn apply_to(img: DynamicImage, ops: AdjustOps) -> DynamicImage {
     apply(img, ops)
 }
 
+/// Apply every active axis in one pass over normalised samples, keeping the
+/// source colour type (8/16-bit integer or float, gray or RGB, with or
+/// without alpha). Integer samples are clamped to their range after each
+/// step, like the former 8-bit pipeline did; float samples may exceed 1.0
+/// (HDR) and are only kept non-negative where gamma needs it.
 fn apply(img: DynamicImage, ops: AdjustOps) -> DynamicImage {
     let mut img = img;
-    if ops.brightness != 0 {
-        img = img.brighten(ops.brightness);
-    }
-    if ops.contrast.abs() > 0.01 {
-        img = img.adjust_contrast(ops.contrast);
-    }
-    if ops.saturation.abs() > 0.01 {
-        img = apply_saturation(img, ops.saturation);
-    }
-    if (ops.gamma - 1.0).abs() > 0.001 {
-        img = apply_gamma(img, ops.gamma);
+    let tone = Tone::new(ops);
+    match &mut img {
+        DynamicImage::ImageLuma8(b) => process(b.as_mut(), 1, 1, u8_to, u8_from, true, &tone),
+        DynamicImage::ImageLumaA8(b) => process(b.as_mut(), 2, 1, u8_to, u8_from, true, &tone),
+        DynamicImage::ImageRgb8(b) => process(b.as_mut(), 3, 3, u8_to, u8_from, true, &tone),
+        DynamicImage::ImageRgba8(b) => process(b.as_mut(), 4, 3, u8_to, u8_from, true, &tone),
+        DynamicImage::ImageLuma16(b) => process(b.as_mut(), 1, 1, u16_to, u16_from, true, &tone),
+        DynamicImage::ImageLumaA16(b) => process(b.as_mut(), 2, 1, u16_to, u16_from, true, &tone),
+        DynamicImage::ImageRgb16(b) => process(b.as_mut(), 3, 3, u16_to, u16_from, true, &tone),
+        DynamicImage::ImageRgba16(b) => process(b.as_mut(), 4, 3, u16_to, u16_from, true, &tone),
+        DynamicImage::ImageRgb32F(b) => process(b.as_mut(), 3, 3, f32_id, f32_id, false, &tone),
+        DynamicImage::ImageRgba32F(b) => process(b.as_mut(), 4, 3, f32_id, f32_id, false, &tone),
+        // Future variants: fall back to 16-bit RGBA, which loses nothing
+        // from any integer type the crate currently knows.
+        other => {
+            let mut rgba = other.to_rgba16();
+            process(rgba.as_mut(), 4, 3, u16_to, u16_from, true, &tone);
+            *other = DynamicImage::ImageRgba16(rgba);
+        }
     }
     img
 }
 
-/// Linear blend between the input image and its luma projection.
-///
-/// `s = +100` pushes twice as far from grey (factor 2.0), `s = 0` leaves
-/// the image untouched, `s = -100` collapses to full greyscale. Alpha is
-/// always preserved; colours are clamped back into `u8`.
-fn apply_saturation(img: DynamicImage, sat: f32) -> DynamicImage {
-    let factor = 1.0 + sat / 100.0;
-    let (w, h) = img.dimensions();
-    let src = img.to_rgba8();
-    let mut out = image::RgbaImage::new(w, h);
-    for (x, y, px) in src.enumerate_pixels() {
-        let r = px[0] as f32;
-        let g = px[1] as f32;
-        let b = px[2] as f32;
-        // Rec. 601 luma weights — cheap and visually decent for 8-bit RGB.
-        let luma = 0.299 * r + 0.587 * g + 0.114 * b;
-        let nr = clamp_u8(luma + (r - luma) * factor);
-        let ng = clamp_u8(luma + (g - luma) * factor);
-        let nb = clamp_u8(luma + (b - luma) * factor);
-        out.put_pixel(x, y, Rgba([nr, ng, nb, px[3]]));
-    }
-    DynamicImage::ImageRgba8(out)
+fn u8_to(v: u8) -> f32 {
+    f32::from(v) / 255.0
+}
+fn u8_from(v: f32) -> u8 {
+    (v * 255.0).round().clamp(0.0, 255.0) as u8
+}
+fn u16_to(v: u16) -> f32 {
+    f32::from(v) / 65535.0
+}
+fn u16_from(v: f32) -> u16 {
+    (v * 65535.0).round().clamp(0.0, 65535.0) as u16
+}
+fn f32_id(v: f32) -> f32 {
+    v
 }
 
-/// Per-pixel gamma via a 256-entry LUT — fast enough for batch work and
-/// exact for 8-bit RGB. Alpha is pass-through. Convention matches
-/// Photoshop/GIMP's "Levels gamma": `output = input^gamma`, so `gamma < 1`
-/// brightens midtones and `gamma > 1` darkens them.
-fn apply_gamma(img: DynamicImage, gamma: f32) -> DynamicImage {
-    let mut lut = [0u8; 256];
-    for (i, slot) in lut.iter_mut().enumerate() {
-        let normalized = (i as f32) / 255.0;
-        let corrected = normalized.powf(gamma).clamp(0.0, 1.0);
-        *slot = (corrected * 255.0).round() as u8;
-    }
-    let (w, h) = img.dimensions();
-    let src = img.to_rgba8();
-    let mut out = image::RgbaImage::new(w, h);
-    for (x, y, px) in src.enumerate_pixels() {
-        out.put_pixel(
-            x,
-            y,
-            Rgba([lut[px[0] as usize], lut[px[1] as usize], lut[px[2] as usize], px[3]]),
-        );
-    }
-    DynamicImage::ImageRgba8(out)
+/// Resolved adjustment parameters, in normalised `0.0..=1.0` units.
+struct Tone {
+    /// Additive offset; `brightness` is expressed in 1/255 steps so 8-bit
+    /// results match the historical `brighten` behaviour, and the same
+    /// visual shift applies to 16-bit and float images.
+    offset: Option<f32>,
+    /// Contrast multiplier around mid-grey (same curve as `image`'s
+    /// `adjust_contrast`).
+    contrast: Option<f32>,
+    /// Distance-from-luma multiplier (`1 + s/100`).
+    saturation: Option<f32>,
+    /// Exponent; `output = input^gamma` (Levels convention).
+    gamma: Option<f32>,
 }
 
-fn clamp_u8(v: f32) -> u8 {
-    v.round().clamp(0.0, 255.0) as u8
+impl Tone {
+    fn new(ops: AdjustOps) -> Self {
+        Self {
+            offset: (ops.brightness != 0).then(|| ops.brightness as f32 / 255.0),
+            contrast: (ops.contrast.abs() > 0.01).then(|| ((100.0 + ops.contrast) / 100.0).powi(2)),
+            saturation: (ops.saturation.abs() > 0.01).then(|| 1.0 + ops.saturation / 100.0),
+            gamma: ((ops.gamma - 1.0).abs() > 0.001).then_some(ops.gamma),
+        }
+    }
+
+    fn apply(&self, colour: &mut [f32], clamp: bool) {
+        let limit = |v: f32| if clamp { v.clamp(0.0, 1.0) } else { v };
+        if let Some(offset) = self.offset {
+            colour.iter_mut().for_each(|v| *v = limit(*v + offset));
+        }
+        if let Some(factor) = self.contrast {
+            colour.iter_mut().for_each(|v| *v = limit((*v - 0.5) * factor + 0.5));
+        }
+        if let (Some(factor), [r, g, b]) = (self.saturation, &mut *colour) {
+            // Rec. 601 luma weights — cheap and visually decent.
+            let luma = 0.299 * *r + 0.587 * *g + 0.114 * *b;
+            for v in [r, g, b] {
+                *v = limit(luma + (*v - luma) * factor);
+            }
+        }
+        if let Some(gamma) = self.gamma {
+            colour.iter_mut().for_each(|v| *v = limit(v.max(0.0).powf(gamma)));
+        }
+    }
+}
+
+/// Run `tone` over interleaved samples: `channels` per pixel, of which the
+/// first `colour` are colour (the rest — alpha — passes through untouched).
+fn process<S: Copy>(
+    data: &mut [S],
+    channels: usize,
+    colour: usize,
+    to: fn(S) -> f32,
+    from: fn(f32) -> S,
+    clamp: bool,
+    tone: &Tone,
+) {
+    for pixel in data.chunks_exact_mut(channels) {
+        let mut values = [0.0f32; 3];
+        for (value, sample) in values.iter_mut().zip(pixel.iter()).take(colour) {
+            *value = to(*sample);
+        }
+        tone.apply(&mut values[..colour], clamp);
+        for (sample, value) in pixel.iter_mut().zip(values).take(colour) {
+            *sample = from(value);
+        }
+    }
 }
 
 #[cfg(test)]
@@ -301,6 +347,64 @@ mod tests {
                 }
             }
         }
+    }
+
+    #[test]
+    fn sixteen_bit_and_float_sources_keep_depth_and_react_to_every_axis() {
+        let rgb16 = DynamicImage::ImageRgb16(image::ImageBuffer::from_pixel(
+            2,
+            2,
+            image::Rgb([20000u16, 30000, 40000]),
+        ));
+        let all = AdjustOps { brightness: 20, contrast: 10.0, saturation: 30.0, gamma: 0.8 };
+        let out = apply_to(rgb16.clone(), all);
+        assert_eq!(out.color(), image::ColorType::Rgb16);
+        assert_ne!(
+            out.as_rgb16().unwrap().get_pixel(0, 0),
+            rgb16.as_rgb16().unwrap().get_pixel(0, 0)
+        );
+
+        // Brightness alone must be visible on 16-bit (it used to add 20 of
+        // 65535) and match the 8-bit shift: +20/255 of full scale.
+        let bright = apply_to(rgb16.clone(), AdjustOps { brightness: 20, ..AdjustOps::default() });
+        let px = bright.as_rgb16().unwrap().get_pixel(0, 0).0;
+        let expected = 20000 + (20.0f32 * 65535.0 / 255.0).round() as u16;
+        assert!(px[0].abs_diff(expected) <= 1, "got {px:?}, expected {expected}");
+
+        let gray16 = DynamicImage::ImageLumaA16(image::ImageBuffer::from_pixel(
+            1,
+            1,
+            image::LumaA([30000u16, 1234]),
+        ));
+        let out =
+            apply_to(gray16, AdjustOps { saturation: 50.0, gamma: 0.5, ..AdjustOps::default() });
+        assert_eq!(out.color(), image::ColorType::La16);
+        let px = out.as_luma_alpha16().unwrap().get_pixel(0, 0).0;
+        assert!(px[0] > 30000);
+        assert_eq!(px[1], 1234);
+
+        let float = DynamicImage::ImageRgba32F(image::ImageBuffer::from_pixel(
+            1,
+            1,
+            image::Rgba([0.25f32, 0.5, 0.75, 0.5]),
+        ));
+        let out = apply_to(float, AdjustOps { brightness: 51, ..AdjustOps::default() });
+        assert_eq!(out.color(), image::ColorType::Rgba32F);
+        let px = out.as_rgba32f().unwrap().get_pixel(0, 0).0;
+        assert!((px[0] - 0.45).abs() < 1e-4 && (px[3] - 0.5).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn adjust_file_writes_sixteen_bit_png_for_sixteen_bit_source() {
+        let dir = TempDir::new().unwrap();
+        let src = dir.path().join("deep.png");
+        image::ImageBuffer::from_pixel(3, 3, image::Rgb([20000u16, 30000, 40000]))
+            .save(&src)
+            .unwrap();
+        let ops = AdjustOps { brightness: 10, saturation: -20.0, ..AdjustOps::default() };
+        let out = adjust_file(&src, ops, None, OverwritePolicy::Replace).unwrap();
+        let decoded = image::open(out.path()).unwrap();
+        assert_eq!(decoded.color(), image::ColorType::Rgb16);
     }
 
     #[test]

@@ -68,9 +68,10 @@ def catalogs():
 
 # Machine translation sometimes returns escaped markup such as "& # 160; …"
 # (a mangled &#160;) instead of the character itself. GTK, desktop files and
-# Thunar's XML show that text literally, so reject numeric entities in any
-# spacing variant.
-HTML_ENTITY_DEBRIS = re.compile(r'&\s*#\s*(?:[0-9]+|[xX][0-9a-fA-F]+)')
+# Thunar's XML show that text literally, so reject numeric entities and the
+# common named ones (e.g. "d &apos; interpolation") in any spacing variant.
+HTML_ENTITY_DEBRIS = re.compile(
+    r'&\s*(?:#\s*(?:[0-9]+|[xX][0-9a-fA-F]+)|(?:amp|apos|quot|lt|gt|nbsp|hellip)\s*;)')
 
 def check():
     expected = set(read_po(PO / 'bigiris.pot', allow_fuzzy=True)) - {''}

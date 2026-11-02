@@ -35,7 +35,8 @@ class TranslationContracts(unittest.TestCase):
 
     def test_html_entity_debris_is_detected(self):
         debris = translations.HTML_ENTITY_DEBRIS
-        for bad in ('Endre størrelse & # 160; …', 'Selvvalgt&#160;…', 'A &#x2026;', 'B & #8230'):
+        for bad in ('Endre størrelse & # 160; …', 'Selvvalgt&#160;…', 'A &#x2026;', 'B & #8230',
+                    'Noyau d &apos; interpolation', 'C&nbsp;D', 'E &amp;F'):
             self.assertTrue(debris.search(bad), bad)
         for good in ('Endre størrelse…', 'Tom & Jerry', 'Item #3', 'Visa metadata…'):
             self.assertFalse(debris.search(good), good)

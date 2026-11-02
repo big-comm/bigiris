@@ -617,7 +617,7 @@ msgstr "Hauteur maximale"
 
 #: crates/bigiris/src/gui.rs:3497
 msgid "Kernel de interpolação"
-msgstr "Noyau d &apos; interpolation"
+msgstr "Noyau d’interpolation"
 
 #: crates/bigiris/src/gui.rs:3526
 msgid "Modo de redimensionamento"
@@ -1076,7 +1076,7 @@ msgstr "10 fois"
 
 #: crates/bigiris/src/gui.rs:6419
 msgid "Velocidade do encoder"
-msgstr "Vitesse de l &apos; encodeur"
+msgstr "Vitesse de l’encodeur"
 
 #: crates/bigiris/src/gui.rs:6420
 msgid "maior = mais rápido, paleta um pouco pior · padrão 10"

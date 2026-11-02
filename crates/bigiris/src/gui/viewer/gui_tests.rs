@@ -264,3 +264,176 @@ fn viewer_review_fixes() {
     drop(window);
     wait(&context, "viewer state released after closing", &|| witness.upgrade().is_none());
 }
+
+fn answer(window: &adw::ApplicationWindow, response: &str) {
+    let dialog = window.visible_dialog().and_downcast::<adw::AlertDialog>().expect("alert shown");
+    dialog.emit_by_name_with_details::<()>(
+        "response",
+        glib::Quark::from_str(response),
+        &[&response],
+    );
+    dialog.close();
+}
+
+fn current_thumb_width(state: &Rc<RefCell<ViewerState>>) -> Option<i32> {
+    let (idx, start) = (state.borrow().idx, state.borrow().film_strip_start);
+    thumb_size(state, idx.checked_sub(start)?).map(|(w, _)| w)
+}
+
+#[test]
+#[ignore = "requires a graphical display; run alone with GSETTINGS_BACKEND=memory"]
+fn viewer_second_review_fixes() {
+    assert_eq!(
+        std::env::var("GSETTINGS_BACKEND").as_deref(),
+        Ok("memory"),
+        "synthetic GUI tests require GSETTINGS_BACKEND=memory"
+    );
+    adw::init().expect("GTK display required");
+    let app = adw::Application::builder()
+        .application_id("com.biglinux.Iris.SecondReviewProbe")
+        .flags(gio::ApplicationFlags::NON_UNIQUE)
+        .build();
+    app.register(None::<&gio::Cancellable>).unwrap();
+    let context = glib::MainContext::default();
+    let dir = tempfile::tempdir().unwrap();
+
+    // 45 images, each with its own width, so a thumbnail tells which file
+    // it was made from.
+    let files: Vec<PathBuf> = (0..45u32)
+        .map(|i| {
+            let path = dir.path().join(format!("img-{i:02}.png"));
+            image::RgbImage::from_pixel(40 + i, 30, image::Rgb([i as u8 * 5, 80, 120]))
+                .save(&path)
+                .unwrap();
+            path
+        })
+        .collect();
+    let (window, witness) = build_window_tracked(&app, Rc::new(files.clone()), 0);
+    window.set_default_size(800, 600);
+    window.present();
+    let state = witness.upgrade().unwrap();
+    wait(&context, "first frame", &|| state.borrow().current_ready);
+
+    // Finding 1: jumping past the strip shows the new file in its cell,
+    // not the texture of the image that was on screen before.
+    handle_key(&state, gdk::Key::End, gdk::ModifierType::empty());
+    wait(&context, "last image", &|| state.borrow().current_ready);
+    settle(&context, 300);
+    assert_eq!(current_thumb_width(&state), Some(40 + 44), "End: stale current cell");
+    handle_key(&state, gdk::Key::Home, gdk::ModifierType::empty());
+    wait(&context, "first image", &|| state.borrow().current_ready);
+    settle(&context, 300);
+    assert_eq!(current_thumb_width(&state), Some(40), "Home: stale current cell");
+    // Trashing rebuilds the strip before the next frame is decoded.
+    remove_current_file(&state, &files[0]);
+    wait(&context, "image after removal", &|| state.borrow().current_ready);
+    settle(&context, 300);
+    assert_eq!(current_thumb_width(&state), Some(41), "removal: stale current cell");
+
+    // Finding 2: a vertical wheel step scrolls the strip horizontally.
+    {
+        let strip = state.borrow().film_strip_scroll.clone();
+        hide_bottom(&state);
+        toggle_film_strip(&state);
+        settle(&context, 400);
+        let controllers = strip.observe_controllers();
+        let wheel = (0..controllers.n_items())
+            .filter_map(|i| controllers.item(i).and_downcast::<gtk::EventControllerScroll>())
+            .find(|c| c.propagation_phase() == gtk::PropagationPhase::Capture)
+            .expect("strip wheel controller");
+        let adjustment = strip.hadjustment();
+        adjustment.set_value(0.0);
+        assert!(wheel.emit_by_name::<bool>("scroll", &[&0.0f64, &1.0f64]));
+        assert!(adjustment.value() > 0.0, "vertical wheel did not scroll the strip");
+    }
+    drop(state);
+    window.destroy();
+    drop(window);
+    wait(&context, "first viewer released", &|| witness.upgrade().is_none());
+
+    // Findings 4, 7 and 9 on a pair: a static PNG and an animated GIF.
+    let png = dir.path().join("a-photo.png");
+    image::RgbImage::from_pixel(64, 32, image::Rgb([200, 10, 10])).save(&png).unwrap();
+    let old = std::time::UNIX_EPOCH + Duration::from_secs(1_000_000);
+    std::fs::File::options().write(true).open(&png).unwrap().set_modified(old).unwrap();
+    let gif = dir.path().join("b-anim.gif");
+    {
+        let frames = (0..2u8).map(|i| {
+            image::Frame::new(image::RgbaImage::from_pixel(
+                16,
+                16,
+                image::Rgba([i * 100, 0, 0, 255]),
+            ))
+        });
+        image::codecs::gif::GifEncoder::new(std::fs::File::create(&gif).unwrap())
+            .encode_frames(frames)
+            .unwrap();
+    }
+    let pair = vec![png.clone(), gif.clone()];
+    let (window, witness) = build_window_tracked(&app, Rc::new(pair.clone()), 0);
+    window.present();
+    let state = witness.upgrade().unwrap();
+    wait(&context, "png frame", &|| state.borrow().current_ready);
+
+    show_metadata_for_current(&state);
+    let props_before = state.borrow().props_dialog.clone().unwrap().0;
+
+    // Finding 9: a successful save caches the result, paints the cell and
+    // resumes the prefetch.
+    apply_edit(&state, EditOp::RotateCw);
+    wait(&context, "edited frame", &|| state.borrow().current_ready);
+    save_edits(&state);
+    settle(&context, 100);
+    answer(&window, "save");
+    wait(&context, "save done", &|| {
+        let s = state.borrow();
+        !s.saving && s.pending_ops.is_empty()
+    });
+    {
+        let s = state.borrow();
+        let modified = file_modified(&png);
+        assert_ne!(modified, Some(old));
+        assert!(
+            s.frame_cache.iter().any(|f| f.path == png && f.modified == modified),
+            "saved frame not cached"
+        );
+        assert_eq!(s.shown_path.as_ref(), Some(&png));
+    }
+    assert_eq!(current_thumb_width(&state), Some(32), "cell kept the pre-save thumbnail");
+    wait(&context, "prefetch after save", &|| {
+        state.borrow().frame_cache.iter().any(|f| f.path == gif)
+    });
+
+    // Finding 7: the properties window is rebuilt for the saved file.
+    show_metadata_for_current(&state);
+    let props_after = state.borrow().props_dialog.clone().unwrap().0;
+    assert_ne!(props_before, props_after, "properties kept the pre-save details");
+    props_after.close();
+    settle(&context, 50);
+
+    // Finding 4: a refused save explains why and lets the edits go.
+    navigate_relative(&state, 1);
+    wait(&context, "gif frame", &|| {
+        let s = state.borrow();
+        s.current_ready && s.files[s.idx] == gif
+    });
+    apply_edit(&state, EditOp::FlipH);
+    wait(&context, "edited gif", &|| state.borrow().current_ready);
+    save_edits(&state);
+    settle(&context, 100);
+    answer(&window, "save");
+    wait(&context, "save failure", &|| !state.borrow().saving && window.visible_dialog().is_some());
+    let failure = window.visible_dialog().and_downcast::<adw::AlertDialog>().unwrap();
+    assert_eq!(failure.heading().as_deref(), Some(gettext("Não foi possível salvar").as_str()));
+    assert_eq!(failure.body(), SaveFailure::NotStatic.message());
+    drop(failure);
+    answer(&window, "discard");
+    settle(&context, 100);
+    assert!(state.borrow().pending_ops.is_empty(), "edits were not discarded");
+    assert!(can_leave_current(&state));
+
+    drop(state);
+    window.destroy();
+    drop(window);
+    wait(&context, "second viewer released", &|| witness.upgrade().is_none());
+}

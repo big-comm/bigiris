@@ -306,3 +306,100 @@ fn fill_resize_dialog(
 
     window
 }
+
+#[cfg(test)]
+mod apply_tests {
+    use super::*;
+
+    fn find_apply(widget: &gtk::Widget, label: &str) -> Option<gtk::Button> {
+        if let Some(button) = widget.downcast_ref::<gtk::Button>() {
+            if button.has_css_class("suggested-action") && button.label().as_deref() == Some(label)
+            {
+                return Some(button.clone());
+            }
+        }
+        let mut child = widget.first_child();
+        while let Some(current) = child {
+            if let Some(found) = find_apply(&current, label) {
+                return Some(found);
+            }
+            child = current.next_sibling();
+        }
+        None
+    }
+
+    /// Apply must still publish its output once the dialog is on screen:
+    /// after the first frame Mesa/GTK hold their own descriptors (DRM node,
+    /// Wayland socket, eventfds) that anything spawned from Apply inherits
+    /// unless the spawn path closes them.
+    ///
+    /// Limitation: unit tests run without `codec::configure()`, so decoding
+    /// happens in-process here and the sandboxed worker is not spawned. The
+    /// test covers the dialog → Apply → output path; it only exercises the
+    /// descriptor hygiene once codec.rs offers a process-wide test worker
+    /// override (its `TEST_EXECUTABLE` is thread-local and batch workers
+    /// run on other threads).
+    #[test]
+    #[ignore = "requires a graphical display; run alone with GSETTINGS_BACKEND=memory"]
+    fn resize_apply_after_first_frame_writes_output() {
+        assert_eq!(
+            std::env::var("GSETTINGS_BACKEND").as_deref(),
+            Ok("memory"),
+            "synthetic GUI tests require GSETTINGS_BACKEND=memory"
+        );
+        adw::init().expect("GTK display required");
+        let app = adw::Application::builder()
+            .application_id("com.biglinux.Iris.ResizeApplyProbe")
+            .flags(gio::ApplicationFlags::NON_UNIQUE)
+            .build();
+        app.register(None::<&gio::Cancellable>).unwrap();
+        let context = glib::MainContext::default();
+        let pump = |what: &str, seconds: u64, done: &dyn Fn() -> bool| {
+            let deadline = std::time::Instant::now() + Duration::from_secs(seconds);
+            while !done() {
+                while context.pending() {
+                    context.iteration(false);
+                }
+                assert!(std::time::Instant::now() < deadline, "timed out: {what}");
+                std::thread::sleep(Duration::from_millis(5));
+            }
+        };
+
+        let dir = tempfile::tempdir().unwrap();
+        let source = dir.path().join("photo.png");
+        image::RgbImage::from_pixel(320, 200, image::Rgb([30, 120, 200])).save(&source).unwrap();
+
+        let window = build_resize_dialog(&app, Rc::new(vec![source.clone()]));
+        window.present();
+        let label = gettext("Redimensionar");
+        pump("resize form", 30, &|| find_apply(window.upcast_ref(), &label).is_some());
+        // Wait for a frame painted with the form, so GTK and the GL driver
+        // have opened everything they open on first draw.
+        pump("frame clock", 10, &|| window.frame_clock().is_some());
+        let clock = window.frame_clock().unwrap();
+        let painted = Rc::new(Cell::new(false));
+        let handler = {
+            let painted = painted.clone();
+            clock.connect_after_paint(move |_| painted.set(true))
+        };
+        window.queue_draw();
+        pump("first frame", 10, &|| painted.get());
+        clock.disconnect(handler);
+
+        let apply = find_apply(window.upcast_ref(), &label).unwrap();
+        assert!(apply.is_sensitive());
+        apply.emit_clicked();
+
+        let written = || {
+            std::fs::read_dir(dir.path()).unwrap().flatten().map(|e| e.path()).find(|path| {
+                *path != source
+                    && path.extension().is_some_and(|ext| ext == "png")
+                    && std::fs::metadata(path).is_ok_and(|m| m.len() > 0)
+            })
+        };
+        pump("resized output", 60, &|| written().is_some());
+        let output = written().unwrap();
+        image::open(&output).expect("output is a readable image");
+        window.destroy();
+    }
+}

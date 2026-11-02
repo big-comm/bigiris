@@ -255,32 +255,36 @@ pub(crate) fn resolve_output_to(
     Ok(naive)
 }
 
+/// Existing regular file a `Replace` publication will overwrite.
+fn replaced_file(output: &Path, policy: OverwritePolicy) -> Option<std::fs::Metadata> {
+    matches!(policy, OverwritePolicy::Replace)
+        .then(|| std::fs::symlink_metadata(output).ok())
+        .flatten()
+        .filter(std::fs::Metadata::is_file)
+}
+
 /// A unique sibling temporary file, cleaned up on every error path.
-pub(crate) fn output_temp(output: &Path) -> Result<tempfile::NamedTempFile> {
+///
+/// The file is created with the mode a plain `open(2)` would use (`0o666`,
+/// or the permission bits of the file a `Replace` will overwrite), so the
+/// kernel applies the umask and any default ACL at creation. No `chmod` is
+/// needed for new outputs, which keeps writes working on FUSE/gvfs/SMB
+/// mounts that refuse `chmod`.
+pub(crate) fn output_temp(
+    output: &Path,
+    policy: OverwritePolicy,
+) -> Result<tempfile::NamedTempFile> {
+    use std::os::unix::fs::PermissionsExt;
     let parent = output.parent().filter(|p| !p.as_os_str().is_empty()).unwrap_or(Path::new("."));
     std::fs::create_dir_all(parent).map_err(BigImageError::Io)?;
+    let mode =
+        replaced_file(output, policy).map_or(0o666, |meta| meta.permissions().mode() & 0o777);
     tempfile::Builder::new()
         .prefix(".bigiris-")
         .suffix(".part")
+        .permissions(std::fs::Permissions::from_mode(mode))
         .tempfile_in(parent)
         .map_err(BigImageError::Io)
-}
-
-/// Mode for newly created outputs: `0o666 & !umask`, like `open(2)` would.
-///
-/// The umask is read from `/proc/self/status` instead of `umask(2)`, which
-/// can only be queried by changing it (a process-wide race with other
-/// threads creating files). Falls back to the common `0o022`.
-pub(crate) fn new_file_mode() -> u32 {
-    let umask = std::fs::read_to_string("/proc/self/status")
-        .ok()
-        .and_then(|status| {
-            status.lines().find_map(|line| {
-                line.strip_prefix("Umask:").and_then(|v| u32::from_str_radix(v.trim(), 8).ok())
-            })
-        })
-        .unwrap_or(0o022);
-    0o666 & !umask
 }
 
 /// Make the rename itself durable. Best-effort: the file is already in
@@ -300,18 +304,22 @@ pub(crate) fn publish_temp(
     policy: OverwritePolicy,
 ) -> Result<crate::ConvertOutcome> {
     use std::os::unix::fs::PermissionsExt;
-    // tempfile creates 0600 files; a published image must get the same
-    // permissions as any other new file (0666 & !umask), unless it replaces
-    // an existing regular file whose permissions we keep.
-    let existing = matches!(policy, OverwritePolicy::Replace)
-        .then(|| std::fs::symlink_metadata(&output).ok())
-        .flatten()
-        .filter(std::fs::Metadata::is_file);
-    let permissions = match existing {
-        Some(meta) => meta.permissions(),
-        None => std::fs::Permissions::from_mode(new_file_mode()),
-    };
-    temp.as_file().set_permissions(permissions).map_err(BigImageError::Io)?;
+    // New outputs already got `0o666 & !umask` (and default ACLs) at
+    // creation, see `output_temp`. A replaced file keeps its exact
+    // permission bits: the umask may have narrowed them at creation, so copy
+    // them again — best-effort, since some mounts refuse chmod and the
+    // creation mode can only be narrower than the original, never wider.
+    if let Some(meta) = replaced_file(&output, policy) {
+        let wanted = meta.permissions().mode() & 0o777;
+        let current = temp.as_file().metadata().map(|m| m.permissions().mode() & 0o777).ok();
+        if current != Some(wanted) {
+            if let Err(error) =
+                temp.as_file().set_permissions(std::fs::Permissions::from_mode(wanted))
+            {
+                tracing::warn!(?output, %error, "permissões do arquivo substituído não copiadas");
+            }
+        }
+    }
     temp.as_file().sync_all().map_err(BigImageError::Io)?;
     if matches!(policy, OverwritePolicy::Replace) {
         temp.persist(&output).map_err(|e| BigImageError::Io(e.error))?;
@@ -385,7 +393,7 @@ pub(crate) fn encode_and_cleanup_with(
     };
     check_dimensions(img.width(), img.height(), destination_bpp)?;
     let prepared = crate::convert::prepare_for_target(img, target);
-    let mut temp = output_temp(&output)?;
+    let mut temp = output_temp(&output, policy)?;
     {
         let mut writer = std::io::BufWriter::new(temp.as_file_mut());
         encode_to_writer(&prepared, &mut writer, target, opts, extras)

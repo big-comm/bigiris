@@ -366,8 +366,22 @@ fn new_outputs_get_umask_permissions_instead_of_private_temp_mode() {
 
     // Replacing an existing file keeps that file's permissions.
     std::fs::set_permissions(&gif, std::fs::Permissions::from_mode(0o640)).unwrap();
-    make_gif(&[src], &gif, AnimateOptions::default()).unwrap();
+    make_gif(std::slice::from_ref(&src), &gif, AnimateOptions::default()).unwrap();
     assert_eq!(mode(&gif), 0o640);
+    // Bits the umask strips at creation (group/other write) are restored.
+    let replaced = dir.path().join("Replace/perm.jpg");
+    for bits in [0o600, 0o666, 0o604] {
+        std::fs::set_permissions(&replaced, std::fs::Permissions::from_mode(bits)).unwrap();
+        convert_file_to(
+            &src,
+            Some(&dir.path().join("Replace")),
+            Format::Jpeg,
+            &EncodeOptions::default(),
+            OverwritePolicy::Replace,
+        )
+        .unwrap();
+        assert_eq!(mode(&replaced), bits);
+    }
 }
 
 #[test]

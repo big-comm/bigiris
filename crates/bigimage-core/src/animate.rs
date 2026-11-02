@@ -87,7 +87,7 @@ pub fn make_gif_with_policy(
         return Ok(ConvertOutcome::Skipped { output: output.to_path_buf() });
     }
 
-    let mut temp = pipeline::output_temp(output)?;
+    let mut temp = pipeline::output_temp(output, policy)?;
     let mut writer = std::io::BufWriter::new(temp.as_file_mut());
     let mut encoder = GifEncoder::new_with_speed(&mut writer, opts.speed.clamp(1, 30));
     encoder

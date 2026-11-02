@@ -168,12 +168,14 @@ pub(in crate::gui) fn build_batch_dialog(
     // True while a worker is running. The Cancel button uses this to
     // decide between "cancel the run" and "close the window".
     let running = Rc::new(Cell::new(false));
-    // Pending auto-close after a clean run. Cleared by a new run and by
-    // closing the window, so it never kills a run started meanwhile.
-    let auto_close: Rc<RefCell<Option<glib::SourceId>>> = Rc::new(RefCell::new(None));
+    // Closing the window stops the remaining files and any in-flight
+    // isolated codec run; the app stays alive until the workers report.
     {
-        let auto_close = auto_close.clone();
-        window.connect_unrealize(move |_| cancel_auto_close(&auto_close));
+        let cancelled = cancelled.clone();
+        window.connect_close_request(move |_| {
+            cancelled.store(true, std::sync::atomic::Ordering::Release);
+            glib::Propagation::Proceed
+        });
     }
 
     // Handlers dos botões "Adicionar arquivos" e "Adicionar pasta".
@@ -243,7 +245,6 @@ pub(in crate::gui) fn build_batch_dialog(
         let cancelled = cancelled.clone();
         let running = running.clone();
         let output_dir = output_dir.clone();
-        let auto_close = auto_close.clone();
         dialog_signal!(window, apply_btn.clone(), connect_clicked, move |_| {
             let fmt = selected_format(&format_row);
             let policy = selected_overwrite(&overwrite_row);
@@ -259,8 +260,9 @@ pub(in crate::gui) fn build_batch_dialog(
                 return;
             }
 
-            // Reset cancel for a re-run, mark a worker as live.
-            cancel_auto_close(&auto_close);
+            // Reset cancel for a re-run, mark a worker as live. A pending
+            // auto-close from the previous run must not end this one.
+            batch_runner::disarm_auto_close(&window);
             cancelled.store(false, std::sync::atomic::Ordering::Relaxed);
             running.set(true);
             apply_btn.set_sensitive(false);
@@ -281,8 +283,12 @@ pub(in crate::gui) fn build_batch_dialog(
             let cancel_btn = cancel_btn.clone();
             let window = window.clone();
             let running = running.clone();
-            let auto_close = auto_close.clone();
+            // Released with the poll closure, i.e. only after the pool
+            // reported back: closing the last window never kills a worker
+            // mid-write and strands `.part` files.
+            let hold = window.application().map(|app| app.hold());
             glib::timeout_add_local(std::time::Duration::from_millis(50), move || loop {
+                let _hold = &hold;
                 match rx.try_recv() {
                     Ok(batch_runner::AsyncBatchEvent::Progress { done, total, file }) => {
                         progress.set_fraction(done as f64 / total.max(1) as f64);
@@ -301,6 +307,10 @@ pub(in crate::gui) fn build_batch_dialog(
                         bytes_out,
                     }) => {
                         running.set(false);
+                        // Closed mid-run: nothing left to show or to close.
+                        if cancelled && !window.is_visible() {
+                            return glib::ControlFlow::Break;
+                        }
                         let timing = batch_runner::format_duration(elapsed);
                         let template = if cancelled {
                             gettext("Cancelado após {done}/{total} em {timing}. {ok} gravado(s), {skip} ignorado(s), {fail} falha(s).")
@@ -353,7 +363,7 @@ pub(in crate::gui) fn build_batch_dialog(
                         };
                         cancel_btn.set_label(&cancel_label);
                         if !cancelled && fail == 0 {
-                            schedule_auto_close(&auto_close, &window, 3);
+                            batch_runner::arm_auto_close(&window, 3);
                         }
                         return glib::ControlFlow::Break;
                     }
@@ -370,36 +380,6 @@ pub(in crate::gui) fn build_batch_dialog(
     }
 
     window
-}
-
-/// Close `window` after `seconds` unless [`cancel_auto_close`] runs first.
-/// The source holds only a weak reference so it never keeps the dialog alive.
-fn schedule_auto_close(
-    slot: &Rc<RefCell<Option<glib::SourceId>>>,
-    window: &adw::ApplicationWindow,
-    seconds: u32,
-) {
-    cancel_auto_close(slot);
-    let weak = window.downgrade();
-    let fired = Rc::downgrade(slot);
-    let id = glib::timeout_add_seconds_local_once(seconds, move || {
-        // The source is gone once it fires; forget its id so nobody
-        // removes it twice.
-        if let Some(slot) = fired.upgrade() {
-            slot.borrow_mut().take();
-        }
-        if let Some(window) = weak.upgrade() {
-            window.close();
-        }
-    });
-    *slot.borrow_mut() = Some(id);
-}
-
-/// Drop a pending [`schedule_auto_close`], if any.
-fn cancel_auto_close(slot: &RefCell<Option<glib::SourceId>>) {
-    if let Some(id) = slot.borrow_mut().take() {
-        id.remove();
-    }
 }
 
 /// Atualiza a ActionRow de resumo do Prisma Lote com a contagem + peso
@@ -542,25 +522,36 @@ mod auto_close_tests {
         let context = glib::MainContext::default();
         let window = adw::ApplicationWindow::builder().application(&app).build();
         window.present();
-        let slot = Rc::new(RefCell::new(None));
+        use batch_runner::{arm_auto_close, auto_close_armed, disarm_auto_close};
 
         // timeout_add_seconds is coalesced to whole seconds, so a 1 s timer
         // may fire up to ~2 s later; wait past that.
-        // A new run (cancel) before the deadline keeps the window open.
-        schedule_auto_close(&slot, &window, 1);
-        cancel_auto_close(&slot);
+        // A new run (disarm) before the deadline keeps the window open.
+        arm_auto_close(&window, 1);
+        assert!(auto_close_armed(&window));
+        disarm_auto_close(&window);
+        assert!(!auto_close_armed(&window));
         spin(&context, Duration::from_millis(2500));
         assert!(window.is_visible(), "cancelled auto-close still closed the window");
 
         // Left alone, it closes the window and forgets its source id, so a
-        // later cancel is a harmless no-op.
-        schedule_auto_close(&slot, &window, 1);
+        // later disarm is a harmless no-op.
+        arm_auto_close(&window, 1);
         let deadline = std::time::Instant::now() + Duration::from_secs(4);
         while window.is_visible() && std::time::Instant::now() < deadline {
             spin(&context, Duration::from_millis(50));
         }
         assert!(!window.is_visible(), "auto-close did not fire");
-        assert!(slot.borrow().is_none());
-        cancel_auto_close(&slot);
+        assert!(!auto_close_armed(&window));
+        disarm_auto_close(&window);
+
+        // Closing (unrealizing) a window drops its pending timer with it.
+        let other = adw::ApplicationWindow::builder().application(&app).build();
+        other.present();
+        spin(&context, Duration::from_millis(200));
+        arm_auto_close(&other, 1);
+        other.close();
+        spin(&context, Duration::from_millis(200));
+        assert!(!auto_close_armed(&other), "closing kept the auto-close armed");
     }
 }

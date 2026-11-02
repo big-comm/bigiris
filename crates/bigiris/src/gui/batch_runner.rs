@@ -87,42 +87,71 @@ pub(super) fn format_size_delta(bytes_in: u64, bytes_out: u64) -> String {
     }
 }
 
-type PendingClose = (gtk4::glib::WeakRef<adw::ApplicationWindow>, gtk4::glib::SourceId);
+/// A pending auto-close: the window (weakly), its timer and the
+/// `unrealize` handler that drops the timer with the window.
+type PendingClose = (
+    gtk4::glib::WeakRef<adw::ApplicationWindow>,
+    gtk4::glib::SourceId,
+    gtk4::glib::SignalHandlerId,
+);
 
 thread_local! {
-    /// Auto-close timers armed by [`finish_dialog`], per window. A new run
+    /// Auto-close timers armed by [`arm_auto_close`], per window. A new run
     /// disarms them so a quick second Apply is not closed mid-batch.
     static PENDING_CLOSE: std::cell::RefCell<Vec<PendingClose>> =
         const { std::cell::RefCell::new(Vec::new()) };
 }
 
-/// Cancel a pending auto-close for `window` (and forget dead windows).
+/// Cancel a pending auto-close for `window`. Every dialog calls this when a
+/// new run starts; unrealizing the window does it too.
 pub(super) fn disarm_auto_close(window: &adw::ApplicationWindow) {
     let mine: Vec<_> = PENDING_CLOSE.with(|pending| {
         let mut pending = pending.borrow_mut();
         let (mine, others): (Vec<_>, Vec<_>) = std::mem::take(&mut *pending)
             .into_iter()
-            .partition(|(weak, _)| weak.upgrade().as_ref() == Some(window));
-        *pending = others;
+            .partition(|(weak, _, _)| weak.upgrade().as_ref() == Some(window));
+        // Entries of finalized windows: their timers can only no-op now.
+        *pending = others.into_iter().filter(|(weak, _, _)| weak.upgrade().is_some()).collect();
         mine
     });
-    for (_, id) in mine {
+    for (_, id, handler) in mine {
         id.remove();
+        window.disconnect(handler);
     }
 }
 
-fn arm_auto_close(window: &adw::ApplicationWindow, seconds: u32) {
+/// Whether `window` has an auto-close armed.
+#[cfg(test)]
+pub(super) fn auto_close_armed(window: &adw::ApplicationWindow) -> bool {
+    PENDING_CLOSE.with(|pending| {
+        pending.borrow().iter().any(|(weak, _, _)| weak.upgrade().as_ref() == Some(window))
+    })
+}
+
+/// Close `window` after `seconds` unless [`disarm_auto_close`] runs first
+/// (a new run, or the window going away). The timer holds only a weak
+/// reference, so it never keeps the dialog alive. Shared by every dialog.
+pub(super) fn arm_auto_close(window: &adw::ApplicationWindow, seconds: u32) {
     disarm_auto_close(window);
     let weak = window.downgrade();
     let id = gtk4::glib::timeout_add_seconds_local_once(seconds, move || {
         let Some(window) = weak.upgrade() else { return };
-        // The source has fired: forget its id instead of removing it again.
-        PENDING_CLOSE.with(|pending| {
-            pending.borrow_mut().retain(|(other, _)| other.upgrade().as_ref() != Some(&window));
+        // The source has fired: forget it instead of removing it again.
+        let fired: Vec<_> = PENDING_CLOSE.with(|pending| {
+            let mut pending = pending.borrow_mut();
+            let (fired, others): (Vec<_>, Vec<_>) = std::mem::take(&mut *pending)
+                .into_iter()
+                .partition(|(other, _, _)| other.upgrade().as_ref() == Some(&window));
+            *pending = others;
+            fired
         });
+        for (_, _, handler) in fired {
+            window.disconnect(handler);
+        }
         window.close();
     });
-    PENDING_CLOSE.with(|pending| pending.borrow_mut().push((window.downgrade(), id)));
+    let handler = window.connect_unrealize(disarm_auto_close);
+    PENDING_CLOSE.with(|pending| pending.borrow_mut().push((window.downgrade(), id, handler)));
 }
 
 /// Summary counts. The catalog validator has no plural support, so a single

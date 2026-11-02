@@ -19,6 +19,12 @@ const HEADER: usize = 36;
 const MAX_BYTES: u64 = 512 * 1024 * 1024;
 const MAX_INPUT: u64 = 1024 * 1024 * 1024;
 const MAX_METADATA: u64 = 1024 * 1024;
+/// EXIF kept for an in-place re-save (a JPEG holds at most 64 KiB anyway).
+const MAX_RESAVE_EXIF: u64 = 1024 * 1024;
+/// ICC profiles kept for an in-place re-save; matches the core's cap.
+const MAX_RESAVE_ICC: u64 = 4 * 1024 * 1024;
+/// Re-save trailer after the pixels: EXIF and ICC lengths (u64 LE each).
+const RESAVE_TRAILER: usize = 16;
 thread_local! { static CANCEL: RefCell<Option<Arc<AtomicBool>>> = const { RefCell::new(None) }; }
 
 pub fn configure() {
@@ -29,6 +35,7 @@ pub fn configure() {
         metadata,
         ensure_static
     }));
+    assert!(backend::configure_resave(resave));
 }
 
 /// Exercise the real process boundary and raw protocol.
@@ -260,6 +267,7 @@ fn execute(path: &Path, mode: &str) -> ImageResult<std::fs::File> {
     // Only pixel modes need large outputs; everything else is tiny.
     let output_limit = match mode {
         "pixels" | "preview" => MAX_BYTES + HEADER as u64,
+        "resave" => MAX_BYTES + (HEADER + RESAVE_TRAILER) as u64 + MAX_RESAVE_EXIF + MAX_RESAVE_ICC,
         _ => MAX_METADATA + 4096,
     };
     let output = tempfile::tempfile()?;
@@ -355,7 +363,15 @@ struct Pixels {
     natural: (u32, u32),
     gps: bool,
 }
-fn receive(mut output: std::fs::File) -> ImageResult<Pixels> {
+fn receive(output: std::fs::File) -> ImageResult<Pixels> {
+    receive_with(output, false).map(|(pixels, _)| pixels)
+}
+/// Read the raw pixel protocol. With `trailer`, the EXIF and ICC blobs of a
+/// re-save decode follow the pixels and are bounded like everything else.
+fn receive_with(
+    mut output: std::fs::File,
+    trailer: bool,
+) -> ImageResult<(Pixels, bigimage_core::SourceMetadata)> {
     let mut header = [0u8; HEADER];
     output.read_exact(&mut header)?;
     if &header[..8] != MAGIC || header[10] > 1 || header[11] != 0 {
@@ -386,8 +402,31 @@ fn receive(mut output: std::fs::File) -> ImageResult<Pixels> {
         || u64::from(w) * u64::from(h) > 256 * 1024 * 1024
         || length > MAX_BYTES
         || length != u64::from(w) * u64::from(h) * u64::from(color.bytes_per_pixel())
-        || output.metadata()?.len() != HEADER as u64 + length
     {
+        return Err(invalid("dimensões ou tamanho do protocolo inválidos"));
+    }
+    let total = output.metadata()?.len();
+    let pixels_end = HEADER as u64 + length;
+    let (exif_length, icc_length) = if trailer {
+        if total < pixels_end + RESAVE_TRAILER as u64 {
+            return Err(invalid("dimensões ou tamanho do protocolo inválidos"));
+        }
+        let mut lengths = [0u8; RESAVE_TRAILER];
+        output.seek(SeekFrom::Start(pixels_end))?;
+        output.read_exact(&mut lengths)?;
+        output.seek(SeekFrom::Start(HEADER as u64))?;
+        let exif = u64::from_le_bytes(lengths[..8].try_into().unwrap());
+        let icc = u64::from_le_bytes(lengths[8..].try_into().unwrap());
+        if exif > MAX_RESAVE_EXIF || icc > MAX_RESAVE_ICC {
+            return Err(invalid("metadados excessivos"));
+        }
+        (exif, icc)
+    } else {
+        (0, 0)
+    };
+    let expected =
+        pixels_end + if trailer { RESAVE_TRAILER as u64 + exif_length + icc_length } else { 0 };
+    if total != expected {
         return Err(invalid("dimensões ou tamanho do protocolo inválidos"));
     }
     let format = if header[9] == 255 {
@@ -435,7 +474,22 @@ fn receive(mut output: std::fs::File) -> ImageResult<Pixels> {
         ColorType::Rgba32F => buffer!(floats!(), ImageRgba32F),
         _ => return Err(invalid("tipo de pixels inválido")),
     };
-    Ok(Pixels { image, format, natural, gps: header[10] == 1 })
+    let mut source = bigimage_core::SourceMetadata::default();
+    if trailer {
+        // Skip the lengths already validated above.
+        output.seek(SeekFrom::Current(RESAVE_TRAILER as i64))?;
+        let mut blob = |length: u64| -> std::io::Result<Option<Vec<u8>>> {
+            if length == 0 {
+                return Ok(None);
+            }
+            let mut data = vec![0; length as usize];
+            output.read_exact(&mut data)?;
+            Ok(Some(data))
+        };
+        source.exif = blob(exif_length)?;
+        source.icc = blob(icc_length)?;
+    }
+    Ok((Pixels { image, format, natural, gps: header[10] == 1 }, source))
 }
 /// Read `length` bytes of native-endian `N`-byte samples without first
 /// materializing the whole byte buffer.
@@ -458,6 +512,11 @@ fn read_samples<const N: usize, T>(
 fn decode(path: &Path) -> ImageResult<backend::Decoded> {
     let pixels = receive(execute(path, "pixels")?)?;
     Ok((pixels.image, pixels.format))
+}
+/// Pixels in the source colour space plus its EXIF/ICC, for in-place saves.
+fn resave(path: &Path) -> ImageResult<backend::ResaveDecoded> {
+    let (pixels, source) = receive_with(execute(path, "resave")?, true)?;
+    Ok((pixels.image, pixels.format, source))
 }
 fn dimensions(path: &Path) -> ImageResult<(u32, u32)> {
     let mut output = execute(path, "dimensions")?;
@@ -564,6 +623,18 @@ fn send(
     natural: (u32, u32),
     gps: bool,
 ) -> ImageResult<()> {
+    let mut output = std::io::stdout().lock();
+    send_to(&mut output, image, format, natural, gps)?;
+    output.flush()?;
+    Ok(())
+}
+fn send_to(
+    output: &mut impl Write,
+    image: &DynamicImage,
+    format: Option<Format>,
+    natural: (u32, u32),
+    gps: bool,
+) -> ImageResult<()> {
     let color = match image.color() {
         ColorType::L8 => 1,
         ColorType::La8 => 2,
@@ -589,10 +660,39 @@ fn send(
         header.extend(value.to_le_bytes());
     }
     header.extend((image.as_bytes().len() as u64).to_le_bytes());
-    let mut output = std::io::stdout().lock();
     output.write_all(&header)?;
     output.write_all(image.as_bytes())?;
-    output.flush()?;
+    Ok(())
+}
+/// Pixels, then the trailer lengths, then the EXIF and ICC blobs.
+fn send_resave(
+    output: &mut impl Write,
+    image: &DynamicImage,
+    format: Option<Format>,
+    source: &bigimage_core::SourceMetadata,
+) -> ImageResult<()> {
+    send_to(output, image, format, image.dimensions(), false)?;
+    let exif = source.exif.as_deref().unwrap_or_default();
+    let icc = source.icc.as_deref().unwrap_or_default();
+    output.write_all(&(exif.len() as u64).to_le_bytes())?;
+    output.write_all(&(icc.len() as u64).to_le_bytes())?;
+    output.write_all(exif)?;
+    output.write_all(icc)?;
+    Ok(())
+}
+/// Keep re-save metadata inside the protocol caps. EXIF over the cap is
+/// dropped (no JPEG could carry it); an oversized ICC profile is applied to
+/// the pixels instead, so colours stay right without it.
+fn bound_resave_metadata(
+    image: &mut DynamicImage,
+    source: &mut bigimage_core::SourceMetadata,
+) -> ImageResult<()> {
+    if source.exif.as_ref().is_some_and(|exif| exif.len() as u64 > MAX_RESAVE_EXIF) {
+        source.exif = None;
+    }
+    if let Some(icc) = source.icc.take_if(|icc| icc.len() as u64 > MAX_RESAVE_ICC) {
+        bigimage_core::color::normalize_srgb(image, &icc)?;
+    }
     Ok(())
 }
 /// Descriptors above stdio that leaked into the sandbox. bwrap does not close
@@ -630,6 +730,13 @@ pub fn worker() -> color_eyre::Result<()> {
         "pixels" => {
             let (image, format) = backend::decode_in_process(&path)?;
             send(&image, format, image.dimensions(), false)?;
+        }
+        "resave" => {
+            let (mut image, format, mut source) = backend::decode_for_resave_in_process(&path)?;
+            bound_resave_metadata(&mut image, &mut source)?;
+            let mut output = std::io::stdout().lock();
+            send_resave(&mut output, &image, format, &source)?;
+            output.flush()?;
         }
         "preview" => {
             let session = PreviewSession::open(&path)?;
@@ -721,6 +828,19 @@ mod tests {
     /// sandbox (packaging containers); native CI must run these.
     fn with_worker<T>(script: &str, budget: Duration, work: impl FnOnce() -> T) -> Option<T> {
         use std::os::unix::fs::PermissionsExt;
+        let dir = tempfile::tempdir().unwrap();
+        let worker = dir.path().join("worker");
+        std::fs::write(&worker, format!("#!/usr/bin/sh\n{script}\n")).unwrap();
+        std::fs::set_permissions(&worker, std::fs::Permissions::from_mode(0o755)).unwrap();
+        with_executable(worker, budget, work)
+    }
+
+    /// Like [`with_worker`], with an executable bound as the worker.
+    fn with_executable<T>(
+        worker: PathBuf,
+        budget: Duration,
+        work: impl FnOnce() -> T,
+    ) -> Option<T> {
         let probe = Command::new("/usr/bin/bwrap")
             .args(["--unshare-all", "--ro-bind", "/usr", "/usr", "--symlink", "usr/lib", "/lib"])
             .args(["--symlink", "usr/lib64", "/lib64", "/usr/bin/true"])
@@ -731,10 +851,6 @@ mod tests {
             assert!(container, "codec sandbox unavailable outside a container");
             return None;
         }
-        let dir = tempfile::tempdir().unwrap();
-        let worker = dir.path().join("worker");
-        std::fs::write(&worker, format!("#!/usr/bin/sh\n{script}\n")).unwrap();
-        std::fs::set_permissions(&worker, std::fs::Permissions::from_mode(0o755)).unwrap();
         TEST_EXECUTABLE.with(|slot| *slot.borrow_mut() = Some((worker, budget)));
         let result = work();
         TEST_EXECUTABLE.with(|slot| *slot.borrow_mut() = None);
@@ -773,6 +889,164 @@ mod tests {
         let message = result.unwrap_err().to_string();
         assert!(message.len() < MAX_DIAGNOSTIC * 4, "{} bytes", message.len());
         assert!(!message.contains('\x1b') && !message.contains('\x07'));
+    }
+
+    /// TIFF EXIF: Make "Cam", Orientation 6 and an Exif sub-IFD holding
+    /// DateTimeOriginal.
+    fn camera_exif() -> Vec<u8> {
+        let mut exif = vec![b'I', b'I', 42, 0, 8, 0, 0, 0, 3, 0];
+        exif.extend_from_slice(&[0x0f, 0x01, 2, 0, 4, 0, 0, 0, b'C', b'a', b'm', 0]);
+        exif.extend_from_slice(&[0x12, 0x01, 3, 0, 1, 0, 0, 0, 6, 0, 0, 0]);
+        // ExifIFDPointer -> 50.
+        exif.extend_from_slice(&[0x69, 0x87, 4, 0, 1, 0, 0, 0, 50, 0, 0, 0]);
+        exif.extend_from_slice(&[0, 0, 0, 0]);
+        // Exif IFD: DateTimeOriginal (0x9003), ASCII, 20 bytes at 68.
+        exif.extend_from_slice(&[1, 0, 0x03, 0x90, 2, 0, 20, 0, 0, 0, 68, 0, 0, 0]);
+        exif.extend_from_slice(&[0, 0, 0, 0]);
+        exif.extend_from_slice(b"2024:05:06 07:08:09\0");
+        exif
+    }
+
+    fn resave_payload(image: &DynamicImage, source: &bigimage_core::SourceMetadata) -> Vec<u8> {
+        let mut payload = Vec::new();
+        send_resave(&mut payload, image, Some(Format::Jpeg), source).unwrap();
+        payload
+    }
+
+    fn receive_bytes(bytes: &[u8], trailer: bool) -> ImageResult<bigimage_core::SourceMetadata> {
+        let mut file = tempfile::tempfile().unwrap();
+        file.write_all(bytes).unwrap();
+        file.rewind().unwrap();
+        receive_with(file, trailer).map(|(_, source)| source)
+    }
+
+    #[test]
+    fn resave_protocol_round_trips_pixels_and_metadata() {
+        let image = DynamicImage::ImageRgb16(ImageBuffer::from_pixel(3, 2, image::Rgb([1, 2, 3])));
+        let source =
+            bigimage_core::SourceMetadata { exif: Some(camera_exif()), icc: Some(vec![7; 300]) };
+        let payload = resave_payload(&image, &source);
+        let mut file = tempfile::tempfile().unwrap();
+        file.write_all(&payload).unwrap();
+        file.rewind().unwrap();
+        let (pixels, received) = receive_with(file, true).unwrap();
+        assert_eq!(pixels.image, image);
+        assert_eq!(pixels.format, Some(Format::Jpeg));
+        assert_eq!(received, source);
+        // Empty metadata stays empty, and the plain protocol rejects a trailer.
+        let bare = resave_payload(&image, &bigimage_core::SourceMetadata::default());
+        assert_eq!(receive_bytes(&bare, true).unwrap(), Default::default());
+        assert!(receive_bytes(&payload, false).is_err());
+    }
+
+    #[test]
+    fn resave_protocol_rejects_hostile_trailers() {
+        let image = DynamicImage::ImageRgb8(ImageBuffer::from_pixel(2, 2, image::Rgb([9, 9, 9])));
+        let source = bigimage_core::SourceMetadata { exif: Some(vec![1; 10]), icc: None };
+        let payload = resave_payload(&image, &source);
+        let trailer = HEADER + 12;
+        // Truncated blob, extra bytes and a missing trailer.
+        assert!(receive_bytes(&payload[..payload.len() - 1], true).is_err());
+        assert!(receive_bytes(&[payload.as_slice(), &[0]].concat(), true).is_err());
+        assert!(receive_bytes(&payload[..trailer], true).is_err());
+        // Claimed blobs above the caps are refused before allocating them.
+        for (offset, claim) in [(0, MAX_RESAVE_EXIF + 1), (8, MAX_RESAVE_ICC + 1), (0, u64::MAX)] {
+            let mut forged = payload.clone();
+            forged[trailer + offset..trailer + offset + 8].copy_from_slice(&claim.to_le_bytes());
+            let error = receive_bytes(&forged, true).unwrap_err().to_string();
+            assert!(error.contains("excessivos"), "{error}");
+        }
+    }
+
+    #[test]
+    fn oversized_resave_metadata_is_bounded_in_the_worker() {
+        let mut image = DynamicImage::ImageRgb8(ImageBuffer::from_pixel(1, 1, image::Rgb([1; 3])));
+        let mut source = bigimage_core::SourceMetadata {
+            exif: Some(vec![0; MAX_RESAVE_EXIF as usize + 1]),
+            icc: Some(vec![0; 64]),
+        };
+        bound_resave_metadata(&mut image, &mut source).unwrap();
+        assert_eq!(source.exif, None);
+        assert_eq!(source.icc.map(|icc| icc.len()), Some(64));
+    }
+
+    #[test]
+    fn hostile_resave_worker_is_rejected_through_the_sandbox() {
+        // The fake worker replays a forged payload stored as the input file.
+        let image = DynamicImage::ImageRgb8(ImageBuffer::from_pixel(2, 2, image::Rgb([9, 9, 9])));
+        let mut payload = resave_payload(&image, &bigimage_core::SourceMetadata::default());
+        let trailer = HEADER + 12;
+        payload[trailer..trailer + 8].copy_from_slice(&(MAX_RESAVE_EXIF + 1).to_le_bytes());
+        let file = tempfile::Builder::new().suffix(".png").tempfile().unwrap();
+        std::fs::write(file.path(), &payload).unwrap();
+        let Some(result) =
+            with_worker("exec /usr/bin/cat \"$4\"", DEADLINE, || resave(file.path()))
+        else {
+            return;
+        };
+        assert!(result.unwrap_err().to_string().contains("excessivos"));
+    }
+
+    /// The real `bigiris` binary next to the test harness (built by
+    /// `cargo test --all-targets` for the CLI integration tests).
+    fn built_worker() -> Option<PathBuf> {
+        let exe = std::env::current_exe().ok()?;
+        Some(exe.parent()?.parent()?.join("bigiris")).filter(|path| path.is_file())
+    }
+
+    #[test]
+    fn sandboxed_resave_keeps_exif_and_wide_gamut_profile() {
+        use bigimage_core::{EncodeOptions, OverwritePolicy};
+        use image::{ImageDecoder, ImageEncoder};
+        let Some(binary) = built_worker() else {
+            eprintln!("skipped: build the bigiris binary (cargo test --all-targets)");
+            return;
+        };
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("photo.jpg");
+        let p3 = moxcms::ColorProfile::new_display_p3().encode().unwrap();
+        // Stored sideways (Orientation 6): 4 wide x 2 high on disk.
+        let stored = image::RgbImage::from_pixel(4, 2, image::Rgb([200, 60, 30]));
+        let mut encoder = image::codecs::jpeg::JpegEncoder::new_with_quality(
+            std::fs::File::create(&path).unwrap(),
+            95,
+        );
+        encoder.set_icc_profile(p3.clone()).unwrap();
+        encoder.set_exif_metadata(camera_exif()).unwrap();
+        encoder.write_image(stored.as_raw(), 4, 2, image::ExtendedColorType::Rgb8).unwrap();
+
+        // Run the real worker binary through the sandbox, like `configure()`
+        // makes `open_image_for_resave` do in the application.
+        let Some(result) = with_executable(binary, DEADLINE, || resave(&path)) else { return };
+        let (image, format, source) = result.unwrap();
+        assert_eq!(format, Some(Format::Jpeg));
+        assert_eq!((image.width(), image.height()), (2, 4), "upright");
+        assert_eq!(source.icc.as_deref(), Some(&p3[..]));
+        let px = image.to_rgb8().get_pixel(0, 0).0;
+        assert!(px[0].abs_diff(200) <= 3 && px[1].abs_diff(60) <= 3, "kept in P3: {px:?}");
+
+        bigimage_core::save_image_preserving_metadata(
+            image.fliph(),
+            &path,
+            Format::Jpeg,
+            &EncodeOptions { quality: Some(95), ..EncodeOptions::default() },
+            OverwritePolicy::Replace,
+            &source,
+        )
+        .unwrap();
+        let meta = bigimage_core::metadata::read(&path).unwrap();
+        assert!(meta.has_camera_info, "Make lost: {:?}", meta.tags);
+        assert!(
+            meta.tags
+                .iter()
+                .any(|(name, value)| name.contains("original") && value.contains("2024-05-06")),
+            "DateTimeOriginal lost: {:?}",
+            meta.tags
+        );
+        assert_eq!(meta.orientation, Some(1), "pixels are upright, tag must say so");
+        let file = std::io::BufReader::new(std::fs::File::open(&path).unwrap());
+        let icc = image::codecs::jpeg::JpegDecoder::new(file).unwrap().icc_profile().unwrap();
+        assert_eq!(icc.as_deref(), Some(&p3[..]));
     }
 
     #[test]

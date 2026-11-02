@@ -348,6 +348,9 @@ struct ViewerState {
     /// One button per file so we can flip `.active-thumb` on navigation.
     film_strip_buttons: Vec<gtk::Button>,
     film_strip_start: usize,
+    /// Index the strip last highlighted and centred, so repeated refreshes
+    /// for the same image (zoom steps, edge reveals) do no work.
+    film_strip_active: Option<usize>,
     film_strip_box: gtk::Box,
     thumbnail_cancel: Arc<AtomicBool>,
     /// When true (accessibility override), chrome stays pinned visible.
@@ -811,6 +814,7 @@ fn build_window_preloaded(
         film_strip_scroll: film_strip_scroll.clone(),
         film_strip_buttons: film_strip_buttons.clone(),
         film_strip_start: 0,
+        film_strip_active: None,
         film_strip_box: film_strip_box.clone(),
         thumbnail_cancel: Arc::new(AtomicBool::new(false)),
         ui_pinned: false,
@@ -1222,14 +1226,16 @@ fn decode_thumbnail(path: &Path) -> Result<(Vec<u8>, u32, u32), Box<dyn std::err
     Ok((thumb.into_raw(), w, h))
 }
 
-/// Only 41 widgets and thumbnail requests exist, independently of folder size.
+/// Only [`viewer::FILM_STRIP_PAGE`] widgets and thumbnail requests exist,
+/// independently of folder size; the window is centred on the current file.
 fn rebuild_film_strip(state: &Rc<RefCell<ViewerState>>) {
-    const PAGE: usize = 41;
+    const PAGE: usize = viewer::FILM_STRIP_PAGE;
     let (container, files, start, cancel, window) = {
         let mut s = state.borrow_mut();
         s.thumbnail_cancel.store(true, Ordering::Release);
         s.thumbnail_cancel = Arc::new(AtomicBool::new(false));
-        s.film_strip_start = s.idx / PAGE * PAGE;
+        s.film_strip_start = viewer::film_strip_start(s.files.len(), s.idx, PAGE);
+        s.film_strip_active = None;
         let container = s.film_strip_box.clone();
         s.film_strip_buttons.clear();
         (
@@ -1349,37 +1355,79 @@ fn start_thumbnail_decoding(
     });
 }
 
-/// Toggle `.active-thumb` so the film strip mirrors the current selection.
-/// Also autoscrolls the strip so the active thumb stays in view; uses the
-/// button's computed bounds (allocation() was deprecated in GTK 4.12).
+/// Toggle `.active-thumb` so the film strip mirrors the current selection,
+/// and scroll the active thumb into the middle when the selection changed.
+/// Zoom steps and pointer motion call this often; when the index is the
+/// same it returns at once, so the strip keeps any manual scroll position.
 fn refresh_film_strip_active(state: &Rc<RefCell<ViewerState>>) {
     let needs_rebuild = {
         let s = state.borrow();
-        s.idx < s.film_strip_start || s.idx >= s.film_strip_start + s.film_strip_buttons.len()
+        !s.files.is_empty()
+            && (s.idx < s.film_strip_start
+                || s.idx >= s.film_strip_start + s.film_strip_buttons.len())
     };
     if needs_rebuild {
         rebuild_film_strip(state);
     }
-    let s = state.borrow();
-    let strip = &s.film_strip_scroll;
-    let viewport_w = strip.width() as f64;
-    for (i, btn) in s.film_strip_buttons.iter().enumerate() {
-        if i + s.film_strip_start == s.idx {
-            btn.add_css_class("active-thumb");
-            // compute_bounds returns coords in the parent (the HBox inside
-            // the scroll's viewport); that's what hadjustment speaks.
-            if let Some(parent) = btn.parent() {
-                if let Some(rect) = btn.compute_bounds(&parent) {
-                    if rect.width() > 0.0 {
-                        let target = rect.x() as f64 - (viewport_w - rect.width() as f64) / 2.0;
-                        strip.hadjustment().set_value(target.max(0.0));
-                    }
-                }
+    {
+        let mut s = state.borrow_mut();
+        if s.film_strip_active == Some(s.idx) {
+            return;
+        }
+        s.film_strip_active = Some(s.idx);
+        let active = s.idx.checked_sub(s.film_strip_start);
+        for (i, btn) in s.film_strip_buttons.iter().enumerate() {
+            if Some(i) == active {
+                btn.add_css_class("active-thumb");
+            } else {
+                btn.remove_css_class("active-thumb");
             }
-        } else {
-            btn.remove_css_class("active-thumb");
         }
     }
+    if !centre_film_strip(state) {
+        schedule_centre_film_strip(state);
+    }
+}
+
+/// Centre once the strip has a layout: a freshly built or just revealed
+/// strip reports zero widths until the next frame.
+fn schedule_centre_film_strip(state: &Rc<RefCell<ViewerState>>) {
+    let strip = state.borrow().film_strip_scroll.clone();
+    let weak = Rc::downgrade(state);
+    let frames = Cell::new(0u32);
+    strip.add_tick_callback(move |_, _| {
+        frames.set(frames.get() + 1);
+        let done = weak.upgrade().is_none_or(|state| centre_film_strip(&state));
+        if done || frames.get() > 30 {
+            glib::ControlFlow::Break
+        } else {
+            glib::ControlFlow::Continue
+        }
+    });
+}
+
+/// Scroll the active thumbnail to the middle of the strip; uses the
+/// button's computed bounds (allocation() was deprecated in GTK 4.12).
+/// Returns false while the strip is not allocated yet.
+fn centre_film_strip(state: &Rc<RefCell<ViewerState>>) -> bool {
+    let s = state.borrow();
+    let Some(btn) = s.idx.checked_sub(s.film_strip_start).and_then(|i| s.film_strip_buttons.get(i))
+    else {
+        return false;
+    };
+    let strip = &s.film_strip_scroll;
+    let viewport_w = strip.width() as f64;
+    // compute_bounds returns coords in the parent (the HBox inside the
+    // scroll's viewport); that's what hadjustment speaks.
+    let Some(rect) = btn.parent().and_then(|parent| btn.compute_bounds(&parent)) else {
+        return false;
+    };
+    if rect.width() <= 0.0 || viewport_w <= 0.0 {
+        return false;
+    }
+    let target = rect.x() as f64 - (viewport_w - rect.width() as f64) / 2.0;
+    strip.hadjustment().set_value(target.max(0.0));
+    true
 }
 
 /// Register a CssProvider carrying [`THEATER_CSS`] on the default display.
@@ -1414,7 +1462,7 @@ fn app_settings() -> Option<gio::Settings> {
 /// Manual film-strip reveal (F key). Just forwards to [`reveal_bottom`]
 /// so it follows the same edge-hide timing as the hover path.
 fn toggle_film_strip(state: &Rc<RefCell<ViewerState>>) {
-    if state.borrow().film_strip_buttons.len() < 2 {
+    if state.borrow().files.len() < 2 {
         return;
     }
     let currently_revealed = state.borrow().strip_revealer.reveals_child();
@@ -1529,22 +1577,25 @@ fn cancel_top_hide(state: &Rc<RefCell<ViewerState>>) {
 /// Slide the film strip into view (skips the motion when files < 2) and
 /// (re)arm its hide timer.
 fn reveal_bottom(state: &Rc<RefCell<ViewerState>>) {
-    {
+    let first_reveal = {
         let s = state.borrow();
-        if s.film_strip_buttons.len() < 2 {
+        if s.files.len() < 2 {
             return;
         }
+        let hidden = !s.strip_revealer.reveals_child();
         s.strip_revealer.set_reveal_child(true);
-    }
+        hidden
+    };
     // A faixa nasce rolada no começo. Como o visualizador agora pode abrir
     // no meio da pasta (clique num arquivo qualquer), a miniatura ativa
     // ficaria fora de vista na primeira vez que o strip aparece. Recentrar
     // fica para o idle seguinte porque, enquanto o revealer não alocou a
     // faixa, `compute_bounds` devolve largura zero e a conta de centragem
-    // não teria em que se apoiar.
-    {
-        let clone = state.clone();
-        glib::idle_add_local_once(move || refresh_film_strip_active(&clone));
+    // não teria em que se apoiar. Só na revelação: cada movimento do
+    // ponteiro na borda de baixo passa por aqui, e recentrar a cada evento
+    // impediria rolar a faixa à mão.
+    if first_reveal {
+        schedule_centre_film_strip(state);
     }
     cancel_bottom_hide(state);
     if state.borrow().ui_pinned || !state.borrow().autohide_ui {
@@ -1664,7 +1715,7 @@ fn toggle_ui_pin(state: &Rc<RefCell<ViewerState>>) {
         cancel_cursor_hide(state);
         let s = state.borrow();
         s.toolbar_view.set_reveal_top_bars(true);
-        if s.film_strip_buttons.len() >= 2 {
+        if s.files.len() >= 2 {
             s.strip_revealer.set_reveal_child(true);
         }
         if !s.osd_label.label().is_empty() {
@@ -1675,7 +1726,7 @@ fn toggle_ui_pin(state: &Rc<RefCell<ViewerState>>) {
         let s = state.borrow();
         if !s.autohide_ui {
             s.toolbar_view.set_reveal_top_bars(true);
-            if s.film_strip_buttons.len() >= 2 {
+            if s.files.len() >= 2 {
                 s.strip_revealer.set_reveal_child(true);
             }
             s.window().set_cursor(None);

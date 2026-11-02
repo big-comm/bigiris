@@ -1,6 +1,20 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //! Pure helpers behind the viewer window.
 
+/// Thumbnails built at once in the film strip, independently of folder size.
+pub(super) const FILM_STRIP_PAGE: usize = 41;
+
+/// First index of the film-strip window that shows `idx`. The window is
+/// centred on the current image and slides back near the end of the list,
+/// so it is always full when the folder has enough images: a page that
+/// held only the last file would make the strip look like a single image.
+pub(super) fn film_strip_start(len: usize, idx: usize, page: usize) -> usize {
+    if len <= page {
+        return 0;
+    }
+    idx.saturating_sub(page / 2).min(len - page)
+}
+
 /// Size handed to `DynamicImage::thumbnail` for a film-strip cell whose
 /// square side is `cover`. The short side covers the cell (the cell crops
 /// to a square), the scale never exceeds 1:1 and the long side is capped,
@@ -32,6 +46,25 @@ mod tests {
         for (w, h) in [(0, 0), (1, 1), (u32::MAX, 1), (1, u32::MAX), (u32::MAX, u32::MAX)] {
             let (tw, th) = thumbnail_dimensions(w, h, 128);
             assert!((1..=512).contains(&tw) && (1..=512).contains(&th), "{w}x{h} -> {tw}x{th}");
+        }
+    }
+
+    #[test]
+    fn film_strip_window_is_full_and_contains_the_current_image() {
+        assert_eq!(film_strip_start(0, 0, 41), 0);
+        assert_eq!(film_strip_start(10, 9, 41), 0);
+        assert_eq!(film_strip_start(41, 40, 41), 0);
+        // 42 files used to put the last one alone on a second page.
+        assert_eq!(film_strip_start(42, 41, 41), 1);
+        assert_eq!(film_strip_start(100, 50, 41), 30);
+        assert_eq!(film_strip_start(100, 3, 41), 0);
+        for len in [1, 2, 40, 41, 42, 82, 83, 10_000] {
+            for idx in 0..len {
+                let start = film_strip_start(len, idx, 41);
+                let end = (start + 41).min(len);
+                assert!(start <= idx && idx < end, "len={len} idx={idx} start={start}");
+                assert_eq!(end - start, len.min(41), "partial window len={len} idx={idx}");
+            }
         }
     }
 }

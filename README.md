@@ -163,6 +163,13 @@ Para remover as integrações pessoais antes de apagar o binário:
 bigiris uninstall-integrations
 ```
 
+Para desfazer tudo o que o `install.sh` instalou (integrações, binário, schema e
+traduções em `$PREFIX`), use o mesmo `PREFIX` da instalação:
+
+```bash
+./install.sh --uninstall
+```
+
 ## Uso
 
 ```bash

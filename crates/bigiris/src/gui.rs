@@ -423,6 +423,9 @@ struct ViewerState {
     redo_ops: Vec<EditOp>,
     /// True while an atomic encode is running off the GTK thread.
     saving: bool,
+    /// Inline crop widgets and, while cropping, the active selection.
+    crop_ui: viewer::crop::CropUi,
+    crop: Option<viewer::crop::CropSession>,
 }
 
 /// Edição in-memory: o usuário gira/espelha sem tocar o
@@ -436,6 +439,13 @@ enum EditOp {
     Rotate180,
     FlipH,
     FlipV,
+    /// Keep `w`×`h` pixels from `(x, y)` of the image as edited so far.
+    Crop {
+        x: u32,
+        y: u32,
+        w: u32,
+        h: u32,
+    },
 }
 
 #[derive(Debug)]
@@ -802,10 +812,15 @@ fn build_window_preloaded(
 
     let overlay = gtk::Overlay::new();
     overlay.set_child(Some(&stack));
+    let crop_ui = viewer::crop::build();
+    overlay.add_overlay(&crop_ui.area);
     overlay.add_overlay(&osd_revealer);
     overlay.add_overlay(&strip_revealer);
     overlay.add_overlay(&histogram_area);
     overlay.add_overlay(&loading_spinner);
+    // Crop bar on top of everything; its selection layer sits right above
+    // the picture (added first) so the OSD hint is not dimmed by it.
+    overlay.add_overlay(&crop_ui.bar);
     // One-pixel, nearly transparent copies of the neighbours. Drawing them
     // in the normal frame makes the renderer upload them to the GPU ahead
     // of time without blocking, so an arrow key only swaps textures.
@@ -899,6 +914,8 @@ fn build_window_preloaded(
         pending_ops: Vec::new(),
         redo_ops: Vec::new(),
         saving: false,
+        crop_ui,
+        crop: None,
     }));
 
     if let Some(settings) = settings.filter(|_| has_images) {
@@ -1121,6 +1138,7 @@ fn build_window_preloaded(
         });
     }
     window.add_controller(key_controller);
+    viewer::crop::connect(&state, &window);
 
     // Mouse-wheel zoom — live on the window so revealed chrome (film strip,
     // header) doesn't steal wheel events. Capture phase pre-empts the
@@ -1680,7 +1698,7 @@ fn cancel_top_hide(state: &Rc<RefCell<ViewerState>>) {
 fn reveal_bottom(state: &Rc<RefCell<ViewerState>>) {
     let first_reveal = {
         let s = state.borrow();
-        if s.files.len() < 2 {
+        if s.files.len() < 2 || s.crop.is_some() {
             return;
         }
         let hidden = !s.strip_revealer.reveals_child();
@@ -1810,7 +1828,7 @@ fn arm_cursor_hide(state: &Rc<RefCell<ViewerState>>, delay: std::time::Duration)
         // Double-check na hora do disparo: user pode ter aberto um
         // diálogo nos últimos CURSOR_HIDE_MS ms.
         let window = s.window();
-        if window.visible_dialog().is_some() {
+        if window.visible_dialog().is_some() || s.crop.is_some() {
             return;
         }
         let cursor = gdk::Cursor::from_name("none", None);
@@ -1877,6 +1895,54 @@ fn handle_key(
     _modifier: gdk::ModifierType,
 ) -> glib::Propagation {
     use gdk::Key;
+
+    if viewer::crop::is_active(state) {
+        return match key {
+            Key::Escape => {
+                viewer::crop::cancel(state);
+                glib::Propagation::Stop
+            }
+            Key::Return | Key::KP_Enter | Key::ISO_Enter => {
+                viewer::crop::apply(state);
+                glib::Propagation::Stop
+            }
+            Key::F11 => {
+                let win = state.borrow().window().clone();
+                win.set_fullscreened(!win.is_fullscreen());
+                glib::Propagation::Stop
+            }
+            // Navigation, zoom and view toggles would move the picture
+            // under the selection; keep Tab and the bar's own keys working.
+            Key::Left
+            | Key::Right
+            | Key::Up
+            | Key::Down
+            | Key::Page_Up
+            | Key::Page_Down
+            | Key::Home
+            | Key::End
+            | Key::BackSpace
+            | Key::space
+            | Key::plus
+            | Key::equal
+            | Key::KP_Add
+            | Key::minus
+            | Key::KP_Subtract
+            | Key::_0
+            | Key::KP_0
+            | Key::_1
+            | Key::KP_1
+            | Key::f
+            | Key::F
+            | Key::g
+            | Key::G
+            | Key::h
+            | Key::H
+            | Key::t
+            | Key::T => glib::Propagation::Stop,
+            _ => glib::Propagation::Proceed,
+        };
+    }
 
     match key {
         Key::Escape => {
@@ -2168,6 +2234,17 @@ fn apply_op_to_image(img: image::DynamicImage, op: EditOp) -> image::DynamicImag
         EditOp::Rotate180 => img.rotate180(),
         EditOp::FlipH => img.fliph(),
         EditOp::FlipV => img.flipv(),
+        EditOp::Crop { x, y, w, h } => {
+            // The rectangle was chosen on this very image; clamp anyway so
+            // a stale op can never ask for pixels outside it.
+            let (iw, ih) = (img.width(), img.height());
+            if iw == 0 || ih == 0 {
+                return img;
+            }
+            let x = x.min(iw - 1);
+            let y = y.min(ih - 1);
+            img.crop_imm(x, y, w.clamp(1, iw - x), h.clamp(1, ih - y))
+        }
     }
 }
 
@@ -2176,6 +2253,10 @@ fn apply_op_to_image(img: image::DynamicImage, op: EditOp) -> image::DynamicImag
 /// `•` no título como pista visual do estado "dirty".
 fn sync_edit_actions(state: &Rc<RefCell<ViewerState>>) {
     let s = state.borrow();
+    // Crop mode suspends these actions and restores them when it ends.
+    if s.crop.is_some() {
+        return;
+    }
     let has_ops = !s.pending_ops.is_empty();
     let idle = !s.saving;
     if let Some(action) = s.window().lookup_action("save-edits") {
@@ -3160,24 +3241,16 @@ fn install_viewer_actions(
     }
     window.add_action(&info);
 
-    // win.crop — abre o diálogo de recorte na imagem atual via subprocesso.
-    // Um processo separado porque `run_crop_dialog` monta sua própria
-    // `adw::Application`, e rodar duas no mesmo processo é conflito certo.
+    // win.crop — recorte direto na imagem principal: seleção sobre a foto,
+    // e o corte vira uma edição como girar/espelhar (Ctrl+Z, Ctrl+S).
     let crop = gio::SimpleAction::new("crop", None);
     crop.set_enabled(has_files);
     {
         let state = Rc::downgrade(state);
         crop.connect_activate(move |_, _| {
-            let Some(state) = state.upgrade() else {
-                return;
-            };
-            let Some(path) = path_for_external_tool(&state) else { return };
-            // `--` keeps a file named like `-x.png` from being read as a flag.
-            let _ = transfers::spawn_bigiris([
-                std::ffi::OsStr::new("--dialog=crop"),
-                std::ffi::OsStr::new("--"),
-                path.as_os_str(),
-            ]);
+            if let Some(state) = state.upgrade() {
+                viewer::crop::enter(&state);
+            }
         });
     }
     window.add_action(&crop);
@@ -4397,7 +4470,7 @@ mod lifecycle_tests {
     }
 
     // Capture only our synthetic windows, never the user's desktop.
-    fn capture_window(window: &impl IsA<gtk::Widget>, name: &str) {
+    pub(in crate::gui) fn capture_window(window: &impl IsA<gtk::Widget>, name: &str) {
         let window = window.as_ref();
         let Some(directory) = std::env::var_os("BIGIRIS_TEST_SCREENSHOTS_DIR") else { return };
         let directory = PathBuf::from(directory);

@@ -10,6 +10,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::task::{Context, Poll, Waker};
 
+pub(in crate::gui) mod crop;
 #[cfg(test)]
 mod gui_tests;
 

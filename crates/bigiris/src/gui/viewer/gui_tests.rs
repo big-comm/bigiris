@@ -165,9 +165,10 @@ fn viewer_review_fixes() {
     assert!(state.borrow().props_dialog.is_none());
     drop((first_props, second_props));
 
-    // Finding 7: external tools refuse to run on unsaved edits.
+    // Finding 7: external tools refuse to run on unsaved edits. (Crop is
+    // inline now and works on top of them; covered by `viewer_inline_crop`.)
     apply_edit(&state, EditOp::FlipH);
-    gtk::prelude::WidgetExt::activate_action(&window, "win.crop", None).unwrap();
+    gtk::prelude::WidgetExt::activate_action(&window, "win.remove-bg", None).unwrap();
     assert_eq!(
         state.borrow().osd_label.text(),
         gettext("Salve ou desfaça as alterações antes de usar esta ferramenta")
@@ -474,4 +475,200 @@ fn viewer_second_review_fixes() {
     window.destroy();
     drop(window);
     wait(&context, "third viewer released", &|| witness.upgrade().is_none());
+}
+
+fn crop_drag(state: &Rc<RefCell<ViewerState>>) -> gtk::GestureDrag {
+    let area = state.borrow().crop_ui.area.clone();
+    let controllers = area.observe_controllers();
+    (0..controllers.n_items())
+        .filter_map(|i| controllers.item(i).and_downcast::<gtk::GestureDrag>())
+        .next()
+        .expect("crop drag gesture")
+}
+
+/// Drag on the crop overlay from natural point `from` by `by` natural pixels.
+fn drag_selection(state: &Rc<RefCell<ViewerState>>, from: (f64, f64), by: (f64, f64)) {
+    let fit = {
+        let s = state.borrow();
+        let natural = s.crop.as_ref().map(|_| s.natural).expect("crop active");
+        super::crop::current_fit(&s, natural)
+    };
+    assert!(fit.scale > 0.0, "picture not laid out");
+    let gesture = crop_drag(state);
+    let start = (fit.ox + from.0 * fit.scale, fit.oy + from.1 * fit.scale);
+    gesture.emit_by_name::<()>("drag-begin", &[&start.0, &start.1]);
+    gesture.emit_by_name::<()>("drag-update", &[&(by.0 * fit.scale), &(by.1 * fit.scale)]);
+    gesture.emit_by_name::<()>("drag-end", &[&(by.0 * fit.scale), &(by.1 * fit.scale)]);
+}
+
+fn action_enabled(window: &adw::ApplicationWindow, name: &str) -> bool {
+    window.lookup_action(name).unwrap().downcast::<gio::SimpleAction>().unwrap().is_enabled()
+}
+
+/// RGBA of one pixel of the texture on screen.
+fn texture_pixel(state: &Rc<RefCell<ViewerState>>, x: usize, y: usize) -> [u8; 4] {
+    let texture = state.borrow().texture.clone().expect("texture");
+    let (w, h) = (texture.width() as usize, texture.height() as usize);
+    let mut downloader = gdk::TextureDownloader::new(&texture);
+    downloader.set_format(gdk::MemoryFormat::R8g8b8a8);
+    let (bytes, stride) = downloader.download_bytes();
+    assert!(x < w && y < h);
+    let i = y * stride + x * 4;
+    [bytes[i], bytes[i + 1], bytes[i + 2], bytes[i + 3]]
+}
+
+#[test]
+#[ignore = "requires a graphical display; run alone with GSETTINGS_BACKEND=memory"]
+fn viewer_inline_crop() {
+    assert_eq!(
+        std::env::var("GSETTINGS_BACKEND").as_deref(),
+        Ok("memory"),
+        "synthetic GUI tests require GSETTINGS_BACKEND=memory"
+    );
+    adw::init().expect("GTK display required");
+    let app = adw::Application::builder()
+        .application_id("com.biglinux.Iris.InlineCropProbe")
+        .flags(gio::ApplicationFlags::NON_UNIQUE)
+        .build();
+    app.register(None::<&gio::Cancellable>).unwrap();
+    let context = glib::MainContext::default();
+    let dir = tempfile::tempdir().unwrap();
+
+    // 400 × 300 with four coloured quadrants, so a crop shows which part
+    // of the image it kept.
+    let photo = dir.path().join("a.png");
+    image::RgbImage::from_fn(400, 300, |x, y| match (x < 200, y < 150) {
+        (true, true) => image::Rgb([255, 0, 0]),
+        (false, true) => image::Rgb([0, 255, 0]),
+        (true, false) => image::Rgb([0, 0, 255]),
+        (false, false) => image::Rgb([255, 255, 0]),
+    })
+    .save(&photo)
+    .unwrap();
+    let other = dir.path().join("b.png");
+    image::RgbImage::from_pixel(64, 48, image::Rgb([9, 9, 9])).save(&other).unwrap();
+
+    let (window, witness) = build_window_tracked(&app, Rc::new(vec![photo.clone(), other]), 0);
+    window.set_default_size(1000, 760);
+    window.present();
+    let state = witness.upgrade().unwrap();
+    wait(&context, "first frame", &|| state.borrow().current_ready);
+    settle(&context, 200);
+    assert_eq!(state.borrow().natural, (400, 300));
+
+    // Ctrl+R enters the crop mode on the main picture: no extra window,
+    // the whole image is selected and actions that would move or change
+    // the picture are suspended.
+    let windows_before = app.windows().len();
+    gtk::prelude::WidgetExt::activate_action(&window, "win.crop", None).unwrap();
+    settle(&context, 100);
+    assert!(state.borrow().crop.is_some(), "crop mode not active");
+    assert_eq!(app.windows().len(), windows_before, "crop opened another window");
+    assert!(state.borrow().crop_ui.area.is_visible() && state.borrow().crop_ui.bar.is_visible());
+    crate::gui::lifecycle_tests::capture_window(&window, "crop-1-enter");
+    for name in ["next", "rotate-cw", "save-edits", "trash", "crop"] {
+        assert!(!action_enabled(&window, name), "{name} stays enabled while cropping");
+    }
+
+    // Arrow keys and the wheel do not navigate or zoom under the selection.
+    handle_key(&state, gdk::Key::Right, gdk::ModifierType::empty());
+    assert_eq!(state.borrow().idx, 0, "navigated while cropping");
+    assert!(wheel_is_consumed(&window));
+    assert!(matches!(state.borrow().zoom, ZoomState::Fit), "zoomed while cropping");
+
+    // Esc cancels without touching the image (and does not close the window).
+    handle_key(&state, gdk::Key::Escape, gdk::ModifierType::empty());
+    settle(&context, 50);
+    assert!(state.borrow().crop.is_none());
+    assert!(state.borrow().pending_ops.is_empty());
+    assert!(window.is_visible(), "Esc closed the window instead of leaving crop");
+    assert!(action_enabled(&window, "next"), "actions not restored after cancel");
+
+    // Drag the bottom-right handle to the centre: keep the red quadrant.
+    gtk::prelude::WidgetExt::activate_action(&window, "win.crop", None).unwrap();
+    settle(&context, 100);
+    drag_selection(&state, (400.0, 300.0), (-200.0, -150.0));
+    crate::gui::lifecycle_tests::capture_window(&window, "crop-2-selection");
+    assert_eq!(
+        super::crop::to_pixels(state.borrow().crop.as_ref().map(|c| c.rect()).unwrap(), (400, 300)),
+        (0, 0, 200, 150)
+    );
+    gtk::prelude::WidgetExt::activate_action(&window, "win.crop-apply", None).unwrap();
+    wait(&context, "cropped frame", &|| {
+        let s = state.borrow();
+        s.current_ready && s.natural == (200, 150)
+    });
+    assert!(state.borrow().crop.is_none());
+    assert_eq!(state.borrow().pending_ops, vec![EditOp::Crop { x: 0, y: 0, w: 200, h: 150 }]);
+    assert_eq!(texture_pixel(&state, 10, 10), [255, 0, 0, 255]);
+    crate::gui::lifecycle_tests::capture_window(&window, "crop-3-cropped");
+    assert_eq!(texture_pixel(&state, 190, 140), [255, 0, 0, 255]);
+    assert!(action_enabled(&window, "save-edits") && action_enabled(&window, "undo"));
+
+    // Undo brings the whole image back, Redo crops again.
+    undo_edit(&state);
+    wait(&context, "uncropped", &|| {
+        let s = state.borrow();
+        s.current_ready && s.natural == (400, 300)
+    });
+    redo_edit(&state);
+    wait(&context, "re-cropped", &|| {
+        let s = state.borrow();
+        s.current_ready && s.natural == (200, 150)
+    });
+
+    // Crops stack on the edited image: a new selection drawn inside the
+    // cropped picture, confirmed with Enter.
+    gtk::prelude::WidgetExt::activate_action(&window, "win.crop", None).unwrap();
+    settle(&context, 100);
+    assert_eq!(state.borrow().crop.as_ref().map(|c| c.natural()), Some((200, 150)));
+    drag_selection(&state, (50.0, 25.0), (100.0, 100.0));
+    handle_key(&state, gdk::Key::Return, gdk::ModifierType::empty());
+    wait(&context, "second crop", &|| {
+        let s = state.borrow();
+        s.current_ready && s.natural == (100, 100)
+    });
+
+    // A fixed ratio: square, largest centred box of the current image.
+    gtk::prelude::WidgetExt::activate_action(&window, "win.crop", None).unwrap();
+    settle(&context, 100);
+    let aspect = state.borrow().crop_ui.aspect_dropdown().clone();
+    aspect.set_selected(2);
+    settle(&context, 50);
+    gtk::prelude::WidgetExt::activate_action(&window, "win.crop-apply", None).unwrap();
+    settle(&context, 200);
+    // Already square: nothing to crop, no extra history entry.
+    assert_eq!(state.borrow().pending_ops.len(), 2);
+    undo_edit(&state);
+    wait(&context, "back to 200x150", &|| {
+        let s = state.borrow();
+        s.current_ready && s.natural == (200, 150)
+    });
+    gtk::prelude::WidgetExt::activate_action(&window, "win.crop", None).unwrap();
+    settle(&context, 100);
+    let aspect = state.borrow().crop_ui.aspect_dropdown().clone();
+    aspect.set_selected(2);
+    settle(&context, 50);
+    gtk::prelude::WidgetExt::activate_action(&window, "win.crop-apply", None).unwrap();
+    wait(&context, "square crop", &|| {
+        let s = state.borrow();
+        s.current_ready && s.natural == (150, 150)
+    });
+
+    // Ctrl+S writes the cropped pixels to the file.
+    save_edits(&state);
+    settle(&context, 100);
+    answer(&window, "save");
+    wait(&context, "save done", &|| {
+        let s = state.borrow();
+        !s.saving && s.pending_ops.is_empty()
+    });
+    let saved = image::open(&photo).unwrap().to_rgb8();
+    assert_eq!(saved.dimensions(), (150, 150));
+    // Centre square of the red 200×150 crop: all red.
+    assert_eq!(saved.get_pixel(0, 0).0, [255, 0, 0]);
+    assert_eq!(saved.get_pixel(149, 149).0, [255, 0, 0]);
+
+    window.destroy();
+    settle(&context, 100);
 }

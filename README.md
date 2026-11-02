@@ -35,8 +35,10 @@ seleção de arquivos locais ou cole arquivos copiados no gerenciador com
   quando o usuário percorre várias imagens rapidamente.
 - Zoom centrado no cursor, pan por arrasto, 1:1, ajustar à janela, tela cheia,
   slideshow, fita de miniaturas e histograma RGB.
-- Giro e espelhamento não destrutivos, com desfazer/refazer; `Ctrl+S` confirma e
-  grava por substituição atômica, preservando o original se o encoder falhar.
+- Giro, espelhamento e recorte não destrutivos, com desfazer/refazer. O recorte
+  acontece direto na imagem aberta (`Ctrl+R`): arraste os cantos ou as bordas,
+  escolha uma proporção e confirme com `Enter`. `Ctrl+S` confirma e grava por
+  substituição atômica, preservando o original se o encoder falhar.
 - Processamento em lote paralelo, cancelável, com progresso, tempo e tamanho
   antes/depois.
 - Integração com Dolphin, Nautilus, Nemo, Thunar, PCManFM-Qt e elementary Files.
@@ -234,6 +236,7 @@ Os mesmos códigos aparecem em `bigiris --help`.
 | `0` / `1` | Ajustar / tamanho real |
 | arrastar | Pan |
 | `R` / `Shift+R` | Girar à direita / esquerda |
+| `Ctrl+R` | Recortar na própria imagem (`Enter` confirma, `Esc` cancela) |
 | `Ctrl+Z` / `Ctrl+Shift+Z` | Desfazer / refazer |
 | `Ctrl+S` | Salvar edições com segurança |
 | `Space` | Slideshow |

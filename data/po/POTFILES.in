@@ -10,6 +10,7 @@ crates/bigiris/src/gui/dialogs/batch.rs
 crates/bigiris/src/gui/dialogs/compare.rs
 crates/bigiris/src/gui/dialogs/convert.rs
 crates/bigiris/src/gui/dialogs/crop.rs
+crates/bigiris/src/gui/viewer/crop.rs
 crates/bigiris/src/gui/dialogs/extent.rs
 crates/bigiris/src/gui/dialogs/flip.rs
 crates/bigiris/src/gui/dialogs/mod.rs

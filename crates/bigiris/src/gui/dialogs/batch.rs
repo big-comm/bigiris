@@ -544,16 +544,21 @@ mod auto_close_tests {
         window.present();
         let slot = Rc::new(RefCell::new(None));
 
+        // timeout_add_seconds is coalesced to whole seconds, so a 1 s timer
+        // may fire up to ~2 s later; wait past that.
         // A new run (cancel) before the deadline keeps the window open.
         schedule_auto_close(&slot, &window, 1);
         cancel_auto_close(&slot);
-        spin(&context, Duration::from_millis(1500));
+        spin(&context, Duration::from_millis(2500));
         assert!(window.is_visible(), "cancelled auto-close still closed the window");
 
         // Left alone, it closes the window and forgets its source id, so a
         // later cancel is a harmless no-op.
         schedule_auto_close(&slot, &window, 1);
-        spin(&context, Duration::from_millis(1500));
+        let deadline = std::time::Instant::now() + Duration::from_secs(4);
+        while window.is_visible() && std::time::Instant::now() < deadline {
+            spin(&context, Duration::from_millis(50));
+        }
         assert!(!window.is_visible(), "auto-close did not fire");
         assert!(slot.borrow().is_none());
         cancel_auto_close(&slot);

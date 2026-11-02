@@ -230,11 +230,8 @@ mod tests {
     fn mismatched_or_cmyk_profiles_are_ignored_without_error() {
         // Gray profile on RGB pixels, RGB profile on gray pixels.
         let gray = ColorProfile::new_gray_with_gamma(1.0).encode().unwrap();
-        let mut rgb = DynamicImage::ImageRgb8(image::ImageBuffer::from_pixel(
-            1,
-            1,
-            image::Rgb([10, 20, 30]),
-        ));
+        let mut rgb =
+            DynamicImage::ImageRgb8(image::ImageBuffer::from_pixel(1, 1, image::Rgb([10, 20, 30])));
         normalize_srgb(&mut rgb, &gray).unwrap();
         assert_eq!(rgb.as_rgb8().unwrap().get_pixel(0, 0).0, [10, 20, 30]);
 

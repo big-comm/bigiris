@@ -56,9 +56,7 @@ impl ResizeMode {
         }
 
         match *self {
-            ResizeMode::MaxEdge(edge) => {
-                Ok(max_edge_dims(src_w, src_h, edge))
-            }
+            ResizeMode::MaxEdge(edge) => Ok(max_edge_dims(src_w, src_h, edge)),
             ResizeMode::Percent(p) => {
                 if !p.is_finite() || p <= 0.0 || p > 1000.0 {
                     return Err(BigImageError::InvalidInput(format!(

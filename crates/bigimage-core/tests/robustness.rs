@@ -320,8 +320,7 @@ fn gray_png_with_gray_icc_profile_opens() {
     use image::ImageEncoder;
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().join("gray.png");
-    let mut encoder =
-        image::codecs::png::PngEncoder::new(std::fs::File::create(&path).unwrap());
+    let mut encoder = image::codecs::png::PngEncoder::new(std::fs::File::create(&path).unwrap());
     encoder
         .set_icc_profile(moxcms::ColorProfile::new_gray_with_gamma(2.2).encode().unwrap())
         .unwrap();

@@ -199,6 +199,32 @@ pub(crate) fn output_temp(output: &Path) -> Result<tempfile::NamedTempFile> {
         .map_err(BigImageError::Io)
 }
 
+/// Mode for newly created outputs: `0o666 & !umask`, like `open(2)` would.
+///
+/// The umask is read from `/proc/self/status` instead of `umask(2)`, which
+/// can only be queried by changing it (a process-wide race with other
+/// threads creating files). Falls back to the common `0o022`.
+pub(crate) fn new_file_mode() -> u32 {
+    let umask = std::fs::read_to_string("/proc/self/status")
+        .ok()
+        .and_then(|status| {
+            status.lines().find_map(|line| {
+                line.strip_prefix("Umask:").and_then(|v| u32::from_str_radix(v.trim(), 8).ok())
+            })
+        })
+        .unwrap_or(0o022);
+    0o666 & !umask
+}
+
+/// Make the rename itself durable. Best-effort: the file is already in
+/// place, so a failure here is logged rather than reported as a failed write.
+fn sync_parent(output: &Path) {
+    let parent = output.parent().filter(|p| !p.as_os_str().is_empty()).unwrap_or(Path::new("."));
+    if let Err(error) = std::fs::File::open(parent).and_then(|dir| dir.sync_all()) {
+        tracing::warn!(?parent, %error, "fsync do diretório de saída falhou");
+    }
+}
+
 /// Publish a complete file atomically. Skip/Increment never overwrite an
 /// existing destination, even when other threads or processes race us.
 pub(crate) fn publish_temp(
@@ -206,14 +232,23 @@ pub(crate) fn publish_temp(
     output: PathBuf,
     policy: OverwritePolicy,
 ) -> Result<crate::ConvertOutcome> {
+    use std::os::unix::fs::PermissionsExt;
+    // tempfile creates 0600 files; a published image must get the same
+    // permissions as any other new file (0666 & !umask), unless it replaces
+    // an existing regular file whose permissions we keep.
+    let existing = matches!(policy, OverwritePolicy::Replace)
+        .then(|| std::fs::symlink_metadata(&output).ok())
+        .flatten()
+        .filter(std::fs::Metadata::is_file);
+    let permissions = match existing {
+        Some(meta) => meta.permissions(),
+        None => std::fs::Permissions::from_mode(new_file_mode()),
+    };
+    temp.as_file().set_permissions(permissions).map_err(BigImageError::Io)?;
     temp.as_file().sync_all().map_err(BigImageError::Io)?;
     if matches!(policy, OverwritePolicy::Replace) {
-        if let Ok(meta) = std::fs::symlink_metadata(&output) {
-            if meta.is_file() {
-                temp.as_file().set_permissions(meta.permissions()).map_err(BigImageError::Io)?;
-            }
-        }
         temp.persist(&output).map_err(|e| BigImageError::Io(e.error))?;
+        sync_parent(&output);
         return Ok(crate::ConvertOutcome::Written { output });
     }
     let mut temp = temp;
@@ -229,7 +264,10 @@ pub(crate) fn publish_temp(
             candidate = output.with_file_name(name);
         }
         match temp.persist_noclobber(&candidate) {
-            Ok(_) => return Ok(crate::ConvertOutcome::Written { output: candidate }),
+            Ok(_) => {
+                sync_parent(&candidate);
+                return Ok(crate::ConvertOutcome::Written { output: candidate });
+            }
             Err(e) if e.error.kind() == std::io::ErrorKind::AlreadyExists => {
                 if matches!(policy, OverwritePolicy::Skip) {
                     return Ok(crate::ConvertOutcome::Skipped { output });

@@ -314,3 +314,43 @@ fn large_ico_is_scaled_to_supported_dimensions() {
     .unwrap();
     assert_eq!(open_image(out.path()).unwrap().dimensions(), (256, 128));
 }
+
+fn expected_new_file_mode() -> u32 {
+    let umask = std::fs::read_to_string("/proc/self/status")
+        .ok()
+        .and_then(|status| {
+            status.lines().find_map(|line| {
+                line.strip_prefix("Umask:").and_then(|v| u32::from_str_radix(v.trim(), 8).ok())
+            })
+        })
+        .unwrap_or(0o022);
+    0o666 & !umask
+}
+
+#[cfg(unix)]
+#[test]
+fn new_outputs_get_umask_permissions_instead_of_private_temp_mode() {
+    use std::os::unix::fs::PermissionsExt;
+    let mode = |path: &Path| std::fs::metadata(path).unwrap().permissions().mode() & 0o777;
+    let dir = tempfile::tempdir().unwrap();
+    let src = fixture(dir.path(), "perm.png", 80);
+    for policy in [OverwritePolicy::Replace, OverwritePolicy::Skip, OverwritePolicy::Increment] {
+        let out = convert_file_to(
+            &src,
+            Some(&dir.path().join(format!("{policy:?}"))),
+            Format::Jpeg,
+            &EncodeOptions::default(),
+            policy,
+        )
+        .unwrap();
+        assert_eq!(mode(out.path()), expected_new_file_mode(), "{policy:?}");
+    }
+    let gif = dir.path().join("anim.gif");
+    make_gif(std::slice::from_ref(&src), &gif, AnimateOptions::default()).unwrap();
+    assert_eq!(mode(&gif), expected_new_file_mode());
+
+    // Replacing an existing file keeps that file's permissions.
+    std::fs::set_permissions(&gif, std::fs::Permissions::from_mode(0o640)).unwrap();
+    make_gif(&[src], &gif, AnimateOptions::default()).unwrap();
+    assert_eq!(mode(&gif), 0o640);
+}

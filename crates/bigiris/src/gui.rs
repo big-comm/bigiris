@@ -3259,13 +3259,23 @@ fn copy_current_to_clipboard(state: &Rc<RefCell<ViewerState>>) {
 /// Renderiza a imagem com cairo numa única página, escalada pra
 /// caber com aspect ratio preservado (Contain).
 fn print_current(state: &Rc<RefCell<ViewerState>>) {
-    let (window, path) = {
+    let (window, path, edited) = {
         let s = state.borrow();
         if s.files.is_empty() {
             return;
         }
-        (s.window().clone(), s.files[s.idx].clone())
+        // With unsaved rotate/flip the page must match the screen, not the
+        // file on disk: print the edited texture already in memory.
+        let edited = s.texture.clone().filter(|_| !s.pending_ops.is_empty());
+        (s.window().clone(), s.files[s.idx].clone(), edited)
     };
+    if let Some(texture) = edited {
+        match cairo_surface_from_texture(&texture) {
+            Some(surface) => present_print_dialog(&window, &path, surface),
+            None => show_print_error(&window, &gettext("Não foi possível preparar a página")),
+        }
+        return;
+    }
     let cancel = Arc::new(AtomicBool::new(false));
     let closing = cancel.clone();
     let closing_handler = window.connect_unrealize(move |_| closing.store(true, Ordering::Release));
@@ -3308,6 +3318,23 @@ fn print_current(state: &Rc<RefCell<ViewerState>>) {
             Err(error) => show_print_error(&window, &error),
         }
     });
+}
+
+/// GDK's default download format is premultiplied BGRA/ARGB in native
+/// order, i.e. exactly cairo's ARGB32.
+fn cairo_surface_from_texture(texture: &gdk::Texture) -> Option<gtk::cairo::ImageSurface> {
+    let (width, height) = (texture.width(), texture.height());
+    let stride = gtk::cairo::Format::ARgb32.stride_for_width(u32::try_from(width).ok()?).ok()?;
+    let mut pixels = vec![0u8; usize::try_from(stride).ok()? * usize::try_from(height).ok()?];
+    texture.download(&mut pixels, usize::try_from(stride).ok()?);
+    gtk::cairo::ImageSurface::create_for_data(
+        pixels,
+        gtk::cairo::Format::ARgb32,
+        width,
+        height,
+        stride,
+    )
+    .ok()
 }
 
 /// Cairo ARGB32 stores premultiplied components in native byte order.
@@ -4957,6 +4984,19 @@ mod print_pixel_tests {
         let values: Vec<_> =
             result.as_chunks::<4>().0.iter().map(|p| u32::from_ne_bytes(*p)).collect();
         assert_eq!(values, vec![0x80643219, 0x00000000, 0xff020304]);
+    }
+
+    /// Unsaved edits are printed from the texture: same layout as the
+    /// on-disk path above.
+    #[test]
+    fn edited_texture_becomes_a_premultiplied_cairo_surface() {
+        let texture = super::texture_from_rgba(vec![200, 100, 50, 128, 2, 3, 4, 255], 2, 1);
+        let mut surface = super::cairo_surface_from_texture(&texture).unwrap();
+        assert_eq!((surface.width(), surface.height()), (2, 1));
+        let data = surface.data().unwrap();
+        let values: Vec<_> =
+            data[..8].as_chunks::<4>().0.iter().map(|p| u32::from_ne_bytes(*p)).collect();
+        assert_eq!(values, vec![0x80643219, 0xff020304]);
     }
 }
 

@@ -77,13 +77,20 @@ pub(super) fn cached_thumbnail_in(cache: &Path, path: &Path) -> Option<PathBuf> 
 
 fn read_bounded(path: &Path) -> Option<Vec<u8>> {
     use std::io::Read;
+    use std::os::unix::fs::OpenOptionsExt;
     // Never follow a symlink or read a device out of the cache directory.
-    let meta = std::fs::symlink_metadata(path).ok()?;
+    // The checks run on the opened handle, so a file swapped between a
+    // check and the open cannot slip through; O_NONBLOCK keeps the open
+    // itself from hanging on a FIFO (std adds O_CLOEXEC).
+    let flags = rustix::fs::OFlags::NOFOLLOW | rustix::fs::OFlags::NONBLOCK;
+    let file =
+        std::fs::OpenOptions::new().read(true).custom_flags(flags.bits() as i32).open(path).ok()?;
+    let meta = file.metadata().ok()?;
     if !meta.is_file() || meta.len() > CACHE_MAX_BYTES {
         return None;
     }
     let mut bytes = Vec::with_capacity(meta.len() as usize);
-    std::fs::File::open(path).ok()?.take(CACHE_MAX_BYTES + 1).read_to_end(&mut bytes).ok()?;
+    file.take(CACHE_MAX_BYTES + 1).read_to_end(&mut bytes).ok()?;
     (bytes.len() as u64 <= CACHE_MAX_BYTES).then_some(bytes)
 }
 
@@ -299,6 +306,29 @@ mod tests {
         )
         .unwrap();
         assert_eq!(cached_thumbnail_in(&cache, &image), Some(entry));
+    }
+
+    #[test]
+    fn cache_reader_rejects_symlinks_and_fifos_without_blocking() {
+        let dir = tempfile::tempdir().unwrap();
+        let file = dir.path().join("entry.png");
+        std::fs::write(&file, b"png").unwrap();
+        assert_eq!(read_bounded(&file).as_deref(), Some(&b"png"[..]));
+        let link = dir.path().join("link.png");
+        std::os::unix::fs::symlink(&file, &link).unwrap();
+        assert_eq!(read_bounded(&link), None, "followed a symlink");
+        // A FIFO without a writer would block a plain open forever.
+        let fifo = dir.path().join("fifo.png");
+        rustix::fs::mkfifoat(
+            rustix::fs::CWD,
+            &fifo,
+            rustix::fs::Mode::RUSR | rustix::fs::Mode::WUSR,
+        )
+        .unwrap();
+        assert_eq!(read_bounded(&fifo), None, "read a FIFO");
+        let big = dir.path().join("big.png");
+        std::fs::write(&big, vec![0u8; CACHE_MAX_BYTES as usize + 1]).unwrap();
+        assert_eq!(read_bounded(&big), None, "oversized entry accepted");
     }
 
     #[test]

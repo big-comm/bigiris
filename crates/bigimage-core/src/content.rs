@@ -141,7 +141,16 @@ pub(crate) fn inspect_gif(reader: &mut (impl Read + Seek)) -> image::ImageResult
     }
     let mut frames = 0;
     loop {
-        match byte(reader)? {
+        let introducer = match byte(reader) {
+            Ok(value) => value,
+            // Many encoders omit the 0x3B trailer; once a complete image block
+            // has been read, end of file is simply the end of the stream.
+            Err(e) if e.kind() == std::io::ErrorKind::UnexpectedEof && frames > 0 => {
+                return Ok(false);
+            }
+            Err(e) => return Err(e.into()),
+        };
+        match introducer {
             0x3b => return Ok(false),
             0x21 => {
                 byte(reader)?;
@@ -172,5 +181,49 @@ pub(crate) fn inspect_gif(reader: &mut (impl Read + Seek)) -> image::ImageResult
             }
             _ => return Err(malformed().into()),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn gif_bytes(frames: usize) -> Vec<u8> {
+        let mut out = Vec::new();
+        {
+            let mut encoder = image::codecs::gif::GifEncoder::new(&mut out);
+            for _ in 0..frames {
+                let frame = image::Frame::new(image::RgbaImage::from_pixel(
+                    4,
+                    3,
+                    image::Rgba([200, 10, 10, 255]),
+                ));
+                encoder.encode_frame(frame).unwrap();
+            }
+        }
+        out
+    }
+
+    #[test]
+    fn gif_without_trailer_is_a_single_complete_image() {
+        let mut bytes = gif_bytes(1);
+        assert_eq!(bytes.pop(), Some(0x3b));
+        assert!(!inspect_gif(&mut std::io::Cursor::new(&bytes)).unwrap());
+
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("no-trailer.gif");
+        std::fs::write(&path, &bytes).unwrap();
+        ensure_static_local(&path).unwrap();
+        assert_eq!(crate::open_image(&path).unwrap().width(), 4);
+    }
+
+    #[test]
+    fn gif_truncated_before_any_image_is_still_rejected() {
+        let bytes = gif_bytes(1);
+        // Header + logical screen descriptor only.
+        assert!(inspect_gif(&mut std::io::Cursor::new(&bytes[..13])).is_err());
+        let mut animated = gif_bytes(2);
+        animated.pop();
+        assert!(inspect_gif(&mut std::io::Cursor::new(&animated)).unwrap());
     }
 }

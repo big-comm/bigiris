@@ -106,11 +106,25 @@ pub fn adjust_file(
     target: Option<Format>,
     policy: OverwritePolicy,
 ) -> Result<ConvertOutcome> {
+    adjust_file_with_options(input, ops, target, &crate::EncodeOptions::default(), policy)
+}
+
+/// Like [`adjust_file`], with caller-supplied encoder options.
+pub fn adjust_file_with_options(
+    input: impl AsRef<Path>,
+    ops: AdjustOps,
+    target: Option<Format>,
+    opts: &crate::EncodeOptions,
+    policy: OverwritePolicy,
+) -> Result<ConvertOutcome> {
     ops.validate()?;
 
     let input = input.as_ref();
     let suffix_tag = ops.suffix_tag();
     let suffix = format!("_{suffix_tag}");
+    if let Some(skipped) = pipeline::skip_before_decode(input, &suffix, target, policy) {
+        return Ok(skipped);
+    }
 
     let (src, src_format) = pipeline::decode_with_source_format(input)?;
     let target = target.unwrap_or(src_format);
@@ -125,7 +139,7 @@ pub fn adjust_file(
     tracing::debug!(?input, ?output, ?ops, "adjust: applying");
     let tweaked = if ops.is_identity() { src } else { apply_to(src, ops) };
 
-    pipeline::encode_and_cleanup(tweaked, output, target, &crate::EncodeOptions::default(), policy)
+    pipeline::encode_and_cleanup(tweaked, output, target, opts, policy)
 }
 
 /// Pure in-memory variant of [`adjust_file`] — applies `ops` to an already-

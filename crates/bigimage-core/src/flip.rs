@@ -33,7 +33,23 @@ pub fn flip_file(
     target: Option<Format>,
     policy: OverwritePolicy,
 ) -> Result<ConvertOutcome> {
+    flip_file_with_options(input, axis, target, &crate::EncodeOptions::default(), policy)
+}
+
+/// Like [`flip_file`], with caller-supplied encoder options.
+pub fn flip_file_with_options(
+    input: impl AsRef<Path>,
+    axis: FlipAxis,
+    target: Option<Format>,
+    opts: &crate::EncodeOptions,
+    policy: OverwritePolicy,
+) -> Result<ConvertOutcome> {
     let input = input.as_ref();
+    if let Some(skipped) =
+        pipeline::skip_before_decode(input, axis.filename_suffix(), target, policy)
+    {
+        return Ok(skipped);
+    }
 
     let (src, src_format) = pipeline::decode_with_source_format(input)?;
     let target = target.unwrap_or(src_format);
@@ -47,7 +63,7 @@ pub fn flip_file(
 
     tracing::debug!(?input, ?output, ?target, ?axis, "flip: computing");
     let flipped = apply_to(&src, axis);
-    pipeline::encode_and_cleanup(flipped, output, target, &crate::EncodeOptions::default(), policy)
+    pipeline::encode_and_cleanup(flipped, output, target, opts, policy)
 }
 
 /// Pure in-memory flip — shared with preview pipeline.

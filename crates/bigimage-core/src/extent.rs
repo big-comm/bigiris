@@ -214,7 +214,27 @@ pub fn extent_file(
     target: Option<Format>,
     policy: OverwritePolicy,
 ) -> Result<ConvertOutcome> {
+    extent_file_with_options(input, opts, target, &EncodeOptions::default(), policy)
+}
+
+/// Like [`extent_file`], with caller-supplied encoder options.
+pub fn extent_file_with_options(
+    input: impl AsRef<Path>,
+    opts: ExtentOptions,
+    target: Option<Format>,
+    encode: &EncodeOptions,
+    policy: OverwritePolicy,
+) -> Result<ConvertOutcome> {
     let input = input.as_ref();
+    // Only exact sizes name the output without the (upright) source
+    // dimensions; aspect targets are checked after decoding.
+    if let ExtentSize::Exact { width, height } = opts.size {
+        if let Some(skipped) =
+            pipeline::skip_before_decode(input, &filename_suffix(width, height), target, policy)
+        {
+            return Ok(skipped);
+        }
+    }
 
     let (src, src_format) = pipeline::decode_with_source_format(input)?;
     let target = target.unwrap_or(src_format);
@@ -230,7 +250,7 @@ pub fn extent_file(
 
     tracing::debug!(?input, ?output, ?target, ?opts, "extent: computing");
     let extended = apply_to(&src, &opts)?;
-    pipeline::encode_and_cleanup(extended, output, target, &EncodeOptions::default(), policy)
+    pipeline::encode_and_cleanup(extended, output, target, encode, policy)
 }
 
 /// Pure in-memory extent — shared with the preview pipeline.

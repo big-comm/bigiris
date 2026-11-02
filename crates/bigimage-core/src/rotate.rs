@@ -42,7 +42,23 @@ pub fn rotate_file(
     target: Option<Format>,
     policy: OverwritePolicy,
 ) -> Result<ConvertOutcome> {
+    rotate_file_with_options(input, rotation, target, &crate::EncodeOptions::default(), policy)
+}
+
+/// Like [`rotate_file`], with caller-supplied encoder options.
+pub fn rotate_file_with_options(
+    input: impl AsRef<Path>,
+    rotation: Rotation,
+    target: Option<Format>,
+    opts: &crate::EncodeOptions,
+    policy: OverwritePolicy,
+) -> Result<ConvertOutcome> {
     let input = input.as_ref();
+    if let Some(skipped) =
+        pipeline::skip_before_decode(input, rotation.filename_suffix(), target, policy)
+    {
+        return Ok(skipped);
+    }
 
     let (src, src_format) = pipeline::decode_with_source_format(input)?;
     let target = target.unwrap_or(src_format);
@@ -56,7 +72,7 @@ pub fn rotate_file(
 
     tracing::debug!(?input, ?output, ?target, ?rotation, "rotate: computing");
     let rotated = apply_to(&src, rotation);
-    pipeline::encode_and_cleanup(rotated, output, target, &crate::EncodeOptions::default(), policy)
+    pipeline::encode_and_cleanup(rotated, output, target, opts, policy)
 }
 
 /// Pure in-memory rotation — shared with preview pipeline.
@@ -111,7 +127,20 @@ pub fn rotate_file_auto(
     target: Option<crate::Format>,
     policy: OverwritePolicy,
 ) -> Result<ConvertOutcome> {
+    rotate_file_auto_with_options(input, target, &crate::EncodeOptions::default(), policy)
+}
+
+/// Like [`rotate_file_auto`], with caller-supplied encoder options.
+pub fn rotate_file_auto_with_options(
+    input: impl AsRef<Path>,
+    target: Option<crate::Format>,
+    opts: &crate::EncodeOptions,
+    policy: OverwritePolicy,
+) -> Result<ConvertOutcome> {
     let input = input.as_ref();
+    if let Some(skipped) = pipeline::skip_before_decode(input, "_auto", target, policy) {
+        return Ok(skipped);
+    }
 
     // `src` arrives already upright — decode_with_source_format honours the
     // orientation tag for every op. Re-applying it here would double-rotate.
@@ -124,7 +153,7 @@ pub fn rotate_file_auto(
     }
 
     tracing::debug!(?input, ?output, "rotate: bake EXIF orientation");
-    pipeline::encode_and_cleanup(src, output, target, &crate::EncodeOptions::default(), policy)
+    pipeline::encode_and_cleanup(src, output, target, opts, policy)
 }
 
 #[cfg(test)]

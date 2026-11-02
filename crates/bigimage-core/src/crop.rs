@@ -66,7 +66,24 @@ pub fn crop_file(
     target: Option<Format>,
     policy: OverwritePolicy,
 ) -> Result<ConvertOutcome> {
+    crop_file_with_options(input, rect, target, &crate::EncodeOptions::default(), policy)
+}
+
+/// Like [`crop_file`], with caller-supplied encoder options (JPEG/AVIF
+/// quality, PNG optimisation…).
+pub fn crop_file_with_options(
+    input: impl AsRef<Path>,
+    rect: CropRect,
+    target: Option<Format>,
+    opts: &crate::EncodeOptions,
+    policy: OverwritePolicy,
+) -> Result<ConvertOutcome> {
     let input = input.as_ref();
+    if let Some(skipped) =
+        pipeline::skip_before_decode(input, &rect.filename_suffix(), target, policy)
+    {
+        return Ok(skipped);
+    }
 
     let (src, src_format) = pipeline::decode_with_source_format(input)?;
     let target = target.unwrap_or(src_format);
@@ -83,7 +100,7 @@ pub fn crop_file(
     tracing::debug!(?input, ?output, ?target, ?rect, "crop: computing");
     let cropped = apply_to(&src, rect)?;
 
-    pipeline::encode_and_cleanup(cropped, output, target, &crate::EncodeOptions::default(), policy)
+    pipeline::encode_and_cleanup(cropped, output, target, opts, policy)
 }
 
 /// Pure in-memory crop — validates `rect` against the image then returns a

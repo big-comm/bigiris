@@ -369,3 +369,152 @@ fn new_outputs_get_umask_permissions_instead_of_private_temp_mode() {
     make_gif(&[src], &gif, AnimateOptions::default()).unwrap();
     assert_eq!(mode(&gif), 0o640);
 }
+
+#[test]
+fn skip_policy_returns_before_decoding_when_destination_is_known() {
+    use bigimage_core::*;
+    let dir = tempfile::tempdir().unwrap();
+    // Valid PNG signature, truncated body: decoding it would fail.
+    let src = dir.path().join("broken.png");
+    let good = std::fs::read(fixture(dir.path(), "good.png", 1)).unwrap();
+    std::fs::write(&src, &good[..40]).unwrap();
+    assert!(open_image(&src).is_err());
+    let skip = OverwritePolicy::Skip;
+    let existing = |name: &str| {
+        let path = dir.path().join(name);
+        std::fs::write(&path, b"keep").unwrap();
+        path
+    };
+    let outcomes = [
+        (
+            existing("broken_crop-1x1+0+0.png"),
+            crop_file(&src, CropRect::new(0, 0, 1, 1), None, skip),
+        ),
+        (
+            existing("broken_flipH.jpg"),
+            flip_file(&src, FlipAxis::Horizontal, Some(Format::Jpeg), skip),
+        ),
+        (existing("broken_rot90.png"), rotate_file(&src, Rotation::Deg90, None, skip)),
+        (existing("broken_auto.png"), rotate_file_auto(&src, None, skip)),
+        (
+            existing("broken_b10.png"),
+            adjust_file(&src, AdjustOps { brightness: 10, ..AdjustOps::default() }, None, skip),
+        ),
+        (
+            existing("broken_extent-64x64.png"),
+            extent_file(
+                &src,
+                ExtentOptions::new(ExtentSize::Exact { width: 64, height: 64 }),
+                None,
+                skip,
+            ),
+        ),
+        (
+            existing("broken_10.png"),
+            resize_file(
+                &src,
+                ResizeMode::MaxEdge(10),
+                Filter::Nearest,
+                None,
+                &EncodeOptions::default(),
+                skip,
+            ),
+        ),
+    ];
+    for (path, outcome) in outcomes {
+        assert_eq!(outcome.unwrap(), ConvertOutcome::Skipped { output: path.clone() });
+        assert_eq!(std::fs::read(&path).unwrap(), b"keep");
+    }
+}
+
+#[test]
+fn single_file_operations_honour_caller_encode_options() {
+    use bigimage_core::*;
+    let dir = tempfile::tempdir().unwrap();
+    let src = dir.path().join("noise.png");
+    let noise = RgbImage::from_fn(64, 64, |x, y| {
+        Rgb([(x * 37 + y * 11) as u8, (x * x + y * 7) as u8, (x ^ y) as u8 * 3])
+    });
+    noise.save(&src).unwrap();
+    let size = |quality: u8| {
+        let opts = EncodeOptions { quality: Some(quality), ..EncodeOptions::default() };
+        let out = dir.path().join(format!("q{quality}"));
+        std::fs::create_dir_all(&out).unwrap();
+        let input = out.join("noise.png");
+        std::fs::copy(&src, &input).unwrap();
+        let jpeg = Some(Format::Jpeg);
+        let replace = OverwritePolicy::Replace;
+        [
+            crop_file_with_options(&input, CropRect::new(0, 0, 60, 60), jpeg, &opts, replace),
+            flip_file_with_options(&input, FlipAxis::Vertical, jpeg, &opts, replace),
+            rotate_file_with_options(&input, Rotation::Deg180, jpeg, &opts, replace),
+            rotate_file_auto_with_options(&input, jpeg, &opts, replace),
+            adjust_file_with_options(
+                &input,
+                AdjustOps { contrast: 5.0, ..AdjustOps::default() },
+                jpeg,
+                &opts,
+                replace,
+            ),
+            extent_file_with_options(
+                &input,
+                ExtentOptions::new(ExtentSize::Exact { width: 70, height: 70 }),
+                jpeg,
+                &opts,
+                replace,
+            ),
+        ]
+        .map(|outcome| std::fs::metadata(outcome.unwrap().path()).unwrap().len())
+    };
+    let (low, high) = (size(10), size(95));
+    for (low, high) in low.iter().zip(high.iter()) {
+        assert!(low < high, "quality ignored: q10={low} q95={high}");
+    }
+}
+
+/// Depth/alpha policy documented on `save_image` (findings: float to
+/// PNG/TIFF without added alpha, extent canvas depth, PNM depth).
+#[test]
+fn documented_depth_and_alpha_policy_holds() {
+    let dir = tempfile::tempdir().unwrap();
+    let save = |image: DynamicImage, name: &str, format: Format| {
+        let path = dir.path().join(name);
+        bigimage_core::save_image(
+            image,
+            &path,
+            format,
+            &EncodeOptions::default(),
+            OverwritePolicy::Replace,
+        )
+        .unwrap();
+        image::open(&path).unwrap()
+    };
+    let float = DynamicImage::ImageRgb32F(image::ImageBuffer::from_pixel(
+        2,
+        2,
+        image::Rgb([0.5f32, 0.25, 1.0]),
+    ));
+    let png = save(float.clone(), "float.png", Format::Png);
+    assert_eq!(png.color(), image::ColorType::Rgb16);
+    let px = png.to_rgb8().get_pixel(0, 0).0;
+    assert!((187..=189).contains(&px[0]), "sRGB transfer missing: {px:?}");
+    assert_eq!(save(float, "float.tiff", Format::Tiff).color(), image::ColorType::Rgb16);
+
+    let gray16 =
+        DynamicImage::ImageLuma16(image::ImageBuffer::from_pixel(3, 2, image::Luma([40000u16])));
+    let rgb16 = DynamicImage::ImageRgb16(image::ImageBuffer::from_pixel(
+        3,
+        2,
+        image::Rgb([1000u16, 2000, 3000]),
+    ));
+    let gray8 = DynamicImage::ImageLuma8(image::ImageBuffer::from_pixel(3, 2, image::Luma([77u8])));
+    assert_eq!(save(gray16.clone(), "g16.pgm", Format::Pnm), gray16);
+    assert_eq!(save(rgb16.clone(), "c16.ppm", Format::Pnm), rgb16);
+    assert_eq!(save(gray8.clone(), "g8.pgm", Format::Pnm), gray8);
+
+    let extent = ExtentOptions::new(ExtentSize::Exact { width: 5, height: 4 });
+    let extended = bigimage_core::extent::apply_to(&rgb16, &extent).unwrap();
+    assert_eq!(save(extended, "extent.png", Format::Png).color(), image::ColorType::Rgb16);
+    let extended = bigimage_core::extent::apply_to(&gray16, &extent).unwrap();
+    assert_eq!(save(extended, "extent-gray.png", Format::Png).color(), image::ColorType::L16);
+}

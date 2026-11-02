@@ -31,18 +31,23 @@ pub mod resize;
 pub mod resources;
 pub mod rotate;
 
-pub use adjust::{adjust_file, AdjustOps};
+pub use adjust::{adjust_file, adjust_file_with_options, AdjustOps};
 pub use animate::{make_gif, make_gif_with_policy, AnimateOptions, LoopMode};
 pub use convert::{convert_file, convert_file_to, ConvertOutcome, OverwritePolicy};
-pub use crop::{crop_file, CropRect};
+pub use crop::{crop_file, crop_file_with_options, CropRect};
 pub use encode::EncodeOptions;
-pub use extent::{extent_file, parse_hex_color, ExtentOptions, ExtentSize, Gravity};
-pub use flip::{flip_file, FlipAxis};
+pub use extent::{
+    extent_file, extent_file_with_options, parse_hex_color, ExtentOptions, ExtentSize, Gravity,
+};
+pub use flip::{flip_file, flip_file_with_options, FlipAxis};
 pub use format::Format;
 pub use metadata::Metadata;
 pub use preview::{PreviewOp, PreviewSession};
 pub use resize::{resize_file, Filter, ResizeMode};
-pub use rotate::{rotate_file, rotate_file_auto, Rotation};
+pub use rotate::{
+    rotate_file, rotate_file_auto, rotate_file_auto_with_options, rotate_file_with_options,
+    Rotation,
+};
 
 /// Crate version.
 pub fn version() -> &'static str {

@@ -143,6 +143,47 @@ pub(crate) fn decode_with_source_format(input: &Path) -> Result<(DynamicImage, F
     Ok((img, format))
 }
 
+/// Source format from magic bytes (extension as fallback) without running
+/// any decoder — the same answer `decode_with_source_format` reports.
+pub(crate) fn sniff_format(input: &Path) -> Option<Format> {
+    use std::io::Read;
+    use std::os::unix::fs::OpenOptionsExt;
+    let file = std::fs::OpenOptions::new()
+        .read(true)
+        .custom_flags(rustix::fs::OFlags::NONBLOCK.bits() as i32)
+        .open(input)
+        .ok()?;
+    if !file.metadata().ok()?.is_file() {
+        return None;
+    }
+    let mut head = Vec::with_capacity(64);
+    file.take(64).read_to_end(&mut head).ok()?;
+    image::guess_format(&head)
+        .ok()
+        .or_else(|| input.extension().and_then(image::ImageFormat::from_extension))
+        .and_then(Format::from_image_format)
+}
+
+/// `Skip` short-circuit before decoding: when the destination name can be
+/// computed from the path and header alone and already exists, return the
+/// skip outcome without paying for a full decode.
+pub(crate) fn skip_before_decode(
+    input: &Path,
+    suffix: &str,
+    target: Option<Format>,
+    policy: OverwritePolicy,
+) -> Option<crate::ConvertOutcome> {
+    if !matches!(policy, OverwritePolicy::Skip) {
+        return None;
+    }
+    let target = target.or_else(|| sniff_format(input))?;
+    let output = resolve_output(input, Some(suffix), target, policy).ok()?;
+    output.symlink_metadata().is_ok().then(|| {
+        tracing::debug!(?output, "skipping existing output before decoding");
+        crate::ConvertOutcome::Skipped { output }
+    })
+}
+
 /// Compute the output path.
 ///
 /// * `suffix`: optional tag appended to the stem (e.g. `"_1080"`, `"_rot90"`).

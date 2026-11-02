@@ -134,53 +134,46 @@ fn make_compare_side(path: &Path, window: &adw::ApplicationWindow) -> gtk::Box {
     let closing = cancel.clone();
     window.connect_unrealize(move |_| closing.store(true, Ordering::Release));
     let input = path.to_path_buf();
-    let (tx, rx) = mpsc::sync_channel(1);
-    std::thread::spawn(move || {
+    // Awaited on the GTK loop instead of polled on a timer.
+    let job = gio::spawn_blocking(move || {
         crate::codec::with_cancel(cancel, || {
-            let result = bigimage_core::open_image(input)
+            bigimage_core::open_image(input)
                 .map(|image| {
                     let rgba = bigimage_core::into_srgb_rgba8(image.thumbnail(2048, 2048));
                     let size = rgba.dimensions();
                     (rgba.into_raw(), size)
                 })
-                .map_err(|e| e.to_string());
-            let _ = tx.send(result);
+                .map_err(|e| e.to_string())
         })
     });
     let weak_picture = picture.downgrade();
     let weak_column = column.downgrade();
     let weak_spinner = spinner.downgrade();
     let weak_window = window.downgrade();
-    glib::timeout_add_local(Duration::from_millis(16), move || {
+    glib::MainContext::default().spawn_local(async move {
+        // A decoder that died without an answer must not leave the spinner
+        // turning forever.
+        let result =
+            job.await.unwrap_or_else(|_| Err(gettext("Não foi possível abrir esta imagem")));
         if weak_window.upgrade().is_none_or(|w| !w.is_visible()) {
-            return glib::ControlFlow::Break;
+            return;
         }
-        match rx.try_recv() {
-            Ok(result) => {
-                if let (Some(column), Some(spinner)) =
-                    (weak_column.upgrade(), weak_spinner.upgrade())
-                {
-                    column.remove(&spinner);
-                }
-                match result {
-                    Ok((raw, (w, h))) => {
-                        if let Some(picture) = weak_picture.upgrade() {
-                            picture.set_paintable(Some(&texture_from_rgba(raw, w, h)));
-                        }
-                    }
-                    Err(error) => {
-                        if let Some(column) = weak_column.upgrade() {
-                            let label = gtk::Label::new(Some(&error));
-                            label.set_wrap(true);
-                            column.append(&label);
-                        }
-                    }
+        let Some(column) = weak_column.upgrade() else { return };
+        if let Some(spinner) = weak_spinner.upgrade() {
+            column.remove(&spinner);
+        }
+        match result {
+            Ok((raw, (w, h))) => {
+                if let Some(picture) = weak_picture.upgrade() {
+                    picture.set_paintable(Some(&texture_from_rgba(raw, w, h)));
                 }
             }
-            Err(mpsc::TryRecvError::Empty) => return glib::ControlFlow::Continue,
-            Err(mpsc::TryRecvError::Disconnected) => {}
+            Err(error) => {
+                let label = gtk::Label::new(Some(&error));
+                label.set_wrap(true);
+                column.append(&label);
+            }
         }
-        glib::ControlFlow::Break
     });
     column
 }

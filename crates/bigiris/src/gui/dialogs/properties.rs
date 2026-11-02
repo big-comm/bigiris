@@ -41,32 +41,30 @@ pub(in crate::gui) fn build_properties_window(
     let cancel = Arc::new(AtomicBool::new(false));
     let closing = cancel.clone();
     window.connect_unrealize(move |_| closing.store(true, Ordering::Release));
-    let (tx, rx) = std::sync::mpsc::sync_channel(1);
-    std::thread::spawn(move || {
-        let result = crate::codec::with_cancel(cancel, || {
+    // Awaited on the GTK loop instead of polled on a timer.
+    let job = gio::spawn_blocking(move || {
+        crate::codec::with_cancel(cancel, || {
             let info = crate::codec::information(&input).ok();
             let fsmeta = std::fs::metadata(&input).map_err(|e| e.to_string());
             (info, fsmeta)
-        });
-        let _ = tx.send(result);
+        })
     });
     let spinner = adw::Spinner::new();
     window.set_content(Some(&spinner));
     let weak = window.downgrade();
     let input = path.to_path_buf();
-    glib::timeout_add_local(Duration::from_millis(16), move || {
-        let Some(window) = weak.upgrade() else { return glib::ControlFlow::Break };
+    glib::MainContext::default().spawn_local(async move {
+        // A panicking reader still replaces the spinner with what the
+        // file system knows.
+        let (info, fsmeta) = job.await.unwrap_or_else(|_| {
+            (None, Err(gettext("Não foi possível ler as informações do arquivo")))
+        });
+        let Some(window) = weak.upgrade() else { return };
+        // Closed (or destroyed by the viewer) while reading.
         if !window.is_visible() {
-            return glib::ControlFlow::Break;
+            return;
         }
-        match rx.try_recv() {
-            Ok((info, fsmeta)) => {
-                fill_properties_window(window, &input, info.as_ref(), fsmeta.as_ref());
-            }
-            Err(std::sync::mpsc::TryRecvError::Empty) => return glib::ControlFlow::Continue,
-            Err(std::sync::mpsc::TryRecvError::Disconnected) => {}
-        }
-        glib::ControlFlow::Break
+        fill_properties_window(window, &input, info.as_ref(), fsmeta.as_ref());
     });
     window
 }

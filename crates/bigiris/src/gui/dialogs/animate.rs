@@ -265,40 +265,32 @@ fn start_animate_run(
         })
     };
 
-    // Worker thread runs the encode (100 frames at 4K can take several
-    // seconds); the main loop polls a oneshot channel for the result.
-    let (tx, rx) = std::sync::mpsc::channel();
-    {
+    // The encode (100 frames at 4K can take several seconds) runs off the
+    // GTK thread and is awaited on the loop instead of polled on a timer.
+    let job = {
         let cancelled = cancelled.clone();
-        std::thread::spawn(move || {
-            let result = crate::codec::with_cancel(cancelled, || {
+        gio::spawn_blocking(move || {
+            crate::codec::with_cancel(cancelled, || {
                 make_gif_with_policy(&frames, &output, opts, policy)
-            });
-            let _ = tx.send(result);
-        });
-    }
+            })
+        })
+    };
 
     let status = status.clone();
     let window = window.clone();
     let apply_btn = apply_btn.clone();
     let cancel_btn = cancel_btn.clone();
-    let mut close_handler = Some(close_handler);
-    // Released with the poll closure, i.e. only after the encoder finished:
-    // closing the window never exits mid-write and strands `.part` files.
+    // Released only after the encoder finished: closing the window never
+    // exits mid-write and strands `.part` files.
     let hold = window.application().map(|app| app.hold());
-    glib::timeout_add_local(std::time::Duration::from_millis(80), move || {
-        let _hold = &hold;
-        let result = match rx.try_recv() {
-            Err(std::sync::mpsc::TryRecvError::Empty) => return glib::ControlFlow::Continue,
-            Ok(result) => Some(result),
-            Err(std::sync::mpsc::TryRecvError::Disconnected) => None,
-        };
-        if let Some(handler) = close_handler.take() {
-            window.disconnect(handler);
-        }
+    glib::MainContext::default().spawn_local(async move {
+        let _hold = hold;
+        // A panicking encoder reports as an unexpected end below.
+        let result = job.await.ok();
+        window.disconnect(close_handler);
         // Closed mid-run: nothing left to show or to auto-close.
         if cancelled.load(Ordering::Acquire) && !window.is_visible() {
-            return glib::ControlFlow::Break;
+            return;
         }
         match result {
             Some(Ok(ConvertOutcome::Written { output })) => {
@@ -326,7 +318,6 @@ fn start_animate_run(
                 cancel_btn.set_sensitive(true);
             }
         }
-        glib::ControlFlow::Break
     });
 }
 

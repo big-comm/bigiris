@@ -402,6 +402,10 @@ fn to_pdf_timeout_kills_the_whole_soffice_tree() {
 
 #[test]
 fn animate_keeps_an_existing_output_unless_asked() {
+    // The replace/increment runs decode frames through the sandboxed codec.
+    if !sandbox_available() {
+        return;
+    }
     let dir = tempfile::tempdir().unwrap();
     fixture(dir.path(), "frame.png");
     let gif = dir.path().join("out.gif");

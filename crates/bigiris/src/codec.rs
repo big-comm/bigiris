@@ -146,6 +146,16 @@ pub(crate) fn configure_for_tests(worker: Option<PathBuf>) -> PathBuf {
             worker.or_else(built_worker).expect("bigiris binary missing: cargo test --all-targets")
         })
         .clone();
+    // The worker refuses a parent from another build (WORKER_ID embeds the
+    // git commit), and a stale target/<profile>/bigiris after a commit would
+    // otherwise surface as an opaque GUI timeout. Fail fast instead.
+    let binary = std::fs::read(&path).expect("read the bigiris worker binary");
+    assert!(
+        binary.windows(WORKER_ID.len()).any(|w| w == WORKER_ID.as_bytes()),
+        "{} was built from another commit than this test; rebuild it with \
+         `cargo build -p bigiris --features \"gui ai\"` (or run cargo test --all-targets)",
+        path.display()
+    );
     CONFIGURE.call_once(configure);
     path
 }

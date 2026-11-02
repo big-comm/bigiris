@@ -722,6 +722,32 @@ fn build_window_preloaded(
         .child(&film_strip_box)
         .build();
     film_strip_scroll.add_css_class("film-strip-bar");
+    // A horizontal-only ScrolledWindow ignores vertical wheel steps, and
+    // most mice only have those: map them onto the horizontal axis.
+    // Capture phase: the ScrolledWindow's own controller would otherwise
+    // claim the event first and drop the vertical part.
+    let strip_wheel = gtk::EventControllerScroll::new(gtk::EventControllerScrollFlags::VERTICAL);
+    strip_wheel.set_propagation_phase(gtk::PropagationPhase::Capture);
+    {
+        let strip = film_strip_scroll.downgrade();
+        strip_wheel.connect_scroll(move |controller, _dx, dy| {
+            let Some(strip) = strip.upgrade() else { return glib::Propagation::Proceed };
+            if dy == 0.0 {
+                return glib::Propagation::Proceed;
+            }
+            let adjustment = strip.hadjustment();
+            // Same step GTK uses for discrete wheel clicks.
+            let step = if controller.unit() == gdk::ScrollUnit::Surface {
+                dy
+            } else {
+                dy * adjustment.page_size().powf(2.0 / 3.0)
+            };
+            let max = (adjustment.upper() - adjustment.page_size()).max(adjustment.lower());
+            adjustment.set_value((adjustment.value() + step).clamp(adjustment.lower(), max));
+            glib::Propagation::Stop
+        });
+    }
+    film_strip_scroll.add_controller(strip_wheel);
 
     let film_strip_buttons = Vec::new();
 
@@ -1114,16 +1140,28 @@ fn build_window_preloaded(
                     return glib::Propagation::Proceed;
                 }
             }
+            // Over the revealed film strip the wheel scrolls the strip; the
+            // strip's own controller turns vertical steps into horizontal.
+            let position = controller.current_event().and_then(|e| e.position());
+            if let Some((wx, wy)) = position {
+                let s = state.borrow();
+                let over_strip = s
+                    .window()
+                    .pick(wx, wy, gtk::PickFlags::DEFAULT)
+                    .is_some_and(|widget| widget.is_ancestor(&s.strip_revealer));
+                if over_strip {
+                    return glib::Propagation::Proceed;
+                }
+            }
             // The scroll controller lives on the window, so event.position()
             // is in window-root coords. Convert to scroller-local coords so
             // adjust_zoom can anchor the re-scroll on the pixel under the
             // pointer: root.compute_point(&scroller, pt) — NOT the reverse.
-            let cursor =
-                controller.current_event().and_then(|e| e.position()).and_then(|(wx, wy)| {
-                    let root = scroller.root()?;
-                    let pt = graphene::Point::new(wx as f32, wy as f32);
-                    root.compute_point(&scroller, &pt).map(|p| (f64::from(p.x()), f64::from(p.y())))
-                });
+            let cursor = position.and_then(|(wx, wy)| {
+                let root = scroller.root()?;
+                let pt = graphene::Point::new(wx as f32, wy as f32);
+                root.compute_point(&scroller, &pt).map(|p| (f64::from(p.x()), f64::from(p.y())))
+            });
             let surface = controller.unit() == gdk::ScrollUnit::Surface;
             if let Some(factor) = zoom::scroll_factor(dy, surface) {
                 adjust_zoom(&state, factor, cursor);

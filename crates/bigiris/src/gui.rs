@@ -2862,13 +2862,7 @@ fn install_viewer_actions(
             let Some(state) = state.upgrade() else {
                 return;
             };
-            let path = {
-                let s = state.borrow();
-                if s.files.is_empty() {
-                    return;
-                }
-                s.files[s.idx].clone()
-            };
+            let Some(path) = path_for_external_tool(&state) else { return };
             if let Ok(exe) = std::env::current_exe() {
                 let _ = std::process::Command::new(exe).arg("--dialog=crop").arg(path).spawn();
             }
@@ -2887,13 +2881,7 @@ fn install_viewer_actions(
             let Some(state) = state.upgrade() else {
                 return;
             };
-            let path = {
-                let s = state.borrow();
-                if s.files.is_empty() {
-                    return;
-                }
-                s.files[s.idx].clone()
-            };
+            let Some(path) = path_for_external_tool(&state) else { return };
             if let Ok(exe) = std::env::current_exe() {
                 let _ = std::process::Command::new(exe)
                     .arg(format!("--dialog={dialog}"))
@@ -2948,6 +2936,29 @@ fn install_viewer_actions(
     app.set_accels_for_action("win.shortcuts", &["<Ctrl>question"]);
     app.set_accels_for_action("win.fullscreen", &["F11"]);
     app.set_accels_for_action("app.about", &["F1"]);
+}
+
+/// File for the crop / remove-background / upscale dialogs. They run in
+/// another process and read the file from disk, so unsaved in-memory edits
+/// would silently be ignored, and a save in progress may replace the file
+/// under them: ask the user to save or undo first, like navigation does.
+fn path_for_external_tool(state: &Rc<RefCell<ViewerState>>) -> Option<PathBuf> {
+    let message = {
+        let s = state.borrow();
+        if s.files.is_empty() {
+            return None;
+        }
+        if s.saving {
+            gettext("Aguarde o salvamento terminar")
+        } else if !s.pending_ops.is_empty() {
+            gettext("Salve ou desfaça as alterações antes de usar esta ferramenta")
+        } else {
+            return Some(s.files[s.idx].clone());
+        }
+    };
+    state.borrow().osd_label.set_text(&message);
+    pulse_osd(state);
+    None
 }
 
 /// Apresenta um FileDialog de seleção múltipla com filtro de imagens.

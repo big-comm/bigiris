@@ -76,7 +76,7 @@ jobs:
 
   test-gui:
     name: test (gui + ai)
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04  # libadwaita >= 1.6 (feature v1_6, AdwSpinner)
     steps:
       - uses: actions/checkout@v4
       - name: install GTK4/libadwaita/dav1d dev
@@ -123,7 +123,7 @@ jobs:
 
   build:
     name: build (release, gui + ai)
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04  # libadwaita >= 1.6 (feature v1_6, AdwSpinner)
     steps:
       - uses: actions/checkout@v4
       - name: install GTK4/libadwaita/dav1d dev

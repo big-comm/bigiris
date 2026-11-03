@@ -61,11 +61,21 @@ pub(crate) fn quantize(
     max_colors: u32,
     dithering: &[f32],
 ) -> ImageResult<Vec<Paletted>> {
+    quantize_with_speed(image, max_colors, dithering, 4)
+}
+
+/// [`quantize`] with imagequant's speed `1..=10` (1 = best palette).
+pub(crate) fn quantize_with_speed(
+    image: &RgbaImage,
+    max_colors: u32,
+    dithering: &[f32],
+    speed: i32,
+) -> ImageResult<Vec<Paletted>> {
     let (w, h) = image.dimensions();
     let mut attr = imagequant::new();
     attr.set_max_colors(max_colors.clamp(2, 256)).map_err(quant_error)?;
     attr.set_quality(0, 100).map_err(quant_error)?;
-    attr.set_speed(4).map_err(quant_error)?;
+    attr.set_speed(speed.clamp(1, 10)).map_err(quant_error)?;
     let pixels: &[imagequant::RGBA] = rgb::bytemuck::cast_slice(image.as_raw());
     let mut img =
         attr.new_image_borrowed(pixels, w as usize, h as usize, 0.0).map_err(quant_error)?;
@@ -78,6 +88,20 @@ pub(crate) fn quantize(
         out.push(Paletted { width: w, height: h, palette, indices });
     }
     Ok(out)
+}
+
+/// GIF stores one fully transparent palette entry, nothing in between:
+/// alpha below 128 becomes fully transparent black, the rest opaque.
+pub(crate) fn binary_alpha(image: &RgbaImage) -> RgbaImage {
+    let mut out = image.clone();
+    for px in out.pixels_mut() {
+        if px[3] < 128 {
+            *px = image::Rgba([0, 0, 0, 0]);
+        } else {
+            px[3] = 255;
+        }
+    }
+    out
 }
 
 /// Unique RGBA colours, or `None` past `limit`.

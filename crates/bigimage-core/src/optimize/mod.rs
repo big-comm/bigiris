@@ -24,6 +24,7 @@
 //! output from pixels already in memory, not untrusted input, so this does
 //! not widen the sandboxed decoding boundary of the application.
 
+pub(crate) mod animated;
 mod avif;
 mod formats;
 mod jpeg;

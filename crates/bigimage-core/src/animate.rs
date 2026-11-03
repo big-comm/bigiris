@@ -6,8 +6,7 @@
 
 use std::path::{Path, PathBuf};
 
-use image::codecs::gif::{GifEncoder, Repeat};
-use image::{DynamicImage, Frame, RgbaImage};
+use image::{DynamicImage, RgbaImage};
 
 use crate::pipeline;
 use crate::{BigImageError, ConvertOutcome, OverwritePolicy, Result};
@@ -25,11 +24,11 @@ pub enum LoopMode {
 }
 
 impl LoopMode {
-    fn to_gif_repeat(self) -> Repeat {
+    fn to_gif_repeat(self) -> gif::Repeat {
         match self {
-            LoopMode::Once => Repeat::Finite(0),
-            LoopMode::Finite(n) => Repeat::Finite(n),
-            LoopMode::Infinite => Repeat::Infinite,
+            LoopMode::Once => gif::Repeat::Finite(0),
+            LoopMode::Finite(n) => gif::Repeat::Finite(n),
+            LoopMode::Infinite => gif::Repeat::Infinite,
         }
     }
 }
@@ -46,6 +45,7 @@ pub struct AnimateOptions {
     pub loop_mode: LoopMode,
     /// Encoder speed 1..=30 (GIF palette quantisation). Higher = faster
     /// encode but worse colour quality. `10` is the balanced default.
+    /// Mapped onto imagequant's 1..=10 speed (`(speed + 2) / 3`).
     pub speed: i32,
 }
 
@@ -87,35 +87,33 @@ pub fn make_gif_with_policy(
         return Ok(ConvertOutcome::Skipped { output: output.to_path_buf() });
     }
 
-    let mut temp = pipeline::output_temp(output, policy)?;
-    let mut writer = std::io::BufWriter::new(temp.as_file_mut());
-    let mut encoder = GifEncoder::new_with_speed(&mut writer, opts.speed.clamp(1, 30));
-    encoder
-        .set_repeat(opts.loop_mode.to_gif_repeat())
-        .map_err(|e| BigImageError::Encode { path: output.to_path_buf(), source: e })?;
-
     // Decode first frame to lock canvas dimensions.
     let (first_img, _fmt) = pipeline::decode_with_source_format(&frames[0])?;
     let (w, h) = (first_img.width(), first_img.height());
-    let delay = image::Delay::from_numer_denom_ms(opts.delay_ms.max(MIN_DELAY_MS), 1);
+    let delay_cs = u16::try_from(opts.delay_ms.max(MIN_DELAY_MS) / 10).unwrap_or(u16::MAX);
+    let speed = (opts.speed.clamp(1, 30) + 2) / 3;
+    let encode_error = |source| BigImageError::Encode { path: output.to_path_buf(), source };
 
-    let mut push_frame = |img: DynamicImage| -> Result<()> {
-        let rgba = normalise_frame(img, w, h)?;
-        encoder
-            .encode_frame(Frame::from_parts(rgba, 0, 0, delay))
-            .map_err(|e| BigImageError::Encode { path: output.to_path_buf(), source: e })?;
-        Ok(())
-    };
-
-    push_frame(first_img)?;
-    for path in &frames[1..] {
-        let (img, _fmt) = pipeline::decode_with_source_format(path)?;
-        push_frame(img)?;
+    let mut temp = pipeline::output_temp(output, policy)?;
+    {
+        let writer = std::io::BufWriter::new(temp.as_file_mut());
+        let mut animation = crate::optimize::animated::GifAnimation::new(
+            writer,
+            w,
+            h,
+            opts.loop_mode.to_gif_repeat(),
+            delay_cs,
+            speed,
+        )
+        .map_err(encode_error)?;
+        animation.push(&normalise_frame(first_img, w, h)?).map_err(encode_error)?;
+        for path in &frames[1..] {
+            let (img, _fmt) = pipeline::decode_with_source_format(path)?;
+            animation.push(&normalise_frame(img, w, h)?).map_err(encode_error)?;
+        }
+        let mut writer = animation.finish().map_err(encode_error)?;
+        std::io::Write::flush(&mut writer).map_err(BigImageError::Io)?;
     }
-
-    drop(encoder);
-    std::io::Write::flush(&mut writer).map_err(BigImageError::Io)?;
-    drop(writer);
     pipeline::publish_temp(temp, output.to_path_buf(), policy)
 }
 

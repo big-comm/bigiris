@@ -16,20 +16,7 @@ fn opaque(image: &RgbaImage) -> bool {
     image.pixels().all(|px| px[3] == 255)
 }
 
-/// GIF stores one fully transparent palette entry, nothing in between.
-fn binary_alpha(image: &RgbaImage) -> RgbaImage {
-    let mut out = image.clone();
-    for px in out.pixels_mut() {
-        if px[3] < 128 {
-            *px = image::Rgba([0, 0, 0, 0]);
-        } else {
-            px[3] = 255;
-        }
-    }
-    out
-}
-
-fn write_gif(paletted: &Paletted) -> ImageResult<Vec<u8>> {
+pub(crate) fn write_gif(paletted: &Paletted) -> ImageResult<Vec<u8>> {
     let gif_error = |e: gif::EncodingError| encode_error(image::ImageFormat::Gif, e.to_string());
     let (w, h) = (paletted.width, paletted.height);
     let too_big = || {
@@ -69,7 +56,7 @@ fn write_gif(paletted: &Paletted) -> ImageResult<Vec<u8>> {
 /// full) is chosen by SSIMULACRA2: the smallest file meeting the target,
 /// or the best-scoring one when neither does.
 pub(crate) fn gif(image: &RgbaImage, opts: &EncodeOptions) -> ImageResult<Vec<u8>> {
-    let binary = binary_alpha(image);
+    let binary = palette::binary_alpha(image);
     if let Some(exact) = palette::exact(&binary, 256) {
         return write_gif(&exact);
     }

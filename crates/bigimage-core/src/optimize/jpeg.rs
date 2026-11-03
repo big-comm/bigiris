@@ -36,10 +36,32 @@ fn encode_rgb(
     chroma: Chroma,
     extras: &Extras,
 ) -> ImageResult<Vec<u8>> {
+    encode_rgb_with(rgb, width, height, quality, chroma, extras, false)
+}
+
+/// `annex_k`: the JPEG standard's example tables scaled like libjpeg's
+/// `quality`, so a fixed quality means what it meant with the previous
+/// encoder (and what [`crate::metadata::estimate_jpeg_quality`] reads back).
+/// Otherwise mozjpeg's own tables, which are better per byte.
+fn encode_rgb_with(
+    rgb: &[u8],
+    width: u32,
+    height: u32,
+    quality: u8,
+    chroma: Chroma,
+    extras: &Extras,
+    annex_k: bool,
+) -> ImageResult<Vec<u8>> {
     let run = || -> std::io::Result<Vec<u8>> {
         let mut compress = mozjpeg::Compress::new(mozjpeg::ColorSpace::JCS_RGB);
         compress.set_size(width as usize, height as usize);
-        compress.set_quality(f32::from(quality.clamp(1, 100)));
+        let q = f32::from(quality.clamp(1, 100));
+        compress.set_quality(q);
+        if annex_k {
+            // Same arithmetic as libjpeg's jpeg_quality_scaling.
+            compress.set_luma_qtable(&mozjpeg::qtable::AnnexK_Luma.scaled(q, q));
+            compress.set_chroma_qtable(&mozjpeg::qtable::AnnexK_Chroma.scaled(q, q));
+        }
         compress.set_progressive_mode();
         compress.set_optimize_coding(true);
         compress.set_optimize_scans(true);
@@ -96,7 +118,7 @@ pub(crate) fn encode(
 ) -> ImageResult<Vec<u8>> {
     let (w, h) = image.dimensions();
     if let Some(quality) = opts.quality {
-        return encode_rgb(image.as_raw(), w, h, quality, Chroma::Sub420, extras);
+        return encode_rgb_with(image.as_raw(), w, h, quality, Chroma::Sub420, extras, true);
     }
     let threshold = opts.target.ssimulacra2();
     let rgba = image::DynamicImage::ImageRgb8(image.clone()).into_rgba8();

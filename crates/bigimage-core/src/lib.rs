@@ -25,6 +25,7 @@ pub mod extent;
 pub mod flip;
 mod format;
 pub mod metadata;
+mod optimize;
 mod pipeline;
 pub mod preview;
 pub mod resize;
@@ -34,10 +35,11 @@ pub mod rotate;
 pub use adjust::{adjust_file, adjust_file_with_options, AdjustOps};
 pub use animate::{make_gif, make_gif_with_policy, AnimateOptions, LoopMode};
 pub use convert::{
-    convert_file, convert_file_to, into_srgb_rgba8, ConvertOutcome, OverwritePolicy,
+    convert_file, convert_file_report, convert_file_to, into_srgb_rgba8, ConvertOutcome,
+    ConvertReport, OverwritePolicy,
 };
 pub use crop::{crop_file, crop_file_with_options, CropRect};
-pub use encode::EncodeOptions;
+pub use encode::{EncodeOptions, QualityTarget};
 pub use extent::{
     extent_file, extent_file_with_options, parse_hex_color, ExtentOptions, ExtentSize, Gravity,
 };

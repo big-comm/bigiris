@@ -78,6 +78,14 @@ const THEATER_CSS: &str = "
 .plasma headerbar button { border-radius: 6px; }
 .plasma .suggested-action { border-radius: 6px; }
 .plasma .viewer-osd { border-radius: 8px; }
+/* The editing panel takes room from the picture: keep that room dark. */
+.theater .viewer-canvas { background-color: #101216; }
+.edit-panel { border-radius: 14px; background-color: rgba(24, 26, 31, 0.78); color: white; }
+.theater .edit-panel scrolledwindow, .theater .edit-panel scrolledwindow > viewport {
+    background-color: transparent;
+}
+.edit-panel .edit-section-title { font-weight: 700; font-size: 0.85em; opacity: 0.7; }
+.edit-panel scale { padding-top: 2px; padding-bottom: 2px; }
 ";
 
 /// Side of each square film-strip cell, in logical pixels.
@@ -423,6 +431,12 @@ struct ViewerState {
     redo_ops: Vec<EditOp>,
     /// True while an atomic encode is running off the GTK thread.
     saving: bool,
+    /// Inline crop widgets and, while cropping, the active selection.
+    crop_ui: viewer::crop::CropUi,
+    crop: Option<viewer::crop::CropSession>,
+    /// Editing side panel widgets and its live state (sliders, previews).
+    edit_ui: viewer::edit_panel::EditPanelUi,
+    edit: viewer::edit_panel::EditPanelState,
 }
 
 /// Edição in-memory: o usuário gira/espelha sem tocar o
@@ -436,6 +450,39 @@ enum EditOp {
     Rotate180,
     FlipH,
     FlipV,
+    /// Keep `w`×`h` pixels from `(x, y)` of the image as edited so far.
+    Crop {
+        x: u32,
+        y: u32,
+        w: u32,
+        h: u32,
+    },
+    /// Brightness, contrast, saturation and gamma (in hundredths), as the
+    /// editing panel's sliders set them. A run of consecutive `Adjust`
+    /// operations is worth only its last one (see `viewer::edits`).
+    Adjust {
+        brightness: i32,
+        contrast: i32,
+        saturation: i32,
+        gamma_pct: u32,
+    },
+    /// Resample to exactly `w`×`h` pixels with Lanczos3.
+    Resize {
+        w: u32,
+        h: u32,
+    },
+    /// Turn by `tenths` of a degree (clockwise) and crop to the largest
+    /// rectangle inside, so no empty corner is left. Consecutive
+    /// `Straighten` operations are worth only their last one.
+    Straighten {
+        tenths: i32,
+    },
+    /// Cut the subject out with the local BiRefNet model (alpha channel).
+    RemoveBackground,
+    /// Enlarge by an integer factor with Lanczos3.
+    Upscale {
+        factor: u8,
+    },
 }
 
 #[derive(Debug)]
@@ -488,6 +535,9 @@ fn file_modified(path: &Path) -> Option<std::time::SystemTime> {
 /// key, only the latest queued request survives; a decode already in flight
 /// may finish, but its generation is ignored by the UI.
 struct ViewerLoader {
+    /// Images after the slow prefixes of the current edits, shared with
+    /// the editing panel's tools.
+    cache: Arc<Mutex<viewer::edits::EditCache>>,
     pending: Arc<(Mutex<Option<LoadRequest>>, Condvar)>,
     results: Arc<Mutex<Option<DecodedFrame>>>,
     stopped: Arc<AtomicBool>,
@@ -505,6 +555,8 @@ impl ViewerLoader {
         let worker_stopped = stopped.clone();
         let wake = viewer::Wake::default();
         let worker_wake = wake.clone();
+        let cache = Arc::new(Mutex::new(viewer::edits::EditCache::default()));
+        let worker_cache = cache.clone();
         std::thread::Builder::new()
             .name("bigiris-viewer-decode".to_string())
             .spawn(move || loop {
@@ -528,7 +580,7 @@ impl ViewerLoader {
                     Err("image too large to prefetch".to_string())
                 } else {
                     crate::codec::with_cancel(worker_stopped.clone(), || {
-                        decode_frame(&request.path, &request.ops)
+                        decode_frame_cached(&request.path, &request.ops, Some(&worker_cache))
                     })
                     .map_err(|e| e.to_string())
                 };
@@ -546,7 +598,12 @@ impl ViewerLoader {
                 worker_wake.notify();
             })
             .expect("could not start viewer decoder");
-        Self { pending, results, stopped, wake }
+        Self { cache, pending, results, stopped, wake }
+    }
+
+    /// Forget cached edit results (navigation, save).
+    fn clear_cache(&self) {
+        self.cache.lock().unwrap_or_else(|poisoned| poisoned.into_inner()).clear();
     }
 
     fn request(&self, request: LoadRequest) {
@@ -801,11 +858,20 @@ fn build_window_preloaded(
     loading_spinner.add_css_class("viewer-loading");
 
     let overlay = gtk::Overlay::new();
+    overlay.add_css_class("viewer-canvas");
     overlay.set_child(Some(&stack));
+    let crop_ui = viewer::crop::build();
+    overlay.add_overlay(&crop_ui.area);
     overlay.add_overlay(&osd_revealer);
     overlay.add_overlay(&strip_revealer);
     overlay.add_overlay(&histogram_area);
+    let edit_ui = viewer::edit_panel::build();
+    overlay.add_overlay(&edit_ui.grid);
+    overlay.add_overlay(&edit_ui.revealer);
     overlay.add_overlay(&loading_spinner);
+    // Crop bar on top of everything; its selection layer sits right above
+    // the picture (added first) so the OSD hint is not dimmed by it.
+    overlay.add_overlay(&crop_ui.bar);
     // One-pixel, nearly transparent copies of the neighbours. Drawing them
     // in the normal frame makes the renderer upload them to the GPU ahead
     // of time without blocking, so an arrow key only swaps textures.
@@ -899,6 +965,10 @@ fn build_window_preloaded(
         pending_ops: Vec::new(),
         redo_ops: Vec::new(),
         saving: false,
+        crop_ui,
+        crop: None,
+        edit_ui,
+        edit: Default::default(),
     }));
 
     if let Some(settings) = settings.filter(|_| has_images) {
@@ -975,6 +1045,7 @@ fn build_window_preloaded(
                 }
                 zoom::cancel_pending(&mut s);
                 s.props_dialog.take();
+                s.edit = Default::default();
                 s.texture.take();
                 s.pending_zoom = None;
                 s.picture.set_paintable(None::<&gdk::Paintable>);
@@ -1015,6 +1086,20 @@ fn build_window_preloaded(
     header.pack_start(&navigation);
 
     header.pack_end(&build_header_menu_button(&state));
+
+    // Icon and label: a lone pencil was easy to miss next to the menu.
+    let edit_btn = gtk::ToggleButton::builder()
+        .child(
+            &adw::ButtonContent::builder()
+                .icon_name("document-edit-symbolic")
+                .label(gettext("Editar"))
+                .build(),
+        )
+        .tooltip_text(gettext("Editar (E)"))
+        .action_name("win.edit-panel")
+        .visible(has_files)
+        .build();
+    header.pack_end(&edit_btn);
 
     let info_btn = gtk::Button::from_icon_name("dialog-information-symbolic");
     info_btn.set_tooltip_text(Some(&gettext("Propriedades da imagem (Ctrl+I)")));
@@ -1121,6 +1206,8 @@ fn build_window_preloaded(
         });
     }
     window.add_controller(key_controller);
+    viewer::crop::connect(&state, &window);
+    viewer::edit_panel::connect(&state, &window);
 
     // Mouse-wheel zoom — live on the window so revealed chrome (film strip,
     // header) doesn't steal wheel events. Capture phase pre-empts the
@@ -1154,11 +1241,12 @@ fn build_window_preloaded(
             let position = controller.current_event().and_then(|e| e.position());
             if let Some((wx, wy)) = position {
                 let s = state.borrow();
-                let over_strip = s
-                    .window()
-                    .pick(wx, wy, gtk::PickFlags::DEFAULT)
-                    .is_some_and(|widget| widget.is_ancestor(&s.strip_revealer));
-                if over_strip {
+                let over_chrome =
+                    s.window().pick(wx, wy, gtk::PickFlags::DEFAULT).is_some_and(|widget| {
+                        widget.is_ancestor(&s.strip_revealer)
+                            || widget.is_ancestor(&s.edit_ui.revealer)
+                    });
+                if over_chrome {
                     return glib::Propagation::Proceed;
                 }
             }
@@ -1188,8 +1276,11 @@ fn build_window_preloaded(
     for entering in [true, false] {
         let weak = Rc::downgrade(&state);
         let record = move |_: &gtk::EventControllerMotion, x, y| {
-            if let Some(state) = weak.upgrade() {
-                state.borrow_mut().zoom_pointer = Some((x, y));
+            // Crossing events can arrive while a widget is shown or hidden
+            // from code that still holds the state; the next motion event
+            // records the pointer then.
+            if let Some(Ok(mut s)) = weak.upgrade().as_ref().map(|state| state.try_borrow_mut()) {
+                s.zoom_pointer = Some((x, y));
             }
         };
         if entering {
@@ -1266,6 +1357,7 @@ fn build_window_preloaded(
     // the bottom shows the film strip, everywhere else only restores the
     // cursor. Each zone has its own hide timer.
     let motion = gtk::EventControllerMotion::new();
+    motion.set_name(Some("bigiris-edge-reveal"));
     {
         let state = Rc::downgrade(&state);
         motion.connect_motion(move |_, _x, y| {
@@ -1680,7 +1772,7 @@ fn cancel_top_hide(state: &Rc<RefCell<ViewerState>>) {
 fn reveal_bottom(state: &Rc<RefCell<ViewerState>>) {
     let first_reveal = {
         let s = state.borrow();
-        if s.files.len() < 2 {
+        if s.files.len() < 2 || s.crop.is_some() {
             return;
         }
         let hidden = !s.strip_revealer.reveals_child();
@@ -1810,7 +1902,7 @@ fn arm_cursor_hide(state: &Rc<RefCell<ViewerState>>, delay: std::time::Duration)
         // Double-check na hora do disparo: user pode ter aberto um
         // diálogo nos últimos CURSOR_HIDE_MS ms.
         let window = s.window();
-        if window.visible_dialog().is_some() {
+        if window.visible_dialog().is_some() || s.crop.is_some() {
             return;
         }
         let cursor = gdk::Cursor::from_name("none", None);
@@ -1878,7 +1970,71 @@ fn handle_key(
 ) -> glib::Propagation {
     use gdk::Key;
 
+    if viewer::crop::is_active(state) {
+        return match key {
+            Key::Escape => {
+                viewer::crop::cancel(state);
+                glib::Propagation::Stop
+            }
+            Key::Return | Key::KP_Enter | Key::ISO_Enter => {
+                viewer::crop::apply(state);
+                glib::Propagation::Stop
+            }
+            Key::F11 => {
+                let win = state.borrow().window().clone();
+                win.set_fullscreened(!win.is_fullscreen());
+                glib::Propagation::Stop
+            }
+            // Navigation, zoom and view toggles would move the picture
+            // under the selection; keep Tab and the bar's own keys working.
+            Key::Left
+            | Key::Right
+            | Key::Up
+            | Key::Down
+            | Key::Page_Up
+            | Key::Page_Down
+            | Key::Home
+            | Key::End
+            | Key::BackSpace
+            | Key::space
+            | Key::plus
+            | Key::equal
+            | Key::KP_Add
+            | Key::minus
+            | Key::KP_Subtract
+            | Key::_0
+            | Key::KP_0
+            | Key::_1
+            | Key::KP_1
+            | Key::f
+            | Key::F
+            | Key::g
+            | Key::G
+            | Key::h
+            | Key::H
+            | Key::t
+            | Key::T => glib::Propagation::Stop,
+            _ => glib::Propagation::Proceed,
+        };
+    }
+
     match key {
+        Key::Escape if viewer::edit_panel::is_open(state) => {
+            viewer::edit_panel::close(state);
+            return glib::Propagation::Stop;
+        }
+        // Plain E only: Ctrl/Alt+E belong to other shortcuts.
+        Key::e | Key::E
+            if !_modifier
+                .intersects(gdk::ModifierType::CONTROL_MASK | gdk::ModifierType::ALT_MASK) =>
+        {
+            viewer::edit_panel::toggle(state);
+            return glib::Propagation::Stop;
+        }
+        Key::backslash => {
+            viewer::edit_panel::show_original(state, viewer::edit_panel::Source::Key, true);
+            return glib::Propagation::Stop;
+        }
         Key::Escape => {
             // Like GNOME's image viewer: Esc first leaves fullscreen and
             // only closes the window when it is not fullscreen.
@@ -2134,9 +2290,10 @@ fn draw_histogram(state: &Rc<RefCell<ViewerState>>, cr: &gtk::cairo::Context, w:
 /// tudo em vez de guardar a `DynamicImage` editada entre turnos evita
 /// drift cumulativo e simplifica o undo futuro (basta `pending_ops.pop`).
 fn apply_edit(state: &Rc<RefCell<ViewerState>>, op: EditOp) {
+    viewer::edit_panel::flush_commit(state);
     let path = {
         let s = state.borrow();
-        if s.files.is_empty() || s.saving {
+        if s.files.is_empty() || s.saving || s.edit.busy() {
             return;
         }
         s.files[s.idx].clone()
@@ -2168,7 +2325,123 @@ fn apply_op_to_image(img: image::DynamicImage, op: EditOp) -> image::DynamicImag
         EditOp::Rotate180 => img.rotate180(),
         EditOp::FlipH => img.fliph(),
         EditOp::FlipV => img.flipv(),
+        EditOp::Crop { x, y, w, h } => {
+            // The rectangle was chosen on this very image; clamp anyway so
+            // a stale op can never ask for pixels outside it.
+            let (iw, ih) = (img.width(), img.height());
+            if iw == 0 || ih == 0 {
+                return img;
+            }
+            let x = x.min(iw - 1);
+            let y = y.min(ih - 1);
+            img.crop_imm(x, y, w.clamp(1, iw - x), h.clamp(1, ih - y))
+        }
+        EditOp::Adjust { .. } => match viewer::edits::AdjustValues::from_op(op) {
+            Some(values) => bigimage_core::adjust::apply_to(img, values.core()),
+            None => img,
+        },
+        EditOp::Resize { w, h } => {
+            let mode = ResizeMode::Exact { width: w.max(1), height: h.max(1) };
+            match bigimage_core::resize::apply_to(&img, mode, Filter::Lanczos3) {
+                Ok(resized) => resized,
+                Err(error) => {
+                    tracing::warn!(%error, "resize edit refused; image kept as is");
+                    img
+                }
+            }
+        }
+        EditOp::Straighten { tenths } => {
+            bigimage_core::rotate::straighten(&img, f64::from(tenths) / 10.0)
+        }
+        // Fallible and slow: see `apply_op`.
+        EditOp::RemoveBackground | EditOp::Upscale { .. } => img,
     }
+}
+
+/// Heavy operations actually computed, for tests of the edit cache.
+#[cfg(test)]
+static HEAVY_RUNS: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+
+#[cfg(test)]
+fn heavy_runs() -> usize {
+    HEAVY_RUNS.load(Ordering::SeqCst)
+}
+
+/// Run a slow operation (background removal, upscale), reporting model
+/// download progress through `progress`.
+fn apply_heavy(
+    img: image::DynamicImage,
+    op: EditOp,
+    progress: &mut dyn FnMut(bigimage_ai::background::BgStage),
+) -> Result<image::DynamicImage, String> {
+    #[cfg(test)]
+    HEAVY_RUNS.fetch_add(1, Ordering::SeqCst);
+    match op {
+        EditOp::RemoveBackground => {
+            let mut session = bigimage_ai::background::BgSession::new(progress).map_err(|e| {
+                fill(&gettext("Falha ao carregar o modelo: {error}"), &[("error", &e.to_string())])
+            })?;
+            session.process(&img).map_err(|e| e.to_string())
+        }
+        EditOp::Upscale { factor } => bigimage_core::resize::apply_to(
+            &img,
+            ResizeMode::Percent(f32::from(factor.clamp(2, 4)) * 100.0),
+            Filter::Lanczos3,
+        )
+        .map_err(|e| e.to_string()),
+        other => Ok(apply_op_to_image(img, other)),
+    }
+}
+
+fn apply_op(img: image::DynamicImage, op: EditOp) -> Result<image::DynamicImage, String> {
+    if viewer::edits::is_heavy(&op) {
+        apply_heavy(img, op, &mut |_| {})
+    } else {
+        Ok(apply_op_to_image(img, op))
+    }
+}
+
+/// Every pending edit applied to `img`, in order, with superseded slider
+/// gestures skipped.
+fn render_edits(img: image::DynamicImage, ops: &[EditOp]) -> Result<image::DynamicImage, String> {
+    viewer::edits::effective_ops(ops).into_iter().try_fold(img, apply_op)
+}
+
+/// `path` with `ops` applied, starting from the longest prefix already
+/// in `cache` and remembering the result of every heavy operation, so
+/// later edits, Undo and Redo do not run it again.
+fn render_cached(
+    path: &Path,
+    ops: &[EditOp],
+    cache: Option<&Mutex<viewer::edits::EditCache>>,
+) -> Result<image::DynamicImage, Box<dyn std::error::Error>> {
+    fn lock(
+        cache: &Mutex<viewer::edits::EditCache>,
+    ) -> std::sync::MutexGuard<'_, viewer::edits::EditCache> {
+        cache.lock().unwrap_or_else(|poisoned| poisoned.into_inner())
+    }
+    let effective = viewer::edits::effective_ops(ops);
+    // Plain viewing keeps no extra copy of the decoded file.
+    let cache = cache.filter(|_| !effective.is_empty());
+    let modified = file_modified(path);
+    let hit = cache.and_then(|cache| lock(cache).best(path, modified, &effective));
+    let (mut img, done) = match hit {
+        Some((len, img)) => ((*img).clone(), len),
+        None => {
+            let img = bigimage_core::open_image(path)?;
+            if let Some(cache) = cache {
+                lock(cache).insert(path, modified, Vec::new(), Arc::new(img.clone()));
+            }
+            (img, 0)
+        }
+    };
+    for (i, op) in effective.iter().enumerate().skip(done) {
+        img = apply_op(img, *op)?;
+        if let (Some(cache), true) = (cache, viewer::edits::is_heavy(op)) {
+            lock(cache).insert(path, modified, effective[..=i].to_vec(), Arc::new(img.clone()));
+        }
+    }
+    Ok(img)
 }
 
 /// Liga/desliga a action `win.save-edits` pra o item de menu e o acelerador
@@ -2176,8 +2449,13 @@ fn apply_op_to_image(img: image::DynamicImage, op: EditOp) -> image::DynamicImag
 /// `•` no título como pista visual do estado "dirty".
 fn sync_edit_actions(state: &Rc<RefCell<ViewerState>>) {
     let s = state.borrow();
+    // Crop mode suspends these actions and restores them when it ends.
+    if s.crop.is_some() {
+        return;
+    }
     let has_ops = !s.pending_ops.is_empty();
-    let idle = !s.saving;
+    // A panel tool (background removal, upscale) also holds the history.
+    let idle = !s.saving && !s.edit.busy();
     if let Some(action) = s.window().lookup_action("save-edits") {
         if let Some(simple) = action.downcast_ref::<gio::SimpleAction>() {
             simple.set_enabled(has_ops && idle);
@@ -2202,12 +2480,15 @@ fn sync_edit_actions(state: &Rc<RefCell<ViewerState>>) {
             }
         }
     }
+    drop(s);
+    viewer::edit_panel::sync_sensitivity(state);
 }
 
 fn undo_edit(state: &Rc<RefCell<ViewerState>>) {
+    viewer::edit_panel::flush_commit(state);
     let path = {
         let mut s = state.borrow_mut();
-        if s.saving {
+        if s.saving || s.edit.busy() {
             return;
         }
         let Some(op) = s.pending_ops.pop() else { return };
@@ -2221,9 +2502,10 @@ fn undo_edit(state: &Rc<RefCell<ViewerState>>) {
 }
 
 fn redo_edit(state: &Rc<RefCell<ViewerState>>) {
+    viewer::edit_panel::flush_commit(state);
     let path = {
         let mut s = state.borrow_mut();
-        if s.saving {
+        if s.saving || s.edit.busy() {
             return;
         }
         let Some(op) = s.redo_ops.pop() else { return };
@@ -2239,6 +2521,7 @@ fn redo_edit(state: &Rc<RefCell<ViewerState>>) {
 /// Salva as edições pendentes no próprio arquivo. Confirma antes — em
 /// JPEG o re-encode perde qualidade e o user precisa ciência disso.
 fn save_edits(state: &Rc<RefCell<ViewerState>>) {
+    viewer::edit_panel::flush_commit(state);
     let (window, path, ops) = {
         let s = state.borrow();
         if s.pending_ops.is_empty() || s.files.is_empty() || s.saving {
@@ -2309,6 +2592,7 @@ fn save_edits(state: &Rc<RefCell<ViewerState>>) {
                 if result.is_ok() {
                     s.pending_ops.clear();
                     s.redo_ops.clear();
+                    s.loader.clear_cache();
                 }
             }
             refresh_title(&state);
@@ -2477,7 +2761,7 @@ fn write_edits_to_disk(
     })?;
     let (img, source, quality) =
         crate::codec::open_for_resave(&target).map_err(SaveFailure::from_image)?;
-    let edited = ops.iter().fold(img, |acc, op| apply_op_to_image(acc, *op));
+    let edited = render_edits(img, ops).map_err(SaveFailure::Other)?;
     let report = bigimage_core::save_image_preserving_metadata_report(
         edited,
         target,
@@ -2490,12 +2774,16 @@ fn write_edits_to_disk(
     Ok(report.dropped)
 }
 
-/// Encoder options for an in-place save: a JPEG keeps the quality its
-/// source was estimated at; everything else uses the defaults.
+/// Encoder options for an in-place save, which may be repeated on the
+/// same file: a JPEG keeps the quality its source was estimated at, WebP
+/// stays lossless as before, and everything else aims for the highest
+/// visual target (PNG stays lossless) to avoid generation loss.
 fn resave_options(format: Format, source_quality: Option<u8>) -> EncodeOptions {
-    let default = EncodeOptions::default();
+    let default =
+        EncodeOptions { target: bigimage_core::QualityTarget::Maximum, ..EncodeOptions::default() };
     match format {
         Format::Jpeg => EncodeOptions { quality: source_quality.or(default.quality), ..default },
+        Format::WebP => EncodeOptions { quality: Some(100), ..default },
         _ => default,
     }
 }
@@ -2573,6 +2861,7 @@ fn update_display(state: &Rc<RefCell<ViewerState>>) {
     // guaranteed empty by the navigation guard, while a redo-only branch
     // (after undoing back to the original) must not leak into the next image.
     state.borrow_mut().redo_ops.clear();
+    state.borrow().loader.clear_cache();
     sync_edit_actions(state);
     if !show_cached_frame(state, &path) {
         let in_flight = state.borrow().prefetching.as_ref() == Some(&path);
@@ -2746,6 +3035,7 @@ fn apply_prefetched_frame(state: &Rc<RefCell<ViewerState>>, frame: DecodedFrame)
         Some(path) => request_frame(state, path, Vec::new()),
         None => schedule_prefetch(state),
     }
+    viewer::edit_panel::refresh(state);
 }
 
 /// Splice the sibling list found in the background into a viewer that was
@@ -2781,6 +3071,7 @@ fn adopt_folder(state: &Rc<RefCell<ViewerState>>, mut files: Vec<PathBuf>, index
 /// Never discard edits as a side effect of navigation. The user can save or
 /// undo them first; slideshow also stops so it cannot repeatedly nag or skip.
 fn can_leave_current(state: &Rc<RefCell<ViewerState>>) -> bool {
+    viewer::edit_panel::flush_commit(state);
     if state.borrow().pending_ops.is_empty() {
         return true;
     }
@@ -2855,6 +3146,8 @@ fn apply_decoded_frame(state: &Rc<RefCell<ViewerState>>, frame: DecodedFrame) {
         }
     }
     schedule_prefetch(state);
+    viewer::edit_panel::refresh(state);
+    viewer::edit_panel::sync_sensitivity(state);
 }
 
 /// Constrói um menu curto para as funções menos frequentes. A navegação e
@@ -2875,22 +3168,12 @@ fn build_header_menu_button(state: &Rc<RefCell<ViewerState>>) -> gtk::MenuButton
     }
     menu.append_section(None, &files);
     if has_images {
+        // Every edit lives in the side panel; the menu only opens it.
         let edit = gio::Menu::new();
+        edit.append(Some(&gettext("Editar imagem")), Some("win.edit-panel"));
         edit.append(Some(&gettext("Desfazer")), Some("win.undo"));
         edit.append(Some(&gettext("Refazer")), Some("win.redo"));
-        let transforms = gio::Menu::new();
-        transforms.append(Some(&gettext("Girar à direita")), Some("win.rotate-cw"));
-        transforms.append(Some(&gettext("Girar à esquerda")), Some("win.rotate-ccw"));
-        transforms.append(Some(&gettext("Girar 180°")), Some("win.rotate-180"));
-        transforms.append(Some(&gettext("Espelhar horizontal")), Some("win.flip-h"));
-        transforms.append(Some(&gettext("Espelhar vertical")), Some("win.flip-v"));
-        transforms.append(Some(&gettext("Recortar…")), Some("win.crop"));
-        edit.append_section(None, &transforms);
-        menu.append_submenu(Some(&gettext("Editar imagem")), &edit);
-        let tools = gio::Menu::new();
-        tools.append(Some(&gettext("Remover fundo (IA)…")), Some("win.remove-bg"));
-        tools.append(Some(&gettext("Aumentar resolução…")), Some("win.upscale"));
-        menu.append_submenu(Some(&gettext("Ferramentas")), &tools);
+        menu.append_section(None, &edit);
         let changes = gio::Menu::new();
         changes.append(Some(&gettext("Salvar alterações")), Some("win.save-edits"));
         changes.append(Some(&gettext("Mover para a lixeira")), Some("win.trash"));
@@ -3160,24 +3443,16 @@ fn install_viewer_actions(
     }
     window.add_action(&info);
 
-    // win.crop — abre o diálogo de recorte na imagem atual via subprocesso.
-    // Um processo separado porque `run_crop_dialog` monta sua própria
-    // `adw::Application`, e rodar duas no mesmo processo é conflito certo.
+    // win.crop — recorte direto na imagem principal: seleção sobre a foto,
+    // e o corte vira uma edição como girar/espelhar (Ctrl+Z, Ctrl+S).
     let crop = gio::SimpleAction::new("crop", None);
     crop.set_enabled(has_files);
     {
         let state = Rc::downgrade(state);
         crop.connect_activate(move |_, _| {
-            let Some(state) = state.upgrade() else {
-                return;
-            };
-            let Some(path) = path_for_external_tool(&state) else { return };
-            // `--` keeps a file named like `-x.png` from being read as a flag.
-            let _ = transfers::spawn_bigiris([
-                std::ffi::OsStr::new("--dialog=crop"),
-                std::ffi::OsStr::new("--"),
-                path.as_os_str(),
-            ]);
+            if let Some(state) = state.upgrade() {
+                viewer::crop::enter(&state);
+            }
         });
     }
     window.add_action(&crop);
@@ -3647,6 +3922,8 @@ fn present_shortcuts_dialog(parent: &adw::ApplicationWindow) {
                 ("<ctrl>B", gettext("Remover fundo (IA)…")),
                 ("<ctrl>U", gettext("Aumentar resolução…")),
                 ("<ctrl>S", gettext("Salvar alterações")),
+                ("E", gettext("Painel de edição")),
+                ("backslash", gettext("Ver original (segure)")),
             ],
         ),
         (
@@ -3884,14 +4161,22 @@ fn refresh_title(state: &Rc<RefCell<ViewerState>>) {
     drop(s);
     refresh_osd(state);
     refresh_film_strip_active(state);
+    viewer::edit_panel::refresh(state);
 }
 
 type Histogram = [u32; 768];
 type RawFrame = (Vec<u8>, u32, u32, Histogram);
 
 fn decode_frame(path: &Path, ops: &[EditOp]) -> Result<RawFrame, Box<dyn std::error::Error>> {
-    let img = bigimage_core::open_image(path)?;
-    let edited = ops.iter().fold(img, |acc, op| apply_op_to_image(acc, *op));
+    decode_frame_cached(path, ops, None)
+}
+
+fn decode_frame_cached(
+    path: &Path,
+    ops: &[EditOp],
+    cache: Option<&Mutex<viewer::edits::EditCache>>,
+) -> Result<RawFrame, Box<dyn std::error::Error>> {
+    let edited = render_cached(path, ops, cache)?;
     // Float (EXR/HDR) pixels are linear: encode them to sRGB for display.
     let rgba = bigimage_core::into_srgb_rgba8(edited);
     let (w, h) = rgba.dimensions();
@@ -4014,6 +4299,35 @@ mod anchor_tests {
     }
 
     #[test]
+    fn heavy_edits_are_computed_once_per_prefix() {
+        use super::{heavy_runs, render_cached, EditOp};
+        let dir = tempfile::TempDir::new().unwrap();
+        let path = dir.path().join("small.png");
+        image::RgbImage::from_pixel(8, 6, image::Rgb([10, 200, 30])).save(&path).unwrap();
+        let cache = std::sync::Mutex::new(crate::gui::viewer::edits::EditCache::default());
+        let runs = heavy_runs();
+        let up = EditOp::Upscale { factor: 2 };
+        let img = render_cached(&path, &[up], Some(&cache)).unwrap();
+        assert_eq!((img.width(), img.height()), (16, 12));
+        assert_eq!(heavy_runs(), runs + 1);
+        // Later edits, an undo back to the heavy step and a slider gesture
+        // all start from the cached result.
+        for ops in [
+            vec![up, EditOp::RotateCw],
+            vec![up],
+            vec![up, EditOp::Straighten { tenths: 30 }, EditOp::Straighten { tenths: 10 }],
+        ] {
+            render_cached(&path, &ops, Some(&cache)).unwrap();
+        }
+        assert_eq!(heavy_runs(), runs + 1, "upscale ran again");
+        let turned = render_cached(&path, &[up, EditOp::RotateCw], Some(&cache)).unwrap();
+        assert_eq!((turned.width(), turned.height()), (12, 16));
+        // Without a cache (saving) it is recomputed.
+        render_cached(&path, &[up], None).unwrap();
+        assert_eq!(heavy_runs(), runs + 2);
+    }
+
+    #[test]
     fn edited_save_is_atomic_and_preserves_permissions() {
         use super::{write_edits_to_disk, EditOp};
         use image::{Rgb, RgbImage};
@@ -4043,8 +4357,11 @@ mod anchor_tests {
         use bigimage_core::{EncodeOptions, Format};
         assert_eq!(resave_options(Format::Jpeg, Some(92)).quality, Some(92));
         assert_eq!(resave_options(Format::Jpeg, None).quality, EncodeOptions::default().quality);
-        // Only JPEG is lossy-by-quality here; others keep their defaults.
+        // Only JPEG keeps a source quality; WebP stays lossless and the
+        // rest aim for the highest visual target.
         assert_eq!(resave_options(Format::Png, Some(92)).quality, EncodeOptions::default().quality);
+        assert_eq!(resave_options(Format::Png, None).target, bigimage_core::QualityTarget::Maximum);
+        assert_eq!(resave_options(Format::WebP, Some(92)).quality, Some(100));
     }
 
     #[test]
@@ -4397,7 +4714,7 @@ mod lifecycle_tests {
     }
 
     // Capture only our synthetic windows, never the user's desktop.
-    fn capture_window(window: &impl IsA<gtk::Widget>, name: &str) {
+    pub(in crate::gui) fn capture_window(window: &impl IsA<gtk::Widget>, name: &str) {
         let window = window.as_ref();
         let Some(directory) = std::env::var_os("BIGIRIS_TEST_SCREENSHOTS_DIR") else { return };
         let directory = PathBuf::from(directory);

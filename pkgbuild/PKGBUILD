@@ -18,6 +18,8 @@ depends=(
 optdepends=(
   'nautilus-python: Nautilus context menu integration'
 )
+# base-devel's C compiler also builds the vendored mozjpeg, libwebp and
+# libdeflate sources (no nasm or cmake needed).
 makedepends=('rust' 'cargo' 'git' 'pkgconf' 'gettext' 'python')
 # Disable LTO. Arch's default makepkg env appends `-flto=auto` to CFLAGS
 # and `-C linker-plugin-lto` to RUSTFLAGS, which makes cc-rs emit pure

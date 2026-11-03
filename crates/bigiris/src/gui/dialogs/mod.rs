@@ -76,23 +76,90 @@ pub(in crate::gui) const CONVERT_FORMATS: &[(&str, Format)] = &[
     (n_("OpenEXR"), Format::OpenExr),
 ];
 
-/// Enable only the controls honored by the selected encoder.
-fn bind_encode_controls(
-    window: &adw::ApplicationWindow,
-    format_row: &adw::ComboRow,
-    quality: &adw::SpinRow,
-    optimize: &adw::SwitchRow,
-) {
-    let selected = format_row.clone();
-    let quality = quality.clone();
-    let optimize = optimize.clone();
-    let update = move || {
-        let format = selected_format(&selected);
-        quality.set_sensitive(matches!(format, Format::Jpeg | Format::Avif));
-        optimize.set_sensitive(matches!(format, Format::Png | Format::Avif));
-    };
-    update();
-    dialog_signal!(window, format_row, connect_selected_notify, move |_| update());
+/// "Qualidade" choices: the visual target each encoder searches for.
+const TARGET_CHOICES: &[(&str, bigimage_core::QualityTarget)] = &[
+    (n_("Máxima qualidade"), bigimage_core::QualityTarget::Maximum),
+    (n_("Equilibrado"), bigimage_core::QualityTarget::Balanced),
+    (n_("Menor arquivo"), bigimage_core::QualityTarget::Smallest),
+];
+
+/// Encoder controls shared by the convert and batch dialogs: the
+/// "Qualidade" target up front, the fixed-quality override and the slower
+/// lossless optimisation under "Avançado".
+pub(in crate::gui) struct EncodeControls {
+    pub(in crate::gui) target: adw::ComboRow,
+    pub(in crate::gui) fixed: adw::SwitchRow,
+    pub(in crate::gui) quality: adw::SpinRow,
+    pub(in crate::gui) optimize: adw::SwitchRow,
+    pub(in crate::gui) advanced: adw::ExpanderRow,
+}
+
+impl EncodeControls {
+    pub(in crate::gui) fn new() -> Self {
+        let names: Vec<&str> = TARGET_CHOICES.iter().map(|(n, _)| *n).collect();
+        let target = adw::ComboRow::builder()
+            .use_markup(false)
+            .title(gettext("Qualidade"))
+            .subtitle(gettext("O menor arquivo que mantém essa qualidade visual"))
+            .model(&translated_strings(&names))
+            .selected(1)
+            .build();
+        let fixed = adw::SwitchRow::builder()
+            .use_markup(false)
+            .title(gettext("Qualidade fixa"))
+            .subtitle(gettext("Usa o valor abaixo sem busca automática (JPEG, WebP e AVIF)"))
+            .active(false)
+            .build();
+        let quality = adw::SpinRow::with_range(1.0, 100.0, 1.0);
+        quality.set_title(&gettext("Qualidade (JPEG/WebP/AVIF)"));
+        quality.set_subtitle(&gettext("1 menor qualidade · 85 equilíbrio · 100 maior qualidade"));
+        quality.set_value(85.0);
+        let optimize = adw::SwitchRow::builder()
+            .use_markup(false)
+            .title(gettext("Otimizar tamanho"))
+            .subtitle(gettext("PNG com compressão máxima; AVIF mais lento; arquivo menor"))
+            .active(false)
+            .build();
+        let advanced = adw::ExpanderRow::builder()
+            .title(gettext("Avançado"))
+            .subtitle(gettext("Otimização do encoder"))
+            .build();
+        advanced.add_row(&fixed);
+        advanced.add_row(&quality);
+        advanced.add_row(&optimize);
+        Self { target, fixed, quality, optimize, advanced }
+    }
+
+    /// Options for the current choices.
+    pub(in crate::gui) fn options(&self) -> EncodeOptions {
+        EncodeOptions {
+            quality: self.fixed.is_active().then(|| self.quality.value() as u8),
+            target: TARGET_CHOICES[self.target.selected() as usize].1,
+            optimize: self.optimize.is_active(),
+            ..EncodeOptions::default()
+        }
+    }
+
+    /// Enable only the controls the selected encoder honours.
+    pub(in crate::gui) fn bind(&self, window: &adw::ApplicationWindow, format_row: &adw::ComboRow) {
+        let selected = format_row.clone();
+        let (target, fixed, quality, optimize) =
+            (self.target.clone(), self.fixed.clone(), self.quality.clone(), self.optimize.clone());
+        let update = Rc::new(move || {
+            let format = selected_format(&selected);
+            let lossy = matches!(format, Format::Jpeg | Format::WebP | Format::Avif);
+            let searched = lossy || matches!(format, Format::Png | Format::Gif);
+            let fixed_on = lossy && fixed.is_active();
+            target.set_sensitive(searched && !fixed_on);
+            fixed.set_sensitive(lossy);
+            quality.set_sensitive(fixed_on);
+            optimize.set_sensitive(matches!(format, Format::Png | Format::Avif));
+        });
+        update();
+        let on_format = update.clone();
+        dialog_signal!(window, format_row, connect_selected_notify, move |_| on_format());
+        dialog_signal!(window, self.fixed, connect_active_notify, move |_| update());
+    }
 }
 
 /// Overwrite choices shared by convert and resize dialogs.
@@ -288,5 +355,20 @@ mod fill_tests {
         let three = vec![one[0].clone(), PathBuf::from("b.png"), PathBuf::from("c.png")];
         assert_eq!(files_subtitle(&three), "{count}.png e mais 2");
         assert_eq!(files_subtitle(&three[..2]), "{count}.png e mais 1");
+    }
+}
+
+#[cfg(test)]
+mod encode_control_tests {
+    use super::TARGET_CHOICES;
+    use bigimage_core::QualityTarget;
+
+    /// The combo is built with `selected(1)`: that row must be the
+    /// library default, so dialogs and the file-manager menu agree.
+    #[test]
+    fn default_quality_row_is_the_library_default() {
+        assert_eq!(TARGET_CHOICES[1].1, QualityTarget::default());
+        assert_eq!(TARGET_CHOICES[0].1, QualityTarget::Maximum);
+        assert_eq!(TARGET_CHOICES[2].1, QualityTarget::Smallest);
     }
 }

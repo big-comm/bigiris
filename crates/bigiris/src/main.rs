@@ -33,7 +33,8 @@ const EXIT_CODES: &str = "Códigos de saída:\n  \
 
 use bigimage_core::{
     AdjustOps, AnimateOptions, ConvertOutcome, CropRect, EncodeOptions, ExtentOptions, ExtentSize,
-    Filter, FlipAxis, Format, Gravity, LoopMode, OverwritePolicy, ResizeMode, Rotation,
+    Filter, FlipAxis, Format, Gravity, LoopMode, OverwritePolicy, QualityTarget, ResizeMode,
+    Rotation,
 };
 use clap::{Args, Parser, Subcommand, ValueEnum};
 
@@ -321,13 +322,19 @@ enum Command {
         /// ico, pnm/ppm/pgm/pbm, tga, qoi, hdr, exr
         #[arg(long)]
         to: String,
-        /// Qualidade 1..100 (afeta JPEG/lossy). Omitido usa o default do encoder.
+        /// Qualidade visual buscada: maxima, equilibrado ou menor (também
+        /// max, balanced, small). Cada formato procura o menor arquivo que
+        /// mantém essa qualidade (SSIMULACRA2 85 / 80 / 70).
+        #[arg(long, value_name = "MODO", default_value = "equilibrado", value_parser = parse_target)]
+        target: QualityTarget,
+        /// Qualidade fixa 1..100 para JPEG/WebP/AVIF, sem busca (ignora
+        /// --target). Em WebP, 100 grava sem perdas.
         #[arg(long, value_parser = clap::value_parser!(u8).range(1..=100))]
         quality: Option<u8>,
-        /// JPEG progressivo (aceito para compatibilidade futura).
+        /// Aceito por compatibilidade: o JPEG já é sempre progressivo.
         #[arg(long)]
         progressive: bool,
-        /// Otimizar tamanho: PNG usa melhor compressao, strip de metadata extra.
+        /// Compressão mais lenta e menor, sem perdas a mais: PNG e AVIF.
         #[arg(long)]
         optimize: bool,
         /// Política quando o arquivo de saída já existe
@@ -348,13 +355,17 @@ enum Command {
         /// Formato de destino (opcional; mantém o formato original se omitido).
         #[arg(long)]
         to: Option<String>,
-        /// Qualidade 1..100 (afeta JPEG/lossy).
+        /// Qualidade visual buscada: maxima, equilibrado ou menor (também
+        /// max, balanced, small).
+        #[arg(long, value_name = "MODO", default_value = "equilibrado", value_parser = parse_target)]
+        target: QualityTarget,
+        /// Qualidade fixa 1..100 para JPEG/WebP/AVIF, sem busca (ignora --target).
         #[arg(long, value_parser = clap::value_parser!(u8).range(1..=100))]
         quality: Option<u8>,
-        /// JPEG progressivo (aceito para compatibilidade futura).
+        /// Aceito por compatibilidade: o JPEG já é sempre progressivo.
         #[arg(long)]
         progressive: bool,
-        /// Otimizar tamanho do PNG de saída.
+        /// Compressão mais lenta e menor, sem perdas a mais: PNG e AVIF.
         #[arg(long)]
         optimize: bool,
         /// Política quando o arquivo de saída já existe.
@@ -567,21 +578,34 @@ fn main() -> color_eyre::Result<()> {
     }
 
     match cli.command {
-        Some(Command::Convert { to, quality, progressive, optimize, overwrite, files }) => {
-            let opts = EncodeOptions { quality, progressive, optimize, ..EncodeOptions::default() };
+        Some(Command::Convert { to, target, quality, progressive, optimize, overwrite, files }) => {
+            let opts = EncodeOptions {
+                quality,
+                progressive,
+                optimize,
+                target,
+                ..EncodeOptions::default()
+            };
             run_convert(&to, opts, overwrite.into(), &files)
         }
         Some(Command::Resize {
             mode,
             filter,
             to,
+            target,
             quality,
             progressive,
             optimize,
             overwrite,
             files,
         }) => {
-            let opts = EncodeOptions { quality, progressive, optimize, ..EncodeOptions::default() };
+            let opts = EncodeOptions {
+                quality,
+                progressive,
+                optimize,
+                target,
+                ..EncodeOptions::default()
+            };
             run_resize(
                 mode.into_mode(),
                 filter.into(),
@@ -682,6 +706,13 @@ fn self_test() -> color_eyre::Result<()> {
     Ok(())
 }
 
+/// `--target`/profile `target`: Portuguese values plus English aliases.
+fn parse_target(value: &str) -> Result<QualityTarget, String> {
+    QualityTarget::parse(value).ok_or_else(|| {
+        format!("alvo de qualidade inválido: {value:?}; use maxima, equilibrado ou menor")
+    })
+}
+
 fn run_convert(
     to: &str,
     opts: EncodeOptions,
@@ -692,7 +723,11 @@ fn run_convert(
         .map_err(|e| color_eyre::eyre::eyre!("formato de destino inválido: {e}"))?;
     tracing::info!(?target, ?opts, ?policy, count = files.len(), "convert");
     run_per_file(files, "convert", Naming::image(Some(target), policy), |f| {
-        bigimage_core::convert_file(f, target, &opts, policy)
+        let report = bigimage_core::convert_file_report(f, None, target, &opts, policy)?;
+        if report.kept_original {
+            println!("info {}: o original já era menor; copiado sem recompressão", f.display());
+        }
+        Ok(report.outcome)
     })
 }
 
@@ -1089,6 +1124,8 @@ struct BatchProfile {
     /// Target extension/name accepted by `Format::parse`.
     format: String,
     quality: Option<u8>,
+    /// maxima | equilibrado | menor (or max | balanced | small).
+    target: Option<String>,
     #[serde(default)]
     progressive: bool,
     #[serde(default)]
@@ -1115,6 +1152,10 @@ fn run_batch(profile: &std::path::Path, inputs: &[PathBuf]) -> color_eyre::Resul
     }
     let format = Format::parse(&profile.format)
         .map_err(|e| color_eyre::eyre::eyre!("formato do perfil inválido: {e}"))?;
+    let target = match profile.target.as_deref() {
+        None => QualityTarget::default(),
+        Some(value) => parse_target(value).map_err(|e| color_eyre::eyre::eyre!("{e}"))?,
+    };
     let policy = match profile.overwrite.trim().to_ascii_lowercase().as_str() {
         "skip" => OverwritePolicy::Skip,
         "replace" => OverwritePolicy::Replace,
@@ -1167,6 +1208,7 @@ fn run_batch(profile: &std::path::Path, inputs: &[PathBuf]) -> color_eyre::Resul
         quality: profile.quality,
         progressive: profile.progressive,
         optimize: profile.optimize,
+        target,
         ..EncodeOptions::default()
     };
     let flat: Vec<PathBuf> = groups.iter().flatten().cloned().collect();

@@ -293,18 +293,33 @@ fn rescale(state: &Rc<RefCell<ViewerState>>, scale: f64, cursor: Option<(f64, f6
 
 pub(super) fn apply_zoom(state: &ViewerState) {
     let picture = &state.picture;
-    let Some(texture) = state.texture.as_ref() else { return };
+    // The editing panel may paint a slider preview or the original instead.
+    let Some((texture, natural)) = super::viewer::edit_panel::display_override(state)
+        .or_else(|| state.texture.clone().map(|texture| (texture, state.natural)))
+    else {
+        return;
+    };
+    let texture = &texture;
     match state.zoom {
         ZoomState::Fit => {
             picture.set_hexpand(true);
             picture.set_vexpand(true);
             picture.set_content_fit(gtk::ContentFit::ScaleDown);
             picture.set_size_request(-1, -1);
-            picture.set_paintable(Some(texture));
+            if (texture.width() as u32, texture.height() as u32) == natural {
+                picture.set_paintable(Some(texture));
+            } else {
+                // A downscaled preview still stands for the full image.
+                let (w, h) = (natural.0 as f32, natural.1 as f32);
+                let snapshot = gtk::Snapshot::new();
+                snapshot.append_texture(texture, &graphene::Rect::new(0.0, 0.0, w, h));
+                let paintable = snapshot.to_paintable(Some(&graphene::Size::new(w, h)));
+                picture.set_paintable(paintable.as_ref());
+            }
         }
         ZoomState::Scale(scale) => {
-            let width = scaled_side(f64::from(state.natural.0), scale) as i32;
-            let height = scaled_side(f64::from(state.natural.1), scale) as i32;
+            let width = scaled_side(f64::from(natural.0), scale) as i32;
+            let height = scaled_side(f64::from(natural.1), scale) as i32;
             // This paintable references the same texture; no pixel resize or
             // additional image allocation happens on GTK's thread.
             let snapshot = gtk::Snapshot::new();

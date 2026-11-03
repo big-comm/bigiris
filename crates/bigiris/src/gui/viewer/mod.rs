@@ -10,8 +10,13 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::task::{Context, Poll, Waker};
 
+pub(in crate::gui) mod crop;
+pub(in crate::gui) mod edit_panel;
+pub(in crate::gui) mod edits;
 #[cfg(test)]
 mod gui_tests;
+#[cfg(test)]
+mod panel_tests;
 
 /// Thumbnails built at once in the film strip, independently of folder size.
 pub(super) const FILM_STRIP_PAGE: usize = 41;

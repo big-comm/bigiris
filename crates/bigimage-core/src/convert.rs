@@ -76,6 +76,35 @@ pub fn convert_file_to(
     opts: &crate::EncodeOptions,
     policy: OverwritePolicy,
 ) -> Result<ConvertOutcome> {
+    convert_file_report(input, output_dir, target, opts, policy).map(|report| report.outcome)
+}
+
+/// Result of [`convert_file_report`].
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[non_exhaustive]
+pub struct ConvertReport {
+    /// What happened to the output file.
+    pub outcome: ConvertOutcome,
+    /// The source was already in the target format and smaller than the
+    /// re-encode, so its bytes were written unchanged ("never larger").
+    pub kept_original: bool,
+}
+
+/// [`convert_file_to`], also reporting whether the original bytes were kept.
+///
+/// Never larger: when the target format is the source's own format and the
+/// re-encoded file would be larger than the input, the input bytes are
+/// published instead — unless `opts.strip_metadata` is set and the input
+/// carries EXIF/XMP/IPTC/text metadata the re-encode would have removed
+/// (privacy wins over size). Across formats the sizes are not comparable
+/// and the encode is always written.
+pub fn convert_file_report(
+    input: impl AsRef<Path>,
+    output_dir: Option<&Path>,
+    target: Format,
+    opts: &crate::EncodeOptions,
+    policy: OverwritePolicy,
+) -> Result<ConvertReport> {
     let input = input.as_ref();
     let output = pipeline::resolve_output_to(input, output_dir, None, target, policy)?;
 
@@ -83,13 +112,24 @@ pub fn convert_file_to(
         if let Some(skipped) =
             pipeline::skip_existing(input, output.clone(), target, pipeline::any_size)?
         {
-            return Ok(skipped);
+            return Ok(ConvertReport { outcome: skipped, kept_original: false });
         }
     }
 
     tracing::debug!(?input, ?output, ?target, ?opts, "convert: decoding");
-    let (img, _src_format) = pipeline::decode_with_source_format(input)?;
-    pipeline::encode_output(img, output, target, opts, policy)
+    let (img, src_format) = pipeline::decode_with_source_format(input)?;
+    let output = pipeline::content_output(output, target, &img);
+    let original = (src_format == target).then_some(input);
+    let (outcome, kept_original) = pipeline::encode_keeping_smaller(
+        img,
+        output,
+        target,
+        opts,
+        policy,
+        &pipeline::Extras::default(),
+        original,
+    )?;
+    Ok(ConvertReport { outcome, kept_original })
 }
 
 /// Coerce a `DynamicImage` into a colour/bit-depth that the target encoder is

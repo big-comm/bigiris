@@ -415,7 +415,7 @@ pub const ACTIONS: &[Action] = &[
         id: "web-optimize-png",
         submenu: Some(SUB_WEB),
         label: n_("Otimizar PNG (compressão máxima)"),
-        command: "bigiris convert --to png --optimize --overwrite replace %F",
+        command: "bigiris convert --to png --target maxima --optimize --overwrite replace %F",
         icon: "applications-internet-symbolic",
         mime_types: IMAGE_MIME,
     },

@@ -9,6 +9,8 @@ Source0:        %{url}/archive/refs/tags/v%{version}.tar.gz
 # crates vendored makes ABF builds reproducible and independent of crates.io.
 Source1:        %{name}-%{version}-vendor.tar.xz
 
+# The vendored crates also carry C sources (mozjpeg, libwebp, libdeflate)
+# built with the default C compiler through the `cc` crate; no nasm/cmake.
 BuildRequires:  cargo >= 1.92
 BuildRequires:  rust >= 1.92
 BuildRequires:  gettext

@@ -1087,8 +1087,14 @@ fn build_window_preloaded(
 
     header.pack_end(&build_header_menu_button(&state));
 
+    // Icon and label: a lone pencil was easy to miss next to the menu.
     let edit_btn = gtk::ToggleButton::builder()
-        .icon_name("document-edit-symbolic")
+        .child(
+            &adw::ButtonContent::builder()
+                .icon_name("document-edit-symbolic")
+                .label(gettext("Editar"))
+                .build(),
+        )
         .tooltip_text(gettext("Editar (E)"))
         .action_name("win.edit-panel")
         .visible(has_files)
@@ -3162,22 +3168,12 @@ fn build_header_menu_button(state: &Rc<RefCell<ViewerState>>) -> gtk::MenuButton
     }
     menu.append_section(None, &files);
     if has_images {
+        // Every edit lives in the side panel; the menu only opens it.
         let edit = gio::Menu::new();
+        edit.append(Some(&gettext("Editar imagem")), Some("win.edit-panel"));
         edit.append(Some(&gettext("Desfazer")), Some("win.undo"));
         edit.append(Some(&gettext("Refazer")), Some("win.redo"));
-        let transforms = gio::Menu::new();
-        transforms.append(Some(&gettext("Girar à direita")), Some("win.rotate-cw"));
-        transforms.append(Some(&gettext("Girar à esquerda")), Some("win.rotate-ccw"));
-        transforms.append(Some(&gettext("Girar 180°")), Some("win.rotate-180"));
-        transforms.append(Some(&gettext("Espelhar horizontal")), Some("win.flip-h"));
-        transforms.append(Some(&gettext("Espelhar vertical")), Some("win.flip-v"));
-        transforms.append(Some(&gettext("Recortar…")), Some("win.crop"));
-        edit.append_section(None, &transforms);
-        menu.append_submenu(Some(&gettext("Editar imagem")), &edit);
-        let tools = gio::Menu::new();
-        tools.append(Some(&gettext("Remover fundo (IA)…")), Some("win.remove-bg"));
-        tools.append(Some(&gettext("Aumentar resolução…")), Some("win.upscale"));
-        menu.append_submenu(Some(&gettext("Ferramentas")), &tools);
+        menu.append_section(None, &edit);
         let changes = gio::Menu::new();
         changes.append(Some(&gettext("Salvar alterações")), Some("win.save-edits"));
         changes.append(Some(&gettext("Mover para a lixeira")), Some("win.trash"));

@@ -18,6 +18,23 @@ tempfile = "3"
 moxcms = { version = "0.8", features = ["in_place"] }
 rustix = { version = "1", features = ["fs"] }
 serde = { workspace = true, optional = true }
+# Perceptual quality search ("smallest file at a guaranteed visual quality").
+fast-ssim2 = { version = "0.9", features = ["rayon"] }
+# Lossy encoders beyond what `image` ships: mozjpeg (progressive, trellis,
+# optimized Huffman) and libwebp (lossy/near-lossless WebP). Both C
+# libraries are vendored and built statically by `cc`; no nasm required.
+mozjpeg = { version = "0.10", default-features = false }
+webp = { version = "0.3", default-features = false }
+ravif = { version = "0.13", default-features = false, features = ["threading"] }
+rgb = { version = "0.8", default-features = false, features = ["bytemuck"] }
+imgref = "1"
+# Lossless PNG optimisation and palette quantization (PNG/GIF/ICO).
+oxipng = { version = "10", default-features = false, features = ["parallel"] }
+imagequant = { version = "4", default-features = false, features = ["threads"] }
+# Direct encoders for container options `image` does not expose.
+tiff = { version = "0.11", default-features = false, features = ["deflate"] }
+exr = "1.74"
+gif = "0.14"
 
 [features]
 default = []

@@ -193,7 +193,8 @@ _SUBMENUS = [
                 "--quality", "80", "--progressive",
             ], _ICON_WEB),
             (n_("Otimizar PNG (compressão máxima)"), [
-                "convert", "--to", "png", "--optimize", "--overwrite", "replace",
+                "convert", "--to", "png", "--target", "maxima", "--optimize",
+                "--overwrite", "replace",
             ], _ICON_CONVERT),
             (n_("Letterbox YouTube post (1:1)"), [
                 "extent", "--aspect", "1:1", "--bg", "#0d0e12",

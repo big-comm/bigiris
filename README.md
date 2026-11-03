@@ -40,11 +40,14 @@ seleção de arquivos locais ou cole arquivos copiados no gerenciador com
   escolha uma proporção e confirme com `Enter`. `Ctrl+S` confirma e grava por
   substituição atômica, preservando o original se o encoder falhar.
 - Painel de edição lateral e translúcido (botão **Editar** ou `E`): girar,
-  espelhar e recortar, brilho, contraste, saturação e gama com prévia ao vivo,
-  redimensionar com proporção travada ou em porcentagem, **Salvar** e
-  **Salvar como…** (grava uma cópia editada, sem tocar no original). Cada ajuste
-  vira um passo de desfazer; **Ver original** (ou segurar `\`) mostra a imagem
-  sem as edições.
+  espelhar, endireitar (−45° a +45°, com grade e recorte automático das bordas
+  vazias) e recortar; brilho, contraste, saturação e gama com prévia ao vivo;
+  redimensionar com proporção travada ou em porcentagem; remover fundo (IA) e
+  aumentar resolução direto na imagem, com progresso e botão de cancelar;
+  **Salvar** e **Salvar como…** (grava uma cópia editada, sem tocar no
+  original). Cada gesto vira um passo de desfazer, e o resultado das
+  ferramentas pesadas fica guardado para que as edições seguintes não as
+  repitam. **Ver original** (ou segurar `\`) mostra a imagem sem as edições.
 - Processamento em lote paralelo, cancelável, com progresso, tempo e tamanho
   antes/depois.
 - Integração com Dolphin, Nautilus, Nemo, Thunar, PCManFM-Qt e elementary Files.

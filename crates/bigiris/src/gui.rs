@@ -471,6 +471,18 @@ enum EditOp {
         w: u32,
         h: u32,
     },
+    /// Turn by `tenths` of a degree (clockwise) and crop to the largest
+    /// rectangle inside, so no empty corner is left. Consecutive
+    /// `Straighten` operations are worth only their last one.
+    Straighten {
+        tenths: i32,
+    },
+    /// Cut the subject out with the local BiRefNet model (alpha channel).
+    RemoveBackground,
+    /// Enlarge by an integer factor with Lanczos3.
+    Upscale {
+        factor: u8,
+    },
 }
 
 #[derive(Debug)]
@@ -523,6 +535,9 @@ fn file_modified(path: &Path) -> Option<std::time::SystemTime> {
 /// key, only the latest queued request survives; a decode already in flight
 /// may finish, but its generation is ignored by the UI.
 struct ViewerLoader {
+    /// Images after the slow prefixes of the current edits, shared with
+    /// the editing panel's tools.
+    cache: Arc<Mutex<viewer::edits::EditCache>>,
     pending: Arc<(Mutex<Option<LoadRequest>>, Condvar)>,
     results: Arc<Mutex<Option<DecodedFrame>>>,
     stopped: Arc<AtomicBool>,
@@ -540,6 +555,8 @@ impl ViewerLoader {
         let worker_stopped = stopped.clone();
         let wake = viewer::Wake::default();
         let worker_wake = wake.clone();
+        let cache = Arc::new(Mutex::new(viewer::edits::EditCache::default()));
+        let worker_cache = cache.clone();
         std::thread::Builder::new()
             .name("bigiris-viewer-decode".to_string())
             .spawn(move || loop {
@@ -563,7 +580,7 @@ impl ViewerLoader {
                     Err("image too large to prefetch".to_string())
                 } else {
                     crate::codec::with_cancel(worker_stopped.clone(), || {
-                        decode_frame(&request.path, &request.ops)
+                        decode_frame_cached(&request.path, &request.ops, Some(&worker_cache))
                     })
                     .map_err(|e| e.to_string())
                 };
@@ -581,7 +598,12 @@ impl ViewerLoader {
                 worker_wake.notify();
             })
             .expect("could not start viewer decoder");
-        Self { pending, results, stopped, wake }
+        Self { cache, pending, results, stopped, wake }
+    }
+
+    /// Forget cached edit results (navigation, save).
+    fn clear_cache(&self) {
+        self.cache.lock().unwrap_or_else(|poisoned| poisoned.into_inner()).clear();
     }
 
     fn request(&self, request: LoadRequest) {
@@ -844,6 +866,7 @@ fn build_window_preloaded(
     overlay.add_overlay(&strip_revealer);
     overlay.add_overlay(&histogram_area);
     let edit_ui = viewer::edit_panel::build();
+    overlay.add_overlay(&edit_ui.grid);
     overlay.add_overlay(&edit_ui.revealer);
     overlay.add_overlay(&loading_spinner);
     // Crop bar on top of everything; its selection layer sits right above
@@ -2260,7 +2283,7 @@ fn apply_edit(state: &Rc<RefCell<ViewerState>>, op: EditOp) {
     viewer::edit_panel::flush_commit(state);
     let path = {
         let s = state.borrow();
-        if s.files.is_empty() || s.saving {
+        if s.files.is_empty() || s.saving || s.edit.busy() {
             return;
         }
         s.files[s.idx].clone()
@@ -2317,13 +2340,98 @@ fn apply_op_to_image(img: image::DynamicImage, op: EditOp) -> image::DynamicImag
                 }
             }
         }
+        EditOp::Straighten { tenths } => {
+            bigimage_core::rotate::straighten(&img, f64::from(tenths) / 10.0)
+        }
+        // Fallible and slow: see `apply_op`.
+        EditOp::RemoveBackground | EditOp::Upscale { .. } => img,
+    }
+}
+
+/// Heavy operations actually computed, for tests of the edit cache.
+#[cfg(test)]
+static HEAVY_RUNS: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+
+#[cfg(test)]
+fn heavy_runs() -> usize {
+    HEAVY_RUNS.load(Ordering::SeqCst)
+}
+
+/// Run a slow operation (background removal, upscale), reporting model
+/// download progress through `progress`.
+fn apply_heavy(
+    img: image::DynamicImage,
+    op: EditOp,
+    progress: &mut dyn FnMut(bigimage_ai::background::BgStage),
+) -> Result<image::DynamicImage, String> {
+    #[cfg(test)]
+    HEAVY_RUNS.fetch_add(1, Ordering::SeqCst);
+    match op {
+        EditOp::RemoveBackground => {
+            let mut session = bigimage_ai::background::BgSession::new(progress).map_err(|e| {
+                fill(&gettext("Falha ao carregar o modelo: {error}"), &[("error", &e.to_string())])
+            })?;
+            session.process(&img).map_err(|e| e.to_string())
+        }
+        EditOp::Upscale { factor } => bigimage_core::resize::apply_to(
+            &img,
+            ResizeMode::Percent(f32::from(factor.clamp(2, 4)) * 100.0),
+            Filter::Lanczos3,
+        )
+        .map_err(|e| e.to_string()),
+        other => Ok(apply_op_to_image(img, other)),
+    }
+}
+
+fn apply_op(img: image::DynamicImage, op: EditOp) -> Result<image::DynamicImage, String> {
+    if viewer::edits::is_heavy(&op) {
+        apply_heavy(img, op, &mut |_| {})
+    } else {
+        Ok(apply_op_to_image(img, op))
     }
 }
 
 /// Every pending edit applied to `img`, in order, with superseded slider
-/// adjustments skipped.
-fn render_edits(img: image::DynamicImage, ops: &[EditOp]) -> image::DynamicImage {
-    viewer::edits::effective_ops(ops).into_iter().fold(img, apply_op_to_image)
+/// gestures skipped.
+fn render_edits(img: image::DynamicImage, ops: &[EditOp]) -> Result<image::DynamicImage, String> {
+    viewer::edits::effective_ops(ops).into_iter().try_fold(img, apply_op)
+}
+
+/// `path` with `ops` applied, starting from the longest prefix already
+/// in `cache` and remembering the result of every heavy operation, so
+/// later edits, Undo and Redo do not run it again.
+fn render_cached(
+    path: &Path,
+    ops: &[EditOp],
+    cache: Option<&Mutex<viewer::edits::EditCache>>,
+) -> Result<image::DynamicImage, Box<dyn std::error::Error>> {
+    fn lock(
+        cache: &Mutex<viewer::edits::EditCache>,
+    ) -> std::sync::MutexGuard<'_, viewer::edits::EditCache> {
+        cache.lock().unwrap_or_else(|poisoned| poisoned.into_inner())
+    }
+    let effective = viewer::edits::effective_ops(ops);
+    // Plain viewing keeps no extra copy of the decoded file.
+    let cache = cache.filter(|_| !effective.is_empty());
+    let modified = file_modified(path);
+    let hit = cache.and_then(|cache| lock(cache).best(path, modified, &effective));
+    let (mut img, done) = match hit {
+        Some((len, img)) => ((*img).clone(), len),
+        None => {
+            let img = bigimage_core::open_image(path)?;
+            if let Some(cache) = cache {
+                lock(cache).insert(path, modified, Vec::new(), Arc::new(img.clone()));
+            }
+            (img, 0)
+        }
+    };
+    for (i, op) in effective.iter().enumerate().skip(done) {
+        img = apply_op(img, *op)?;
+        if let (Some(cache), true) = (cache, viewer::edits::is_heavy(op)) {
+            lock(cache).insert(path, modified, effective[..=i].to_vec(), Arc::new(img.clone()));
+        }
+    }
+    Ok(img)
 }
 
 /// Liga/desliga a action `win.save-edits` pra o item de menu e o acelerador
@@ -2336,7 +2444,8 @@ fn sync_edit_actions(state: &Rc<RefCell<ViewerState>>) {
         return;
     }
     let has_ops = !s.pending_ops.is_empty();
-    let idle = !s.saving;
+    // A panel tool (background removal, upscale) also holds the history.
+    let idle = !s.saving && !s.edit.busy();
     if let Some(action) = s.window().lookup_action("save-edits") {
         if let Some(simple) = action.downcast_ref::<gio::SimpleAction>() {
             simple.set_enabled(has_ops && idle);
@@ -2369,7 +2478,7 @@ fn undo_edit(state: &Rc<RefCell<ViewerState>>) {
     viewer::edit_panel::flush_commit(state);
     let path = {
         let mut s = state.borrow_mut();
-        if s.saving {
+        if s.saving || s.edit.busy() {
             return;
         }
         let Some(op) = s.pending_ops.pop() else { return };
@@ -2386,7 +2495,7 @@ fn redo_edit(state: &Rc<RefCell<ViewerState>>) {
     viewer::edit_panel::flush_commit(state);
     let path = {
         let mut s = state.borrow_mut();
-        if s.saving {
+        if s.saving || s.edit.busy() {
             return;
         }
         let Some(op) = s.redo_ops.pop() else { return };
@@ -2473,6 +2582,7 @@ fn save_edits(state: &Rc<RefCell<ViewerState>>) {
                 if result.is_ok() {
                     s.pending_ops.clear();
                     s.redo_ops.clear();
+                    s.loader.clear_cache();
                 }
             }
             refresh_title(&state);
@@ -2641,7 +2751,7 @@ fn write_edits_to_disk(
     })?;
     let (img, source, quality) =
         crate::codec::open_for_resave(&target).map_err(SaveFailure::from_image)?;
-    let edited = render_edits(img, ops);
+    let edited = render_edits(img, ops).map_err(SaveFailure::Other)?;
     let report = bigimage_core::save_image_preserving_metadata_report(
         edited,
         target,
@@ -2737,6 +2847,7 @@ fn update_display(state: &Rc<RefCell<ViewerState>>) {
     // guaranteed empty by the navigation guard, while a redo-only branch
     // (after undoing back to the original) must not leak into the next image.
     state.borrow_mut().redo_ops.clear();
+    state.borrow().loader.clear_cache();
     sync_edit_actions(state);
     if !show_cached_frame(state, &path) {
         let in_flight = state.borrow().prefetching.as_ref() == Some(&path);
@@ -4053,8 +4164,15 @@ type Histogram = [u32; 768];
 type RawFrame = (Vec<u8>, u32, u32, Histogram);
 
 fn decode_frame(path: &Path, ops: &[EditOp]) -> Result<RawFrame, Box<dyn std::error::Error>> {
-    let img = bigimage_core::open_image(path)?;
-    let edited = render_edits(img, ops);
+    decode_frame_cached(path, ops, None)
+}
+
+fn decode_frame_cached(
+    path: &Path,
+    ops: &[EditOp],
+    cache: Option<&Mutex<viewer::edits::EditCache>>,
+) -> Result<RawFrame, Box<dyn std::error::Error>> {
+    let edited = render_cached(path, ops, cache)?;
     // Float (EXR/HDR) pixels are linear: encode them to sRGB for display.
     let rgba = bigimage_core::into_srgb_rgba8(edited);
     let (w, h) = rgba.dimensions();
@@ -4174,6 +4292,35 @@ mod anchor_tests {
         // 1px alto → flip V é no-op visual
         assert_eq!(fv.dimensions(), (2, 1));
         assert_eq!(fv.get_pixel(0, 0).0, [255, 0, 0, 255]);
+    }
+
+    #[test]
+    fn heavy_edits_are_computed_once_per_prefix() {
+        use super::{heavy_runs, render_cached, EditOp};
+        let dir = tempfile::TempDir::new().unwrap();
+        let path = dir.path().join("small.png");
+        image::RgbImage::from_pixel(8, 6, image::Rgb([10, 200, 30])).save(&path).unwrap();
+        let cache = std::sync::Mutex::new(crate::gui::viewer::edits::EditCache::default());
+        let runs = heavy_runs();
+        let up = EditOp::Upscale { factor: 2 };
+        let img = render_cached(&path, &[up], Some(&cache)).unwrap();
+        assert_eq!((img.width(), img.height()), (16, 12));
+        assert_eq!(heavy_runs(), runs + 1);
+        // Later edits, an undo back to the heavy step and a slider gesture
+        // all start from the cached result.
+        for ops in [
+            vec![up, EditOp::RotateCw],
+            vec![up],
+            vec![up, EditOp::Straighten { tenths: 30 }, EditOp::Straighten { tenths: 10 }],
+        ] {
+            render_cached(&path, &ops, Some(&cache)).unwrap();
+        }
+        assert_eq!(heavy_runs(), runs + 1, "upscale ran again");
+        let turned = render_cached(&path, &[up, EditOp::RotateCw], Some(&cache)).unwrap();
+        assert_eq!((turned.width(), turned.height()), (12, 16));
+        // Without a cache (saving) it is recomputed.
+        render_cached(&path, &[up], None).unwrap();
+        assert_eq!(heavy_runs(), runs + 2);
     }
 
     #[test]

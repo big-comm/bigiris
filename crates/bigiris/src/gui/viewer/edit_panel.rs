@@ -2,15 +2,15 @@
 //! Editing side panel.
 //!
 //! The "Editar" header button (or `E`) slides a translucent panel in from
-//! the right with every edit in one place: rotate, flip and crop, tone
-//! sliders, resize and save. Everything it does is an in-memory
-//! [`EditOp`], so Undo/Redo, `Ctrl+S` and the `•` in the title keep
-//! working exactly as with the menu entries.
+//! the right with every edit in one place: rotate, flip, straighten and
+//! crop, tone sliders, resize, background removal and upscale, and save.
+//! Everything it does is an in-memory [`EditOp`], so Undo/Redo, `Ctrl+S`
+//! and the `•` in the title keep working exactly as with the menu entries.
 //!
 //! Sliders preview live on a downscaled working copy (at most
 //! [`PREVIEW_MAX_PIXELS`]) shown in the main picture; a finished gesture
-//! commits one `EditOp::Adjust` and the full-resolution result comes from
-//! the regular edit pipeline.
+//! commits one operation and the full-resolution result comes from the
+//! regular edit pipeline.
 //!
 //! Showing, hiding or revealing widgets emits crossing events
 //! synchronously and their handlers borrow the state: no function here
@@ -57,8 +57,8 @@ pub(in crate::gui) fn save_as_options(format: Format, quality: SaveQuality) -> E
     EncodeOptions::default()
 }
 
-/// One tone slider and its widgets.
-struct Slider {
+/// One slider with its value label and reset button.
+struct SliderRow {
     scale: gtk::Scale,
     value: gtk::Label,
     reset: gtk::Button,
@@ -67,15 +67,25 @@ struct Slider {
 /// Widgets of the panel, built hidden with the viewer.
 pub(in crate::gui) struct EditPanelUi {
     pub revealer: gtk::Revealer,
+    /// Alignment grid drawn over the picture while straightening.
+    pub grid: gtk::DrawingArea,
     content: gtk::Box,
     original: gtk::ToggleButton,
-    sliders: [Slider; 4],
+    straighten: SliderRow,
+    sliders: [SliderRow; 4],
     reset_all: gtk::Button,
     width: gtk::SpinButton,
     height: gtk::SpinButton,
     lock: gtk::ToggleButton,
     percent: gtk::SpinButton,
     resize_apply: gtk::Button,
+    remove_bg: gtk::Button,
+    upscale: gtk::Button,
+    factor: gtk::DropDown,
+    tool_box: gtk::Box,
+    tool_progress: gtk::ProgressBar,
+    tool_cancel: gtk::Button,
+    tool_status: gtk::Label,
     save_as: gtk::Button,
     quality: gtk::DropDown,
     /// Set while code (not the user) moves a control, so its handler
@@ -83,11 +93,19 @@ pub(in crate::gui) struct EditPanelUi {
     syncing: Rc<Cell<bool>>,
 }
 
-/// Image the sliders preview on.
+/// Image a slider previews on.
 struct PreviewBase {
     path: PathBuf,
     ops: Vec<EditOp>,
     image: Rc<image::RgbaImage>,
+    /// Full-resolution size the working copy stands for.
+    natural: (u32, u32),
+}
+
+/// A working copy and the full-resolution size it stands for.
+struct WorkingCopy {
+    image: Rc<image::RgbaImage>,
+    natural: (u32, u32),
 }
 
 /// Unedited pixels of the current file, for "Ver original".
@@ -97,6 +115,20 @@ struct Original {
     natural: (u32, u32),
 }
 
+/// A background removal or upscale running off the GTK thread.
+struct ToolJob {
+    cancel: Arc<AtomicBool>,
+}
+
+/// Progress a tool worker publishes for the panel.
+#[derive(Clone, Debug)]
+enum ToolProgress {
+    Preparing,
+    Download { done: u64, total: u64 },
+    Running,
+    Done(Result<(), String>),
+}
+
 /// Panel state kept in the viewer.
 #[derive(Default)]
 pub(in crate::gui) struct EditPanelState {
@@ -104,7 +136,10 @@ pub(in crate::gui) struct EditPanelState {
     /// Hidden while the crop mode owns the picture.
     suspended: bool,
     /// Values on the sliders right now.
-    adjust: Option<AdjustValues>,
+    adjust: AdjustValues,
+    straighten: i32,
+    /// Slider whose gesture is being previewed or waits to be committed.
+    active: Option<edits::Slider>,
     /// A pointer button is down on a slider.
     dragging: bool,
     /// A slider gesture is waiting to become an edit.
@@ -114,8 +149,9 @@ pub(in crate::gui) struct EditPanelState {
     base: Option<PreviewBase>,
     /// Key of the working copy being prepared off the GTK thread.
     base_job: Option<(PathBuf, Vec<EditOp>)>,
-    /// Adjusted working copy on screen instead of the full image.
-    preview: Option<gdk::Texture>,
+    /// Slider preview on screen instead of the full image, with the
+    /// natural size it stands for.
+    preview: Option<(gdk::Texture, (u32, u32))>,
     original: Option<Original>,
     original_job: Option<PathBuf>,
     original_button: bool,
@@ -123,6 +159,14 @@ pub(in crate::gui) struct EditPanelState {
     /// File and edits the controls were last synchronised with.
     synced: Option<(PathBuf, Vec<EditOp>)>,
     synced_natural: (u32, u32),
+    tool: Option<ToolJob>,
+}
+
+impl EditPanelState {
+    /// A tool is running: other edits wait until it ends.
+    pub(in crate::gui) fn busy(&self) -> bool {
+        self.tool.is_some()
+    }
 }
 
 fn section(title: &str) -> gtk::Box {
@@ -141,7 +185,7 @@ fn icon_button(icon: &str, tooltip: &str, action: &str) -> gtk::Button {
     button
 }
 
-fn slider(title: &str, min: f64, max: f64, step: f64, neutral: f64) -> (gtk::Box, Slider) {
+fn slider(title: &str, min: f64, max: f64, step: f64, neutral: f64) -> (gtk::Box, SliderRow) {
     let scale = gtk::Scale::with_range(gtk::Orientation::Horizontal, min, max, step);
     scale.set_value(neutral);
     scale.set_draw_value(false);
@@ -149,13 +193,14 @@ fn slider(title: &str, min: f64, max: f64, step: f64, neutral: f64) -> (gtk::Box
     scale.add_mark(neutral, gtk::PositionType::Bottom, None);
     scale.update_property(&[gtk::accessible::Property::Label(title)]);
     let name = gtk::Label::builder().label(title).xalign(0.0).hexpand(true).build();
-    let value = gtk::Label::builder().xalign(1.0).width_chars(5).build();
+    let value = gtk::Label::builder().xalign(1.0).width_chars(6).build();
     value.add_css_class("numeric");
     value.add_css_class("dim-label");
     let reset = gtk::Button::from_icon_name("edit-undo-symbolic");
     reset.add_css_class("flat");
     reset.add_css_class("circular");
     reset.set_tooltip_text(Some(&gettext("Restaurar")));
+    reset.set_sensitive(false);
     let head = gtk::Box::new(gtk::Orientation::Horizontal, 6);
     head.append(&name);
     head.append(&value);
@@ -163,7 +208,7 @@ fn slider(title: &str, min: f64, max: f64, step: f64, neutral: f64) -> (gtk::Box
     let row = gtk::Box::new(gtk::Orientation::Vertical, 0);
     row.append(&head);
     row.append(&scale);
-    (row, Slider { scale, value, reset })
+    (row, SliderRow { scale, value, reset })
 }
 
 fn size_spin(tooltip: &str) -> gtk::SpinButton {
@@ -174,6 +219,27 @@ fn size_spin(tooltip: &str) -> gtk::SpinButton {
     spin.set_tooltip_text(Some(tooltip));
     spin.update_property(&[gtk::accessible::Property::Label(tooltip)]);
     spin
+}
+
+fn signed(value: i32) -> String {
+    if value > 0 {
+        format!("+{value}")
+    } else {
+        value.to_string()
+    }
+}
+
+fn degrees_label(tenths: i32) -> String {
+    let degrees = f64::from(tenths) / 10.0;
+    if tenths > 0 {
+        format!("+{degrees:.1}°")
+    } else {
+        format!("{degrees:.1}°")
+    }
+}
+
+fn no_ai_message() -> String {
+    gettext("Esta build não inclui IA. Recompile com `cargo build --features ai` e instale `onnxruntime` (Arch: `pacman -S onnxruntime`).")
 }
 
 pub(in crate::gui) fn build() -> EditPanelUi {
@@ -213,6 +279,12 @@ pub(in crate::gui) fn build() -> EditPanelUi {
         buttons.append(&icon_button(icon, &tooltip, action));
     }
     transform.append(&buttons);
+    let (straighten_row, straighten) = slider(&gettext("Endireitar"), -45.0, 45.0, 0.1, 0.0);
+    straighten.scale.set_digits(1);
+    straighten.scale.set_tooltip_text(Some(&gettext(
+        "Gira a foto e recorta as bordas vazias para alinhar o horizonte",
+    )));
+    transform.append(&straighten_row);
     let crop = gtk::Button::builder()
         .label(gettext("Recortar"))
         .tooltip_text(gettext("Recortar na própria imagem (Ctrl+R)"))
@@ -263,6 +335,44 @@ pub(in crate::gui) fn build() -> EditPanelUi {
     scale_row.append(&resize_apply);
     size.append(&scale_row);
 
+    // Ferramentas
+    let tools = section(&gettext("Ferramentas"));
+    let remove_bg = gtk::Button::with_label(&gettext("Remover fundo (IA)"));
+    remove_bg.set_tooltip_text(Some(&gettext(
+        "Remoção de fundo: requer 8 GiB de RAM livre para iniciar. Este recurso é opcional.",
+    )));
+    tools.append(&remove_bg);
+    let ai_note = gtk::Label::builder()
+        .label(no_ai_message())
+        .wrap(true)
+        .xalign(0.0)
+        .visible(!bigimage_ai::onnx_available())
+        .build();
+    ai_note.add_css_class("dim-label");
+    ai_note.add_css_class("caption");
+    tools.append(&ai_note);
+    let factor_names: Vec<&str> = UPSCALE_FACTORS.iter().map(|(name, _)| *name).collect();
+    let factor = gtk::DropDown::builder().model(&translated_strings(&factor_names)).build();
+    factor.set_tooltip_text(Some(&gettext("Fator")));
+    let upscale = gtk::Button::with_label(&gettext("Aumentar resolução"));
+    upscale.set_hexpand(true);
+    let upscale_row = gtk::Box::new(gtk::Orientation::Horizontal, 6);
+    upscale_row.append(&upscale);
+    upscale_row.append(&factor);
+    tools.append(&upscale_row);
+    let tool_progress = gtk::ProgressBar::builder().show_text(true).hexpand(true).build();
+    let tool_cancel = gtk::Button::from_icon_name("process-stop-symbolic");
+    tool_cancel.set_tooltip_text(Some(&gettext("Cancelar")));
+    tool_cancel.add_css_class("flat");
+    let tool_box = gtk::Box::new(gtk::Orientation::Horizontal, 6);
+    tool_box.set_visible(false);
+    tool_box.append(&tool_progress);
+    tool_box.append(&tool_cancel);
+    tools.append(&tool_box);
+    let tool_status = gtk::Label::builder().wrap(true).xalign(0.0).visible(false).build();
+    tool_status.add_css_class("caption");
+    tools.append(&tool_status);
+
     // Salvar
     let save = section(&gettext("Salvar"));
     let save_button = gtk::Button::builder()
@@ -288,6 +398,7 @@ pub(in crate::gui) fn build() -> EditPanelUi {
     content.append(&transform);
     content.append(&adjust);
     content.append(&size);
+    content.append(&tools);
     content.append(&save);
 
     let scroll = gtk::ScrolledWindow::builder()
@@ -313,10 +424,18 @@ pub(in crate::gui) fn build() -> EditPanelUi {
         .margin_end(PANEL_MARGIN)
         .child(&frame)
         .build();
+    let grid = gtk::DrawingArea::builder()
+        .hexpand(true)
+        .vexpand(true)
+        .visible(false)
+        .can_target(false)
+        .build();
     EditPanelUi {
         revealer,
+        grid,
         content,
         original,
+        straighten,
         sliders: [brightness, contrast, saturation, gamma],
         reset_all,
         width,
@@ -324,6 +443,13 @@ pub(in crate::gui) fn build() -> EditPanelUi {
         lock,
         percent,
         resize_apply,
+        remove_bg,
+        upscale,
+        factor,
+        tool_box,
+        tool_progress,
+        tool_cancel,
+        tool_status,
         save_as,
         quality,
         syncing: Rc::new(Cell::new(false)),
@@ -341,9 +467,12 @@ impl EditPanelUi {
         }
     }
 
-    fn show_values(&self, values: AdjustValues) {
+    fn straighten_tenths(&self) -> i32 {
+        (self.straighten.scale.value() * 10.0).round() as i32
+    }
+
+    fn show_values(&self, values: AdjustValues, tenths: i32) {
         let [b, c, s, g] = &self.sliders;
-        let signed = |v: i32| if v > 0 { format!("+{v}") } else { v.to_string() };
         b.value.set_text(&signed(values.brightness));
         c.value.set_text(&signed(values.contrast));
         s.value.set_text(&signed(values.saturation));
@@ -353,18 +482,21 @@ impl EditPanelUi {
         c.reset.set_sensitive(values.contrast != neutral.contrast);
         s.reset.set_sensitive(values.saturation != neutral.saturation);
         g.reset.set_sensitive(values.gamma_pct != neutral.gamma_pct);
+        self.straighten.value.set_text(&degrees_label(tenths));
+        self.straighten.reset.set_sensitive(tenths != 0);
     }
 
     /// Move the sliders without treating it as user input.
-    fn set_values(&self, values: AdjustValues) {
+    fn set_values(&self, values: AdjustValues, tenths: i32) {
         self.syncing.set(true);
         let [b, c, s, g] = &self.sliders;
         b.scale.set_value(f64::from(values.brightness));
         c.scale.set_value(f64::from(values.contrast));
         s.scale.set_value(f64::from(values.saturation));
         g.scale.set_value(f64::from(values.gamma_pct) / 100.0);
+        self.straighten.scale.set_value(f64::from(tenths) / 10.0);
         self.syncing.set(false);
-        self.show_values(values);
+        self.show_values(values, tenths);
     }
 
     fn set_size(&self, size: (u32, u32)) {
@@ -378,6 +510,10 @@ impl EditPanelUi {
     fn quality(&self) -> SaveQuality {
         SAVE_QUALITIES.get(self.quality.selected() as usize).map_or(SaveQuality::Balanced, |q| q.0)
     }
+
+    fn upscale_factor(&self) -> u8 {
+        UPSCALE_FACTORS.get(self.factor.selected() as usize).map_or(2, |(_, factor)| *factor)
+    }
 }
 
 /// Widgets the panel needs without keeping the state borrowed.
@@ -385,29 +521,53 @@ impl EditPanelUi {
 struct Handles {
     content: gtk::Box,
     original: gtk::ToggleButton,
-    scales: [gtk::Scale; 4],
+    scales: [gtk::Scale; 5],
     width: gtk::SpinButton,
     height: gtk::SpinButton,
     save_as: gtk::Button,
     resize_apply: gtk::Button,
+    remove_bg: gtk::Button,
+    upscale: gtk::Button,
+    tool_cancel: gtk::Button,
+    grid: gtk::DrawingArea,
+    tool_box: gtk::Box,
+    tool_progress: gtk::ProgressBar,
+    tool_status: gtk::Label,
 }
 
 fn handles(s: &ViewerState) -> Handles {
     let ui = &s.edit_ui;
+    let [b, c, sat, g] = &ui.sliders;
     Handles {
         content: ui.content.clone(),
         original: ui.original.clone(),
-        scales: ui.sliders.each_ref().map(|slider| slider.scale.clone()),
+        scales: [
+            b.scale.clone(),
+            c.scale.clone(),
+            sat.scale.clone(),
+            g.scale.clone(),
+            ui.straighten.scale.clone(),
+        ],
         width: ui.width.clone(),
         height: ui.height.clone(),
         save_as: ui.save_as.clone(),
         resize_apply: ui.resize_apply.clone(),
+        remove_bg: ui.remove_bg.clone(),
+        upscale: ui.upscale.clone(),
+        tool_cancel: ui.tool_cancel.clone(),
+        grid: ui.grid.clone(),
+        tool_box: ui.tool_box.clone(),
+        tool_progress: ui.tool_progress.clone(),
+        tool_status: ui.tool_status.clone(),
     }
 }
 
 pub(in crate::gui) fn is_open(state: &Rc<RefCell<ViewerState>>) -> bool {
     state.borrow().edit.open
 }
+
+/// What a panel button does.
+type Run = fn(&Rc<RefCell<ViewerState>>);
 
 /// Wire the panel widgets and the `win.edit-panel` toggle.
 pub(in crate::gui) fn connect(state: &Rc<RefCell<ViewerState>>, window: &adw::ApplicationWindow) {
@@ -430,7 +590,8 @@ pub(in crate::gui) fn connect(state: &Rc<RefCell<ViewerState>>, window: &adw::Ap
     let syncing = state.borrow().edit_ui.syncing.clone();
 
     // Sliders: preview on every change, commit when the gesture ends.
-    for scale in &ui.scales {
+    for (index, scale) in ui.scales.iter().enumerate() {
+        let kind = if index == 4 { edits::Slider::Straighten } else { edits::Slider::Adjust };
         let weak = Rc::downgrade(state);
         let syncing = syncing.clone();
         scale.connect_value_changed(move |_| {
@@ -438,7 +599,7 @@ pub(in crate::gui) fn connect(state: &Rc<RefCell<ViewerState>>, window: &adw::Ap
                 return;
             }
             if let Some(state) = weak.upgrade() {
-                sliders_moved(&state);
+                slider_moved(&state, kind);
             }
         });
         // A legacy controller sees press and release even after the
@@ -475,25 +636,41 @@ pub(in crate::gui) fn connect(state: &Rc<RefCell<ViewerState>>, window: &adw::Ap
         });
         scale.add_controller(pointer);
     }
-    let resets: Vec<(gtk::Button, usize)> = {
+    let resets: Vec<(gtk::Button, Option<usize>)> = {
         let s = state.borrow();
-        s.edit_ui.sliders.iter().enumerate().map(|(i, slider)| (slider.reset.clone(), i)).collect()
+        let mut resets: Vec<_> = s
+            .edit_ui
+            .sliders
+            .iter()
+            .enumerate()
+            .map(|(i, slider)| (slider.reset.clone(), Some(i)))
+            .collect();
+        resets.push((s.edit_ui.reset_all.clone(), None));
+        resets
     };
     for (button, index) in resets {
         let weak = Rc::downgrade(state);
         button.connect_clicked(move |_| {
             if let Some(state) = weak.upgrade() {
-                reset_slider(&state, Some(index));
+                reset_adjust(&state, index);
             }
         });
     }
     {
         let weak = Rc::downgrade(state);
-        let reset_all = state.borrow().edit_ui.reset_all.clone();
-        reset_all.connect_clicked(move |_| {
+        let reset = state.borrow().edit_ui.straighten.reset.clone();
+        reset.connect_clicked(move |_| {
             if let Some(state) = weak.upgrade() {
-                reset_slider(&state, None);
+                reset_straighten(&state);
             }
+        });
+    }
+    {
+        let weak = Rc::downgrade(state);
+        ui.grid.set_draw_func(move |area, cr, width, height| {
+            let Some(state) = weak.upgrade() else { return };
+            let Ok(s) = state.try_borrow() else { return };
+            draw_grid(&s, area, cr, f64::from(width), f64::from(height));
         });
     }
 
@@ -562,19 +739,21 @@ pub(in crate::gui) fn connect(state: &Rc<RefCell<ViewerState>>, window: &adw::Ap
             }
         });
     }
-    {
+    let buttons: [(gtk::Button, Run); 5] = [
+        (ui.resize_apply.clone(), apply_resize),
+        (ui.save_as.clone(), choose_save_as),
+        (ui.remove_bg.clone(), |state| run_tool(state, EditOp::RemoveBackground)),
+        (ui.upscale.clone(), |state| {
+            let factor = state.borrow().edit_ui.upscale_factor();
+            run_tool(state, EditOp::Upscale { factor });
+        }),
+        (ui.tool_cancel.clone(), cancel_tool),
+    ];
+    for (button, run) in buttons {
         let weak = Rc::downgrade(state);
-        ui.resize_apply.connect_clicked(move |_| {
+        button.connect_clicked(move |_| {
             if let Some(state) = weak.upgrade() {
-                apply_resize(&state);
-            }
-        });
-    }
-    {
-        let weak = Rc::downgrade(state);
-        ui.save_as.connect_clicked(move |_| {
-            if let Some(state) = weak.upgrade() {
-                choose_save_as(&state);
+                run(&state);
             }
         });
     }
@@ -704,13 +883,15 @@ fn apply_reserved_space(state: &Rc<RefCell<ViewerState>>) {
         s.loading_spinner.clone(),
         s.strip_revealer.clone(),
         s.histogram_area.clone(),
+        s.edit_ui.grid.clone(),
     );
     drop(s);
-    let (stack, osd, spinner, strip, histogram) = widgets;
+    let (stack, osd, spinner, strip, histogram, grid) = widgets;
     if stack.margin_end() == reserve {
         return;
     }
     stack.set_margin_end(reserve);
+    grid.set_margin_end(reserve);
     osd.set_margin_end(reserve);
     spinner.set_margin_end(reserve);
     strip.set_margin_end(12 + reserve);
@@ -727,7 +908,8 @@ pub(in crate::gui) fn reserved_width(s: &ViewerState) -> i32 {
 /// follow their actions; the rest is driven from here.
 pub(in crate::gui) fn sync_sensitivity(state: &Rc<RefCell<ViewerState>>) {
     let Ok(s) = state.try_borrow() else { return };
-    let usable = !s.saving && !s.files.is_empty() && s.texture.is_some();
+    let usable = !s.saving && !s.files.is_empty() && s.texture.is_some() && !s.edit.busy();
+    let saving = s.saving;
     let ui = handles(&s);
     drop(s);
     for scale in &ui.scales {
@@ -738,7 +920,9 @@ pub(in crate::gui) fn sync_sensitivity(state: &Rc<RefCell<ViewerState>>) {
     ui.resize_apply.set_sensitive(usable);
     ui.save_as.set_sensitive(usable);
     ui.original.set_sensitive(usable);
-    ui.content.set_sensitive(!state.try_borrow().is_ok_and(|s| s.saving));
+    ui.upscale.set_sensitive(usable);
+    ui.remove_bg.set_sensitive(usable && bigimage_ai::onnx_available());
+    ui.content.set_sensitive(!saving);
 }
 
 /// Bring the controls in line with the current file and edits: after
@@ -750,12 +934,12 @@ pub(in crate::gui) fn refresh(state: &Rc<RefCell<ViewerState>>) {
     let key = (path.clone(), s.pending_ops.clone());
     let edits_changed = s.edit.synced.as_ref() != Some(&key);
     let gesture = s.edit.dragging || s.edit.commit_pending;
-    let mut values = None;
+    let mut reset = false;
     if edits_changed && !gesture {
-        let trailing = edits::trailing_adjust(&s.pending_ops);
-        s.edit.adjust = Some(trailing);
-        values = Some(trailing);
+        s.edit.adjust = edits::trailing_adjust(&s.pending_ops);
+        s.edit.straighten = edits::trailing_straighten(&s.pending_ops);
         s.edit.synced = Some(key);
+        reset = true;
     }
     if s.edit.original.as_ref().is_some_and(|o| o.path != path) {
         s.edit.original = None;
@@ -765,11 +949,7 @@ pub(in crate::gui) fn refresh(state: &Rc<RefCell<ViewerState>>) {
     }
     // The real frame replaces the preview once it shows the slider values.
     let mut repaint = false;
-    if s.edit.preview.is_some()
-        && !gesture
-        && s.current_ready
-        && s.edit.adjust == Some(edits::trailing_adjust(&s.pending_ops))
-    {
+    if s.edit.preview.is_some() && settled(&s) {
         s.edit.preview = None;
         repaint = true;
     }
@@ -780,17 +960,29 @@ pub(in crate::gui) fn refresh(state: &Rc<RefCell<ViewerState>>) {
     if repaint {
         zoom::apply_zoom(&s);
     }
-    let ui_values = s.edit.adjust.unwrap_or(AdjustValues::NEUTRAL);
+    let (values, tenths) = (s.edit.adjust, s.edit.straighten);
     drop(s);
-    let s = state.borrow();
-    if let Some(values) = values {
-        s.edit_ui.set_values(values);
-    } else {
-        s.edit_ui.show_values(ui_values);
+    {
+        let s = state.borrow();
+        if reset {
+            s.edit_ui.set_values(values, tenths);
+        } else {
+            s.edit_ui.show_values(values, tenths);
+        }
+        if let Some(natural) = natural {
+            s.edit_ui.set_size(natural);
+        }
     }
-    if let Some(natural) = natural {
-        s.edit_ui.set_size(natural);
-    }
+    update_grid(state);
+}
+
+/// No gesture is pending and the frame on screen shows the slider values.
+fn settled(s: &ViewerState) -> bool {
+    !s.edit.dragging
+        && !s.edit.commit_pending
+        && s.current_ready
+        && s.edit.adjust == edits::trailing_adjust(&s.pending_ops)
+        && s.edit.straighten == edits::trailing_straighten(&s.pending_ops)
 }
 
 /// The texture to paint instead of the edited image, with the natural
@@ -803,28 +995,41 @@ pub(in crate::gui) fn display_override(s: &ViewerState) -> Option<(gdk::Texture,
             return Some((original.texture.clone(), original.natural));
         }
     }
-    s.edit.preview.clone().map(|texture| (texture, s.natural))
+    s.edit.preview.clone()
 }
 
-fn sliders_moved(state: &Rc<RefCell<ViewerState>>) {
-    let values = {
+fn slider_moved(state: &Rc<RefCell<ViewerState>>, kind: edits::Slider) {
+    // Moving another slider finishes the previous gesture first.
+    let other_pending = state
+        .try_borrow()
+        .is_ok_and(|s| s.edit.commit_pending && s.edit.active.is_some_and(|a| a != kind));
+    if other_pending {
+        flush_commit(state);
+    }
+    {
         let Ok(mut s) = state.try_borrow_mut() else { return };
-        if s.saving || s.files.is_empty() {
+        if s.saving || s.files.is_empty() || s.edit.busy() {
             return;
         }
-        let values = s.edit_ui.values();
-        s.edit.adjust = Some(values);
-        values
-    };
-    state.borrow().edit_ui.show_values(values);
+        match kind {
+            edits::Slider::Adjust => s.edit.adjust = s.edit_ui.values(),
+            edits::Slider::Straighten => s.edit.straighten = s.edit_ui.straighten_tenths(),
+        }
+        s.edit.active = Some(kind);
+    }
+    {
+        let s = state.borrow();
+        s.edit_ui.show_values(s.edit.adjust, s.edit.straighten);
+    }
     schedule_preview(state);
     schedule_commit(state);
 }
 
-fn reset_slider(state: &Rc<RefCell<ViewerState>>, index: Option<usize>) {
-    let values = {
+fn reset_adjust(state: &Rc<RefCell<ViewerState>>, index: Option<usize>) {
+    flush_other(state, edits::Slider::Adjust);
+    let (values, tenths) = {
         let s = state.borrow();
-        let mut values = s.edit.adjust.unwrap_or(AdjustValues::NEUTRAL);
+        let mut values = s.edit.adjust;
         let neutral = AdjustValues::NEUTRAL;
         match index {
             Some(0) => values.brightness = neutral.brightness,
@@ -833,16 +1038,39 @@ fn reset_slider(state: &Rc<RefCell<ViewerState>>, index: Option<usize>) {
             Some(_) => values.gamma_pct = neutral.gamma_pct,
             None => values = neutral,
         }
-        values
+        (values, s.edit.straighten)
     };
-    state.borrow().edit_ui.set_values(values);
+    state.borrow().edit_ui.set_values(values, tenths);
     {
         let mut s = state.borrow_mut();
-        s.edit.adjust = Some(values);
+        s.edit.adjust = values;
+        s.edit.active = Some(edits::Slider::Adjust);
         s.edit.commit_pending = true;
     }
     schedule_preview(state);
     flush_commit(state);
+}
+
+fn reset_straighten(state: &Rc<RefCell<ViewerState>>) {
+    flush_other(state, edits::Slider::Straighten);
+    let values = state.borrow().edit.adjust;
+    state.borrow().edit_ui.set_values(values, 0);
+    {
+        let mut s = state.borrow_mut();
+        s.edit.straighten = 0;
+        s.edit.active = Some(edits::Slider::Straighten);
+        s.edit.commit_pending = true;
+    }
+    schedule_preview(state);
+    flush_commit(state);
+}
+
+/// Commit a pending gesture of the other slider before this one starts.
+fn flush_other(state: &Rc<RefCell<ViewerState>>, kind: edits::Slider) {
+    let other = state.borrow().edit.active.is_some_and(|active| active != kind);
+    if other {
+        flush_commit(state);
+    }
 }
 
 fn schedule_commit(state: &Rc<RefCell<ViewerState>>) {
@@ -890,16 +1118,25 @@ pub(in crate::gui) fn flush_commit(state: &Rc<RefCell<ViewerState>>) {
 fn commit(state: &Rc<RefCell<ViewerState>>) {
     let op = {
         let s = state.borrow();
-        s.edit.adjust.and_then(|values| edits::adjust_commit(&s.pending_ops, values))
+        match s.edit.active {
+            Some(edits::Slider::Adjust) => edits::adjust_commit(&s.pending_ops, s.edit.adjust),
+            Some(edits::Slider::Straighten) => {
+                edits::straighten_commit(&s.pending_ops, s.edit.straighten)
+            }
+            None => None,
+        }
     };
     match op {
         Some(op) => apply_edit(state, op),
         // Back where it started: drop the preview.
         None => {
-            let mut s = state.borrow_mut();
-            if s.edit.preview.take().is_some() {
-                zoom::apply_zoom(&s);
+            {
+                let mut s = state.borrow_mut();
+                if s.edit.preview.take().is_some() {
+                    zoom::apply_zoom(&s);
+                }
             }
+            update_grid(state);
         }
     }
 }
@@ -922,66 +1159,121 @@ fn schedule_preview(state: &Rc<RefCell<ViewerState>>) {
 }
 
 fn render_preview(state: &Rc<RefCell<ViewerState>>) {
-    {
-        // The full-resolution frame may already show these values.
+    let kind = {
         let mut s = state.borrow_mut();
-        let gesture = s.edit.dragging || s.edit.commit_pending;
-        if !gesture
-            && s.current_ready
-            && s.edit.adjust == Some(edits::trailing_adjust(&s.pending_ops))
-        {
+        // The full-resolution frame may already show these values.
+        if settled(&s) {
             if s.edit.preview.take().is_some() {
                 zoom::apply_zoom(&s);
             }
-            return;
+            None
+        } else {
+            s.edit.active
         }
+    };
+    let preview = kind.and_then(|kind| {
+        let base = preview_base(state, kind)?;
+        let s = state.borrow();
+        let source = image::DynamicImage::ImageRgba8((*base.image).clone());
+        Some(match kind {
+            edits::Slider::Adjust => {
+                (bigimage_core::adjust::apply_to(source, s.edit.adjust.core()), base.natural)
+            }
+            edits::Slider::Straighten => {
+                let degrees = f64::from(s.edit.straighten) / 10.0;
+                let (w, h) = base.natural;
+                let natural = bigimage_core::rotate::straightened_size(w, h, degrees);
+                (bigimage_core::rotate::straighten(&source, degrees), natural)
+            }
+        })
+    });
+    if let Some((image, natural)) = preview {
+        let rgba = image.into_rgba8();
+        let (w, h) = rgba.dimensions();
+        let texture = texture_from_rgba(rgba.into_raw(), w, h);
+        let mut s = state.borrow_mut();
+        s.edit.preview = Some((texture, natural));
+        zoom::apply_zoom(&s);
     }
-    let Some(base) = preview_base(state) else { return };
-    let Some(values) = state.borrow().edit.adjust else { return };
-    let adjusted = bigimage_core::adjust::apply_to(
-        image::DynamicImage::ImageRgba8((*base).clone()),
-        values.core(),
-    )
-    .into_rgba8();
-    let (w, h) = adjusted.dimensions();
-    let texture = texture_from_rgba(adjusted.into_raw(), w, h);
-    let mut s = state.borrow_mut();
-    s.edit.preview = Some(texture);
-    zoom::apply_zoom(&s);
+    update_grid(state);
 }
 
-/// The working copy for the current edits, or `None` while it is being
-/// prepared (the preview is drawn when it arrives).
-fn preview_base(state: &Rc<RefCell<ViewerState>>) -> Option<Rc<image::RgbaImage>> {
-    let (path, ops, from_texture) = {
+/// Show the alignment grid while a straighten preview is on screen.
+fn update_grid(state: &Rc<RefCell<ViewerState>>) {
+    let Ok(s) = state.try_borrow() else { return };
+    let show = s.edit.preview.is_some() && s.edit.active == Some(edits::Slider::Straighten);
+    let grid = s.edit_ui.grid.clone();
+    drop(s);
+    if grid.is_visible() != show {
+        grid.set_visible(show);
+    }
+    grid.queue_draw();
+}
+
+/// Thirds in white and finer lines in faint white, over the picture only.
+fn draw_grid(s: &ViewerState, area: &gtk::DrawingArea, cr: &gtk::cairo::Context, w: f64, h: f64) {
+    let Some((_, natural)) = s.edit.preview.as_ref() else { return };
+    let bounds = s
+        .picture
+        .compute_bounds(area)
+        .map(|b| (f64::from(b.x()), f64::from(b.y()), f64::from(b.width()), f64::from(b.height())))
+        .unwrap_or((0.0, 0.0, w, h));
+    let fit = super::crop::scale_down_fit(bounds, *natural);
+    let (x, y) = (fit.ox, fit.oy);
+    let (gw, gh) = (f64::from(natural.0) * fit.scale, f64::from(natural.1) * fit.scale);
+    if gw <= 0.0 || gh <= 0.0 {
+        return;
+    }
+    for (divisions, alpha) in [(9, 0.22), (3, 0.6)] {
+        cr.set_source_rgba(1.0, 1.0, 1.0, alpha);
+        cr.set_line_width(1.0);
+        for i in 1..divisions {
+            let fx = (x + gw * f64::from(i) / f64::from(divisions)).round() + 0.5;
+            let fy = (y + gh * f64::from(i) / f64::from(divisions)).round() + 0.5;
+            cr.move_to(fx, y);
+            cr.line_to(fx, y + gh);
+            cr.move_to(x, fy);
+            cr.line_to(x + gw, fy);
+        }
+        let _ = cr.stroke();
+    }
+}
+
+/// The working copy for the current edits and `kind`, or `None` while it
+/// is being prepared (the preview is drawn when it arrives).
+fn preview_base(state: &Rc<RefCell<ViewerState>>, kind: edits::Slider) -> Option<WorkingCopy> {
+    let (path, ops, from_texture, cache) = {
         let s = state.borrow();
         let path = s.files.get(s.idx)?.clone();
-        let ops = edits::adjust_base_ops(&s.pending_ops);
+        let ops = edits::base_ops(&s.pending_ops, kind);
         if let Some(base) = s.edit.base.as_ref().filter(|b| b.path == path && b.ops == ops) {
-            return Some(base.image.clone());
+            return Some(WorkingCopy { image: base.image.clone(), natural: base.natural });
         }
-        // The picture on screen already is the base when no adjustment
-        // is being replaced and it is up to date.
-        let replaces = matches!(s.pending_ops.last(), Some(EditOp::Adjust { .. }));
-        let from_texture = (!replaces && s.current_ready).then(|| s.texture.clone()).flatten();
+        // The picture on screen already is the base when no gesture of
+        // this slider is being replaced and it is up to date.
+        let replaces = edits::effective_ops(&s.pending_ops) != ops;
+        let from_texture = (!replaces && s.current_ready)
+            .then(|| s.texture.clone().map(|texture| (texture, s.natural)))
+            .flatten();
         if from_texture.is_none() && s.edit.base_job.as_ref() == Some(&(path.clone(), ops.clone()))
         {
             return None;
         }
-        (path, ops, from_texture)
+        (path, ops, from_texture, s.loader.cache.clone())
     };
-    if let Some(texture) = from_texture {
+    if let Some((texture, natural)) = from_texture {
         let image = Rc::new(downscale(texture_rgba(&texture)));
-        state.borrow_mut().edit.base = Some(PreviewBase { path, ops, image: image.clone() });
-        return Some(image);
+        state.borrow_mut().edit.base =
+            Some(PreviewBase { path, ops, image: image.clone(), natural });
+        return Some(WorkingCopy { image, natural });
     }
     state.borrow_mut().edit.base_job = Some((path.clone(), ops.clone()));
     let job_path = path.clone();
     let job_ops = ops.clone();
     let job = gio::spawn_blocking(move || {
-        let img = bigimage_core::open_image(&job_path).ok()?;
-        let edited = render_edits(img, &job_ops);
-        Some(downscale(bigimage_core::into_srgb_rgba8(edited)))
+        let edited = render_cached(&job_path, &job_ops, Some(&cache)).ok()?;
+        let natural = (edited.width(), edited.height());
+        Some((downscale(bigimage_core::into_srgb_rgba8(edited)), natural))
     });
     let weak = Rc::downgrade(state);
     glib::MainContext::default().spawn_local(async move {
@@ -993,10 +1285,10 @@ fn preview_base(state: &Rc<RefCell<ViewerState>>) -> Option<Rc<image::RgbaImage>
                 s.edit.base_job = None;
             }
             let still =
-                s.files.get(s.idx) == Some(&path) && edits::adjust_base_ops(&s.pending_ops) == ops;
+                s.files.get(s.idx) == Some(&path) && edits::base_ops(&s.pending_ops, kind) == ops;
             match result {
-                Some(image) if still => {
-                    s.edit.base = Some(PreviewBase { path, ops, image: Rc::new(image) });
+                Some((image, natural)) if still => {
+                    s.edit.base = Some(PreviewBase { path, ops, image: Rc::new(image), natural });
                 }
                 _ => return,
             }
@@ -1108,12 +1400,177 @@ fn apply_resize(state: &Rc<RefCell<ViewerState>>) {
     apply_edit(state, EditOp::Resize { w, h });
 }
 
+/// Run background removal or upscale on the edited image off the GTK
+/// thread, with progress and a Cancel button, then push it as an edit.
+/// The result goes into the edit cache first, so the pipeline that
+/// renders the new edit list finds it instead of computing it again.
+pub(in crate::gui) fn run_tool(state: &Rc<RefCell<ViewerState>>, op: EditOp) {
+    flush_commit(state);
+    let ui = handles(&state.borrow());
+    let refusal = {
+        let s = state.borrow();
+        if s.files.is_empty() || s.saving || s.edit.busy() || s.texture.is_none() {
+            return;
+        }
+        if op != EditOp::RemoveBackground {
+            None
+        } else if !bigimage_ai::onnx_available() {
+            Some(no_ai_message())
+        } else {
+            bigimage_ai::background::check_resources().err().map(|error| error.to_string())
+        }
+    };
+    if let Some(message) = refusal {
+        ui.tool_status.set_text(&message);
+        ui.tool_status.set_visible(true);
+        return;
+    }
+    let cancel = Arc::new(AtomicBool::new(false));
+    let (path, ops, cache) = {
+        let mut s = state.borrow_mut();
+        s.edit.tool = Some(ToolJob { cancel: cancel.clone() });
+        (s.files[s.idx].clone(), s.pending_ops.clone(), s.loader.cache.clone())
+    };
+    ui.tool_status.set_visible(false);
+    ui.tool_progress.set_fraction(0.0);
+    ui.tool_progress.set_text(Some(&gettext("Preparando…")));
+    ui.tool_box.set_visible(true);
+    sync_edit_actions(state);
+
+    let shared = Arc::new(Mutex::new(ToolProgress::Preparing));
+    let wake = viewer::Wake::default();
+    {
+        let shared = shared.clone();
+        let wake = wake.clone();
+        let cancel = cancel.clone();
+        let path = path.clone();
+        let ops = ops.clone();
+        std::thread::spawn(move || {
+            // Ends the wait on the GTK side even if the worker panics.
+            struct CloseOnDrop(viewer::Wake);
+            impl Drop for CloseOnDrop {
+                fn drop(&mut self) {
+                    self.0.close();
+                }
+            }
+            let _close = CloseOnDrop(wake.clone());
+            let publish = |progress: ToolProgress| {
+                *shared.lock().unwrap_or_else(|p| p.into_inner()) = progress;
+                wake.notify();
+            };
+            let result = crate::codec::with_cancel(cancel.clone(), || {
+                let modified = file_modified(&path);
+                let base = render_cached(&path, &ops, Some(&cache)).map_err(|e| e.to_string())?;
+                if cancel.load(Ordering::Acquire) {
+                    return Err(String::new());
+                }
+                publish(ToolProgress::Running);
+                let out = apply_heavy(base, op, &mut |stage| {
+                    if let bigimage_ai::background::BgStage::Download { done, total } = stage {
+                        publish(ToolProgress::Download { done, total });
+                    } else {
+                        publish(ToolProgress::Running);
+                    }
+                })?;
+                if !cancel.load(Ordering::Acquire) {
+                    let mut key = edits::effective_ops(&ops);
+                    key.push(op);
+                    cache.lock().unwrap_or_else(|p| p.into_inner()).insert(
+                        &path,
+                        modified,
+                        key,
+                        Arc::new(out),
+                    );
+                }
+                Ok(())
+            });
+            publish(ToolProgress::Done(result));
+        });
+    }
+
+    let weak = Rc::downgrade(state);
+    glib::MainContext::default().spawn_local(async move {
+        let snapshot = || shared.lock().unwrap_or_else(|p| p.into_inner()).clone();
+        while wake.wait().await {
+            if !cancel.load(Ordering::Acquire) {
+                show_tool_progress(&ui.tool_progress, &snapshot(), op);
+            }
+        }
+        let Some(state) = weak.upgrade() else { return };
+        // Cancelled: the panel was already given back.
+        if cancel.load(Ordering::Acquire) {
+            return;
+        }
+        state.borrow_mut().edit.tool = None;
+        ui.tool_box.set_visible(false);
+        sync_edit_actions(&state);
+        let result = match snapshot() {
+            ToolProgress::Done(result) => result,
+            _ => Err(gettext("O processamento terminou inesperadamente. Tente novamente.")),
+        };
+        match result {
+            Ok(()) => {
+                let unchanged = {
+                    let s = state.borrow();
+                    s.files.get(s.idx) == Some(&path) && s.pending_ops == ops
+                };
+                if unchanged {
+                    apply_edit(&state, op);
+                }
+            }
+            Err(error) => {
+                tracing::warn!(%error, ?op, "ferramenta do painel falhou");
+                ui.tool_status.set_text(&error);
+                ui.tool_status.set_visible(true);
+            }
+        }
+    });
+}
+
+fn show_tool_progress(bar: &gtk::ProgressBar, progress: &ToolProgress, op: EditOp) {
+    match progress {
+        ToolProgress::Preparing | ToolProgress::Done(_) => bar.pulse(),
+        ToolProgress::Download { done, total } => {
+            let fraction =
+                if *total > 0 { (*done as f64 / *total as f64).clamp(0.0, 1.0) } else { 0.0 };
+            bar.set_fraction(fraction);
+            bar.set_text(Some(&fill(
+                &gettext("Baixando modelo (uma vez só): {done} / {total}"),
+                &[
+                    ("done", &crate::gui::batch_runner::format_size(*done)),
+                    ("total", &crate::gui::batch_runner::format_size(*total)),
+                ],
+            )));
+        }
+        ToolProgress::Running => {
+            bar.pulse();
+            bar.set_text(Some(&if op == EditOp::RemoveBackground {
+                gettext("Removendo o fundo…")
+            } else {
+                gettext("Aumentando…")
+            }));
+        }
+    }
+}
+
+/// Give the panel back at once; a result that still arrives is dropped.
+pub(in crate::gui) fn cancel_tool(state: &Rc<RefCell<ViewerState>>) {
+    let job = state.borrow_mut().edit.tool.take();
+    let Some(job) = job else { return };
+    job.cancel.store(true, Ordering::Release);
+    let ui = handles(&state.borrow());
+    ui.tool_box.set_visible(false);
+    ui.tool_status.set_text(&gettext("Cancelado"));
+    ui.tool_status.set_visible(true);
+    sync_edit_actions(state);
+}
+
 /// Ask where to save a copy of the edited image.
 fn choose_save_as(state: &Rc<RefCell<ViewerState>>) {
     flush_commit(state);
     let (window, path) = {
         let s = state.borrow();
-        if s.files.is_empty() || s.saving {
+        if s.files.is_empty() || s.saving || s.edit.busy() {
             return;
         }
         (s.window(), s.files[s.idx].clone())
@@ -1143,7 +1600,7 @@ pub(in crate::gui) fn save_copy(state: &Rc<RefCell<ViewerState>>, target: PathBu
     flush_commit(state);
     let (source, ops, quality) = {
         let s = state.borrow();
-        if s.files.is_empty() || s.saving {
+        if s.files.is_empty() || s.saving || s.edit.busy() {
             return;
         }
         (s.files[s.idx].clone(), s.pending_ops.clone(), s.edit_ui.quality())
@@ -1213,7 +1670,7 @@ pub(in crate::gui) fn write_copy(
 ) -> Result<Vec<bigimage_core::MetadataLoss>, SaveFailure> {
     let (img, metadata, _) =
         crate::codec::open_for_resave(source).map_err(SaveFailure::from_image)?;
-    let edited = render_edits(img, ops);
+    let edited = render_edits(img, ops).map_err(SaveFailure::Other)?;
     let report = bigimage_core::save_image_preserving_metadata_report(
         edited,
         target,
@@ -1316,6 +1773,10 @@ impl EditPanelUi {
         self.sliders[index].scale.clone()
     }
 
+    pub(in crate::gui) fn straighten_scale(&self) -> gtk::Scale {
+        self.straighten.scale.clone()
+    }
+
     pub(in crate::gui) fn slider_values(&self) -> AdjustValues {
         self.values()
     }
@@ -1329,6 +1790,18 @@ impl EditPanelUi {
             self.lock.clone(),
             self.percent.clone(),
             self.resize_apply.clone(),
+        )
+    }
+
+    pub(in crate::gui) fn tool_controls(
+        &self,
+    ) -> (gtk::Button, gtk::Button, gtk::DropDown, gtk::Box, gtk::Label) {
+        (
+            self.remove_bg.clone(),
+            self.upscale.clone(),
+            self.factor.clone(),
+            self.tool_box.clone(),
+            self.tool_status.clone(),
         )
     }
 

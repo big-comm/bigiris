@@ -17,6 +17,12 @@ pub(in crate::gui) struct AdjustValues {
     pub gamma_pct: u32,
 }
 
+impl Default for AdjustValues {
+    fn default() -> Self {
+        Self::NEUTRAL
+    }
+}
+
 impl AdjustValues {
     pub(in crate::gui) const NEUTRAL: Self =
         Self { brightness: 0, contrast: 0, saturation: 0, gamma_pct: 100 };
@@ -51,17 +57,33 @@ impl AdjustValues {
     }
 }
 
-/// Every slider movement replaces the adjustment instead of stacking on
-/// it: a run of consecutive `Adjust` operations is worth only its last
-/// one. Each committed slider gesture is still its own history entry,
-/// so Undo goes back to the previous slider position, not to the
-/// unadjusted image. Returns the operations that reach the pixels.
+/// Panel sliders whose gestures replace, rather than stack on, the
+/// previous gesture of the same slider.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(in crate::gui) enum Slider {
+    Adjust,
+    Straighten,
+}
+
+fn slider_of(op: &EditOp) -> Option<Slider> {
+    match op {
+        EditOp::Adjust { .. } => Some(Slider::Adjust),
+        EditOp::Straighten { .. } => Some(Slider::Straighten),
+        _ => None,
+    }
+}
+
+/// Every slider movement replaces the previous value instead of stacking
+/// on it: a run of consecutive operations of the same slider (`Adjust`
+/// or `Straighten`) is worth only its last one. Each committed gesture is
+/// still its own history entry, so Undo goes back to the previous slider
+/// position, not to the untouched image. Returns the operations that
+/// reach the pixels.
 pub(in crate::gui) fn effective_ops(ops: &[EditOp]) -> Vec<EditOp> {
     ops.iter()
         .enumerate()
         .filter(|(i, op)| {
-            !(matches!(op, EditOp::Adjust { .. })
-                && matches!(ops.get(i + 1), Some(EditOp::Adjust { .. })))
+            slider_of(op).is_none() || ops.get(i + 1).and_then(slider_of) != slider_of(op)
         })
         .map(|(_, op)| *op)
         .collect()
@@ -73,20 +95,119 @@ pub(in crate::gui) fn trailing_adjust(ops: &[EditOp]) -> AdjustValues {
     ops.last().and_then(|op| AdjustValues::from_op(*op)).unwrap_or(AdjustValues::NEUTRAL)
 }
 
-/// The image the sliders work on: every effective edit except the
-/// trailing adjustment they are replacing.
-pub(in crate::gui) fn adjust_base_ops(ops: &[EditOp]) -> Vec<EditOp> {
+/// The straighten angle in tenths of a degree the slider shows for `ops`.
+pub(in crate::gui) fn trailing_straighten(ops: &[EditOp]) -> i32 {
+    match ops.last() {
+        Some(EditOp::Straighten { tenths }) => *tenths,
+        _ => 0,
+    }
+}
+
+/// The image a slider works on: every effective edit except the trailing
+/// gesture of that slider, which it is replacing.
+pub(in crate::gui) fn base_ops(ops: &[EditOp], slider: Slider) -> Vec<EditOp> {
     let mut effective = effective_ops(ops);
-    if matches!(effective.last(), Some(EditOp::Adjust { .. })) {
+    if effective.last().and_then(slider_of) == Some(slider) {
         effective.pop();
     }
     effective
 }
 
-/// The operation that records a finished slider gesture, or `None` when
-/// the sliders ended where they started.
+/// The operation that records a finished adjustment gesture, or `None`
+/// when the sliders ended where they started.
 pub(in crate::gui) fn adjust_commit(ops: &[EditOp], values: AdjustValues) -> Option<EditOp> {
     (trailing_adjust(ops) != values).then(|| values.op())
+}
+
+/// The operation that records a finished straighten gesture.
+pub(in crate::gui) fn straighten_commit(ops: &[EditOp], tenths: i32) -> Option<EditOp> {
+    (trailing_straighten(ops) != tenths).then_some(EditOp::Straighten { tenths })
+}
+
+/// Operations too slow to redo on every edit: their results are cached.
+pub(in crate::gui) fn is_heavy(op: &EditOp) -> bool {
+    matches!(op, EditOp::RemoveBackground | EditOp::Upscale { .. })
+}
+
+/// Index and length of the longest of `prefixes` that `ops` starts with.
+/// Ties keep the first candidate.
+pub(in crate::gui) fn longest_prefix<'a>(
+    prefixes: impl IntoIterator<Item = &'a [EditOp]>,
+    ops: &[EditOp],
+) -> Option<(usize, usize)> {
+    prefixes.into_iter().enumerate().filter(|(_, prefix)| ops.starts_with(prefix)).fold(
+        None,
+        |best: Option<(usize, usize)>, (i, prefix)| match best {
+            Some((_, len)) if len >= prefix.len() => best,
+            _ => Some((i, prefix.len())),
+        },
+    )
+}
+
+/// Images after already-computed prefixes of the effective edits of one
+/// file, so heavy operations (background removal, upscale) are not run
+/// again on every later edit, Undo or Redo. Bounded: at most
+/// [`EditCache::CAPACITY`] entries, most recently used first.
+#[derive(Default)]
+pub(in crate::gui) struct EditCache {
+    entries: Vec<CacheEntry>,
+}
+
+struct CacheEntry {
+    path: std::path::PathBuf,
+    modified: Option<std::time::SystemTime>,
+    ops: Vec<EditOp>,
+    image: std::sync::Arc<image::DynamicImage>,
+}
+
+impl EditCache {
+    pub(in crate::gui) const CAPACITY: usize = 2;
+    /// Larger results are recomputed instead of held in memory.
+    const MAX_PIXELS: u64 = 100_000_000;
+
+    /// The longest cached prefix of `ops` for this version of `path`.
+    pub(in crate::gui) fn best(
+        &mut self,
+        path: &std::path::Path,
+        modified: Option<std::time::SystemTime>,
+        ops: &[EditOp],
+    ) -> Option<(usize, std::sync::Arc<image::DynamicImage>)> {
+        let candidates: Vec<usize> = (0..self.entries.len())
+            .filter(|&i| self.entries[i].path == path && self.entries[i].modified == modified)
+            .collect();
+        let (pick, len) =
+            longest_prefix(candidates.iter().map(|&i| self.entries[i].ops.as_slice()), ops)?;
+        let index = candidates[pick];
+        let entry = self.entries.remove(index);
+        let image = entry.image.clone();
+        self.entries.insert(0, entry);
+        Some((len, image))
+    }
+
+    pub(in crate::gui) fn insert(
+        &mut self,
+        path: &std::path::Path,
+        modified: Option<std::time::SystemTime>,
+        ops: Vec<EditOp>,
+        image: std::sync::Arc<image::DynamicImage>,
+    ) {
+        if u64::from(image.width()) * u64::from(image.height()) > Self::MAX_PIXELS {
+            return;
+        }
+        // Other files and older versions of this one are never used again.
+        self.entries.retain(|e| e.path == path && e.modified == modified && e.ops != ops);
+        self.entries.insert(0, CacheEntry { path: path.to_path_buf(), modified, ops, image });
+        self.entries.truncate(Self::CAPACITY);
+    }
+
+    pub(in crate::gui) fn clear(&mut self) {
+        self.entries.clear();
+    }
+
+    #[cfg(test)]
+    pub(in crate::gui) fn cached_ops(&self) -> Vec<Vec<EditOp>> {
+        self.entries.iter().map(|e| e.ops.clone()).collect()
+    }
 }
 
 /// Largest side accepted by the size fields.
@@ -149,9 +270,71 @@ mod tests {
     }
 
     #[test]
-    fn base_excludes_the_adjustment_being_replaced() {
-        assert_eq!(adjust_base_ops(&[EditOp::RotateCw, adj(10), adj(30)]), [EditOp::RotateCw]);
-        assert_eq!(adjust_base_ops(&[adj(10), EditOp::FlipV]), [adj(10), EditOp::FlipV]);
+    fn base_excludes_the_gesture_being_replaced() {
+        let base = |ops: &[EditOp]| base_ops(ops, Slider::Adjust);
+        assert_eq!(base(&[EditOp::RotateCw, adj(10), adj(30)]), [EditOp::RotateCw]);
+        assert_eq!(base(&[adj(10), EditOp::FlipV]), [adj(10), EditOp::FlipV]);
+        let turn = |tenths| EditOp::Straighten { tenths };
+        let ops = [adj(10), turn(15), turn(-20)];
+        assert_eq!(base_ops(&ops, Slider::Straighten), [adj(10)]);
+        assert_eq!(base_ops(&ops, Slider::Adjust), [adj(10), turn(-20)]);
+        assert_eq!(trailing_straighten(&ops), -20);
+        assert_eq!(trailing_straighten(&[turn(5), adj(1)]), 0);
+        assert_eq!(straighten_commit(&ops, -20), None);
+        assert_eq!(straighten_commit(&[adj(1)], 0), None);
+        assert_eq!(straighten_commit(&ops, 0), Some(turn(0)));
+        // Different sliders never collapse into each other.
+        assert_eq!(effective_ops(&[turn(1), adj(2), turn(3)]), [turn(1), adj(2), turn(3)]);
+        assert_eq!(effective_ops(&[turn(1), turn(2), adj(3)]), [turn(2), adj(3)]);
+    }
+
+    #[test]
+    fn longest_cached_prefix_wins() {
+        let a = [EditOp::RotateCw];
+        let ab = [EditOp::RotateCw, EditOp::RemoveBackground];
+        let ops = [EditOp::RotateCw, EditOp::RemoveBackground, EditOp::FlipH];
+        let empty: [EditOp; 0] = [];
+        assert_eq!(longest_prefix([&a[..], &ab[..], &empty[..]], &ops), Some((1, 2)));
+        assert_eq!(longest_prefix([&empty[..], &a[..]], &ops), Some((1, 1)));
+        assert_eq!(longest_prefix([&ab[..]], &a), None);
+        assert_eq!(longest_prefix([&ab[..]], &ab), Some((0, 2)));
+        assert_eq!(longest_prefix(std::iter::empty(), &ops), None);
+        assert!(is_heavy(&EditOp::Upscale { factor: 2 }) && !is_heavy(&EditOp::RotateCw));
+    }
+
+    #[test]
+    fn cache_is_bounded_and_keyed_by_file_version() {
+        use std::sync::Arc;
+        let img = |w| Arc::new(image::DynamicImage::new_rgb8(w, 1));
+        let path = std::path::Path::new("/x/a.png");
+        let t0 = Some(std::time::UNIX_EPOCH);
+        let t1 = Some(std::time::UNIX_EPOCH + std::time::Duration::from_secs(1));
+        let heavy = vec![EditOp::RemoveBackground];
+        let mut cache = EditCache::default();
+        cache.insert(path, t0, Vec::new(), img(1));
+        cache.insert(path, t0, heavy.clone(), img(2));
+        let ops = [EditOp::RemoveBackground, EditOp::RotateCw];
+        let (len, hit) = cache.best(path, t0, &ops).unwrap();
+        assert_eq!((len, hit.width()), (1, 2));
+        let (len, hit) = cache.best(path, t0, &[EditOp::FlipH]).unwrap();
+        assert_eq!((len, hit.width()), (0, 1));
+        // Changed on disk, or another file: no hit.
+        assert!(cache.best(path, t1, &ops).is_none());
+        assert!(cache.best(std::path::Path::new("/x/b.png"), t0, &ops).is_none());
+        // Never more than two images; the least recently used goes.
+        cache.insert(
+            path,
+            t0,
+            vec![EditOp::RemoveBackground, EditOp::Upscale { factor: 2 }],
+            img(3),
+        );
+        assert_eq!(cache.cached_ops().len(), EditCache::CAPACITY);
+        assert_eq!(cache.cached_ops()[1], Vec::<EditOp>::new());
+        // A new version of the file drops the old entries.
+        cache.insert(path, t1, Vec::new(), img(4));
+        assert_eq!(cache.cached_ops(), vec![Vec::<EditOp>::new()]);
+        cache.clear();
+        assert!(cache.best(path, t1, &[]).is_none());
     }
 
     #[test]

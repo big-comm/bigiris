@@ -47,14 +47,16 @@ const SAVE_QUALITIES: [(SaveQuality, &str); 3] = [
     (SaveQuality::Smallest, n_("Menor arquivo")),
 ];
 
-/// Encoder options for "Salvar como…".
-///
-/// TODO(coordinator): map `quality` onto the perceptual `QualityTarget`
-/// of `EncodeOptions` once it lands (Máxima qualidade / Equilibrado /
-/// Menor arquivo); until then every choice uses the defaults.
+/// Encoder options for "Salvar como…": the smallest file that keeps the
+/// chosen visual quality (SSIMULACRA2 target), like the Prisma converter.
 pub(in crate::gui) fn save_as_options(format: Format, quality: SaveQuality) -> EncodeOptions {
-    let _ = (format, quality);
-    EncodeOptions::default()
+    let _ = format;
+    let target = match quality {
+        SaveQuality::Max => bigimage_core::QualityTarget::Maximum,
+        SaveQuality::Balanced => bigimage_core::QualityTarget::Balanced,
+        SaveQuality::Smallest => bigimage_core::QualityTarget::Smallest,
+    };
+    EncodeOptions { target, ..EncodeOptions::default() }
 }
 
 /// One slider with its value label and reset button.
@@ -1811,5 +1813,25 @@ impl EditPanelUi {
 
     pub(in crate::gui) fn content(&self) -> gtk::Box {
         self.content.clone()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn save_as_quality_maps_onto_the_visual_target() {
+        use bigimage_core::QualityTarget;
+        for (choice, target) in [
+            (SaveQuality::Max, QualityTarget::Maximum),
+            (SaveQuality::Balanced, QualityTarget::Balanced),
+            (SaveQuality::Smallest, QualityTarget::Smallest),
+        ] {
+            let opts = save_as_options(Format::WebP, choice);
+            assert_eq!(opts.target, target);
+            // A target, not a fixed quality: the encoder searches.
+            assert_eq!(opts.quality, None);
+        }
     }
 }

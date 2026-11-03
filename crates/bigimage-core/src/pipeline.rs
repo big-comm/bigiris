@@ -433,6 +433,13 @@ pub(crate) struct Extras {
     pub(crate) icc: Option<Vec<u8>>,
 }
 
+impl Extras {
+    /// Nothing to embed besides the pixels.
+    pub(crate) fn is_empty(&self) -> bool {
+        self.exif.is_none() && self.icc.is_none()
+    }
+}
+
 /// Encode into a unique sibling and publish only after encode, flush and sync.
 pub(crate) fn encode_and_cleanup(
     img: DynamicImage,
@@ -478,59 +485,17 @@ fn encode_to_writer(
     opts: &EncodeOptions,
     extras: &Extras,
 ) -> image::ImageResult<()> {
-    use image::ImageEncoder;
     let icc = || match &extras.icc {
-        Some(icc) => Ok(icc.clone()),
-        None => crate::color::srgb_profile(),
+        Some(icc) => Ok(Some(icc.clone())),
+        None => crate::color::srgb_profile().map(Some),
     };
-    let exif = |encoder: &mut dyn FnMut(Vec<u8>) -> image::ImageResult<()>| match &extras.exif {
-        Some(exif) => encoder(exif.clone()),
-        None => Ok(()),
-    };
-    match target {
-        Format::Jpeg => {
-            let mut encoder =
-                image::codecs::jpeg::JpegEncoder::new_with_quality(writer, opts.jpeg_quality());
-            encoder.set_icc_profile(icc()?).map_err(image::ImageError::Unsupported)?;
-            exif(&mut |e| encoder.set_exif_metadata(e).map_err(image::ImageError::Unsupported))?;
-            let rgb = img.to_rgb8();
-            encoder.write_image(
-                rgb.as_raw(),
-                rgb.width(),
-                rgb.height(),
-                image::ExtendedColorType::Rgb8,
-            )
-        }
-        Format::Avif => {
-            let encoder = image::codecs::avif::AvifEncoder::new_with_speed_quality(
-                writer,
-                opts.effective_avif_speed(),
-                opts.quality.unwrap_or(80),
-            )
-            .with_num_threads(Some(
-                std::thread::available_parallelism()
-                    .map(|n| n.get().saturating_sub(1).clamp(1, 2))
-                    .unwrap_or(1),
-            ));
-            let mut encoder = encoder;
-            exif(&mut |e| encoder.set_exif_metadata(e).map_err(image::ImageError::Unsupported))?;
-            let rgba = img.to_rgba8();
-            encoder.write_image(
-                rgba.as_raw(),
-                rgba.width(),
-                rgba.height(),
-                image::ExtendedColorType::Rgba8,
-            )
-        }
-        Format::Png => {
-            use image::codecs::png::{CompressionType, FilterType, PngEncoder};
-            let mut encoder = if opts.optimize {
-                PngEncoder::new_with_quality(writer, CompressionType::Best, FilterType::Adaptive)
-            } else {
-                PngEncoder::new(writer)
-            };
-            // A custom profile was matched to the pixel layout by the caller;
-            // the generated sRGB one only describes RGB pixels.
+    // Which profile each format embeds: JPEG always (generated sRGB unless
+    // the caller matched a source profile to the pixels); PNG a custom one,
+    // or sRGB for RGB pixels only (the generated profile is RGB); WebP and
+    // TIFF only a caller-provided one; the rest none.
+    let icc = match target {
+        Format::Jpeg => icc()?,
+        Format::Png
             if extras.icc.is_some()
                 || matches!(
                     img.color(),
@@ -538,26 +503,22 @@ fn encode_to_writer(
                         | image::ColorType::Rgba8
                         | image::ColorType::Rgb16
                         | image::ColorType::Rgba16
-                )
-            {
-                encoder.set_icc_profile(icc()?).map_err(image::ImageError::Unsupported)?;
-            }
-            exif(&mut |e| encoder.set_exif_metadata(e).map_err(image::ImageError::Unsupported))?;
-            encoder.write_image(img.as_bytes(), img.width(), img.height(), img.color().into())
+                ) =>
+        {
+            icc()?
         }
-        Format::WebP if extras.icc.is_some() || extras.exif.is_some() => {
-            let mut encoder = image::codecs::webp::WebPEncoder::new_lossless(writer);
-            if let Some(icc) = &extras.icc {
-                encoder.set_icc_profile(icc.clone()).map_err(image::ImageError::Unsupported)?;
-            }
-            exif(&mut |e| encoder.set_exif_metadata(e).map_err(image::ImageError::Unsupported))?;
-            encoder.write_image(img.as_bytes(), img.width(), img.height(), img.color().into())
-        }
-        Format::Tiff if extras.icc.is_some() => {
-            let mut encoder = image::codecs::tiff::TiffEncoder::new(writer);
-            encoder.set_icc_profile(icc()?).map_err(image::ImageError::Unsupported)?;
-            encoder.write_image(img.as_bytes(), img.width(), img.height(), img.color().into())
-        }
+        Format::WebP | Format::Tiff => extras.icc.clone(),
+        _ => None,
+    };
+    let exif = match target {
+        Format::Jpeg | Format::Png | Format::WebP | Format::Avif => extras.exif.as_deref(),
+        _ => None,
+    };
+    if let Some(bytes) = crate::optimize::encode(img, target, opts, icc.as_deref(), exif)? {
+        writer.write_all(&bytes)?;
+        return Ok(());
+    }
+    match target {
         Format::Pnm => write_pnm(img, writer),
         _ => img.write_to(writer, target.to_image_format()),
     }

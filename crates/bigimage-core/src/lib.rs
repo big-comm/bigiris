@@ -25,6 +25,7 @@ pub mod extent;
 pub mod flip;
 mod format;
 pub mod metadata;
+mod optimize;
 mod pipeline;
 pub mod preview;
 pub mod resize;
@@ -37,7 +38,7 @@ pub use convert::{
     convert_file, convert_file_to, into_srgb_rgba8, ConvertOutcome, OverwritePolicy,
 };
 pub use crop::{crop_file, crop_file_with_options, CropRect};
-pub use encode::EncodeOptions;
+pub use encode::{EncodeOptions, QualityTarget};
 pub use extent::{
     extent_file, extent_file_with_options, parse_hex_color, ExtentOptions, ExtentSize, Gravity,
 };

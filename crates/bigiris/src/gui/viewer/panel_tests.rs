@@ -416,3 +416,136 @@ fn viewer_edit_panel() {
     drop(state);
     wait(&context, "viewer state released", &|| witness.upgrade().is_none());
 }
+
+#[test]
+#[ignore = "requires a graphical display; run alone with GSETTINGS_BACKEND=memory"]
+fn viewer_edit_panel_tools() {
+    let context = glib::MainContext::default();
+    let dir = tempfile::tempdir().unwrap();
+    let photo = dir.path().join("a.png");
+    landscape(&photo);
+    let (window, state, witness) =
+        open_viewer("com.biglinux.Iris.EditToolsProbe", vec![photo.clone()], (1000, 700));
+    handle_key(&state, gdk::Key::e, gdk::ModifierType::empty());
+    settle(&context, 300);
+    assert!(state.borrow().edit.is_shown());
+    let grid = state.borrow().edit_ui.grid.clone();
+
+    // Endireitar: live preview with an alignment grid, then one edit that
+    // turns and crops to the largest rectangle inside: no empty corners.
+    let straighten = state.borrow().edit_ui.straighten_scale();
+    // Held like a pointer drag, so the preview stays until the release.
+    state.borrow_mut().edit.set_dragging(true);
+    for value in [1.0, 3.0, 5.0] {
+        straighten.set_value(value);
+        settle(&context, 30);
+    }
+    assert!(state.borrow().edit.has_preview(), "no straighten preview");
+    assert!(grid.is_visible(), "no grid while straightening");
+    crate::gui::lifecycle_tests::capture_window(&window, "panel-5-straighten-grid");
+    assert!(state.borrow().pending_ops.is_empty(), "committed while held");
+    super::edit_panel::flush_commit(&state);
+    wait(&context, "straighten committed", &|| state.borrow().pending_ops.len() == 1);
+    assert_eq!(state.borrow().pending_ops, vec![EditOp::Straighten { tenths: 50 }]);
+    let expected = bigimage_core::rotate::straightened_size(640, 480, 5.0);
+    assert!(expected.0 < 640 && expected.1 < 480);
+    wait_frame(&context, &state, expected);
+    assert!(!grid.is_visible(), "grid stayed after the commit");
+    let (w, h) = expected;
+    for (x, y) in [(0, 0), (w - 1, 0), (0, h - 1), (w - 1, h - 1)] {
+        let [r, g, b, a] = texture_pixel(&state, x, y);
+        assert_eq!(a, 255, "transparent corner at {x},{y}");
+        assert!(u32::from(r) + u32::from(g) + u32::from(b) > 100, "dark corner at {x},{y}");
+    }
+    crate::gui::lifecycle_tests::capture_window(&window, "panel-6-straightened");
+    // A second gesture replaces the angle instead of turning further.
+    straighten.set_value(-2.0);
+    wait(&context, "second angle", &|| state.borrow().pending_ops.len() == 2);
+    wait_frame(&context, &state, bigimage_core::rotate::straightened_size(640, 480, 2.0));
+    undo_edit(&state);
+    wait_frame(&context, &state, expected);
+    assert_eq!(straighten.value(), 5.0, "slider did not follow Undo");
+    undo_edit(&state);
+    wait_frame(&context, &state, (640, 480));
+    assert_eq!(straighten.value(), 0.0);
+
+    // Aumentar resolução runs inline with progress and becomes an edit.
+    let (remove_bg, upscale, factor, tool_box, status) = state.borrow().edit_ui.tool_controls();
+    factor.set_selected(0);
+    let runs = heavy_runs();
+    upscale.emit_clicked();
+    assert!(tool_box.is_visible(), "no progress while upscaling");
+    assert!(!action_enabled(&window, "rotate-cw"), "edits live during a tool run");
+    wait(&context, "upscaled", &|| state.borrow().pending_ops == [EditOp::Upscale { factor: 2 }]);
+    wait_frame(&context, &state, (1280, 960));
+    assert!(!tool_box.is_visible());
+    assert_eq!(heavy_runs(), runs + 1);
+    // Later edits, Undo and Redo reuse the cached result.
+    gtk::prelude::WidgetExt::activate_action(&window, "win.rotate-cw", None).unwrap();
+    wait_frame(&context, &state, (960, 1280));
+    let brightness = state.borrow().edit_ui.scale(0);
+    brightness.set_value(20.0);
+    wait(&context, "adjusted", &|| state.borrow().pending_ops.len() == 3);
+    wait_frame(&context, &state, (960, 1280));
+    undo_edit(&state);
+    wait_frame(&context, &state, (960, 1280));
+    undo_edit(&state);
+    wait_frame(&context, &state, (1280, 960));
+    redo_edit(&state);
+    wait_frame(&context, &state, (960, 1280));
+    assert_eq!(heavy_runs(), runs + 1, "the upscale ran again");
+
+    // Cancel gives the panel back at once and drops the result.
+    upscale.emit_clicked();
+    assert!(tool_box.is_visible());
+    let cancel = find(&tool_box, &|w| w.is::<gtk::Button>()).and_downcast::<gtk::Button>().unwrap();
+    cancel.emit_clicked();
+    assert!(!tool_box.is_visible() && status.is_visible());
+    assert!(action_enabled(&window, "rotate-cw"));
+    settle(&context, 800);
+    assert_eq!(state.borrow().pending_ops.len(), 2, "a cancelled tool still applied");
+    // The lower sections, scrolled into view.
+    let scroller = find(&state.borrow().edit_ui.revealer, &|w| w.is::<gtk::ScrolledWindow>())
+        .and_downcast::<gtk::ScrolledWindow>()
+        .unwrap();
+    let adjustment = scroller.vadjustment();
+    adjustment.set_value(adjustment.upper());
+    crate::gui::lifecycle_tests::capture_window(&window, "panel-7-tools-and-save");
+    adjustment.set_value(0.0);
+    undo_edit(&state);
+    undo_edit(&state);
+    wait_frame(&context, &state, (640, 480));
+
+    // Remover fundo: inline when the AI backend and model are present;
+    // otherwise the panel shows the same guidance as the dialog.
+    if !bigimage_ai::onnx_available() {
+        assert!(!remove_bg.is_sensitive());
+        super::edit_panel::run_tool(&state, EditOp::RemoveBackground);
+        assert!(status.text().contains("onnxruntime"), "no guidance: {}", status.text());
+    } else {
+        assert!(remove_bg.is_sensitive());
+        let model = bigimage_ai::download::local_path(&bigimage_ai::background::BIREFNET_LITE);
+        let ready = model.is_ok_and(|path| path.is_file())
+            && bigimage_ai::background::check_resources().is_ok();
+        if ready {
+            let runs = heavy_runs();
+            remove_bg.emit_clicked();
+            wait(&context, "background removed", &|| {
+                state.borrow().pending_ops == [EditOp::RemoveBackground]
+            });
+            wait_frame(&context, &state, (640, 480));
+            gtk::prelude::WidgetExt::activate_action(&window, "win.flip-h", None).unwrap();
+            wait(&context, "flipped", &|| state.borrow().pending_ops.len() == 2);
+            wait_frame(&context, &state, (640, 480));
+            assert_eq!(heavy_runs(), runs + 1, "background removal ran again");
+        } else {
+            eprintln!("skipping inline background removal: model or memory unavailable");
+        }
+    }
+
+    window.destroy();
+    drop(window);
+    settle(&context, 100);
+    drop(state);
+    wait(&context, "viewer state released", &|| witness.upgrade().is_none());
+}

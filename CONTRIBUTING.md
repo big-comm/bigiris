@@ -26,6 +26,11 @@ sudo apt-get install -y rustc cargo pkg-config libgtk-4-dev \
 
 Rust mínimo: **1.92** (declarado no `Cargo.toml`; `rust-toolchain.toml` seleciona stable).
 
+Os encoders mozjpeg, libwebp e libdeflate (oxipng) são compilados a partir
+das fontes C que vêm dentro dos crates, com o compilador C do sistema
+(`base-devel` no Arch, `build-essential` no Debian/Ubuntu). Não é preciso
+`nasm` nem `cmake`: o SIMD em assembly do mozjpeg fica desligado.
+
 ## Compilando
 
 ```bash

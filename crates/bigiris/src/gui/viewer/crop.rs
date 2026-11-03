@@ -626,7 +626,7 @@ pub(in crate::gui) fn enter(state: &Rc<RefCell<ViewerState>>) {
             (action, enabled)
         })
         .collect();
-    {
+    let (area, bar, strip, osd_label) = {
         let mut s = state.borrow_mut();
         let natural = s.natural;
         s.crop = Some(CropSession {
@@ -637,15 +637,24 @@ pub(in crate::gui) fn enter(state: &Rc<RefCell<ViewerState>>) {
             ratio: None,
             suspended,
         });
-        s.strip_revealer.set_reveal_child(false);
-        s.crop_ui.area.set_visible(true);
-        s.crop_ui.bar.set_visible(true);
-        s.crop_ui.bar.set_reveal_child(true);
-        s.osd_label.set_text(&gettext(
-            "Arraste nos cantos para redimensionar · dentro do recorte para mover · fora dele para uma nova seleção.",
-        ));
         refresh(&s);
-    }
+        (
+            s.crop_ui.area.clone(),
+            s.crop_ui.bar.clone(),
+            s.strip_revealer.clone(),
+            s.osd_label.clone(),
+        )
+    };
+    // Showing or hiding widgets under the pointer emits crossing events
+    // synchronously, and their handlers borrow the state: never do it
+    // while a borrow is held.
+    strip.set_reveal_child(false);
+    area.set_visible(true);
+    bar.set_visible(true);
+    bar.set_reveal_child(true);
+    osd_label.set_text(&gettext(
+        "Arraste nos cantos para redimensionar · dentro do recorte para mover · fora dele para uma nova seleção.",
+    ));
     cancel_cursor_hide(state);
     state.borrow().window().set_cursor(None);
     pulse_osd(state);
@@ -653,15 +662,17 @@ pub(in crate::gui) fn enter(state: &Rc<RefCell<ViewerState>>) {
 
 /// Leave crop mode and give the suspended actions back.
 fn leave(state: &Rc<RefCell<ViewerState>>) -> Option<CropSession> {
-    let session = {
+    let (session, area, bar) = {
         let mut s = state.borrow_mut();
         let session = s.crop.take()?;
-        s.crop_ui.bar.set_reveal_child(false);
-        s.crop_ui.bar.set_visible(false);
-        s.crop_ui.area.set_visible(false);
-        s.crop_ui.area.set_cursor(None);
-        session
+        (session, s.crop_ui.area.clone(), s.crop_ui.bar.clone())
     };
+    // Hiding the layer under the pointer re-enters the picture's motion
+    // handlers synchronously (see `enter`), so no borrow is held here.
+    bar.set_reveal_child(false);
+    bar.set_visible(false);
+    area.set_cursor(None);
+    area.set_visible(false);
     for (action, enabled) in &session.suspended {
         action.set_enabled(*enabled);
     }

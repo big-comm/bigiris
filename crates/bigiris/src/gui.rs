@@ -1206,8 +1206,11 @@ fn build_window_preloaded(
     for entering in [true, false] {
         let weak = Rc::downgrade(&state);
         let record = move |_: &gtk::EventControllerMotion, x, y| {
-            if let Some(state) = weak.upgrade() {
-                state.borrow_mut().zoom_pointer = Some((x, y));
+            // Crossing events can arrive while a widget is shown or hidden
+            // from code that still holds the state; the next motion event
+            // records the pointer then.
+            if let Some(Ok(mut s)) = weak.upgrade().as_ref().map(|state| state.try_borrow_mut()) {
+                s.zoom_pointer = Some((x, y));
             }
         };
         if entering {

@@ -556,6 +556,25 @@ fn viewer_inline_crop() {
     settle(&context, 200);
     assert_eq!(state.borrow().natural, (400, 300));
 
+    // With a real pointer over the window, showing or hiding the crop
+    // layer emits crossing events synchronously, which re-enter the
+    // picture's motion handler. The virtual display has no pointer, so
+    // replay that motion from the visibility change itself.
+    {
+        let (area, scroller) = {
+            let s = state.borrow();
+            (s.crop_ui.area.clone(), s.scroller.clone())
+        };
+        let controllers = scroller.observe_controllers();
+        let motion = (0..controllers.n_items())
+            .filter_map(|i| controllers.item(i).and_downcast::<gtk::EventControllerMotion>())
+            .find(|c| c.name().as_deref() == Some("bigiris-zoom-pointer"))
+            .expect("zoom pointer controller");
+        area.connect_visible_notify(move |_| {
+            motion.emit_by_name::<()>("motion", &[&10.0f64, &10.0f64]);
+        });
+    }
+
     // Ctrl+R enters the crop mode on the main picture: no extra window,
     // the whole image is selected and actions that would move or change
     // the picture are suspended.

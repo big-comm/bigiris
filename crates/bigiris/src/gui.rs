@@ -2017,7 +2017,11 @@ fn handle_key(
             viewer::edit_panel::close(state);
             return glib::Propagation::Stop;
         }
-        Key::e | Key::E => {
+        // Plain E only: Ctrl/Alt+E belong to other shortcuts.
+        Key::e | Key::E
+            if !_modifier
+                .intersects(gdk::ModifierType::CONTROL_MASK | gdk::ModifierType::ALT_MASK) =>
+        {
             viewer::edit_panel::toggle(state);
             return glib::Propagation::Stop;
         }

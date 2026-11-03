@@ -328,7 +328,7 @@ pub(in crate::gui) struct CropSession {
 }
 
 /// Actions that would change, leave or zoom the image under the selection.
-const SUSPENDED_ACTIONS: [&str; 21] = [
+const SUSPENDED_ACTIONS: [&str; 22] = [
     "rotate-cw",
     "rotate-ccw",
     "rotate-180",
@@ -350,6 +350,7 @@ const SUSPENDED_ACTIONS: [&str; 21] = [
     "print",
     "open",
     "batch-folder",
+    "edit-panel",
 ];
 
 pub(in crate::gui) fn build() -> CropUi {
@@ -649,6 +650,7 @@ pub(in crate::gui) fn enter(state: &Rc<RefCell<ViewerState>>) {
     // synchronously, and their handlers borrow the state: never do it
     // while a borrow is held.
     strip.set_reveal_child(false);
+    super::edit_panel::suspend(state, true);
     area.set_visible(true);
     bar.set_visible(true);
     bar.set_reveal_child(true);
@@ -673,6 +675,7 @@ fn leave(state: &Rc<RefCell<ViewerState>>) -> Option<CropSession> {
     bar.set_visible(false);
     area.set_cursor(None);
     area.set_visible(false);
+    super::edit_panel::suspend(state, false);
     for (action, enabled) in &session.suspended {
         action.set_enabled(*enabled);
     }

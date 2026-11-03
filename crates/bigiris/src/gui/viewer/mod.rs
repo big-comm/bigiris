@@ -11,6 +11,8 @@ use std::sync::{Arc, Mutex};
 use std::task::{Context, Poll, Waker};
 
 pub(in crate::gui) mod crop;
+pub(in crate::gui) mod edit_panel;
+pub(in crate::gui) mod edits;
 #[cfg(test)]
 mod gui_tests;
 

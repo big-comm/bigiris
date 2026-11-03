@@ -39,6 +39,12 @@ seleção de arquivos locais ou cole arquivos copiados no gerenciador com
   acontece direto na imagem aberta (`Ctrl+R`): arraste os cantos ou as bordas,
   escolha uma proporção e confirme com `Enter`. `Ctrl+S` confirma e grava por
   substituição atômica, preservando o original se o encoder falhar.
+- Painel de edição lateral e translúcido (botão **Editar** ou `E`): girar,
+  espelhar e recortar, brilho, contraste, saturação e gama com prévia ao vivo,
+  redimensionar com proporção travada ou em porcentagem, **Salvar** e
+  **Salvar como…** (grava uma cópia editada, sem tocar no original). Cada ajuste
+  vira um passo de desfazer; **Ver original** (ou segurar `\`) mostra a imagem
+  sem as edições.
 - Processamento em lote paralelo, cancelável, com progresso, tempo e tamanho
   antes/depois.
 - Integração com Dolphin, Nautilus, Nemo, Thunar, PCManFM-Qt e elementary Files.
@@ -237,6 +243,8 @@ Os mesmos códigos aparecem em `bigiris --help`.
 | arrastar | Pan |
 | `R` / `Shift+R` | Girar à direita / esquerda |
 | `Ctrl+R` | Recortar na própria imagem (`Enter` confirma, `Esc` cancela) |
+| `E` | Abrir / fechar o painel de edição (`Esc` fecha) |
+| `\` (segurar) | Ver a imagem original, sem as edições |
 | `Ctrl+Z` / `Ctrl+Shift+Z` | Desfazer / refazer |
 | `Ctrl+S` | Salvar edições com segurança |
 | `Space` | Slideshow |

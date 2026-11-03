@@ -78,6 +78,14 @@ const THEATER_CSS: &str = "
 .plasma headerbar button { border-radius: 6px; }
 .plasma .suggested-action { border-radius: 6px; }
 .plasma .viewer-osd { border-radius: 8px; }
+/* The editing panel takes room from the picture: keep that room dark. */
+.theater .viewer-canvas { background-color: #101216; }
+.edit-panel { border-radius: 14px; background-color: rgba(24, 26, 31, 0.78); color: white; }
+.theater .edit-panel scrolledwindow, .theater .edit-panel scrolledwindow > viewport {
+    background-color: transparent;
+}
+.edit-panel .edit-section-title { font-weight: 700; font-size: 0.85em; opacity: 0.7; }
+.edit-panel scale { padding-top: 2px; padding-bottom: 2px; }
 ";
 
 /// Side of each square film-strip cell, in logical pixels.
@@ -426,6 +434,9 @@ struct ViewerState {
     /// Inline crop widgets and, while cropping, the active selection.
     crop_ui: viewer::crop::CropUi,
     crop: Option<viewer::crop::CropSession>,
+    /// Editing side panel widgets and its live state (sliders, previews).
+    edit_ui: viewer::edit_panel::EditPanelUi,
+    edit: viewer::edit_panel::EditPanelState,
 }
 
 /// Edição in-memory: o usuário gira/espelha sem tocar o
@@ -443,6 +454,20 @@ enum EditOp {
     Crop {
         x: u32,
         y: u32,
+        w: u32,
+        h: u32,
+    },
+    /// Brightness, contrast, saturation and gamma (in hundredths), as the
+    /// editing panel's sliders set them. A run of consecutive `Adjust`
+    /// operations is worth only its last one (see `viewer::edits`).
+    Adjust {
+        brightness: i32,
+        contrast: i32,
+        saturation: i32,
+        gamma_pct: u32,
+    },
+    /// Resample to exactly `w`×`h` pixels with Lanczos3.
+    Resize {
         w: u32,
         h: u32,
     },
@@ -811,12 +836,15 @@ fn build_window_preloaded(
     loading_spinner.add_css_class("viewer-loading");
 
     let overlay = gtk::Overlay::new();
+    overlay.add_css_class("viewer-canvas");
     overlay.set_child(Some(&stack));
     let crop_ui = viewer::crop::build();
     overlay.add_overlay(&crop_ui.area);
     overlay.add_overlay(&osd_revealer);
     overlay.add_overlay(&strip_revealer);
     overlay.add_overlay(&histogram_area);
+    let edit_ui = viewer::edit_panel::build();
+    overlay.add_overlay(&edit_ui.revealer);
     overlay.add_overlay(&loading_spinner);
     // Crop bar on top of everything; its selection layer sits right above
     // the picture (added first) so the OSD hint is not dimmed by it.
@@ -916,6 +944,8 @@ fn build_window_preloaded(
         saving: false,
         crop_ui,
         crop: None,
+        edit_ui,
+        edit: Default::default(),
     }));
 
     if let Some(settings) = settings.filter(|_| has_images) {
@@ -992,6 +1022,7 @@ fn build_window_preloaded(
                 }
                 zoom::cancel_pending(&mut s);
                 s.props_dialog.take();
+                s.edit = Default::default();
                 s.texture.take();
                 s.pending_zoom = None;
                 s.picture.set_paintable(None::<&gdk::Paintable>);
@@ -1032,6 +1063,14 @@ fn build_window_preloaded(
     header.pack_start(&navigation);
 
     header.pack_end(&build_header_menu_button(&state));
+
+    let edit_btn = gtk::ToggleButton::builder()
+        .icon_name("document-edit-symbolic")
+        .tooltip_text(gettext("Editar (E)"))
+        .action_name("win.edit-panel")
+        .visible(has_files)
+        .build();
+    header.pack_end(&edit_btn);
 
     let info_btn = gtk::Button::from_icon_name("dialog-information-symbolic");
     info_btn.set_tooltip_text(Some(&gettext("Propriedades da imagem (Ctrl+I)")));
@@ -1139,6 +1178,7 @@ fn build_window_preloaded(
     }
     window.add_controller(key_controller);
     viewer::crop::connect(&state, &window);
+    viewer::edit_panel::connect(&state, &window);
 
     // Mouse-wheel zoom — live on the window so revealed chrome (film strip,
     // header) doesn't steal wheel events. Capture phase pre-empts the
@@ -1172,11 +1212,12 @@ fn build_window_preloaded(
             let position = controller.current_event().and_then(|e| e.position());
             if let Some((wx, wy)) = position {
                 let s = state.borrow();
-                let over_strip = s
-                    .window()
-                    .pick(wx, wy, gtk::PickFlags::DEFAULT)
-                    .is_some_and(|widget| widget.is_ancestor(&s.strip_revealer));
-                if over_strip {
+                let over_chrome =
+                    s.window().pick(wx, wy, gtk::PickFlags::DEFAULT).is_some_and(|widget| {
+                        widget.is_ancestor(&s.strip_revealer)
+                            || widget.is_ancestor(&s.edit_ui.revealer)
+                    });
+                if over_chrome {
                     return glib::Propagation::Proceed;
                 }
             }
@@ -1287,6 +1328,7 @@ fn build_window_preloaded(
     // the bottom shows the film strip, everywhere else only restores the
     // cursor. Each zone has its own hide timer.
     let motion = gtk::EventControllerMotion::new();
+    motion.set_name(Some("bigiris-edge-reveal"));
     {
         let state = Rc::downgrade(&state);
         motion.connect_motion(move |_, _x, y| {
@@ -1948,6 +1990,18 @@ fn handle_key(
     }
 
     match key {
+        Key::Escape if viewer::edit_panel::is_open(state) => {
+            viewer::edit_panel::close(state);
+            return glib::Propagation::Stop;
+        }
+        Key::e | Key::E => {
+            viewer::edit_panel::toggle(state);
+            return glib::Propagation::Stop;
+        }
+        Key::backslash => {
+            viewer::edit_panel::show_original(state, viewer::edit_panel::Source::Key, true);
+            return glib::Propagation::Stop;
+        }
         Key::Escape => {
             // Like GNOME's image viewer: Esc first leaves fullscreen and
             // only closes the window when it is not fullscreen.
@@ -2203,6 +2257,7 @@ fn draw_histogram(state: &Rc<RefCell<ViewerState>>, cr: &gtk::cairo::Context, w:
 /// tudo em vez de guardar a `DynamicImage` editada entre turnos evita
 /// drift cumulativo e simplifica o undo futuro (basta `pending_ops.pop`).
 fn apply_edit(state: &Rc<RefCell<ViewerState>>, op: EditOp) {
+    viewer::edit_panel::flush_commit(state);
     let path = {
         let s = state.borrow();
         if s.files.is_empty() || s.saving {
@@ -2248,7 +2303,27 @@ fn apply_op_to_image(img: image::DynamicImage, op: EditOp) -> image::DynamicImag
             let y = y.min(ih - 1);
             img.crop_imm(x, y, w.clamp(1, iw - x), h.clamp(1, ih - y))
         }
+        EditOp::Adjust { .. } => match viewer::edits::AdjustValues::from_op(op) {
+            Some(values) => bigimage_core::adjust::apply_to(img, values.core()),
+            None => img,
+        },
+        EditOp::Resize { w, h } => {
+            let mode = ResizeMode::Exact { width: w.max(1), height: h.max(1) };
+            match bigimage_core::resize::apply_to(&img, mode, Filter::Lanczos3) {
+                Ok(resized) => resized,
+                Err(error) => {
+                    tracing::warn!(%error, "resize edit refused; image kept as is");
+                    img
+                }
+            }
+        }
     }
+}
+
+/// Every pending edit applied to `img`, in order, with superseded slider
+/// adjustments skipped.
+fn render_edits(img: image::DynamicImage, ops: &[EditOp]) -> image::DynamicImage {
+    viewer::edits::effective_ops(ops).into_iter().fold(img, apply_op_to_image)
 }
 
 /// Liga/desliga a action `win.save-edits` pra o item de menu e o acelerador
@@ -2286,9 +2361,12 @@ fn sync_edit_actions(state: &Rc<RefCell<ViewerState>>) {
             }
         }
     }
+    drop(s);
+    viewer::edit_panel::sync_sensitivity(state);
 }
 
 fn undo_edit(state: &Rc<RefCell<ViewerState>>) {
+    viewer::edit_panel::flush_commit(state);
     let path = {
         let mut s = state.borrow_mut();
         if s.saving {
@@ -2305,6 +2383,7 @@ fn undo_edit(state: &Rc<RefCell<ViewerState>>) {
 }
 
 fn redo_edit(state: &Rc<RefCell<ViewerState>>) {
+    viewer::edit_panel::flush_commit(state);
     let path = {
         let mut s = state.borrow_mut();
         if s.saving {
@@ -2323,6 +2402,7 @@ fn redo_edit(state: &Rc<RefCell<ViewerState>>) {
 /// Salva as edições pendentes no próprio arquivo. Confirma antes — em
 /// JPEG o re-encode perde qualidade e o user precisa ciência disso.
 fn save_edits(state: &Rc<RefCell<ViewerState>>) {
+    viewer::edit_panel::flush_commit(state);
     let (window, path, ops) = {
         let s = state.borrow();
         if s.pending_ops.is_empty() || s.files.is_empty() || s.saving {
@@ -2561,7 +2641,7 @@ fn write_edits_to_disk(
     })?;
     let (img, source, quality) =
         crate::codec::open_for_resave(&target).map_err(SaveFailure::from_image)?;
-    let edited = ops.iter().fold(img, |acc, op| apply_op_to_image(acc, *op));
+    let edited = render_edits(img, ops);
     let report = bigimage_core::save_image_preserving_metadata_report(
         edited,
         target,
@@ -2830,6 +2910,7 @@ fn apply_prefetched_frame(state: &Rc<RefCell<ViewerState>>, frame: DecodedFrame)
         Some(path) => request_frame(state, path, Vec::new()),
         None => schedule_prefetch(state),
     }
+    viewer::edit_panel::refresh(state);
 }
 
 /// Splice the sibling list found in the background into a viewer that was
@@ -2865,6 +2946,7 @@ fn adopt_folder(state: &Rc<RefCell<ViewerState>>, mut files: Vec<PathBuf>, index
 /// Never discard edits as a side effect of navigation. The user can save or
 /// undo them first; slideshow also stops so it cannot repeatedly nag or skip.
 fn can_leave_current(state: &Rc<RefCell<ViewerState>>) -> bool {
+    viewer::edit_panel::flush_commit(state);
     if state.borrow().pending_ops.is_empty() {
         return true;
     }
@@ -2939,6 +3021,8 @@ fn apply_decoded_frame(state: &Rc<RefCell<ViewerState>>, frame: DecodedFrame) {
         }
     }
     schedule_prefetch(state);
+    viewer::edit_panel::refresh(state);
+    viewer::edit_panel::sync_sensitivity(state);
 }
 
 /// Constrói um menu curto para as funções menos frequentes. A navegação e
@@ -3723,6 +3807,8 @@ fn present_shortcuts_dialog(parent: &adw::ApplicationWindow) {
                 ("<ctrl>B", gettext("Remover fundo (IA)…")),
                 ("<ctrl>U", gettext("Aumentar resolução…")),
                 ("<ctrl>S", gettext("Salvar alterações")),
+                ("E", gettext("Painel de edição")),
+                ("backslash", gettext("Ver original (segure)")),
             ],
         ),
         (
@@ -3960,6 +4046,7 @@ fn refresh_title(state: &Rc<RefCell<ViewerState>>) {
     drop(s);
     refresh_osd(state);
     refresh_film_strip_active(state);
+    viewer::edit_panel::refresh(state);
 }
 
 type Histogram = [u32; 768];
@@ -3967,7 +4054,7 @@ type RawFrame = (Vec<u8>, u32, u32, Histogram);
 
 fn decode_frame(path: &Path, ops: &[EditOp]) -> Result<RawFrame, Box<dyn std::error::Error>> {
     let img = bigimage_core::open_image(path)?;
-    let edited = ops.iter().fold(img, |acc, op| apply_op_to_image(acc, *op));
+    let edited = render_edits(img, ops);
     // Float (EXR/HDR) pixels are linear: encode them to sRGB for display.
     let rgba = bigimage_core::into_srgb_rgba8(edited);
     let (w, h) = rgba.dimensions();

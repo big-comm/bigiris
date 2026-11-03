@@ -102,6 +102,84 @@ pub fn preserved_by(format: crate::Format) -> MetadataSupport {
     }
 }
 
+/// Whether an encoded file carries metadata a stripping re-encode would
+/// remove (EXIF, XMP, IPTC, text comments). Conservative: formats we do not
+/// parse structurally answer `true` when in doubt, so a "keep the original
+/// bytes" shortcut never leaks what a conversion would have dropped.
+pub(crate) fn carries_metadata(bytes: &[u8], format: crate::Format) -> bool {
+    use crate::Format;
+    let contains = |needle: &[u8]| bytes.windows(needle.len()).any(|w| w == needle);
+    match format {
+        Format::Jpeg => jpeg_carries_metadata(bytes),
+        Format::Png => png_carries_metadata(bytes),
+        Format::WebP => webp_carries_metadata(bytes),
+        Format::Avif => contains(b"Exif") || contains(b"mime") || contains(b"xml "),
+        Format::Gif => contains(b"XMP DataXMP") || contains(&[0x21, 0xfe]),
+        // TIFF metadata lives in IFD tags of the image itself.
+        Format::Tiff => true,
+        _ => false,
+    }
+}
+
+fn jpeg_carries_metadata(bytes: &[u8]) -> bool {
+    let mut at = 2;
+    while at + 4 <= bytes.len() {
+        if bytes[at] != 0xff {
+            return true;
+        }
+        let marker = bytes[at + 1];
+        if marker == 0xff {
+            at += 1;
+            continue;
+        }
+        // Start of scan: no more header segments.
+        if marker == 0xda {
+            return false;
+        }
+        let len = usize::from(u16::from_be_bytes([bytes[at + 2], bytes[at + 3]]));
+        let payload = bytes.get(at + 4..at + 2 + len).unwrap_or(&[]);
+        match marker {
+            // APP2 holds ICC profiles (kept: they describe the pixels).
+            0xe2 if payload.starts_with(b"ICC_PROFILE\0") => {}
+            // JFIF/JFXX (APP0) and Adobe (APP14) are structural.
+            0xe0 | 0xee => {}
+            // Any other APPn (EXIF/XMP in APP1, IPTC in APP13…) or COM.
+            0xe1..=0xef | 0xfe => return true,
+            _ => {}
+        }
+        at += 2 + len;
+    }
+    true
+}
+
+fn png_carries_metadata(bytes: &[u8]) -> bool {
+    let mut at = 8;
+    while at + 8 <= bytes.len() {
+        let len =
+            u32::from_be_bytes([bytes[at], bytes[at + 1], bytes[at + 2], bytes[at + 3]]) as usize;
+        match &bytes[at + 4..at + 8] {
+            b"eXIf" | b"tEXt" | b"zTXt" | b"iTXt" => return true,
+            b"IEND" => return false,
+            _ => {}
+        }
+        at = at.saturating_add(12).saturating_add(len);
+    }
+    true
+}
+
+fn webp_carries_metadata(bytes: &[u8]) -> bool {
+    let mut at = 12;
+    while at + 8 <= bytes.len() {
+        let len = u32::from_le_bytes([bytes[at + 4], bytes[at + 5], bytes[at + 6], bytes[at + 7]])
+            as usize;
+        if matches!(&bytes[at..at + 4], b"EXIF" | b"XMP ") {
+            return true;
+        }
+        at = at.saturating_add(8).saturating_add(len + (len & 1));
+    }
+    false
+}
+
 /// Normalise an EXIF blob for re-attachment: drop an `Exif\0\0` prefix and
 /// reset IFD0 `Orientation` to 1, because the pixels being saved are already
 /// upright. Returns `None` for blobs that are not TIFF-structured.
@@ -374,6 +452,41 @@ pub fn has_gps(path: impl AsRef<Path>) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn metadata_detection_finds_exif_and_text_but_not_icc() {
+        use crate::Format;
+        let rgb = image::RgbImage::from_pixel(4, 4, image::Rgb([1, 2, 3]));
+        let encode_png = |exif: bool, icc: bool| {
+            use image::ImageEncoder;
+            let mut out = Vec::new();
+            let mut encoder = image::codecs::png::PngEncoder::new(&mut out);
+            if exif {
+                encoder.set_exif_metadata(b"II*\0\x08\0\0\0\0\0\0\0\0\0".to_vec()).unwrap();
+            }
+            if icc {
+                encoder.set_icc_profile(crate::color::srgb_profile().unwrap()).unwrap();
+            }
+            encoder.write_image(rgb.as_raw(), 4, 4, image::ExtendedColorType::Rgb8).unwrap();
+            out
+        };
+        assert!(!carries_metadata(&encode_png(false, true), Format::Png));
+        assert!(carries_metadata(&encode_png(true, false), Format::Png));
+        let encode_jpeg = |exif: bool| {
+            use image::ImageEncoder;
+            let mut out = Vec::new();
+            let mut encoder = image::codecs::jpeg::JpegEncoder::new(&mut out);
+            encoder.set_icc_profile(crate::color::srgb_profile().unwrap()).unwrap();
+            if exif {
+                encoder.set_exif_metadata(b"II*\0\x08\0\0\0\0\0\0\0\0\0".to_vec()).unwrap();
+            }
+            encoder.write_image(rgb.as_raw(), 4, 4, image::ExtendedColorType::Rgb8).unwrap();
+            out
+        };
+        assert!(!carries_metadata(&encode_jpeg(false), Format::Jpeg));
+        assert!(carries_metadata(&encode_jpeg(true), Format::Jpeg));
+        assert!(carries_metadata(&[0u8; 16], Format::Tiff));
+    }
     use image::{Rgb, RgbImage};
     use tempfile::TempDir;
 

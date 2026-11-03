@@ -460,7 +460,24 @@ pub(crate) fn encode_and_cleanup_with(
     policy: OverwritePolicy,
     extras: &Extras,
 ) -> Result<crate::ConvertOutcome> {
-    use std::io::Write;
+    encode_keeping_smaller(img, output, target, opts, policy, extras, None)
+        .map(|(outcome, _)| outcome)
+}
+
+/// [`encode_and_cleanup_with`] that, given the `original` file the pixels
+/// came from (same format as `target`), publishes the original bytes
+/// instead when the new encode came out larger and the original carries
+/// no metadata the encode would have stripped. Returns whether it did.
+pub(crate) fn encode_keeping_smaller(
+    img: DynamicImage,
+    output: PathBuf,
+    target: Format,
+    opts: &EncodeOptions,
+    policy: OverwritePolicy,
+    extras: &Extras,
+    original: Option<&Path>,
+) -> Result<(crate::ConvertOutcome, bool)> {
+    use std::io::{Seek, Write};
     let destination_bpp = match target {
         Format::OpenExr => 16,
         Format::Hdr => 12,
@@ -475,7 +492,47 @@ pub(crate) fn encode_and_cleanup_with(
             .map_err(|source| BigImageError::Encode { path: output.clone(), source })?;
         writer.flush().map_err(BigImageError::Io)?;
     }
-    publish_temp(temp, output, policy)
+    let mut kept = false;
+    if let Some(original) = original {
+        let written = temp.as_file().metadata().map_err(BigImageError::Io)?.len();
+        if let Some(bytes) = smaller_original(original, written, target, opts) {
+            let file = temp.as_file_mut();
+            file.set_len(0).map_err(BigImageError::Io)?;
+            file.rewind().map_err(BigImageError::Io)?;
+            file.write_all(&bytes).map_err(BigImageError::Io)?;
+            kept = true;
+            tracing::debug!(
+                ?original,
+                written,
+                original_len = bytes.len(),
+                "mantido o original menor"
+            );
+        }
+    }
+    publish_temp(temp, output, policy).map(|outcome| (outcome, kept))
+}
+
+/// The bytes of `original` when they are smaller than `written` and can be
+/// published as-is: the file is a regular file still in `target` format,
+/// and either metadata stripping is off or it carries none.
+fn smaller_original(
+    original: &Path,
+    written: u64,
+    target: Format,
+    opts: &EncodeOptions,
+) -> Option<Vec<u8>> {
+    let meta = std::fs::metadata(original).ok()?;
+    if !meta.is_file() || meta.len() >= written {
+        return None;
+    }
+    let bytes = std::fs::read(original).ok()?;
+    let format = image::guess_format(&bytes).ok().and_then(Format::from_image_format)?;
+    if format != target
+        || (opts.strip_metadata && crate::metadata::carries_metadata(&bytes, format))
+    {
+        return None;
+    }
+    Some(bytes)
 }
 
 fn encode_to_writer(

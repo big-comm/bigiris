@@ -68,19 +68,10 @@ pub(in crate::gui) fn build_batch_dialog(
     let format_row = format_row();
     convert_group.add(&format_row);
 
-    let quality_spin = adw::SpinRow::with_range(1.0, 100.0, 1.0);
-    quality_spin.set_title(&gettext("Qualidade (JPEG/AVIF)"));
-    quality_spin.set_subtitle(&gettext("1 menor qualidade · 85 equilíbrio · 100 maior qualidade"));
-    quality_spin.set_value(85.0);
-    convert_group.add(&quality_spin);
-
-    let optimize_switch = adw::SwitchRow::builder()
-        .use_markup(false)
-        .title(gettext("Otimizar tamanho"))
-        .subtitle(gettext("PNG com compressão máxima; AVIF mais lento; arquivo menor"))
-        .build();
-    convert_group.add(&optimize_switch);
-    bind_encode_controls(&window, &format_row, &quality_spin, &optimize_switch);
+    let encode = EncodeControls::new();
+    convert_group.add(&encode.target);
+    convert_group.add(&encode.advanced);
+    encode.bind(&window, &format_row);
 
     // ── Grupo: destino ──────────────────────────────────────────────────
     let dest_group = adw::PreferencesGroup::builder().title(gettext("Destino")).build();
@@ -235,8 +226,7 @@ pub(in crate::gui) fn build_batch_dialog(
         let files = files.clone();
         let format_row = format_row.clone();
         let overwrite_row = overwrite_row.clone();
-        let quality_spin = quality_spin.clone();
-        let optimize_switch = optimize_switch.clone();
+        let encode = Rc::new(encode);
         let progress = progress.clone();
         let status = status.clone();
         let apply_btn = apply_btn.clone();
@@ -248,11 +238,7 @@ pub(in crate::gui) fn build_batch_dialog(
         dialog_signal!(window, apply_btn.clone(), connect_clicked, move |_| {
             let fmt = selected_format(&format_row);
             let policy = selected_overwrite(&overwrite_row);
-            let opts = EncodeOptions {
-                quality: Some(quality_spin.value() as u8),
-                optimize: optimize_switch.is_active(),
-                ..EncodeOptions::default()
-            };
+            let opts = encode.options();
             let out_dir_snapshot = output_dir.borrow().clone();
             let files_owned: Vec<PathBuf> = files.borrow().clone();
             if files_owned.is_empty() {

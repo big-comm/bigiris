@@ -2768,12 +2768,16 @@ fn write_edits_to_disk(
     Ok(report.dropped)
 }
 
-/// Encoder options for an in-place save: a JPEG keeps the quality its
-/// source was estimated at; everything else uses the defaults.
+/// Encoder options for an in-place save, which may be repeated on the
+/// same file: a JPEG keeps the quality its source was estimated at, WebP
+/// stays lossless as before, and everything else aims for the highest
+/// visual target (PNG stays lossless) to avoid generation loss.
 fn resave_options(format: Format, source_quality: Option<u8>) -> EncodeOptions {
-    let default = EncodeOptions::default();
+    let default =
+        EncodeOptions { target: bigimage_core::QualityTarget::Maximum, ..EncodeOptions::default() };
     match format {
         Format::Jpeg => EncodeOptions { quality: source_quality.or(default.quality), ..default },
+        Format::WebP => EncodeOptions { quality: Some(100), ..default },
         _ => default,
     }
 }
@@ -4357,8 +4361,11 @@ mod anchor_tests {
         use bigimage_core::{EncodeOptions, Format};
         assert_eq!(resave_options(Format::Jpeg, Some(92)).quality, Some(92));
         assert_eq!(resave_options(Format::Jpeg, None).quality, EncodeOptions::default().quality);
-        // Only JPEG is lossy-by-quality here; others keep their defaults.
+        // Only JPEG keeps a source quality; WebP stays lossless and the
+        // rest aim for the highest visual target.
         assert_eq!(resave_options(Format::Png, Some(92)).quality, EncodeOptions::default().quality);
+        assert_eq!(resave_options(Format::Png, None).target, bigimage_core::QualityTarget::Maximum);
+        assert_eq!(resave_options(Format::WebP, Some(92)).quality, Some(100));
     }
 
     #[test]

@@ -481,6 +481,10 @@ fn collisions_are_planned_by_content_not_extension() {
 
 #[test]
 fn quality_target_is_accepted_in_both_languages_and_validated() {
+    // The conversions decode through the sandboxed codec.
+    if !sandbox_available() {
+        return;
+    }
     let dir = tempfile::tempdir().unwrap();
     let photo = image::RgbImage::from_fn(96, 64, |x, y| {
         image::Rgb([(x * 2 + y) as u8, (y * 3) as u8, ((x * y) % 251) as u8])

@@ -88,9 +88,39 @@ As conversões estáticas reencodam os pixels e removem metadados pessoais.
 Perfis ICC RGB são normalizados para sRGB; PNG/JPEG recebem um perfil sRGB
 gerado sem dados da imagem original. Edição estática de animações e TIFF
 multipágina é recusada para impedir perda de conteúdo. O viewer exibe o
-primeiro quadro/página; reprodução animada e navegação multipágina permanecem pendentes. WebP é gravado
-sem perdas; ICO é limitado a 256 × 256. Consulte as limitações em
+primeiro quadro/página; reprodução animada e navegação multipágina permanecem pendentes. ICO é
+limitado a 256 × 256. Consulte as limitações em
 [docs/QUALITY.md](docs/QUALITY.md) antes de converter um acervo.
+
+### Qualidade e tamanho
+
+Cada conversão procura **o menor arquivo que mantém a qualidade visual
+escolhida**, medida com SSIMULACRA2 contra os pixels gravados (imagens com
+transparência são avaliadas sobre fundo preto e branco, valendo a pior nota):
+
+| Modo (`--target`) | Nota mínima | Uso |
+|---|---|---|
+| `maxima` (`max`) | 85 | diferença só aparece comparando com zoom |
+| `equilibrado` (`balanced`) — padrão | 80 | sem perda visível em uso normal |
+| `menor` (`small`) | 70 | alta qualidade, arquivos menores |
+
+- **JPEG**: mozjpeg (progressivo, trellis, Huffman otimizado), 4:2:0 e 4:4:4
+  quando as cores exigem.
+- **WebP**: libwebp com perdas (equivalente a `cwebp -m 6 -sharp_yuv -af`),
+  comparado com versões sem perdas e quase sem perdas; vence a menor que
+  atinge a meta.
+- **AVIF**: ravif 10 bits; busca rápida e codificação final mais lenta.
+- **PNG**: otimização sem perdas (oxipng); paleta de 256 cores só quando atinge
+  a meta e fica menor (nunca em `maxima`; 16 bits só em `menor`).
+- **GIF**: paleta exata ou imagequant, com o pontilhado escolhido pela nota.
+- **ICO, BMP, TGA, TIFF, OpenEXR**: o menor formato sem perdas de cada um
+  (PNG otimizado, paleta/24 bits, RLE, Deflate com preditor, ZIP/PIZ).
+- **QOI, PNM, HDR** não têm parâmetros de tamanho.
+
+`--quality N` (1 a 100) fixa a qualidade de JPEG/WebP/AVIF sem busca, como
+antes; em WebP, 100 grava sem perdas. Ao converter para o **mesmo formato**,
+se o resultado ficasse maior que o original e o original não tiver metadados
+pessoais (EXIF, XMP, textos), o original é copiado sem recompressão.
 
 ## Instalação no BigCommunity GNOME
 
@@ -200,6 +230,8 @@ bigiris --dialog=remove-bg foto.jpg
 
 # CLI
 bigiris convert --to avif --overwrite increment *.jpg
+bigiris convert --to webp --target menor *.png
+bigiris convert --to jpg --quality 90 foto.png
 bigiris resize --max-edge 1080 *.png
 bigiris rotate --degrees 90 foto.jpg
 bigiris flip --axis horizontal foto.jpg

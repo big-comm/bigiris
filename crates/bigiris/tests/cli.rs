@@ -478,3 +478,36 @@ fn collisions_are_planned_by_content_not_extension() {
     assert_eq!(output.status.code(), Some(1), "{}", String::from_utf8_lossy(&output.stderr));
     assert!(!dir.path().join("a_rot90.png").exists());
 }
+
+#[test]
+fn quality_target_is_accepted_in_both_languages_and_validated() {
+    let dir = tempfile::tempdir().unwrap();
+    let photo = image::RgbImage::from_fn(96, 64, |x, y| {
+        image::Rgb([(x * 2 + y) as u8, (y * 3) as u8, ((x * y) % 251) as u8])
+    });
+    photo.save(dir.path().join("photo.png")).unwrap();
+    let mut sizes = Vec::new();
+    for target in ["maxima", "equilibrado", "menor", "max", "balanced", "small"] {
+        let out = format!("out-{target}");
+        std::fs::create_dir(dir.path().join(&out)).unwrap();
+        std::fs::copy(dir.path().join("photo.png"), dir.path().join(&out).join("photo.png"))
+            .unwrap();
+        let input = format!("{out}/photo.png");
+        success(run(dir.path(), &["convert", "--to", "webp", "--target", target, &input]));
+        sizes.push(std::fs::metadata(dir.path().join(&out).join("photo.webp")).unwrap().len());
+    }
+    // Portuguese and English spellings are the same modes; smaller targets
+    // never produce larger files.
+    assert_eq!(sizes[..3], sizes[3..]);
+    assert!(sizes[0] >= sizes[1] && sizes[1] >= sizes[2], "{sizes:?}");
+    let invalid = ["convert", "--to", "webp", "--target", "ultra", "photo.png"];
+    assert_eq!(run(dir.path(), &invalid).status.code(), Some(1));
+    std::fs::write(dir.path().join("p.toml"), "format = 'jpg'\ntarget = 'menor'\n").unwrap();
+    success(run(dir.path(), &["batch", "--profile", "p.toml", "photo.png"]));
+    assert!(dir.path().join("photo.jpg").exists());
+    std::fs::write(dir.path().join("bad.toml"), "format = 'jpg'\ntarget = 'ultra'\n").unwrap();
+    assert_eq!(
+        run(dir.path(), &["batch", "--profile", "bad.toml", "photo.png"]).status.code(),
+        Some(1)
+    );
+}

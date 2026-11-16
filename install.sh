@@ -101,7 +101,7 @@ command -v msgfmt >/dev/null || warn "msgfmt (gettext) ausente — traduções s
 # Dependências de runtime para gui+ai. Aviso brando: nem toda distro é Arch.
 if [ -f /etc/openmandriva-release ] && command -v dnf >/dev/null; then
     miss=()
-    for p in rust cargo lib64gtk4.0-devel lib64adwaita-devel onnxruntime-devel gettext; do
+    for p in rust cargo lib64gtk4.0-devel lib64adwaita-devel shaderc gettext; do
         rpm -q "$p" >/dev/null 2>&1 || miss+=("$p")
     done
     if [ "${#miss[@]}" -gt 0 ]; then
@@ -110,15 +110,23 @@ if [ -f /etc/openmandriva-release ] && command -v dnf >/dev/null; then
     fi
 elif command -v pacman >/dev/null; then
     miss=()
-    for p in gtk4 libadwaita onnxruntime; do
-        pacman -Qq "$p" >/dev/null 2>&1 || pacman -Qq "${p}-cpu" >/dev/null 2>&1 || miss+=("$p")
+    for p in gtk4 libadwaita shaderc; do
+        pacman -Qq "$p" >/dev/null 2>&1 || miss+=("$p")
     done
     if [ "${#miss[@]}" -gt 0 ]; then
         warn "Pacotes possivelmente faltando: ${miss[*]}"
-        warn "Instale com: sudo pacman -S ${miss[*]}   (onnxruntime pode ser onnxruntime-cpu)"
+        warn "Instale com: sudo pacman -S ${miss[*]}"
+    fi
+    ai=()
+    for p in birefnet-native realesrgan-native scunet-native lama-native; do
+        pacman -Qq "$p" >/dev/null 2>&1 || ai+=("$p")
+    done
+    if [ "${#ai[@]}" -gt 0 ]; then
+        warn "Ferramentas de IA opcionais sem pesos: ${ai[*]}"
+        warn "Para usá-las: sudo pacman -S ${ai[*]}"
     fi
 else
-    warn "pacman ausente — confirme manualmente: gtk4, libadwaita, onnxruntime instalados."
+    warn "pacman ausente — confirme manualmente: gtk4, libadwaita e glslc (shaderc) instalados."
 fi
 ok "Checagem de dependências concluída"
 

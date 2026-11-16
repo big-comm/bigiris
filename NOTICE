@@ -1,0 +1,104 @@
+BigIris
+Copyright the BigIris authors. GPL-3.0-or-later (LICENSE).
+
+BigIris built with the `ai` feature includes image-engine-native
+(https://github.com/biglinux/image-engine-native, revision
+adbe1784bafd9329c8d667f28759aedfbf841d29): the native-engine,
+native-vulkan, birefnet-native, realesrgan-native, scunet-native and
+lama-native crates, MIT-licensed, with parts under BSD-3-Clause. Their
+licence and notices follow.
+
+The model weights are not part of BigIris. They are installed by the
+BigLinux packages birefnet-native (BiRefNet-lite, MIT), realesrgan-native
+(Real-ESRGAN, BSD-3-Clause), scunet-native (SCUNet, Apache-2.0) and
+lama-native (Big LaMa, Apache-2.0), each with its licence under
+/usr/share/licenses/<package>.
+
+----------------------------------------------------------------------
+image-engine-native LICENSE
+----------------------------------------------------------------------
+
+MIT License
+
+Copyright (c) 2026 Bruno Gonçalves <www.biglinux.com.br>
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+----------------------------------------------------------------------
+image-engine-native NOTICE
+----------------------------------------------------------------------
+
+image-engine-native
+Copyright 2026 Bruno Gonçalves <www.biglinux.com.br>
+
+Rust implementations of image models for the CPU and for Vulkan GPUs,
+provided under MIT (LICENSE). Each model's crate credits its model and
+carries the licence of its weights in its own NOTICE: crates/birefnet-native,
+crates/scunet-native, crates/realesrgan-native and crates/lama-native. The
+CPU engine they share, crates/native-engine, and their Vulkan shaders build
+on the work below.
+
+1. XNNPACK (BSD-3-Clause), by Facebook, Inc. and its affiliates and Google
+   LLC. The exponential under the softmax and the sigmoid computes as
+   XNNPACK's f32 "p5" kernels do for finite values: the same constants and
+   argument reduction, written anew in Rust. The left operand of every matrix
+   product is read through row pointers, as XNNPACK's indirect convolution
+   reads it. https://github.com/google/XNNPACK
+   XNNPACK's licence follows as notice A.
+
+2. Eigen: the error function under the GELU, on the CPU and in the shaders,
+   evaluates the 13/8-degree rational fit of generic_fast_erf_float in Eigen
+   3.4 (unsupported/Eigen/src/SpecialFunctions/SpecialFunctionsImpl.h, by
+   Eugene Brevdo). Only its twelve coefficients and the [-4, 4] clamp are
+   taken; no Eigen source is copied. https://gitlab.com/libeigen/eigen
+
+
+A. XNNPACK, https://github.com/google/XNNPACK
+
+BSD License
+
+For XNNPACK software
+
+Copyright (c) Facebook, Inc. and its affiliates. All rights reserved.
+Copyright 2019 Google LLC
+
+Redistribution and use in source and binary forms, with or without modification,
+are permitted provided that the following conditions are met:
+
+ * Redistributions of source code must retain the above copyright notice, this
+   list of conditions and the following disclaimer.
+
+ * Redistributions in binary form must reproduce the above copyright notice,
+   this list of conditions and the following disclaimer in the documentation
+   and/or other materials provided with the distribution.
+
+ * Neither the name Facebook nor the names of its contributors may be used to
+   endorse or promote products derived from this software without specific
+   prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
+ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.

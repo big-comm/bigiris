@@ -435,3 +435,135 @@ fn spawn_compare_viewer(original: &Path, result: &Path) {
         result.as_os_str(),
     ]);
 }
+
+#[cfg(test)]
+mod availability_tests {
+    use super::*;
+
+    fn spin(context: &glib::MainContext, millis: u64) {
+        let deadline = std::time::Instant::now() + Duration::from_millis(millis);
+        while std::time::Instant::now() < deadline {
+            while context.pending() {
+                context.iteration(false);
+            }
+            std::thread::sleep(Duration::from_millis(5));
+        }
+    }
+
+    /// Every widget under `root`, depth first.
+    fn widgets(root: &gtk::Widget) -> Vec<gtk::Widget> {
+        let mut all = vec![root.clone()];
+        let mut child = root.first_child();
+        while let Some(current) = child {
+            all.extend(widgets(&current));
+            child = current.next_sibling();
+        }
+        all
+    }
+
+    fn button(window: &adw::ApplicationWindow, label: &str) -> gtk::Button {
+        widgets(window.upcast_ref())
+            .into_iter()
+            .filter_map(|w| w.downcast::<gtk::Button>().ok())
+            .find(|b| b.label().as_deref() == Some(label))
+            .unwrap_or_else(|| panic!("no button {label}"))
+    }
+
+    fn texts(window: &adw::ApplicationWindow) -> String {
+        widgets(window.upcast_ref())
+            .into_iter()
+            .filter_map(|w| w.downcast::<gtk::Label>().ok())
+            .map(|l| l.text().to_string())
+            .collect::<Vec<_>>()
+            .join("\n")
+    }
+
+    /// The Prisma remove-bg and upscale dialogs with and without their
+    /// weights: unavailable states name the package and refuse to start;
+    /// with the weights (BIGIRIS_BIREFNET_WEIGHTS and
+    /// BIGIRIS_REALESRGAN_WEIGHTS, or the packages) they are ready.
+    #[test]
+    #[ignore = "requires a graphical display; run alone with GSETTINGS_BACKEND=memory"]
+    fn ai_dialogs_show_availability_and_install_hints() {
+        assert_eq!(std::env::var("GSETTINGS_BACKEND").as_deref(), Ok("memory"));
+        adw::init().expect("GTK display required");
+        let app = adw::Application::builder()
+            .application_id("com.biglinux.Iris.AiDialogsProbe")
+            .flags(gio::ApplicationFlags::NON_UNIQUE)
+            .build();
+        app.register(None::<&gio::Cancellable>).unwrap();
+        let context = glib::MainContext::default();
+        let dir = tempfile::tempdir().unwrap();
+        let source = dir.path().join("foto.png");
+        image::RgbImage::from_pixel(320, 240, image::Rgb([90, 140, 200])).save(&source).unwrap();
+        let files = Rc::new(vec![source]);
+        let bg = &bigimage_ai::background::MODEL;
+        let up = &bigimage_ai::upscale::MODEL;
+        let installed = (bg.availability().is_ready(), up.availability().is_ready());
+        let saved: Vec<_> = [bg.env, up.env].into_iter().map(std::env::var_os).collect();
+
+        let show =
+            |name: &str,
+             build: fn(&adw::Application, Rc<Vec<PathBuf>>) -> adw::ApplicationWindow| {
+                let window = build(&app, files.clone());
+                window.present();
+                spin(&context, 300);
+                crate::gui::lifecycle_tests::capture_window(&window, name);
+                window
+            };
+        // Missing packages.
+        let absent = dir.path().join("absent.weights");
+        std::env::set_var(bg.env, &absent);
+        std::env::set_var(up.env, &absent);
+        let window = show("prisma-ai-remove-bg-missing", build_remove_bg_dialog);
+        let hint = if bigimage_ai::engines_compiled() {
+            "sudo pacman -S birefnet-native"
+        } else {
+            "--features ai"
+        };
+        assert!(texts(&window).contains(hint), "no install hint: {}", texts(&window));
+        let apply = button(&window, &gettext("Remover fundo"));
+        assert!(!apply.is_sensitive(), "remove-bg can start without its model");
+        window.destroy();
+        let window = show("prisma-ai-upscale-missing", build_upscale_dialog);
+        let row = widgets(window.upcast_ref())
+            .into_iter()
+            .find_map(|w| w.downcast::<adw::SwitchRow>().ok())
+            .expect("engine row");
+        assert!(!row.is_active() && !row.is_sensitive());
+        if bigimage_ai::engines_compiled() {
+            assert!(row.subtitle().unwrap_or_default().contains("realesrgan-native"));
+        }
+        // Lanczos3 still runs.
+        assert!(button(&window, &gettext("Aumentar")).is_sensitive());
+        window.destroy();
+
+        // Installed (or pointed at) weights.
+        for (var, value) in [bg.env, up.env].iter().zip(&saved) {
+            match value {
+                Some(value) => std::env::set_var(var, value),
+                None => std::env::remove_var(var),
+            }
+        }
+        if installed.0 {
+            let window = show("prisma-ai-remove-bg", build_remove_bg_dialog);
+            assert!(button(&window, &gettext("Remover fundo")).is_sensitive());
+            assert!(!texts(&window).contains("sudo pacman"));
+            window.destroy();
+        } else {
+            eprintln!("skipping the ready remove-bg dialog: weights absent");
+        }
+        if installed.1 {
+            let window = show("prisma-ai-upscale", build_upscale_dialog);
+            let row = widgets(window.upcast_ref())
+                .into_iter()
+                .find_map(|w| w.downcast::<adw::SwitchRow>().ok())
+                .expect("engine row");
+            assert!(row.is_active() && row.is_sensitive());
+            window.destroy();
+        } else {
+            eprintln!("skipping the ready upscale dialog: weights absent");
+        }
+        spin(&context, 100);
+    }
+}

@@ -479,10 +479,15 @@ enum EditOp {
     },
     /// Cut the subject out with the local BiRefNet model (alpha channel).
     RemoveBackground,
-    /// Enlarge by an integer factor with Lanczos3.
+    /// Enlarge by an integer factor: with Real-ESRGAN when `ai`, else with
+    /// Lanczos3. The engine is chosen when the tool runs and recorded, so
+    /// saving later computes the same image.
     Upscale {
         factor: u8,
+        ai: bool,
     },
+    /// Remove noise and compression artifacts with the local SCUNet model.
+    Denoise,
 }
 
 #[derive(Debug)]
@@ -2354,7 +2359,7 @@ fn apply_op_to_image(img: image::DynamicImage, op: EditOp) -> image::DynamicImag
             bigimage_core::rotate::straighten(&img, f64::from(tenths) / 10.0)
         }
         // Fallible and slow: see `apply_op`.
-        EditOp::RemoveBackground | EditOp::Upscale { .. } => img,
+        EditOp::RemoveBackground | EditOp::Upscale { .. } | EditOp::Denoise => img,
     }
 }
 
@@ -2367,29 +2372,78 @@ fn heavy_runs() -> usize {
     HEAVY_RUNS.load(Ordering::SeqCst)
 }
 
-/// Run a slow operation (background removal, upscale), reporting model
-/// download progress through `progress`.
+/// Run a slow operation (background removal, upscale, denoise), reporting
+/// its [`bigimage_ai::Stage`]s through `progress`. A cancel scoped with
+/// [`crate::codec::with_cancel`] stops the network at its next step.
 fn apply_heavy(
     img: image::DynamicImage,
     op: EditOp,
-    progress: &mut dyn FnMut(bigimage_ai::background::BgStage),
+    progress: &mut dyn FnMut(bigimage_ai::Stage),
 ) -> Result<image::DynamicImage, String> {
     #[cfg(test)]
     HEAVY_RUNS.fetch_add(1, Ordering::SeqCst);
-    match op {
-        EditOp::RemoveBackground => {
-            let mut session = bigimage_ai::background::BgSession::new(progress).map_err(|e| {
-                fill(&gettext("Falha ao carregar o modelo: {error}"), &[("error", &e.to_string())])
-            })?;
-            session.process(&img).map_err(|e| e.to_string())
+    let mut control = |stage| {
+        progress(stage);
+        if crate::codec::cancelled() {
+            std::ops::ControlFlow::Break(())
+        } else {
+            std::ops::ControlFlow::Continue(())
         }
-        EditOp::Upscale { factor } => bigimage_core::resize::apply_to(
-            &img,
-            ResizeMode::Percent(f32::from(factor.clamp(2, 4)) * 100.0),
-            Filter::Lanczos3,
-        )
-        .map_err(|e| e.to_string()),
-        other => Ok(apply_op_to_image(img, other)),
+    };
+    let result = match op {
+        EditOp::RemoveBackground => {
+            bigimage_ai::background::remove_background_with_progress(&img, &mut control)
+        }
+        EditOp::Upscale { factor, ai } => {
+            let method = if ai {
+                bigimage_ai::upscale::Method::RealEsrgan
+            } else {
+                bigimage_ai::upscale::Method::Lanczos
+            };
+            bigimage_ai::upscale::upscale(&img, factor.clamp(2, 4), method, &mut control)
+        }
+        EditOp::Denoise => bigimage_ai::denoise::denoise(&img, &mut control),
+        other => return Ok(apply_op_to_image(img, other)),
+    };
+    result.map_err(|error| ai_error_text(&error))
+}
+
+/// A model error as the GUI shows it, translated where it is ours.
+pub(in crate::gui) fn ai_error_text(error: &bigimage_ai::AiError) -> String {
+    use bigimage_ai::AiError;
+    match error {
+        AiError::Disabled => no_ai_build_message(),
+        AiError::Missing { model, package, .. } => missing_model_message(model, package),
+        AiError::Cancelled => gettext("Cancelado"),
+        other => fill(&gettext("Falha na IA: {error}"), &[("error", &other.to_string())]),
+    }
+}
+
+/// This build has no AI engines.
+pub(in crate::gui) fn no_ai_build_message() -> String {
+    gettext("Esta build não inclui IA. Recompile com `cargo build --features ai` (requer glslc, do pacote shaderc).")
+}
+
+/// A model's weights package is not installed.
+pub(in crate::gui) fn missing_model_message(model: &str, package: &str) -> String {
+    fill(
+        &gettext("{model} não está instalado. Instale com: sudo pacman -S {package}"),
+        &[("model", model), ("package", package)],
+    )
+}
+
+/// Why `model` cannot run now, or `None` when it can.
+pub(in crate::gui) fn model_unavailable(model: &bigimage_ai::ModelInfo) -> Option<String> {
+    match model.availability() {
+        bigimage_ai::Availability::Ready => None,
+        bigimage_ai::Availability::NotBuilt => Some(no_ai_build_message()),
+        bigimage_ai::Availability::Missing { .. } => {
+            Some(missing_model_message(model.name, model.package))
+        }
+        bigimage_ai::Availability::Unreadable { path, error } => Some(fill(
+            &gettext("Não foi possível ler {path}: {error}"),
+            &[("path", &path.display().to_string()), ("error", &error)],
+        )),
     }
 }
 
@@ -4306,7 +4360,7 @@ mod anchor_tests {
         image::RgbImage::from_pixel(8, 6, image::Rgb([10, 200, 30])).save(&path).unwrap();
         let cache = std::sync::Mutex::new(crate::gui::viewer::edits::EditCache::default());
         let runs = heavy_runs();
-        let up = EditOp::Upscale { factor: 2 };
+        let up = EditOp::Upscale { factor: 2, ai: false };
         let img = render_cached(&path, &[up], Some(&cache)).unwrap();
         assert_eq!((img.width(), img.height()), (16, 12));
         assert_eq!(heavy_runs(), runs + 1);

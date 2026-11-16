@@ -1739,6 +1739,10 @@ fn dispatch_gui(dialog: Option<Dialog>, files: &[PathBuf]) -> color_eyre::Result
 
     #[cfg(feature = "gui")]
     {
+        // Leave one core to the desktop while a model runs (the CLI uses
+        // them all).
+        let cores = std::thread::available_parallelism().map_or(1, |n| n.get());
+        bigimage_ai::set_threads(cores.saturating_sub(1).max(1));
         let code = match dialog {
             Some(Dialog::Convert) => gui::run_convert_dialog(files.to_vec()),
             Some(Dialog::Resize) => gui::run_resize_dialog(files.to_vec()),

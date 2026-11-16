@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-//! Aumentar resolução: Lanczos3 upscale by an integer factor.
+//! Aumentar resolução: Real-ESRGAN (when `realesrgan-native` is installed)
+//! or Lanczos3, by an integer factor.
 
 use super::*;
 
 /// Upscale factors we expose in the dialog — matches the CLI `--factor` range
-/// (2..=4). Real-ESRGAN backend, when available, slots in without changing
-/// this list.
+/// (2..=4), for both engines.
 pub(in crate::gui) const UPSCALE_FACTORS: &[(&str, u8)] =
     &[("2× (200%)", 2), ("3× (300%)", 3), ("4× (400%)", 4)];
 
-/// Upscale modal: pick an integer factor and run Lanczos3 resize.
+/// Upscale modal: pick an integer factor and an engine.
 pub fn run_upscale_dialog(files: Vec<PathBuf>) -> i32 {
     let files = Rc::new(files);
     run_dialog_app(move |app| build_upscale_dialog(app, files.clone()).present())
@@ -34,11 +34,13 @@ fn fill_upscale_dialog(
     files: Rc<Vec<PathBuf>>,
     preview_session: Option<Rc<PreviewSession>>,
 ) -> adw::ApplicationWindow {
+    let ai_unavailable = model_unavailable(&bigimage_ai::upscale::MODEL);
     let header = adw::HeaderBar::new();
-    header.set_title_widget(Some(&adw::WindowTitle::new(
+    let title = adw::WindowTitle::new(
         &gettext("Aumentar resolução"),
-        "Prisma · Lanczos3",
-    )));
+        if ai_unavailable.is_none() { "Prisma · Real-ESRGAN" } else { "Prisma · Lanczos3" },
+    );
+    header.set_title_widget(Some(&title));
 
     let content_h = gtk::Box::builder()
         .orientation(gtk::Orientation::Horizontal)
@@ -57,13 +59,25 @@ fn fill_upscale_dialog(
         .width_request(340)
         .build();
 
-    // Hook — shown when an IA backend lands. Today just an informative note.
-    let engine_note = gtk::Label::builder()
-        .label(gettext("Motor: Lanczos3 (CPU). O modo IA (Real-ESRGAN) será habilitado automaticamente quando um modelo ONNX FOSS estiver disponível."))
-        .wrap(true)
-        .xalign(0.0)
+    // Real-ESRGAN when its package is installed; the row says what to
+    // install otherwise and Lanczos3 runs instead.
+    let engine_row = adw::SwitchRow::builder()
+        .title(gettext("Usar IA (Real-ESRGAN)"))
+        .subtitle(ai_unavailable.clone().unwrap_or_else(engine_subtitle))
+        .active(ai_unavailable.is_none())
+        .sensitive(ai_unavailable.is_none())
         .build();
-    engine_note.add_css_class("dim-label");
+    {
+        let title = title.clone();
+        dialog_signal!(window, engine_row, connect_active_notify, move |row| {
+            title.set_subtitle(if row.is_active() {
+                "Prisma · Real-ESRGAN"
+            } else {
+                "Prisma · Lanczos3"
+            });
+        });
+    }
+    follow_device(&engine_row);
 
     let files_row = selection_row(&gettext("Arquivos selecionados"), &files);
 
@@ -112,6 +126,7 @@ fn fill_upscale_dialog(
     let overwrite_row = overwrite_row();
 
     let group = adw::PreferencesGroup::new();
+    group.add(&engine_row);
     group.add(&files_row);
     group.add(&natural_row);
     group.add(&factor_row);
@@ -119,7 +134,6 @@ fn fill_upscale_dialog(
     group.add(&target_row);
     group.add(&overwrite_row);
 
-    form_col.append(&engine_note);
     form_col.append(&group);
 
     let status = status_label();
@@ -166,6 +180,7 @@ fn fill_upscale_dialog(
     {
         let files = files.clone();
         let factor_row = factor_row.clone();
+        let engine_row = engine_row.clone();
         let target_row = target_row.clone();
         let overwrite_row = overwrite_row.clone();
         let status = status.clone();
@@ -181,13 +196,38 @@ fn fill_upscale_dialog(
             cancel_btn.set_sensitive(false);
             status.set_text(&gettext("Aumentando…"));
 
-            // Upscale = Lanczos3 resize at factor * 100 %.
             let work_files: Vec<PathBuf> = (*files).clone();
             let mode = ResizeMode::Percent(f32::from(factor) * 100.0);
             let opts = EncodeOptions::default();
+            let ai = engine_row.is_active() && engine_row.is_sensitive();
+            // Same `<stem>_<pct>pct` name either way.
+            let suffix = format!("_{}pct", u32::from(factor) * 100);
+            // One file at a time through the network: it already uses
+            // every core, and parallel files would only add their buffers.
+            let one_at_a_time = Arc::new(Mutex::new(()));
             run_batch_async(
                 work_files,
-                move |f| resize_file(f, mode, Filter::Lanczos3, target, &opts, policy),
+                move |f| {
+                    if !ai {
+                        return resize_file(f, mode, Filter::Lanczos3, target, &opts, policy);
+                    }
+                    let _turn = one_at_a_time.lock().unwrap_or_else(|p| p.into_inner());
+                    bigimage_core::transform_file(f, &suffix, target, &opts, policy, |img| {
+                        bigimage_ai::upscale::upscale(
+                            &img,
+                            factor,
+                            bigimage_ai::upscale::Method::RealEsrgan,
+                            |_| {
+                                if crate::codec::cancelled() {
+                                    std::ops::ControlFlow::Break(())
+                                } else {
+                                    std::ops::ControlFlow::Continue(())
+                                }
+                            },
+                        )
+                        .map_err(|e| bigimage_core::BigImageError::Other(ai_error_text(&e)))
+                    })
+                },
                 gettext("Aumentando"),
                 status.clone(),
                 apply_btn.clone(),
@@ -198,4 +238,29 @@ fn fill_upscale_dialog(
     }
 
     window
+}
+
+/// Engine row subtitle: where Real-ESRGAN runs once it has loaded.
+fn engine_subtitle() -> String {
+    match bigimage_ai::upscale::device() {
+        Some(device) => fill(&gettext("Roda em: {device}"), &[("device", &device.to_string())]),
+        None => gettext("Detalhes mais nítidos que Lanczos3; roda no seu computador"),
+    }
+}
+
+/// Show the device in `row` once the model has loaded in this process.
+fn follow_device(row: &adw::SwitchRow) {
+    // Unavailable: the subtitle keeps the install hint.
+    if !row.is_sensitive() || bigimage_ai::upscale::device().is_some() {
+        return;
+    }
+    let weak = row.downgrade();
+    glib::timeout_add_local(std::time::Duration::from_millis(500), move || {
+        let Some(row) = weak.upgrade() else { return glib::ControlFlow::Break };
+        if bigimage_ai::upscale::device().is_none() {
+            return glib::ControlFlow::Continue;
+        }
+        row.set_subtitle(&engine_subtitle());
+        glib::ControlFlow::Break
+    });
 }

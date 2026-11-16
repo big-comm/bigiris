@@ -3,7 +3,8 @@
 //!
 //! The "Editar" header button (or `E`) slides a translucent panel in from
 //! the right with every edit in one place: rotate, flip, straighten and
-//! crop, tone sliders, resize, background removal and upscale, and save.
+//! crop, tone sliders, resize, the AI tools (background removal, upscale,
+//! denoise) and save.
 //! Everything it does is an in-memory [`EditOp`], so Undo/Redo, `Ctrl+S`
 //! and the `•` in the title keep working exactly as with the menu entries.
 //!
@@ -82,8 +83,11 @@ pub(in crate::gui) struct EditPanelUi {
     percent: gtk::SpinButton,
     resize_apply: gtk::Button,
     remove_bg: gtk::Button,
+    denoise: gtk::Button,
     upscale: gtk::Button,
     factor: gtk::DropDown,
+    /// Which AI tools need a package (or a build) to run.
+    ai_note: gtk::Label,
     tool_box: gtk::Box,
     tool_progress: gtk::ProgressBar,
     tool_cancel: gtk::Button,
@@ -117,7 +121,7 @@ struct Original {
     natural: (u32, u32),
 }
 
-/// A background removal or upscale running off the GTK thread.
+/// A background removal, upscale or denoise running off the GTK thread.
 struct ToolJob {
     cancel: Arc<AtomicBool>,
 }
@@ -126,8 +130,10 @@ struct ToolJob {
 #[derive(Clone, Debug)]
 enum ToolProgress {
     Preparing,
-    Download { done: u64, total: u64 },
-    Running,
+    /// Loading the model (the first GPU load also builds its shaders).
+    Loading,
+    /// Share of the network's work done; 0 for single-step models.
+    Running(f32),
     Done(Result<(), String>),
 }
 
@@ -240,8 +246,37 @@ fn degrees_label(tenths: i32) -> String {
     }
 }
 
-fn no_ai_message() -> String {
-    gettext("Esta build não inclui IA. Recompile com `cargo build --features ai` e instale `onnxruntime` (Arch: `pacman -S onnxruntime`).")
+/// What the AI tools need before they can all run, or `None`.
+fn ai_note_text() -> Option<String> {
+    if !bigimage_ai::engines_compiled() {
+        return Some(no_ai_build_message());
+    }
+    let mut notes: Vec<String> = [&bigimage_ai::background::MODEL, &bigimage_ai::denoise::MODEL]
+        .into_iter()
+        .filter_map(model_unavailable)
+        .collect();
+    if !bigimage_ai::upscale::availability().is_ready() {
+        notes.push(fill(
+            &gettext(
+                "Aumentar resolução usa Lanczos3. Para IA (Real-ESRGAN): sudo pacman -S {package}",
+            ),
+            &[("package", bigimage_ai::upscale::MODEL.package)],
+        ));
+    }
+    (!notes.is_empty()).then(|| notes.join("\n"))
+}
+
+/// Tooltip of an AI tool: what it does and, once loaded, where it runs.
+fn tool_tooltip(what: String, device: Option<bigimage_ai::Device>) -> String {
+    match device {
+        Some(device) => {
+            format!(
+                "{what}\n{}",
+                fill(&gettext("Roda em: {device}"), &[("device", &device.to_string())])
+            )
+        }
+        None => what,
+    }
 }
 
 pub(in crate::gui) fn build() -> EditPanelUi {
@@ -340,19 +375,9 @@ pub(in crate::gui) fn build() -> EditPanelUi {
     // Ferramentas
     let tools = section(&gettext("Ferramentas"));
     let remove_bg = gtk::Button::with_label(&gettext("Remover fundo (IA)"));
-    remove_bg.set_tooltip_text(Some(&gettext(
-        "Remoção de fundo: requer 8 GiB de RAM livre para iniciar. Este recurso é opcional.",
-    )));
     tools.append(&remove_bg);
-    let ai_note = gtk::Label::builder()
-        .label(no_ai_message())
-        .wrap(true)
-        .xalign(0.0)
-        .visible(!bigimage_ai::onnx_available())
-        .build();
-    ai_note.add_css_class("dim-label");
-    ai_note.add_css_class("caption");
-    tools.append(&ai_note);
+    let denoise = gtk::Button::with_label(&gettext("Remover ruído (IA)"));
+    tools.append(&denoise);
     let factor_names: Vec<&str> = UPSCALE_FACTORS.iter().map(|(name, _)| *name).collect();
     let factor = gtk::DropDown::builder().model(&translated_strings(&factor_names)).build();
     factor.set_tooltip_text(Some(&gettext("Fator")));
@@ -362,6 +387,10 @@ pub(in crate::gui) fn build() -> EditPanelUi {
     upscale_row.append(&upscale);
     upscale_row.append(&factor);
     tools.append(&upscale_row);
+    let ai_note = gtk::Label::builder().wrap(true).xalign(0.0).visible(false).build();
+    ai_note.add_css_class("dim-label");
+    ai_note.add_css_class("caption");
+    tools.append(&ai_note);
     let tool_progress = gtk::ProgressBar::builder().show_text(true).hexpand(true).build();
     let tool_cancel = gtk::Button::from_icon_name("process-stop-symbolic");
     tool_cancel.set_tooltip_text(Some(&gettext("Cancelar")));
@@ -446,8 +475,10 @@ pub(in crate::gui) fn build() -> EditPanelUi {
         percent,
         resize_apply,
         remove_bg,
+        denoise,
         upscale,
         factor,
+        ai_note,
         tool_box,
         tool_progress,
         tool_cancel,
@@ -529,7 +560,9 @@ struct Handles {
     save_as: gtk::Button,
     resize_apply: gtk::Button,
     remove_bg: gtk::Button,
+    denoise: gtk::Button,
     upscale: gtk::Button,
+    ai_note: gtk::Label,
     tool_cancel: gtk::Button,
     grid: gtk::DrawingArea,
     tool_box: gtk::Box,
@@ -555,7 +588,9 @@ fn handles(s: &ViewerState) -> Handles {
         save_as: ui.save_as.clone(),
         resize_apply: ui.resize_apply.clone(),
         remove_bg: ui.remove_bg.clone(),
+        denoise: ui.denoise.clone(),
         upscale: ui.upscale.clone(),
+        ai_note: ui.ai_note.clone(),
         tool_cancel: ui.tool_cancel.clone(),
         grid: ui.grid.clone(),
         tool_box: ui.tool_box.clone(),
@@ -741,13 +776,17 @@ pub(in crate::gui) fn connect(state: &Rc<RefCell<ViewerState>>, window: &adw::Ap
             }
         });
     }
-    let buttons: [(gtk::Button, Run); 5] = [
+    let buttons: [(gtk::Button, Run); 6] = [
         (ui.resize_apply.clone(), apply_resize),
         (ui.save_as.clone(), choose_save_as),
         (ui.remove_bg.clone(), |state| run_tool(state, EditOp::RemoveBackground)),
+        (ui.denoise.clone(), |state| run_tool(state, EditOp::Denoise)),
         (ui.upscale.clone(), |state| {
             let factor = state.borrow().edit_ui.upscale_factor();
-            run_tool(state, EditOp::Upscale { factor });
+            // Recorded with the edit, so saving later uses the same engine.
+            let ai =
+                bigimage_ai::upscale::Method::auto() == bigimage_ai::upscale::Method::RealEsrgan;
+            run_tool(state, EditOp::Upscale { factor, ai });
         }),
         (ui.tool_cancel.clone(), cancel_tool),
     ];
@@ -923,8 +962,38 @@ pub(in crate::gui) fn sync_sensitivity(state: &Rc<RefCell<ViewerState>>) {
     ui.save_as.set_sensitive(usable);
     ui.original.set_sensitive(usable);
     ui.upscale.set_sensitive(usable);
-    ui.remove_bg.set_sensitive(usable && bigimage_ai::onnx_available());
+    sync_ai_tools(&ui, usable);
     ui.content.set_sensitive(!saving);
+}
+
+/// Sensitivity, tooltips and the install note of the AI tools. The
+/// packages may be installed while the viewer runs: checked every time.
+fn sync_ai_tools(ui: &Handles, usable: bool) {
+    let remove_bg = model_unavailable(&bigimage_ai::background::MODEL);
+    let denoise = model_unavailable(&bigimage_ai::denoise::MODEL);
+    ui.remove_bg.set_sensitive(usable && remove_bg.is_none());
+    ui.denoise.set_sensitive(usable && denoise.is_none());
+    ui.remove_bg.set_tooltip_text(Some(&remove_bg.unwrap_or_else(|| {
+        tool_tooltip(
+            gettext("Recorta o objeto principal com BiRefNet-lite, no seu computador"),
+            bigimage_ai::background::device(),
+        )
+    })));
+    ui.denoise.set_tooltip_text(Some(&denoise.unwrap_or_else(|| {
+        tool_tooltip(
+            gettext("Limpa ruído e artefatos de compressão com SCUNet, no seu computador"),
+            bigimage_ai::denoise::device(),
+        )
+    })));
+    let upscale = if bigimage_ai::upscale::availability().is_ready() {
+        tool_tooltip(gettext("Real-ESRGAN (IA), no seu computador"), bigimage_ai::upscale::device())
+    } else {
+        gettext("Lanczos3 (sem IA)")
+    };
+    ui.upscale.set_tooltip_text(Some(&upscale));
+    let note = ai_note_text();
+    ui.ai_note.set_visible(note.is_some());
+    ui.ai_note.set_text(note.as_deref().unwrap_or(""));
 }
 
 /// Bring the controls in line with the current file and edits: after
@@ -1402,8 +1471,9 @@ fn apply_resize(state: &Rc<RefCell<ViewerState>>) {
     apply_edit(state, EditOp::Resize { w, h });
 }
 
-/// Run background removal or upscale on the edited image off the GTK
-/// thread, with progress and a Cancel button, then push it as an edit.
+/// Run an AI tool (background removal, upscale, denoise) on the edited
+/// image off the GTK thread, with progress and a Cancel button, then push
+/// it as an edit.
 /// The result goes into the edit cache first, so the pipeline that
 /// renders the new edit list finds it instead of computing it again.
 pub(in crate::gui) fn run_tool(state: &Rc<RefCell<ViewerState>>, op: EditOp) {
@@ -1414,12 +1484,11 @@ pub(in crate::gui) fn run_tool(state: &Rc<RefCell<ViewerState>>, op: EditOp) {
         if s.files.is_empty() || s.saving || s.edit.busy() || s.texture.is_none() {
             return;
         }
-        if op != EditOp::RemoveBackground {
-            None
-        } else if !bigimage_ai::onnx_available() {
-            Some(no_ai_message())
-        } else {
-            bigimage_ai::background::check_resources().err().map(|error| error.to_string())
+        match op {
+            EditOp::RemoveBackground => model_unavailable(&bigimage_ai::background::MODEL),
+            EditOp::Denoise => model_unavailable(&bigimage_ai::denoise::MODEL),
+            EditOp::Upscale { ai: true, .. } => model_unavailable(&bigimage_ai::upscale::MODEL),
+            _ => None,
         }
     };
     if let Some(message) = refusal {
@@ -1466,13 +1535,12 @@ pub(in crate::gui) fn run_tool(state: &Rc<RefCell<ViewerState>>, op: EditOp) {
                 if cancel.load(Ordering::Acquire) {
                     return Err(String::new());
                 }
-                publish(ToolProgress::Running);
+                publish(ToolProgress::Running(0.0));
                 let out = apply_heavy(base, op, &mut |stage| {
-                    if let bigimage_ai::background::BgStage::Download { done, total } = stage {
-                        publish(ToolProgress::Download { done, total });
-                    } else {
-                        publish(ToolProgress::Running);
-                    }
+                    publish(match stage {
+                        bigimage_ai::Stage::Loading => ToolProgress::Loading,
+                        bigimage_ai::Stage::Running(share) => ToolProgress::Running(share),
+                    });
                 })?;
                 if !cancel.load(Ordering::Acquire) {
                     let mut key = edits::effective_ops(&ops);
@@ -1506,6 +1574,8 @@ pub(in crate::gui) fn run_tool(state: &Rc<RefCell<ViewerState>>, op: EditOp) {
         state.borrow_mut().edit.tool = None;
         ui.tool_box.set_visible(false);
         sync_edit_actions(&state);
+        // The tooltips now name the device the model loaded on.
+        sync_sensitivity(&state);
         let result = match snapshot() {
             ToolProgress::Done(result) => result,
             _ => Err(gettext("O processamento terminou inesperadamente. Tente novamente.")),
@@ -1532,24 +1602,21 @@ pub(in crate::gui) fn run_tool(state: &Rc<RefCell<ViewerState>>, op: EditOp) {
 fn show_tool_progress(bar: &gtk::ProgressBar, progress: &ToolProgress, op: EditOp) {
     match progress {
         ToolProgress::Preparing | ToolProgress::Done(_) => bar.pulse(),
-        ToolProgress::Download { done, total } => {
-            let fraction =
-                if *total > 0 { (*done as f64 / *total as f64).clamp(0.0, 1.0) } else { 0.0 };
-            bar.set_fraction(fraction);
-            bar.set_text(Some(&fill(
-                &gettext("Baixando modelo (uma vez só): {done} / {total}"),
-                &[
-                    ("done", &crate::gui::batch_runner::format_size(*done)),
-                    ("total", &crate::gui::batch_runner::format_size(*total)),
-                ],
-            )));
-        }
-        ToolProgress::Running => {
+        ToolProgress::Loading => {
             bar.pulse();
-            bar.set_text(Some(&if op == EditOp::RemoveBackground {
-                gettext("Removendo o fundo…")
+            bar.set_text(Some(&gettext("Carregando o modelo…")));
+        }
+        ToolProgress::Running(share) => {
+            // Single-step models report 0 until they finish.
+            if *share > 0.0 {
+                bar.set_fraction(f64::from(*share));
             } else {
-                gettext("Aumentando…")
+                bar.pulse();
+            }
+            bar.set_text(Some(&match op {
+                EditOp::RemoveBackground => gettext("Removendo o fundo…"),
+                EditOp::Denoise => gettext("Removendo ruído…"),
+                _ => gettext("Aumentando…"),
             }));
         }
     }
@@ -1805,6 +1872,10 @@ impl EditPanelUi {
             self.tool_box.clone(),
             self.tool_status.clone(),
         )
+    }
+
+    pub(in crate::gui) fn ai_controls(&self) -> (gtk::Button, gtk::Label) {
+        (self.denoise.clone(), self.ai_note.clone())
     }
 
     pub(in crate::gui) fn original_button(&self) -> gtk::ToggleButton {

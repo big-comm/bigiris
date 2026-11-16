@@ -12,19 +12,20 @@ pub(in crate::gui) fn nobg_output_path(src: &Path) -> PathBuf {
 }
 
 /// Run one remove-bg pass over `src`: decode → BiRefNet → save PNG RGBA.
-/// Reuse-friendly remove-bg: takes a pre-loaded [`BgSession`] (~224 MB
-/// of weights stay resident across calls) and runs inference + saves
-/// the RGBA output. Used by the dialog batch loop so a 50-file batch
-/// loads BiRefNet **once**, not 50 times.
+/// The model stays loaded across calls (see [`bigimage_ai::background`]),
+/// so a 50-file batch loads BiRefNet once. `cancel` stops the network.
 fn remove_bg_one_with_session(
     session: &mut bigimage_ai::background::BgSession,
     src: &Path,
+    cancel: &std::sync::atomic::AtomicBool,
 ) -> Result<PathBuf, String> {
     bigimage_core::content::ensure_static(src).map_err(|e| e.to_string())?;
     let img = bigimage_core::open_image(src).map_err(|e| {
         fill(&gettext("Não foi possível ler a imagem: {error}"), &[("error", &e.to_string())])
     })?;
-    let out = session.process(&img).map_err(|e| e.to_string())?;
+    let out = session
+        .process_with_progress(&img, bigimage_ai::cancel_on(cancel))
+        .map_err(|e| ai_error_text(&e))?;
     // Increment, never Replace: the dialog promises not to overwrite, and
     // `foto.jpg` + `foto.png` in one batch both map to `foto_nobg.png`.
     let outcome = bigimage_core::save_image(
@@ -47,8 +48,8 @@ fn remove_bg_one_with_session(
 enum BgUiState {
     /// Worker hasn't started yet (apply not clicked).
     Idle,
-    /// Downloading the BiRefNet weights. `done`/`total` in bytes.
-    Download { done: u64, total: u64 },
+    /// Loading BiRefNet (the first GPU load also builds its shaders).
+    Loading,
     /// Running inference on file `idx` (0-based) of `total`.
     Processing { idx: usize, total: usize, file: String },
     /// Worker finished. `outputs` pairs the index of each input processed
@@ -77,6 +78,7 @@ pub(in crate::gui) fn build_remove_bg_dialog(
         &gettext("Remover fundo"),
         &gettext("Prisma · BiRefNet-lite"),
     )));
+    let unavailable = model_unavailable(&bigimage_ai::background::MODEL);
 
     let content = gtk::Box::builder()
         .orientation(gtk::Orientation::Vertical)
@@ -108,28 +110,13 @@ pub(in crate::gui) fn build_remove_bg_dialog(
         return window;
     }
 
-    // Soft-fail build warning: if the `ai` feature is off, inference will
-    // refuse anyway — but tell the user upfront so they don't click and
-    // get a surprise error.
-    if !bigimage_ai::onnx_available() {
-        let banner = gtk::Label::builder()
-            .label(gettext("Esta build não inclui IA. Recompile com `cargo build --features ai` e instale `onnxruntime` (Arch: `pacman -S onnxruntime`)."))
-            .wrap(true)
-            .xalign(0.0)
-            .build();
+    // No engines in this build, or the weights package is missing: say
+    // which package to install before the user clicks.
+    if let Some(message) = &unavailable {
+        let banner = gtk::Label::builder().label(message).wrap(true).xalign(0.0).build();
         banner.add_css_class("warning");
         content.append(&banner);
     }
-
-    let memory_row = gtk::Label::builder()
-        .label(gettext(
-            "Remoção de fundo: requer 8 GiB de RAM livre para iniciar. Este recurso é opcional.",
-        ))
-        .wrap(true)
-        .xalign(0.0)
-        .build();
-    memory_row.add_css_class("dim-label");
-    content.append(&memory_row);
 
     let files_row = selection_row(&gettext("Imagens"), &files);
     let files_icon = gtk::Image::from_icon_name("image-x-generic-symbolic");
@@ -138,7 +125,7 @@ pub(in crate::gui) fn build_remove_bg_dialog(
     let model_row = adw::ActionRow::builder()
         .use_markup(false)
         .title(gettext("Modelo"))
-        .subtitle(gettext("BiRefNet-lite (MIT) · roda offline no seu computador"))
+        .subtitle(model_subtitle())
         .build();
     let model_icon = gtk::Image::from_icon_name("application-x-executable-symbolic");
     model_row.add_prefix(&model_icon);
@@ -175,6 +162,7 @@ pub(in crate::gui) fn build_remove_bg_dialog(
     content.append(&status);
 
     let (cancel_btn, apply_btn, actions_box) = action_buttons(&gettext("Remover fundo"));
+    apply_btn.set_sensitive(unavailable.is_none());
     content.append(&actions_box);
 
     let tv = adw::ToolbarView::new();
@@ -210,9 +198,10 @@ pub(in crate::gui) fn build_remove_bg_dialog(
         let cancel_btn = cancel_btn.clone();
         let window = window.clone();
         let cancelled = cancelled.clone();
+        let model_row = model_row.clone();
         dialog_signal!(window, apply_btn.clone(), connect_clicked, move |_| {
-            if let Err(error) = bigimage_ai::background::check_resources() {
-                status.set_text(&error.to_string());
+            if let Some(message) = model_unavailable(&bigimage_ai::background::MODEL) {
+                status.set_text(&message);
                 return;
             }
             let pending: Vec<(usize, PathBuf)> = files_rc
@@ -257,15 +246,12 @@ pub(in crate::gui) fn build_remove_bg_dialog(
                         *shared.lock().unwrap_or_else(|p| p.into_inner()) = state;
                         wake.notify();
                     };
-                    // Build a single BgSession for the whole batch — Download
-                    // progress streams once, then the loaded weights are
-                    // reused for every file. Previous code reloaded ~224 MB
-                    // per file (perf review I-ORT).
+                    // Load the model once for the whole batch; every file
+                    // reuses it.
                     let total = pending.len();
-                    let session_result = bigimage_ai::background::BgSession::new(|stage| {
-                        if let bigimage_ai::background::BgStage::Download { done, total } = stage {
-                            publish(BgUiState::Download { done, total });
-                        }
+                    let session_result = bigimage_ai::background::BgSession::new(|_| {
+                        publish(BgUiState::Loading);
+                        std::ops::ControlFlow::Continue(())
                     });
                     let mut session = match session_result {
                         Ok(s) => s,
@@ -274,7 +260,7 @@ pub(in crate::gui) fn build_remove_bg_dialog(
                                 outputs: pending.iter().map(|(idx, _)| (*idx, None)).collect(),
                                 first_err: Some(fill(
                                     &gettext("Falha ao carregar o modelo: {error}"),
-                                    &[("error", &e.to_string())],
+                                    &[("error", &ai_error_text(&e))],
                                 )),
                             });
                             return;
@@ -284,9 +270,8 @@ pub(in crate::gui) fn build_remove_bg_dialog(
                     let mut outputs = Vec::with_capacity(total);
                     let mut first_err: Option<String> = None;
                     for (position, (idx, path)) in pending.iter().enumerate() {
-                        // Bail entre arquivos — não dá para interromper o
-                        // session.run() do ORT no meio, mas pelo menos o
-                        // próximo arquivo do lote não é tocado.
+                        // Bail between files; a running file stops at the
+                        // network's next step through the same flag.
                         if cancelled_w.load(std::sync::atomic::Ordering::Relaxed) {
                             outputs.push((*idx, None));
                             continue;
@@ -302,7 +287,7 @@ pub(in crate::gui) fn build_remove_bg_dialog(
                         // Scoped cancel lets closing the window stop the
                         // isolated decode instead of waiting for it.
                         let result = crate::codec::with_cancel(cancelled_w.clone(), || {
-                            remove_bg_one_with_session(&mut session, path)
+                            remove_bg_one_with_session(&mut session, path, &cancelled_w)
                         });
                         match result {
                             Ok(out) => outputs.push((*idx, Some(out))),
@@ -330,6 +315,7 @@ pub(in crate::gui) fn build_remove_bg_dialog(
             let originals = files_rc.clone();
             let results = results.clone();
             let cancelled_ui = cancelled.clone();
+            let model_row = model_row.clone();
             let hold = window.application().map(|app| app.hold());
             glib::MainContext::default().spawn_local(async move {
                 let _hold = hold;
@@ -337,6 +323,7 @@ pub(in crate::gui) fn build_remove_bg_dialog(
                 while wake.wait().await {
                     if !cancelled_ui.load(std::sync::atomic::Ordering::Relaxed) {
                         show_bg_progress(&progress_bar, &snapshot());
+                        model_row.set_subtitle(&model_subtitle());
                     }
                 }
                 if cancelled_ui.load(std::sync::atomic::Ordering::Relaxed) {
@@ -404,14 +391,9 @@ pub(in crate::gui) fn build_remove_bg_dialog(
 fn show_bg_progress(progress_bar: &gtk::ProgressBar, state: &BgUiState) {
     match state {
         BgUiState::Idle | BgUiState::Done { .. } => {}
-        BgUiState::Download { done, total } => {
-            let frac =
-                if *total > 0 { (*done as f64 / *total as f64).clamp(0.0, 1.0) } else { 0.0 };
-            progress_bar.set_fraction(frac);
-            progress_bar.set_text(Some(&fill(
-                &gettext("Baixando modelo (uma vez só): {done} / {total}"),
-                &[("done", &format_size(*done)), ("total", &format_size(*total))],
-            )));
+        BgUiState::Loading => {
+            progress_bar.pulse();
+            progress_bar.set_text(Some(&gettext("Carregando o modelo…")));
         }
         BgUiState::Processing { idx, total, file } => {
             let frac = (*idx as f64 / (*total).max(1) as f64).clamp(0.0, 1.0);
@@ -425,6 +407,17 @@ fn show_bg_progress(progress_bar: &gtk::ProgressBar, state: &BgUiState) {
                 ],
             )));
         }
+    }
+}
+
+/// Model row subtitle: licence, and where the model runs once loaded.
+fn model_subtitle() -> String {
+    match bigimage_ai::background::device() {
+        Some(device) => fill(
+            &gettext("BiRefNet-lite (MIT) · roda offline em {device}"),
+            &[("device", &device.to_string())],
+        ),
+        None => gettext("BiRefNet-lite (MIT) · roda offline no seu computador"),
     }
 }
 

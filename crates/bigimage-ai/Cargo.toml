@@ -1,6 +1,6 @@
 [package]
 name = "bigimage-ai"
-description = "AI inference backend for BigIris (ONNX Runtime, feature-gated)"
+description = "Local image AI for BigIris (native BiRefNet, Real-ESRGAN, SCUNet and LaMa engines, feature-gated)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -12,27 +12,20 @@ repository.workspace = true
 bigimage-core = { path = "../bigimage-core" }
 thiserror.workspace = true
 tracing.workspace = true
-
-# Model download infrastructure: always built (cheap). Inference
-# (ort + ndarray) stays gated behind `onnx` so CI default and distros
-# without onnxruntime can still compile.
-ureq.workspace = true
-sha2.workspace = true
-directories.workspace = true
 image.workspace = true
-tempfile = "3"
-url = "2"
+# getrlimit for the memory admission check (address-space limit).
 rustix = { version = "1", features = ["process"] }
 
-ort = { workspace = true, optional = true }
-ndarray = { workspace = true, optional = true }
+# The engines need `glslc` (shaderc) at build time and only `std` +
+# the system's libvulkan (opened at run time) afterwards. Weights are
+# never downloaded: they come from the BigLinux packages
+# birefnet-native, realesrgan-native, scunet-native and lama-native.
+birefnet-native = { workspace = true, optional = true }
+realesrgan-native = { workspace = true, optional = true }
+scunet-native = { workspace = true, optional = true }
+lama-native = { workspace = true, optional = true }
 
 [features]
 default = []
-# Enable ONNX Runtime-based inference (remove-bg, upscale, denoise).
-# Requires `libonnxruntime` at runtime (Arch: `pacman -S onnxruntime`).
-onnx = ["dep:ort", "dep:ndarray"]
-
-[[example]]
-name = "onnx_memory"
-required-features = ["onnx"]
+# Native inference (remove background, upscale, denoise, inpaint).
+native = ["dep:birefnet-native", "dep:realesrgan-native", "dep:scunet-native", "dep:lama-native"]

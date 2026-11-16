@@ -51,9 +51,11 @@ mimalloc = { version = "0.1", default-features = false }
 # system libs required). The PKGBUILD and README install instructions
 # pass `--features "gui ai"` explicitly for end-user installs.
 default = []
-# Enable AI backend (ORT + models). Requires `onnxruntime` at runtime
-# (Arch: `pacman -S onnxruntime`).
-ai = ["bigimage-ai/onnx"]
+# Enable the native AI engines (remove background, upscale, denoise,
+# inpaint). Building needs `glslc` (shaderc); at run time each tool needs
+# its BigLinux weights package (birefnet-native, realesrgan-native,
+# scunet-native, lama-native) and works without any of the others.
+ai = ["bigimage-ai/native"]
 # Enable GTK4 / libadwaita viewer.
 gui = ["dep:gtk4", "dep:libadwaita"]
 

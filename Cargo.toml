@@ -10,7 +10,7 @@ members = [
 [workspace.package]
 version = "0.1.0"
 edition = "2021"
-rust-version = "1.92"
+rust-version = "1.95"
 license = "GPL-3.0-or-later"
 authors = ["Leonardo Athayde <leoathayde@gmail.com>"]
 repository = "https://github.com/xathay/bigiris"
@@ -26,10 +26,13 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 color-eyre = "0.6"
 fast_image_resize = { version = "6", features = ["image"] }
 kamadak-exif = "0.6"
-ureq = { version = "2", default-features = false, features = ["native-tls"] }
-sha2 = "0.10"
-ort = { version = "=2.0.0-rc.10", default-features = false, features = ["load-dynamic", "ndarray"] }
-ndarray = "0.16"
+# Native image AI engines (BigLinux): plain Rust, CPU or Vulkan GPU, no
+# ONNX Runtime. Pinned to a reviewed commit; the weights come from the
+# BigLinux packages of the same name (see crates/bigimage-ai).
+birefnet-native = { git = "https://github.com/biglinux/image-engine-native", rev = "adbe1784bafd9329c8d667f28759aedfbf841d29" }
+realesrgan-native = { git = "https://github.com/biglinux/image-engine-native", rev = "adbe1784bafd9329c8d667f28759aedfbf841d29" }
+scunet-native = { git = "https://github.com/biglinux/image-engine-native", rev = "adbe1784bafd9329c8d667f28759aedfbf841d29" }
+lama-native = { git = "https://github.com/biglinux/image-engine-native", rev = "adbe1784bafd9329c8d667f28759aedfbf841d29" }
 gtk4 = { version = "0.11", features = ["v4_12"] }
 libadwaita = { version = "0.9", features = ["v1_6"] }
 directories = "5"

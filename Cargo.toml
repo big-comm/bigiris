@@ -64,6 +64,21 @@ strip = "debuginfo"
 [profile.dev]
 opt-level = 1
 
+# The AI engines are compute kernels: at opt-level 1 a debug build runs
+# them several times slower, which makes the GUI tests that use them crawl.
+[profile.dev.package.native-engine]
+opt-level = 3
+[profile.dev.package.native-vulkan]
+opt-level = 3
+[profile.dev.package.birefnet-native]
+opt-level = 3
+[profile.dev.package.realesrgan-native]
+opt-level = 3
+[profile.dev.package.scunet-native]
+opt-level = 3
+[profile.dev.package.lama-native]
+opt-level = 3
+
 # image 0.25.10 with the AVIF decoder termination fix from upstream
 # (image-rs/image@3d74c477). A crafted AVIF without a decodable frame made
 # AvifDecoder::new spin forever. Drop this once image > 0.25.10 ships the fix.

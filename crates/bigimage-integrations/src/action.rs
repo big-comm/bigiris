@@ -105,7 +105,8 @@ pub const SUB_UTILS: Submenu =
     Submenu { id: "utils", label: n_("Utilidades"), icon: "applications-graphics-symbolic" };
 
 /// Submenu: IA local (background removal, upscale, denoise).
-/// Requer build com feature `ai` e o pacote `onnxruntime` instalado.
+/// Requer build com feature `ai`; cada ferramenta precisa do seu pacote de
+/// pesos (`birefnet-native`, `realesrgan-native`, ...).
 pub const SUB_AI: Submenu =
     Submenu { id: "ai", label: n_("IA"), icon: "applications-science-symbolic" };
 

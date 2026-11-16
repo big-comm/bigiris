@@ -14,17 +14,26 @@ no histórico Git.
 Distros baseadas em Arch/BigLinux:
 
 ```bash
-sudo pacman -S --needed rust pkgconf gtk4 libadwaita dav1d openssl gettext
+sudo pacman -S --needed rust pkgconf gtk4 libadwaita dav1d gettext shaderc
 ```
 
 Distros Debian/Ubuntu:
 
 ```bash
 sudo apt-get install -y rustc cargo pkg-config libgtk-4-dev \
-    libadwaita-1-dev libdav1d-dev libssl-dev gettext
+    libadwaita-1-dev libdav1d-dev gettext glslc
 ```
 
-Rust mínimo: **1.92** (declarado no `Cargo.toml`; `rust-toolchain.toml` seleciona stable).
+Rust mínimo: **1.95** (declarado no `Cargo.toml`; `rust-toolchain.toml` seleciona stable).
+`glslc` (do shaderc) só é usado na compilação com a feature `ai`, para os
+shaders Vulkan dos motores de IA.
+
+Para testar as ferramentas de IA sem instalar os pacotes de pesos, aponte as
+variáveis `BIGIRIS_BIREFNET_WEIGHTS`, `BIGIRIS_REALESRGAN_WEIGHTS`,
+`BIGIRIS_SCUNET_WEIGHTS` e `BIGIRIS_LAMA_WEIGHTS` para os arquivos extraídos
+dos pacotes `*-native` (veja [docs/IA-LOCAL.md](docs/IA-LOCAL.md)). Os testes
+que carregam modelos usam bastante memória: rode-os com
+`--test-threads=1`.
 
 Os encoders mozjpeg, libwebp e libdeflate (oxipng) são compilados a partir
 das fontes C que vêm dentro dos crates, com o compilador C do sistema
@@ -101,10 +110,11 @@ recusa execução direta sem `GSETTINGS_BACKEND=memory`. Inclui preservação do
 ponto do cursor no zoom por geometria real e pixels renderizados, além de
 cancelamento na navegação e liberação de estado no fechamento.
 
-A suíte CLI com a feature `ai` testa recusa sob RLIMIT_AS de 4 GiB antes do
-download, sem cache/saída e com original preservado. Inferência real exige
-8 GiB de RAM disponível e modelo na cache isolada; use `scripts/ai_smoke.py`
-e consulte os limites em `docs/QUALITY.md`.
+A suíte CLI com a feature `ai` testa a recusa sob RLIMIT_AS de 512 MiB antes
+de carregar o modelo, sem saída e com o original preservado, e a mensagem de
+pacote ausente. Os testes que rodam os modelos de verdade só rodam com os
+pesos instalados ou apontados por `BIGIRIS_*_WEIGHTS`; veja
+[docs/IA-LOCAL.md](docs/IA-LOCAL.md) e `scripts/ai_smoke.py`.
 
 Capturas opcionais registram somente os widgets das janelas sintéticas:
 
@@ -133,7 +143,7 @@ de Memcheck e não demonstram, isoladamente, ausência de vazamentos.
 ```
 crates/
 ├── bigimage-core/         # decode/encode/transforms — pure Rust, headless
-├── bigimage-ai/           # ONNX Runtime + modelos (feature `onnx`)
+├── bigimage-ai/           # IA local: motores image-engine-native (feature `native`)
 ├── bigimage-integrations/ # service menus pros 6 file managers
 └── bigiris/               # binário (CLI + GUI via feature `gui`)
 data/
@@ -257,10 +267,9 @@ externamente não são instrumentadas. Valgrind continua sendo um gate
 independente no CI.
 
 `python3 scripts/release_smoke.py` verifica o sandbox e os 13 formatos no
-release. `python3 scripts/ai_smoke.py` executa inferência ONNX real em duas
-imagens sintéticas com transparência, usando somente o cache isolado em
-`target/quality/ai/`. O primeiro download exige `--allow-download`; o teste
-não toca no cache pessoal e registra tempo, RAM e preservação de RGB/alpha.
+release. `python3 scripts/ai_smoke.py` executa a remoção de fundo real em duas
+imagens sintéticas com transparência, com os pesos do pacote `birefnet-native`
+(ou `--weights`), e registra tempo, RAM e preservação de RGB/alpha.
 
 Após `cargo build --release -p bigimage-core --example quality_probe --locked`,
 `python3 scripts/soak.py --seconds 28800 --background` executa oito horas do

@@ -40,15 +40,16 @@ Inclua, na medida do possível:
 São considerados em escopo:
 
 - Decode de arquivos de imagem (`bigimage-core`).
-- Pipeline de IA local (`bigimage-ai`) — incluindo verificação de
-  integridade dos modelos.
+- Pipeline de IA local (`bigimage-ai`) — leitura dos pesos dos pacotes do
+  sistema e pré/pós-processamento das imagens.
 - Geradores de service menus de file manager (`bigimage-integrations`).
 - Visualizador GTK4 (`bigiris/gui`).
 - PKGBUILDs do projeto (`pkgbuild/`).
 
 Fora de escopo (encaminhe upstream): vulnerabilidades em `image`,
-`fast_image_resize`, `dav1d`, `gtk4`, `libadwaita`, `ort`,
-ONNX Runtime ou no kernel.
+`fast_image_resize`, `dav1d`, `gtk4`, `libadwaita`, nos motores do
+[image-engine-native](https://github.com/biglinux/image-engine-native), nos
+drivers Vulkan ou no kernel.
 
 ## Hardening já aplicado
 
@@ -78,7 +79,8 @@ Para contexto sobre o que já é defesa em profundidade:
 
 Decodificação, inspeção de formatos e EXIF do executável passam pelo worker
 confinado. Consumidores autônomos de `bigimage-core` usam execução local por
-padrão. Encoders, GTK, TLS e inferência ONNX continuam no processo do aplicativo.
+padrão. Encoders, GTK e a inferência de IA (motores image-engine-native, CPU ou Vulkan)
+continuam no processo do aplicativo.
 O isolamento não substitui revisão das bibliotecas nativas ou do kernel. O relatório de qualidade registra os testes realizados e
 as lacunas; uma execução curta sem crescimento de RSS não prova ausência de leaks.
 
@@ -92,11 +94,12 @@ de energia em todos os sistemas de arquivos.
 
 ### Admissão de memória para IA
 
-BiRefNet FP32 exige orçamento inicial de 8 GiB de RAM livre. A conferência
-ocorre antes do download/carga e antes da inferência; considera MemAvailable,
-limites dos ancestrais de cgroup v2 e RLIMIT_AS. Não conta swap. Sessões
-reutilizadas creditam somente crescimento residente observado no código nativo,
-com teto; a área de trabalho da imagem é acrescentada ao orçamento. A política
-não é quota de RSS, não cobre cgroup v1 e não elimina competição por memória
-após a conferência. ONNX permanece no processo principal. Um modelo menor
+Cada modelo estima a memória de que precisa (pesos e buffers fixos na carga;
+rede e buffers da imagem em cada execução, com margem sobre os picos medidos)
+e confere antes da carga e antes de cada execução; considera MemAvailable,
+limites dos ancestrais de cgroup v2 e RLIMIT_AS. Não conta swap. Os pesos vêm
+só dos pacotes do sistema (`/usr/share/<pacote>`), nunca da rede. A política
+não é quota de RSS, não cobre cgroup v1 nem a memória da GPU e não elimina
+competição por memória após a conferência. A inferência permanece no
+processo principal. Um modelo menor
 precisa de medições próprias antes de ser oferecido para máquinas de 4 GB.

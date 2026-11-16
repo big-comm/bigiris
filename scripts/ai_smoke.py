@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-3.0-or-later
-"""Exercise real ONNX inference using synthetic RGBA images and isolated data."""
+"""Exercise real background removal (BiRefNet-lite, birefnet-native) on synthetic RGBA images."""
 import argparse
 import hashlib
 import json
@@ -19,15 +19,18 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--binary', type=Path, default=ROOT / 'target/release/bigiris')
     parser.add_argument('--output', type=Path, default=ROOT / 'target/quality/round2/ai-release')
-    parser.add_argument('--allow-download', action='store_true')
+    parser.add_argument('--weights', type=Path,
+                        default=os.environ.get('BIGIRIS_BIREFNET_WEIGHTS',
+                                               '/usr/share/birefnet-native/birefnet-lite-f16.weights'),
+                        help='BiRefNet-lite weights (default: the birefnet-native package)')
     args = parser.parse_args()
     binary = args.binary.resolve()
     output = args.output.resolve()
     output.mkdir(parents=True, exist_ok=True)
-    cache = ROOT / 'target/quality/ai'
-    if not args.allow_download and not any(cache.glob('*/models/*.onnx')):
-        parser.error('isolated model cache missing; explicitly use --allow-download')
-    env = dict(os.environ, XDG_DATA_HOME=str(cache))
+    weights = args.weights.resolve()
+    if not weights.is_file():
+        parser.error(f'{weights} missing; install birefnet-native or pass --weights')
+    env = dict(os.environ, BIGIRIS_BIREFNET_WEIGHTS=str(weights))
     originals = []
 
     def chunk(kind, data):
@@ -42,7 +45,7 @@ def main():
                          + chunk(b'IDAT', zlib.compress(rows)) + chunk(b'IEND', b''))
         originals.append((path, width, height, pixels))
     report = dict(passed=False, binary_sha256=hashlib.sha256(binary.read_bytes()).hexdigest(),
-                  images=len(originals), model_cache=str(cache))
+                  images=len(originals), weights=str(weights))
     started = time.monotonic()
     try:
         result = subprocess.run([str(binary), 'remove-bg', *[str(item[0]) for item in originals]],

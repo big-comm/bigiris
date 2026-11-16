@@ -620,7 +620,12 @@ fn viewer_edit_panel_ai() {
         let tooltip = denoise.tooltip_text().unwrap_or_default();
         assert!(tooltip.contains("CPU") || tooltip.contains("GPU"), "tooltip: {tooltip}");
     }
-    assert!(!note.is_visible() || !expected.is_empty() || !bigimage_ai::engines_compiled());
+    // With every panel model installed there is nothing to install.
+    if expected.len() == 3 {
+        assert!(!note.is_visible(), "install note with every model present: {}", note.text());
+    } else {
+        assert!(note.is_visible(), "no install note with a model missing");
+    }
     let scroller = find(&state.borrow().edit_ui.revealer, &|w| w.is::<gtk::ScrolledWindow>())
         .and_downcast::<gtk::ScrolledWindow>()
         .unwrap();
@@ -644,7 +649,12 @@ fn viewer_edit_panel_ai() {
         // colour profile kept): every heavy tool once more, same engines.
         let copy = dir.path().join("a-copy.png");
         super::edit_panel::save_copy(&state, copy.clone());
-        wait(&context, "save-as done", &|| !state.borrow().saving);
+        // Every heavy tool again: minutes for SCUNet on a slow CPU.
+        let deadline = std::time::Instant::now() + Duration::from_secs(600);
+        while state.borrow().saving {
+            assert!(std::time::Instant::now() < deadline, "timed out: save-as");
+            settle(&context, 50);
+        }
         let saved = image::open(&copy).unwrap();
         assert_eq!((saved.width(), saved.height()), natural);
         assert_eq!(heavy_runs(), runs + expected.len(), "save-as skipped a tool");

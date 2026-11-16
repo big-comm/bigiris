@@ -22,6 +22,7 @@ mod codec;
 #[cfg(feature = "gui")]
 mod gui;
 
+use std::ops::ControlFlow::Continue;
 use std::path::{Path, PathBuf};
 
 /// One exit-status convention for every headless command.
@@ -460,7 +461,8 @@ enum Command {
         #[arg(value_name = "FILE", required = true)]
         files: Vec<PathBuf>,
     },
-    /// Remover fundo usando IA (headless)
+    /// Remover fundo usando IA local (BiRefNet-lite, pacote birefnet-native).
+    /// Grava `<nome>_nobg.png` (PNG com alfa) ao lado de cada imagem.
     RemoveBg {
         /// Modelo de segmentação.
         #[arg(long, value_enum, default_value_t = ModelArg::BirefnetLite)]
@@ -471,12 +473,38 @@ enum Command {
         #[arg(value_name = "FILE", required = true)]
         files: Vec<PathBuf>,
     },
-    /// Aumentar resolução (Lanczos3 CPU). Futuro backend IA (Real-ESRGAN)
-    /// entra por --engine quando o modelo estiver disponível.
+    /// Aumentar resolução por 2, 3 ou 4. Com o pacote realesrgan-native usa
+    /// IA (Real-ESRGAN); sem ele, Lanczos3. Grava `<nome>_<pct>pct.<ext>`.
     Upscale {
         /// Fator inteiro (2, 3 ou 4).
         #[arg(long, default_value_t = 2)]
         factor: u8,
+        /// Motor: auto (Real-ESRGAN se instalado, senão Lanczos3),
+        /// realesrgan (falha se ausente) ou lanczos.
+        #[arg(long, value_enum, default_value_t = UpscaleEngineArg::Auto)]
+        engine: UpscaleEngineArg,
+        /// Política de sobrescrita do arquivo de saída.
+        #[arg(long, default_value_t, value_enum)]
+        overwrite: OverwriteArg,
+        #[arg(value_name = "FILE", required = true)]
+        files: Vec<PathBuf>,
+    },
+    /// Remover ruído e artefatos de compressão com IA local (SCUNet, pacote
+    /// scunet-native). Grava `<nome>_denoised.<ext>`.
+    Denoise {
+        /// Política de sobrescrita do arquivo de saída.
+        #[arg(long, default_value_t, value_enum)]
+        overwrite: OverwriteArg,
+        #[arg(value_name = "FILE", required = true)]
+        files: Vec<PathBuf>,
+    },
+    /// Apagar objetos: preenche a área marcada na máscara com IA local (LaMa,
+    /// pacote lama-native). Grava `<nome>_inpaint.<ext>`.
+    Inpaint {
+        /// Máscara do mesmo tamanho da imagem: branco = preencher, preto =
+        /// manter (áreas transparentes são mantidas).
+        #[arg(long, value_name = "MASK")]
+        mask: PathBuf,
         /// Política de sobrescrita do arquivo de saída.
         #[arg(long, default_value_t, value_enum)]
         overwrite: OverwriteArg,
@@ -546,9 +574,24 @@ enum Command {
 #[derive(ValueEnum, Debug, Clone, Copy, Default)]
 #[value(rename_all = "kebab-case")]
 enum ModelArg {
-    /// BiRefNet Lite (único modelo disponível hoje).
+    /// BiRefNet-lite (único modelo disponível).
     #[default]
     BirefnetLite,
+}
+
+#[derive(ValueEnum, Debug, Clone, Copy, Default, PartialEq, Eq)]
+#[value(rename_all = "kebab-case")]
+enum UpscaleEngineArg {
+    /// Real-ESRGAN quando o pacote realesrgan-native está instalado,
+    /// senão Lanczos3.
+    #[default]
+    Auto,
+    /// IA Real-ESRGAN (requer realesrgan-native).
+    #[value(alias = "ai", alias = "real-esrgan")]
+    Realesrgan,
+    /// Reamostragem Lanczos3 (sem IA).
+    #[value(alias = "lanczos3", alias = "cpu")]
+    Lanczos,
 }
 
 fn main() -> color_eyre::Result<()> {
@@ -660,8 +703,12 @@ fn main() -> color_eyre::Result<()> {
         Some(Command::RemoveBg { model, overwrite, files }) => {
             run_remove_bg(model, overwrite.into(), &files)
         }
-        Some(Command::Upscale { factor, overwrite, files }) => {
-            run_upscale(factor, overwrite.into(), &files)
+        Some(Command::Upscale { factor, engine, overwrite, files }) => {
+            run_upscale(factor, engine, overwrite.into(), &files)
+        }
+        Some(Command::Denoise { overwrite, files }) => run_denoise(overwrite.into(), &files),
+        Some(Command::Inpaint { mask, overwrite, files }) => {
+            run_inpaint(&mask, overwrite.into(), &files)
         }
         Some(Command::Animate { output, delay, loop_count, speed, overwrite, frames }) => {
             run_animate(&output, delay, loop_count, speed, overwrite.into(), &frames)
@@ -695,12 +742,12 @@ fn init_i18n() {
 fn self_test() -> color_eyre::Result<()> {
     codec::self_test()?;
     println!(
-        "bigiris self-test OK [sandbox + decode]  (bigiris={}+{}  core={}  ai={} [onnx={}]  integrations={})",
+        "bigiris self-test OK [sandbox + decode]  (bigiris={}+{}  core={}  ai={} [engines={}]  integrations={})",
         env!("CARGO_PKG_VERSION"),
         env!("BIGIRIS_BUILD_ID"),
         bigimage_core::version(),
         bigimage_ai::version(),
-        bigimage_ai::onnx_available(),
+        bigimage_ai::engines_compiled(),
         bigimage_integrations::version(),
     );
     Ok(())
@@ -1000,13 +1047,7 @@ fn run_remove_bg(
     files: &[PathBuf],
 ) -> color_eyre::Result<()> {
     tracing::info!(?model, ?policy, count = files.len(), "remove-bg");
-    if !bigimage_ai::onnx_available() {
-        return Err(color_eyre::eyre::eyre!(
-            "esta build não tem a feature `ai`. Recompile com \
-             `cargo build --features ai` e instale onnxruntime (Arch: \
-             `pacman -S onnxruntime`)."
-        ));
-    }
+    require_model(&bigimage_ai::background::MODEL)?;
     let naming = Naming::image(Some(Format::Png), policy);
     let groups = plan_outputs(files, naming)?;
 
@@ -1014,7 +1055,7 @@ fn run_remove_bg(
     let mut skipped = 0usize;
     let mut fail = 0usize;
     // Loaded on first use: skipping existing outputs needs no model.
-    let mut session = None;
+    let mut slot = None;
     for f in groups.iter().flatten() {
         let dest = remove_bg_output(f);
         if policy == OverwritePolicy::Skip && dest.exists() {
@@ -1022,9 +1063,13 @@ fn run_remove_bg(
             println!("skip {} (já existe: {})", f.display(), dest.display());
             continue;
         }
-        let session = match &mut session {
+        let session = match &mut slot {
             Some(session) => session,
-            None => session.insert(bigimage_ai::background::BgSession::new(|_| {})?),
+            None => {
+                let session = bigimage_ai::background::BgSession::new(|_| Continue(()))?;
+                report_device("remove-bg", bigimage_ai::background::device());
+                slot.insert(session)
+            }
         };
         match remove_bg_one(f, dest, policy, session) {
             Ok(ConvertOutcome::Written { output }) => {
@@ -1070,19 +1115,136 @@ fn remove_bg_one(
         .map_err(|e| color_eyre::eyre::eyre!("encode: {e}"))
 }
 
-/// Upscale via resize Lanczos3 (CPU). Produz saída `<stem>_<pct>pct.<ext>`.
-/// O backend IA (Real-ESRGAN) entra aqui no futuro por trás de um
-/// `--engine ai`, reusando a mesma API de saída.
-fn run_upscale(factor: u8, policy: OverwritePolicy, files: &[PathBuf]) -> color_eyre::Result<()> {
+/// Refuse to start when `model` cannot run: not built in, or its weights
+/// package is missing (the message names the package to install).
+fn require_model(model: &bigimage_ai::ModelInfo) -> color_eyre::Result<()> {
+    match model.availability() {
+        bigimage_ai::Availability::Ready => Ok(()),
+        bigimage_ai::Availability::NotBuilt => {
+            Err(color_eyre::eyre::eyre!("{}", bigimage_ai::AiError::Disabled))
+        }
+        bigimage_ai::Availability::Missing { path } => Err(color_eyre::eyre::eyre!(
+            "{} não está instalado ({} não existe). Instale com: {}",
+            model.name,
+            path.display(),
+            model.install_command()
+        )),
+        bigimage_ai::Availability::Unreadable { path, error } => Err(color_eyre::eyre::eyre!(
+            "não foi possível ler os pesos de {} em {}: {error}",
+            model.name,
+            path.display()
+        )),
+    }
+}
+
+/// Say once where a model runs (CPU or which GPU).
+fn report_device(op: &str, device: Option<bigimage_ai::Device>) {
+    if let Some(device) = device {
+        eprintln!("{op}: {device}");
+    }
+}
+
+fn ai_error(error: bigimage_ai::AiError) -> bigimage_core::BigImageError {
+    bigimage_core::BigImageError::Other(error.to_string())
+}
+
+/// Upscale by 2, 3 or 4: Real-ESRGAN when installed (or asked for), else
+/// Lanczos3. Output `<stem>_<pct>pct.<ext>` either way, as before.
+fn run_upscale(
+    factor: u8,
+    engine: UpscaleEngineArg,
+    policy: OverwritePolicy,
+    files: &[PathBuf],
+) -> color_eyre::Result<()> {
+    use bigimage_ai::upscale::Method;
     if !(2..=4).contains(&factor) {
         return Err(color_eyre::eyre::eyre!("fator inválido: {factor}. Use 2, 3 ou 4."));
     }
-    let percent = f32::from(factor) * 100.0;
-    let mode = ResizeMode::Percent(percent);
-    tracing::info!(factor, ?policy, count = files.len(), "upscale (lanczos3)");
+    let method = match engine {
+        UpscaleEngineArg::Lanczos => Method::Lanczos,
+        UpscaleEngineArg::Realesrgan => {
+            require_model(&bigimage_ai::upscale::MODEL)?;
+            Method::RealEsrgan
+        }
+        UpscaleEngineArg::Auto => {
+            let method = Method::auto();
+            if method == Method::Lanczos {
+                eprintln!(
+                    "upscale: Real-ESRGAN indisponível; usando Lanczos3. Para usar IA: {}",
+                    bigimage_ai::upscale::MODEL.install_command()
+                );
+            }
+            method
+        }
+    };
+    tracing::info!(factor, ?method, ?policy, count = files.len(), "upscale");
     let opts = bigimage_core::EncodeOptions::default();
+    if method == Method::Lanczos {
+        let mode = ResizeMode::Percent(f32::from(factor) * 100.0);
+        return run_per_file(files, "upscale", Naming::image(None, policy), |f| {
+            bigimage_core::resize_file(f, mode, Filter::Lanczos3, None, &opts, policy)
+        });
+    }
+    let suffix = format!("_{}pct", u32::from(factor) * 100);
+    let mut reported = false;
     run_per_file(files, "upscale", Naming::image(None, policy), |f| {
-        bigimage_core::resize_file(f, mode, Filter::Lanczos3, None, &opts, policy)
+        let outcome = bigimage_core::transform_file(f, &suffix, None, &opts, policy, |img| {
+            bigimage_ai::upscale::upscale(&img, factor, method, |_| Continue(())).map_err(ai_error)
+        });
+        if !reported && bigimage_ai::upscale::device().is_some() {
+            reported = true;
+            report_device("upscale", bigimage_ai::upscale::device());
+        }
+        outcome
+    })
+}
+
+/// Remove noise with SCUNet. Output `<stem>_denoised.<ext>`.
+fn run_denoise(policy: OverwritePolicy, files: &[PathBuf]) -> color_eyre::Result<()> {
+    require_model(&bigimage_ai::denoise::MODEL)?;
+    tracing::info!(?policy, count = files.len(), "denoise");
+    let opts = bigimage_core::EncodeOptions::default();
+    let mut reported = false;
+    run_per_file(files, "denoise", Naming::image(None, policy), |f| {
+        let outcome = bigimage_core::transform_file(f, "_denoised", None, &opts, policy, |img| {
+            bigimage_ai::denoise::denoise(&img, |_| Continue(())).map_err(ai_error)
+        });
+        if !reported && bigimage_ai::denoise::device().is_some() {
+            reported = true;
+            report_device("denoise", bigimage_ai::denoise::device());
+        }
+        outcome
+    })
+}
+
+/// Fill the white area of `mask` with LaMa. Output `<stem>_inpaint.<ext>`.
+fn run_inpaint(mask: &Path, policy: OverwritePolicy, files: &[PathBuf]) -> color_eyre::Result<()> {
+    require_model(&bigimage_ai::inpaint::MODEL)?;
+    let mask_error = |e: &dyn std::fmt::Display| {
+        color_eyre::eyre::eyre!(
+            "máscara {}: {}",
+            codec::sanitize_text(&mask.display().to_string()),
+            codec::sanitize_text(&e.to_string())
+        )
+    };
+    bigimage_core::content::ensure_static(mask).map_err(|e| mask_error(&e))?;
+    let mask_image = bigimage_core::open_image(mask).map_err(|e| mask_error(&e))?;
+    let mask_image = bigimage_ai::inpaint::mask_from_image(&mask_image);
+    if bigimage_ai::inpaint::plan(&mask_image).map_err(|e| mask_error(&e))?.is_none() {
+        return Err(mask_error(&"não marca nenhuma área (pinte de branco o que deve ser apagado)"));
+    }
+    tracing::info!(?mask, ?policy, count = files.len(), "inpaint");
+    let opts = bigimage_core::EncodeOptions::default();
+    let mut reported = false;
+    run_per_file(files, "inpaint", Naming::image(None, policy), |f| {
+        let outcome = bigimage_core::transform_file(f, "_inpaint", None, &opts, policy, |img| {
+            bigimage_ai::inpaint::inpaint(&img, &mask_image, |_| Continue(())).map_err(ai_error)
+        });
+        if !reported && bigimage_ai::inpaint::device().is_some() {
+            reported = true;
+            report_device("inpaint", bigimage_ai::inpaint::device());
+        }
+        outcome
     })
 }
 

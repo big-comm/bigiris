@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: bigiris 0.1.0\n"
 "Report-Msgid-Bugs-To: https://github.com/big-comm/bigiris/issues\n"
-"POT-Creation-Date: 2026-11-15 21:57-0300\n"
+"POT-Creation-Date: 2026-11-16 21:59-0300\n"
 "PO-Revision-Date: 2026-10-14 01:36-0300\n"
 "Last-Translator: BigCommunity Team\n"
 "Language-Team: BigCommunity Team\n"
@@ -433,6 +433,8 @@ msgid "Remover fundo (IA)…"
 msgstr "배경 제거( AI)…"
 
 #: crates/bigiris/src/gui.rs:3977
+#: crates/bigimage-integrations/src/action.rs:517
+#: data/nautilus/bigiris-menu.py:239
 msgid "Aumentar resolução…"
 msgstr "해상도 높이기…"
 
@@ -1828,12 +1830,12 @@ msgid "IA"
 msgstr "AI"
 
 #: crates/bigimage-integrations/src/action.rs:116
-#: data/nautilus/bigiris-menu.py:243
+#: data/nautilus/bigiris-menu.py:244
 msgid "PDF"
 msgstr "PDF"
 
 #: crates/bigimage-integrations/src/action.rs:134
-#: data/nautilus/bigiris-menu.py:254
+#: data/nautilus/bigiris-menu.py:255
 msgid "Visualizar em BigIris"
 msgstr "BigIris에서 보기"
 
@@ -2017,20 +2019,20 @@ msgstr "2개의 이미지를 비교하기…"
 msgid "Remover fundo (BiRefNet)"
 msgstr "배경 제거( BiRefNet)"
 
-#: crates/bigimage-integrations/src/action.rs:518
-#: data/nautilus/bigiris-menu.py:247
+#: crates/bigimage-integrations/src/action.rs:528
+#: data/nautilus/bigiris-menu.py:248
 msgid "Converter para PDF (LibreOffice)"
 msgstr "PDF로 변환 (LibreOffice)"
 
-#: data/nautilus/bigiris-menu.py:294
+#: data/nautilus/bigiris-menu.py:295
 msgid "Operações BigIris"
 msgstr "BigIris 동작"
 
-#: data/nautilus/bigiris-menu.py:373
+#: data/nautilus/bigiris-menu.py:374
 msgid "BigIris: Processar esta pasta…"
 msgstr "BigIris: 이 폴더 처리…"
 
-#: data/nautilus/bigiris-menu.py:374
+#: data/nautilus/bigiris-menu.py:375
 msgid "Converter imagens da pasta com o Prisma"
 msgstr "Prisma로 폴더 이미지 변환"
 

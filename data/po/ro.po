@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: bigiris 0.1.0\n"
 "Report-Msgid-Bugs-To: https://github.com/big-comm/bigiris/issues\n"
-"POT-Creation-Date: 2026-11-15 21:57-0300\n"
+"POT-Creation-Date: 2026-11-16 21:59-0300\n"
 "PO-Revision-Date: 2026-10-14 01:36-0300\n"
 "Last-Translator: BigCommunity Team\n"
 "Language-Team: BigCommunity Team\n"
@@ -434,6 +434,8 @@ msgid "Remover fundo (IA)…"
 msgstr "Eliminați fundalul (AI)…"
 
 #: crates/bigiris/src/gui.rs:3977
+#: crates/bigimage-integrations/src/action.rs:517
+#: data/nautilus/bigiris-menu.py:239
 msgid "Aumentar resolução…"
 msgstr "Mărește rezoluția…"
 
@@ -1836,12 +1838,12 @@ msgid "IA"
 msgstr "AI"
 
 #: crates/bigimage-integrations/src/action.rs:116
-#: data/nautilus/bigiris-menu.py:243
+#: data/nautilus/bigiris-menu.py:244
 msgid "PDF"
 msgstr "PDF"
 
 #: crates/bigimage-integrations/src/action.rs:134
-#: data/nautilus/bigiris-menu.py:254
+#: data/nautilus/bigiris-menu.py:255
 msgid "Visualizar em BigIris"
 msgstr "Vizualizați în BigIris"
 
@@ -2025,20 +2027,20 @@ msgstr "Compară 2 imagini…"
 msgid "Remover fundo (BiRefNet)"
 msgstr "Eliminați fundalul (BiRefNet)"
 
-#: crates/bigimage-integrations/src/action.rs:518
-#: data/nautilus/bigiris-menu.py:247
+#: crates/bigimage-integrations/src/action.rs:528
+#: data/nautilus/bigiris-menu.py:248
 msgid "Converter para PDF (LibreOffice)"
 msgstr "Conversia în PDF (LibreOffice)"
 
-#: data/nautilus/bigiris-menu.py:294
+#: data/nautilus/bigiris-menu.py:295
 msgid "Operações BigIris"
 msgstr "Acțiunile lui BigIris"
 
-#: data/nautilus/bigiris-menu.py:373
+#: data/nautilus/bigiris-menu.py:374
 msgid "BigIris: Processar esta pasta…"
 msgstr "BigIris: Procesează acest dosar…"
 
-#: data/nautilus/bigiris-menu.py:374
+#: data/nautilus/bigiris-menu.py:375
 msgid "Converter imagens da pasta com o Prisma"
 msgstr "Conversia imaginilor de foldere cu Prisma"
 

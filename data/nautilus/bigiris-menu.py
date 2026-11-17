@@ -236,6 +236,7 @@ _SUBMENUS = [
         "image",
         [
             (n_("Remover fundo (BiRefNet)"), ["--dialog=remove-bg"], _ICON_AI),
+            (n_("Aumentar resolução…"), ["--dialog=upscale"], _ICON_AI),
         ],
     ),
     (

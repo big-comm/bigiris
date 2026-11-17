@@ -90,8 +90,10 @@ ferramenta, e cada ferramenta funciona sem as outras.
 sudo pacman -S birefnet-native realesrgan-native scunet-native lama-native
 ```
 
-Sem o pacote, a ferramenta aparece indisponível e diz qual pacote instalar;
-sem `realesrgan-native`, **Aumentar resolução** usa Lanczos3. Para testes e
+O pacote do BigLinux já instala o `realesrgan-native` (4,9 MB) como
+dependência; os outros pesos são opcionais. Sem o pacote, a ferramenta aparece
+indisponível e diz qual pacote instalar; sem `realesrgan-native` (instalação
+manual ou outra distribuição), **Aumentar resolução** usa Lanczos3. Para testes e
 desenvolvimento, `BIGIRIS_BIREFNET_WEIGHTS`, `BIGIRIS_REALESRGAN_WEIGHTS`,
 `BIGIRIS_SCUNET_WEIGHTS` e `BIGIRIS_LAMA_WEIGHTS` apontam para outros arquivos
 de pesos; `IMAGE_ENGINE_NATIVE_GPU=0` força a CPU.

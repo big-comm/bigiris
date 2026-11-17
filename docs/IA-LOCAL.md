@@ -59,9 +59,14 @@ CPU e fica na CPU até o fim do processo.
 sudo pacman -S birefnet-native realesrgan-native scunet-native lama-native
 ```
 
-Cada ferramenta funciona sem as outras. Sem o pacote, ela aparece
-indisponível, com o comando de instalação; sem `realesrgan-native`, o aumento
-de resolução usa Lanczos3.
+Cada ferramenta funciona sem as outras. O pacote `bigiris` do BigLinux já
+depende do `realesrgan-native`; os demais pesos são opcionais. Sem o pacote, a
+ferramenta aparece indisponível, com o comando de instalação; sem
+`realesrgan-native` (instalação manual ou outra distribuição), o aumento de
+resolução usa Lanczos3.
+
+Pelo gerenciador de arquivos, o submenu **BigIris ▸ IA** abre os diálogos de
+**Remover fundo** e **Aumentar resolução**.
 
 ### CLI
 

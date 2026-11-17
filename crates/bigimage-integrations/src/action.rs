@@ -511,6 +511,16 @@ pub const ACTIONS: &[Action] = &[
         icon: "applications-science-symbolic",
         mime_types: IMAGE_MIME,
     },
+    Action {
+        id: "ai-upscale",
+        submenu: Some(SUB_AI),
+        label: n_("Aumentar resolução…"),
+        // Same dialog as the viewer's edit panel: Real-ESRGAN when
+        // `realesrgan-native` is installed, Lanczos3 otherwise.
+        command: "bigiris --dialog=upscale %F",
+        icon: "applications-science-symbolic",
+        mime_types: IMAGE_MIME,
+    },
     // PDF ▸ (documentos, não imagens — filter DOC_MIME exclusivo)
     Action {
         id: "pdf-convert",

@@ -67,13 +67,12 @@ Para contexto sobre o que já é defesa em profundidade:
   Não se trata de quota total de RSS/cgroup nem de filtro seccomp.
 - Service menus escritos com `O_NOFOLLOW` para impedir
   symlink-follow durante `sudo install-integrations --system`.
-- Modelos IA pinados por SHA-256 + allowlist FOSS de licenças
-  (MIT/Apache-2.0/BSD/MPL-2.0/CC0); download abortado se exceder o
-  tamanho esperado por mais de 16 MiB.
+- Nada é baixado: o aplicativo não tem cliente de rede. Os pesos de IA vêm
+  só dos pacotes opcionais `birefnet-native`, `realesrgan-native`,
+  `scunet-native` e `lama-native`, lidos de `/usr/share/<pacote>/`, e os
+  quatro têm licença FOSS (MIT, BSD-3-Clause, Apache-2.0).
 - Comandos do Thunar UCA empacotados em `sh -c '… "$@"' …` para que
   filenames não sejam reinterpretados pelo shell.
-- TLS configurado explicitamente via `native-tls` (OpenSSL do sistema), sem `danger_*` desativando
-  validação de certificado.
 
 ### Limitações a considerar antes de distribuição oficial
 

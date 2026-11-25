@@ -8,7 +8,7 @@ pendentes. Não há certificação de ausência universal de bugs ou vazamentos.
 ## Ambiente e rastreabilidade
 
 BigCommunity GNOME/Wayland, x86_64, Ryzen 7 5800H, 16 CPUs lógicas,
-Rust 1.98.1, GTK 4.22.4, libadwaita 1.9.3, dav1d 1.5.4 e ONNX Runtime 1.29.0.
+Rust 1.98.1, GTK 4.22.4, libadwaita 1.9.3 e dav1d 1.5.4.
 MSRV do projeto: 1.95. Runtime GTK mínimo: 4.12; libadwaita: 1.6.
 
 Somente imagens sintéticas, fixtures de regressão e diretórios de teste foram
@@ -22,9 +22,9 @@ em `target/quality/` e não integram o pacote distribuído:
 - `fuzz/summary.json`, `decode.log` e `icc.log`: última campanha instrumentada.
 - `round2/fuzz-before-gif*`, `fuzz-before-avif*` e `fuzz-artifacts/`: descobertas anteriores.
 - `round3/release-final/release-smoke.json`: binário release, SHA-256 e 40 verificações.
-- `round3/ai-release/summary.json`: inferência ONNX real antes da correção do empacotamento Nautilus.
+- `round3/ai-release/summary.json`: inferência real com o motor ONNX anterior, antes da correção do empacotamento Nautilus.
 - `round3/ai-final/summary.json`: repetição no binário final; conferir o resultado e o orçamento disponível.
-- `round3/ai-preflight-final/summary.json`: recusa sob 4 GiB e runtime opcional ausente, conferidos no release.
+- `round3/ai-preflight-final/summary.json`: recusa sob 4 GiB e runtime opcional ausente, conferidos no release do motor ONNX anterior.
 - `round2/nautilus-real.json`: menu construído com GI/Nautilus instalado.
 - `long-soak/status.json`: estado explícito do ensaio prolongado.
 - `candidate/`: pacote candidato, hashes e manifesto.
@@ -58,9 +58,9 @@ históricos não foram reescritos para aparentar aprovação.
 | Fuzzing ASan/LSan | Última campanha passou | 17.304 execuções decode e 33.331 ICC, 61 s por alvo; sem erro reportado nessa amostra |
 | Stress | 64 conversões, 4 trabalhadores, todas reabertas | Passou; 0,593 s medidos pelo probe, pico de 51.008 KiB |
 | Estabilidade curta | 300,079 s, 3.029 ciclos | RSS estável, descritores e threads estáveis |
-| IA real | Passou antes da correção do empacotamento; 21,172 s para duas imagens | RGB/alpha preservados, sessão reutilizada; pico de 6.847.848 KiB (~6,53 GiB). Repetição no binário final recusada por RAM disponível abaixo de 8 GiB |
+| IA real (motor ONNX anterior) | Passou antes da correção do empacotamento; 21,172 s para duas imagens | RGB/alpha preservados, sessão reutilizada; pico de 6.847.848 KiB (~6,53 GiB). Repetição no binário final recusada por RAM disponível abaixo de 8 GiB |
 | RustSec | Gate final passou | Zero vulnerabilidades e zero avisos unsound na base consultada; um aviso de manutenção |
-| Memcheck | Passou no CI em oito ciclos sintéticos do core | Zero erros, zero bytes definitivamente/indiretamente perdidos; 48 bytes possivelmente perdidos e 548 bytes ainda alcançáveis. Não cobre GUI ou ONNX; impedimento local do loader glibc permanece |
+| Memcheck | Passou no CI em oito ciclos sintéticos do core | Zero erros, zero bytes definitivamente/indiretamente perdidos; 48 bytes possivelmente perdidos e 548 bytes ainda alcançáveis. Não cobre GUI ou IA; impedimento local do loader glibc permanece |
 | Oito horas do core | Passou; 28.800,047 s e 298.657 ciclos | RSS inicial/final de 13.200/7.988 KiB, pico de 26.108 KiB; quatro descritores e uma thread antes/depois. Binário e estado final registrados em `long-soak/`; não cobre o produto completo |
 
 Os testes GTK executam loaders locais no binário de teste. O executável final
@@ -72,7 +72,7 @@ corpus sintético dos formatos e perfis ICC. A entrada mutada é limitada a 16 K
 o decode completo, a um milhão de pixels. Cabeçalhos de imagens maiores continuam
 inspecionados. As bibliotecas nativas externas não são instrumentadas. Limites
 maiores têm regressões e contenção pelo sandbox; o resultado não cobre todo
-arquivo possível ou todos os encoders, GTK, ONNX e argumentos CLI.
+arquivo possível ou todos os encoders, GTK, IA e argumentos CLI.
 
 Durante a campanha, GIF com frame maior que a tela lógica e AVIF com caixa além
 do arquivo provocaram timeout/alocação excessiva. Foram acrescentadas inspeções
@@ -105,7 +105,7 @@ mas esses números não demonstram uma melhoria percentual atribuível à mudan�
 No soak de cinco minutos, RSS após aquecimento: 13.136 KiB, antes e depois;
 pico: 26.056 KiB; quatro descritores e uma thread antes e depois. O probe usa
 allocator padrão; o executável usa mimalloc. As medições não abrangem GPU,
-memória de ONNX ou um acervo grande. O binário do ensaio prolongado tem hash
+memória da IA ou um acervo grande. O binário do ensaio prolongado tem hash
 registrado; um resultado só vale para aquela compilação e aquele roteiro.
 
 ## Correções e arquitetura
@@ -118,7 +118,7 @@ de saída a 512 MiB mais cabeçalho. O supervisor encerra o filho após 60 s ou
 cancelamento. O protocolo de pixels é validado antes da alocação no pai.
 Se o isolamento falhar, a imagem é recusada. Não há fallback sem sandbox.
 
-Isso não é quota de RSS/cgroup nem filtro seccomp. Encoders, GTK, TLS e ONNX
+Isso não é quota de RSS/cgroup nem filtro seccomp. Encoders, GTK e a inferência de IA
 continuam no pai. Consumidores autônomos da biblioteca core executam localmente
 por padrão. O worker restringe entrada e saída; scratch interno dos codecs
 não tem contabilização precisa por buffer. `/usr` inteiro é visível somente
@@ -139,34 +139,23 @@ coalescente, buffers limitados e apenas a revisão atual é apresentada. A fita
 retenções; testes verificam liberação. A impressão usa alpha premultiplicado,
 com regressão específica; não foi enviado trabalho a uma impressora real.
 
-A IA exige HTTPS/TLS e SHA-256, URL de revisão imutável, publicação atômica do
-modelo, shape validado e sigmoid dos logits, preservando alpha original.
-Uma sessão é reutilizada por lote e usa até quatro threads de inferência.
-Não há interrupção segura no meio de uma inferência. O release da rodada 3 atingiu 6.847.848 KiB (~6,53 GiB) nas duas imagens
-sintéticas, em 21,172 s. A rodada 2 mediu 6,12 GiB e 33,195 s; a diferença
-entre sessões não demonstra redução de tempo atribuível às mudanças.
-A feature é opcional. A candidata exige 8 GiB de RAM livre antes de baixar/carregar
-esse modelo; reavalia o orçamento antes de cada inferência e acrescenta a área
-de trabalho da imagem. Considera MemAvailable, todos os limites finitos dos
-ancestrais cgroup v2 e RLIMIT_AS, sem somar swap. Sessões reutilizadas creditam
-crescimento residente observado nas chamadas nativas, com teto conservador.
-Isso é admissão preventiva, não uma quota rígida de RSS: a disponibilidade pode
-mudar após a conferência e cgroup v1 não é abrangido.
+Os ensaios de IA desta campanha usaram ONNX Runtime 1.29.0 com modelos
+baixados sob demanda; esse motor foi substituído e os números de IA da tabela acima não se
+aplicam ao produto atual. A IA agora usa os motores image-engine-native do
+BigLinux (Rust puro, CPU ou Vulkan) e nada é baixado: cada ferramenta lê os
+pesos do seu pacote opcional (`birefnet-native`, `realesrgan-native`,
+`scunet-native`, `lama-native`) em `/usr/share/<pacote>/`. O modelo carregado é
+reutilizado entre arquivos do lote, a máscara preserva o alpha original e o
+cancelamento é atendido entre etapas, não no meio de uma.
 
-Quatro GiB são recusados antes do download. O teste da CLI usa RLIMIT_AS de
-4 GiB, verifica mensagem, ausência de cache/saída e preservação do original;
-três testes puros cobrem capacidade, pressão, crédito e parsing do orçamento.
-O release anterior à correção do empacotamento também recusou o orçamento de
-4 GiB e tratou a ausência da biblioteca opcional ONNX como erro concluído,
-sem saída nem alteração do original. No binário final, a recusa sob 4 GiB passou;
-o teste de biblioteca ausente não alcançou a carga porque o host tinha menos de
-3,3 GiB livres. A inferência foi recusada pela mesma política. Os resultados
-não foram convertidos artificialmente em aprovação de inferência; repetição
-no pacote final com RAM suficiente permanece pendente.
-Isso não equivale a homologação em máquina física de 4 GB. Visualização e
-conversão continuam disponíveis, sujeitas ao tamanho e aos limites das imagens.
-O teste experimental sem arena do ORT sob limite de espaço virtual de 3 GiB
-falhou na inferência; essa configuração não foi adotada no produto.
+Antes de carregar e antes de cada execução, cada modelo estima a memória de
+que precisa (de 0,1 a 0,7 GB medidos nos maiores casos, mais a área de
+trabalho da imagem) e compara com o menor entre MemAvailable, os limites
+cgroup v2 dos ancestrais e RLIMIT_AS, sem somar swap. Isso é admissão
+preventiva, não quota rígida de RSS: a disponibilidade pode mudar após a
+conferência e cgroup v1 não é abrangido. Visualização e conversão continuam
+disponíveis sem nenhum pacote de pesos. Medir RAM, tempo e qualidade dos
+motores nativos em hardware modesto permanece pendente.
 
 O zoom foi extraído para `gui/zoom.rs`. Roda, atalhos e botões usam o ponto do
 cursor; sem posição válida, usam o centro. A regressão original conferia apenas
@@ -211,11 +200,11 @@ em `round3/package-before-nautilus-fix/`, sem aprovação de distribuição.
 | Alta | Estabilidade prolongada | Resultado de oito horas do core mais sessão GNOME/slideshow com memória CPU/GPU monitorada |
 | Alta | Memória nativa | Memcheck em ambiente compatível; CI remoto verde e revisão dos logs |
 | Alta | Acervo e fidelidade | Comparação visual/colorimétrica de imagens reais autorizadas, ICC e 16 bits; definir política para HDR, animação e páginas |
-| Alta | IA em hardware modesto | Medir RAM, tempo, qualidade da máscara e cancelamento; homologar a recusa do modelo atual e medir alternativas menores |
+| Alta | IA em hardware modesto | Medir RAM, tempo, qualidade da máscara e cancelamento dos motores image-engine-native, na CPU e em GPU Vulkan |
 | Média | Performance do produto | Primeiro frame frio, navegação e latência comparados ao visualizador nativo no mesmo hardware/acervo |
 | Média | Dívida arquitetural restante | Extrair estado/controllers/diálogos do `gui.rs`; ampliar testes dos fluxos interativos |
 | Média | Dependência sem manutenção | Retirar `paste` transitivo via rav1e/ravif, RUSTSEC-2024-0436, com regressão AVIF |
-| Média | Confinamento adicional | Avaliar encoders/ONNX fora do pai, seccomp/cgroup e allowlist de bibliotecas |
+| Média | Confinamento adicional | Avaliar encoders/IA fora do pai, seccomp/cgroup e allowlist de bibliotecas |
 
 O viewer mostra primeiro quadro/página; não há reprodução de animações,
 navegação TIFF multipágina ou gestão HDR/tone mapping completa. A estabilidade

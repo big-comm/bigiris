@@ -3,9 +3,8 @@
   <id>com.biglinux.Iris</id>
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>GPL-3.0-or-later</project_license>
-  <name>Íris</name>
-  <name xml:lang="pt-BR">Íris</name>
-  <summary>Visualizador e conversor de imagens moderno</summary>
+  <name>BigIris</name>
+  <summary>Modern image viewer and converter</summary>
   <summary xml:lang="bg">Модерна програма за разглеждане и конвертиране на изображения</summary>
   <summary xml:lang="cs">Moderní prohlížeč obrázků a konvertor</summary>
   <summary xml:lang="da">Moderne billedfremviser og konverter</summary>
@@ -57,8 +56,8 @@
       <li xml:lang="pt-BR">Conversão paralela em lote: PNG, JPEG, WebP, AVIF, TIFF e BMP</li>
       <li>Resize, rotate, crop and adjust in batch or per image</li>
       <li xml:lang="pt-BR">Redimensionar, girar, cortar e ajustar em lote ou em uma imagem</li>
-      <li>Remove background and upscale with open AI models, downloaded on demand</li>
-      <li xml:lang="pt-BR">Remover fundo e ampliar (upscale) com modelos de IA abertos, baixados sob demanda</li>
+      <li>Remove backgrounds, upscale, denoise and erase objects with local AI; nothing is downloaded, the weights come from optional packages</li>
+      <li xml:lang="pt-BR">Remover fundo, ampliar, remover ruído e apagar objetos com IA local; nada é baixado, os pesos vêm de pacotes opcionais</li>
       <li>Integrates with Dolphin, Nautilus, Nemo, Thunar, PCManFM-Qt and Files (elementary)</li>
       <li xml:lang="pt-BR">Integração com Dolphin, Nautilus, Nemo, Thunar, PCManFM-Qt e Arquivos (elementary)</li>
       <li>Command-line mirroring the GUI for scripts and CI/CD</li>
@@ -93,12 +92,12 @@
         <p>First release focused on safety, responsive folder navigation and distribution packaging.</p>
         <p xml:lang="pt-BR">Primeira versão com foco em segurança, navegação responsiva por pastas e empacotamento para distribuições.</p>
         <ul>
-          <li>Viewer Íris (GTK4 + libadwaita): zoom cursor-anchored, drag pan, slideshow, film strip, histogram, theater mode</li>
-          <li xml:lang="pt-BR">Visualizador Íris (GTK4 + libadwaita): zoom centrado no cursor, pan por arrasto, slideshow, film strip, histograma, modo teatro</li>
+          <li>BigIris viewer (GTK4 + libadwaita): zoom cursor-anchored, drag pan, slideshow, film strip, histogram, theater mode</li>
+          <li xml:lang="pt-BR">Visualizador BigIris (GTK4 + libadwaita): zoom centrado no cursor, pan por arrasto, slideshow, film strip, histograma, modo teatro</li>
           <li>Prisma dialogs (Convert, Resize, Rotate, Flip, Crop, Adjust, Compare, Metadata, Animate, Batch, Remove-bg, Upscale) running off the GTK main thread for IrfanView-grade batch responsiveness</li>
           <li xml:lang="pt-BR">Diálogos Prisma (Convert, Resize, Rotate, Flip, Crop, Adjust, Compare, Metadata, Animate, Batch, Remove-bg, Upscale) rodando fora da main loop do GTK para responsividade em lote no nível do IrfanView</li>
-          <li>Local AI background removal with BiRefNet-lite (MIT) — model pinned by SHA-256, FOSS license allowlist, cached across batch</li>
-          <li xml:lang="pt-BR">Remoção de fundo via IA local com BiRefNet-lite (MIT) — modelo pinado por SHA-256, allowlist FOSS de licenças, cache entre arquivos do lote</li>
+          <li>Local AI on the CPU or a Vulkan GPU: background removal (BiRefNet-lite), upscale (Real-ESRGAN), denoise (SCUNet) and object removal (Big LaMa), with weights from the birefnet-native, realesrgan-native, scunet-native and lama-native packages</li>
+          <li xml:lang="pt-BR">IA local na CPU ou numa GPU Vulkan: remoção de fundo (BiRefNet-lite), ampliação (Real-ESRGAN), remoção de ruído (SCUNet) e remoção de objetos (Big LaMa), com pesos dos pacotes birefnet-native, realesrgan-native, scunet-native e lama-native</li>
           <li>File-manager integration for Dolphin, Nautilus, Nemo, Thunar, PCManFM-Qt and elementary Files — `O_NOFOLLOW`-protected installs, shell-injection-safe Thunar UCA</li>
           <li xml:lang="pt-BR">Integração com gerenciadores de arquivos: Dolphin, Nautilus, Nemo, Thunar, PCManFM-Qt e Arquivos (elementary) — instalação com `O_NOFOLLOW` e UCA do Thunar imune a injeção de shell</li>
           <li>Decode bombs guarded with byte (1 GiB) and pixel (256 MP) caps before decompression</li>

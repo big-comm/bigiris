@@ -123,7 +123,9 @@ def generated_assets():
     localized_summary = ''.join(
         f'  <summary xml:lang="{lang.replace("_", "-")}">{html.escape(entries[APPSTREAM_SUMMARY])}</summary>\n'
         for lang, entries in catalog.items())
-    metainfo = re.sub(r'^  <summary>.*</summary>\n', lambda m: m[0]+localized_summary, metainfo, flags=re.M)
+    # The untranslated summary is English, the language of the default description.
+    summary = f'  <summary>{html.escape(catalog["en"][APPSTREAM_SUMMARY])}</summary>\n'
+    metainfo = re.sub(r'^  <summary>.*</summary>\n', lambda m: summary+localized_summary, metainfo, flags=re.M)
     return {path: rust, ROOT / 'data/com.biglinux.Iris.desktop': desktop,
             ROOT / 'data/com.biglinux.Iris.metainfo.xml': metainfo}
 

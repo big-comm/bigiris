@@ -48,13 +48,12 @@ rede do host. Se falhar, a candidata não deve ser aprovada nessa máquina.
    ICC RGB é normalizado para sRGB; perfis não RGB são recusados. O viewer
    mostra o primeiro quadro/página; edição estática recusa animações e
    TIFF multipágina. HDR não dispõe de gestão completa ou tone mapping.
-6. Avaliar remoção de fundo: download íntegro, inferência local, cancelamento
-   entre arquivos e reutilização do modelo. O ensaio inicial atingiu cerca
-   de 6 GiB; o ensaio da rodada 3, antes da correção de empacotamento, processou duas
-   imagens em 21,172 s, com pico de
-   aproximadamente 6,53 GiB. A candidata exige 8 GiB de RAM livre para iniciar esse modelo e recusa
-   um orçamento de 4 GiB antes do download. Visualização e conversões continuam
-   disponíveis. Homologar em hardware físico de pouca RAM; o limite é uma
+6. Avaliar as ferramentas de IA com e sem os pacotes de pesos
+   (`birefnet-native`, `realesrgan-native`, `scunet-native`, `lama-native`):
+   nada é baixado, cada ferramenta sem o seu pacote explica como instalá-lo, e
+   visualização e conversões continuam disponíveis. Medir RAM, tempo,
+   cancelamento entre arquivos e reutilização do modelo na CPU e numa GPU
+   Vulkan, incluindo hardware físico de pouca RAM; a admissão de memória é uma
    conferência preventiva, sem quota rígida de RSS.
 7. Exigir resultado final do ensaio prolongado e do Memcheck em ambiente
    compatível. O soak iniciado exercita o core; adicionar sessão GNOME de
@@ -64,20 +63,19 @@ rede do host. Se falhar, a candidata não deve ser aprovada nessa máquina.
 
 ASan/LSan, testes de ciclo de vida e estabilidade curta não provam ausência
 universal de vazamentos. O isolamento cobre decodificação e inspeção de
-metadados do executável; inferência ONNX e encoders continuam no processo
+metadados do executável; a inferência de IA e os encoders continuam no processo
 principal. O worker tem limites de espaço virtual, CPU, prazo, arquivos,
 descritores e scratch, sem quota cgroup de RSS nem filtro seccomp.
 
-A repetição da inferência no binário final foi recusada pelo orçamento de RAM
-do host, então permanece pendente com pelo menos 8 GiB disponíveis. As duas
-inferências reais aprovadas precedem a correção de empacotamento Nautilus.
-Os testes de recusa sob 4 GiB passaram também no binário final.
+As inferências reais registradas nesta candidata usaram o motor ONNX anterior,
+com modelos baixados sob demanda. Os motores image-engine-native que o
+substituíram ainda precisam da mesma avaliação no pacote final.
 
 O primeiro CI do PR nº 1 aprovou dez jobs, inclusive o empacotamento Arch e
 o Memcheck de oito ciclos do core. Quatro jobs falharam por seleção de stable
 no fuzzing e indisponibilidade do sandbox no runner Ubuntu. A configuração
 foi corrigida, mas a confirmação exige nova execução remota. O ensaio local
-de oito horas do core também terminou aprovado; GUI/GPU/ONNX não fazem parte
+de oito horas do core também terminou aprovado; GUI/GPU/IA não fazem parte
 desse ensaio. Resultados e limites estão em [QUALITY.md](QUALITY.md).
 Não foram concedidos privilégios amplos ao contêiner Arch. A publicação
 no repositório da distribuição e a associação MIME padrão exigem decisão

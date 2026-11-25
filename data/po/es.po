@@ -27,7 +27,7 @@ msgstr "No se pudo abrir la imagen"
 #: crates/bigiris/src/gui.rs:998 crates/bigiris/src/gui.rs:3593
 #: crates/bigiris/src/gui/viewer/crop.rs:600
 msgid "Aguarde o salvamento terminar"
-msgstr "Espera a que finalice el proceso de guardado"
+msgstr "Espere a que termine el guardado"
 
 #: crates/bigiris/src/gui.rs:1009
 msgid "Descartar alterações?"
@@ -836,7 +836,7 @@ msgstr "Añadir carpeta con imágenes"
 
 #: crates/bigiris/src/gui/dialogs/compare.rs:31
 msgid "Comparar imagens — Íris"
-msgstr "Comparar imágenes — Iris"
+msgstr "Comparar imágenes — Íris"
 
 #: crates/bigiris/src/gui/dialogs/compare.rs:43
 msgid "Comparar imagens"
@@ -1163,7 +1163,7 @@ msgstr "Comunidad de YouTube (1:1)"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:13
 msgid "Instagram feed (4:5)"
-msgstr "Canal de Instagram (4:5)"
+msgstr "Feed de Instagram (4:5)"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:14
 msgid "Stories / Shorts (9:16)"
@@ -1238,7 +1238,7 @@ msgstr "Relación de aspecto de destino"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:111
 msgid "Razão W"
-msgstr "Relación de anchura"
+msgstr "Relación de ancho"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:114
 msgid "Razão H"
@@ -1638,7 +1638,7 @@ msgstr "CatmullRom"
 
 #: crates/bigiris/src/gui/dialogs/resize.rs:11
 msgid "Bilinear"
-msgstr "Bilinear"
+msgstr "Bilineal"
 
 #: crates/bigiris/src/gui/dialogs/resize.rs:12
 msgid "Nearest (sem anti-aliasing)"
@@ -1982,7 +1982,7 @@ msgstr "Optimizar PNG (máxima compresión)"
 #: crates/bigimage-integrations/src/action.rs:430
 #: data/nautilus/bigiris-menu.py:199
 msgid "Letterbox YouTube post (1:1)"
-msgstr "Bandas para post de YouTube (1:1)"
+msgstr "Bandas para publicación de YouTube (1:1)"
 
 #: crates/bigimage-integrations/src/action.rs:438
 #: data/nautilus/bigiris-menu.py:202

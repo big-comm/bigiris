@@ -80,7 +80,7 @@ msgstr "Ajuster à la fenêtre"
 
 #: crates/bigiris/src/gui.rs:1130 crates/bigiris/src/gui.rs:3953
 msgid "Tamanho real (100%)"
-msgstr "Taille réelle (100%)"
+msgstr "Taille réelle (100 %)"
 
 #: crates/bigiris/src/gui.rs:1139 crates/bigiris/src/gui.rs:3949
 msgid "Zoom"
@@ -137,8 +137,8 @@ msgid ""
 "O arquivo será sobrescrito. JPEG é recodificado a cada gravação; isso pode "
 "reduzir a qualidade."
 msgstr ""
-"Le fichier sera écrasé. JPEG est ré-encodé chaque fois qu’il est enregistré. "
-"Cela peut réduire la qualité."
+"Le fichier sera écrasé. JPEG est réencodé chaque fois qu’il est enregistré, "
+"ce qui peut réduire la qualité."
 
 #: crates/bigiris/src/gui.rs:2604
 msgid "O arquivo será sobrescrito."
@@ -841,7 +841,7 @@ msgstr "Ajouter un dossier d’images"
 
 #: crates/bigiris/src/gui/dialogs/compare.rs:31
 msgid "Comparar imagens — Íris"
-msgstr "Comparer les images — Iris"
+msgstr "Comparer les images — Íris"
 
 #: crates/bigiris/src/gui/dialogs/compare.rs:43
 msgid "Comparar imagens"
@@ -1510,7 +1510,7 @@ msgstr "Mégapixels"
 
 #: crates/bigiris/src/gui/dialogs/properties.rs:205
 msgid "Razão de aspecto"
-msgstr "Rapport d’aspect"
+msgstr "Proportions"
 
 #: crates/bigiris/src/gui/dialogs/properties.rs:208
 msgid "Modo de cor"
@@ -1648,7 +1648,7 @@ msgstr "CatmullRom"
 
 #: crates/bigiris/src/gui/dialogs/resize.rs:11
 msgid "Bilinear"
-msgstr "Bilinear"
+msgstr "Bilinéaire"
 
 #: crates/bigiris/src/gui/dialogs/resize.rs:12
 msgid "Nearest (sem anti-aliasing)"
@@ -1882,17 +1882,17 @@ msgstr "Plus d’options…"
 #: crates/bigimage-integrations/src/action.rs:203
 #: data/nautilus/bigiris-menu.py:119
 msgid "25%"
-msgstr "25%"
+msgstr "25 %"
 
 #: crates/bigimage-integrations/src/action.rs:211
 #: data/nautilus/bigiris-menu.py:120
 msgid "50%"
-msgstr "50%"
+msgstr "50 %"
 
 #: crates/bigimage-integrations/src/action.rs:219
 #: data/nautilus/bigiris-menu.py:121
 msgid "200%"
-msgstr "200%"
+msgstr "200 %"
 
 #: crates/bigimage-integrations/src/action.rs:227
 #: data/nautilus/bigiris-menu.py:122

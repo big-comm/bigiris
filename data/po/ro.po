@@ -137,7 +137,7 @@ msgid ""
 "O arquivo será sobrescrito. JPEG é recodificado a cada gravação; isso pode "
 "reduzir a qualidade."
 msgstr ""
-"Fișierul va fi suprascris. JPEG este re-codat de fiecare dată când este "
+"Fișierul va fi suprascris. JPEG este recodat de fiecare dată când este "
 "salvat; acest lucru poate reduce calitatea."
 
 #: crates/bigiris/src/gui.rs:2604
@@ -834,7 +834,7 @@ msgstr "Adaugă un dosar cu imagini"
 
 #: crates/bigiris/src/gui/dialogs/compare.rs:31
 msgid "Comparar imagens — Íris"
-msgstr "Compară imagini — Iris"
+msgstr "Compară imagini — Íris"
 
 #: crates/bigiris/src/gui/dialogs/compare.rs:43
 msgid "Comparar imagens"
@@ -1162,7 +1162,7 @@ msgstr "Comunitatea YouTube (1:1)"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:13
 msgid "Instagram feed (4:5)"
-msgstr "Flux Instagram (4:5)"
+msgstr "Feed Instagram (4:5)"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:14
 msgid "Stories / Shorts (9:16)"
@@ -1194,7 +1194,7 @@ msgstr "Transparent"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:26
 msgid "Personalizada (hex)"
-msgstr "Particularizat (hex)"
+msgstr "Personalizat (hex)"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:33
 msgid "Centro"
@@ -1273,7 +1273,7 @@ msgstr "Se extinde…"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:332
 msgid "Estendendo"
-msgstr "Extinderea"
+msgstr "Extindere"
 
 #: crates/bigiris/src/gui/dialogs/flip.rs:20
 msgid "Espelhar imagens — Prisma"
@@ -1637,7 +1637,7 @@ msgstr "CatmullRom"
 
 #: crates/bigiris/src/gui/dialogs/resize.rs:11
 msgid "Bilinear"
-msgstr "Bilinear"
+msgstr "Biliniar"
 
 #: crates/bigiris/src/gui/dialogs/resize.rs:12
 msgid "Nearest (sem anti-aliasing)"

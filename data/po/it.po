@@ -27,7 +27,7 @@ msgstr "Impossibile aprire l’immagine"
 #: crates/bigiris/src/gui.rs:998 crates/bigiris/src/gui.rs:3593
 #: crates/bigiris/src/gui/viewer/crop.rs:600
 msgid "Aguarde o salvamento terminar"
-msgstr "Attendere che il salvataggio finisca"
+msgstr "Attendi il termine del salvataggio"
 
 #: crates/bigiris/src/gui.rs:1009
 msgid "Descartar alterações?"
@@ -679,7 +679,7 @@ msgstr "10 volte"
 
 #: crates/bigiris/src/gui/dialogs/animate.rs:83
 msgid "Velocidade do encoder"
-msgstr "Velocità dell’encoder"
+msgstr "Velocità del codificatore"
 
 #: crates/bigiris/src/gui/dialogs/animate.rs:84
 msgid "maior = mais rápido, paleta um pouco pior · padrão 10"
@@ -837,7 +837,7 @@ msgstr "Aggiungi cartella con immagini"
 
 #: crates/bigiris/src/gui/dialogs/compare.rs:31
 msgid "Comparar imagens — Íris"
-msgstr "Confronta immagini — Iris"
+msgstr "Confronta immagini — Íris"
 
 #: crates/bigiris/src/gui/dialogs/compare.rs:43
 msgid "Comparar imagens"
@@ -1640,7 +1640,7 @@ msgstr "CatmullRom"
 
 #: crates/bigiris/src/gui/dialogs/resize.rs:11
 msgid "Bilinear"
-msgstr "Bilinear"
+msgstr "Bilineare"
 
 #: crates/bigiris/src/gui/dialogs/resize.rs:12
 msgid "Nearest (sem anti-aliasing)"

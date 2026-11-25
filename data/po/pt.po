@@ -580,7 +580,7 @@ msgstr "Saturação"
 
 #: crates/bigiris/src/gui/dialogs/adjust.rs:49
 msgid "-100 cinza · 0 neutro · +100 vibrante"
-msgstr "-100 cinza · 0 neutro · +100 vibrante"
+msgstr "-100 cinzento · 0 neutro · +100 vibrante"
 
 #: crates/bigiris/src/gui/dialogs/adjust.rs:53
 msgid "Gamma"
@@ -1150,16 +1150,16 @@ msgid ""
 "O BigIris não sabe gravar este formato. Use, por exemplo, .png, .jpg "
 "ou .webp."
 msgstr ""
-"O BigIris não sabe gravar este formato. Use, por exemplo, .png, .jpg "
+"O BigIris não consegue gravar este formato. Use, por exemplo, .png, .jpg "
 "ou .webp."
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:12
 msgid "YouTube community (1:1)"
-msgstr "YouTube community (1:1)"
+msgstr "Comunidade do YouTube (1:1)"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:13
 msgid "Instagram feed (4:5)"
-msgstr "Instagram feed (4:5)"
+msgstr "Feed do Instagram (4:5)"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:14
 msgid "Stories / Shorts (9:16)"
@@ -1167,7 +1167,7 @@ msgstr "Stories / Shorts (9:16)"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:15
 msgid "Widescreen (16:9)"
-msgstr "Widescreen (16:9)"
+msgstr "Ecrã panorâmico (16:9)"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:16
 msgid "Personalizado…"
@@ -1234,11 +1234,11 @@ msgstr "Proporção alvo"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:111
 msgid "Razão W"
-msgstr "Razão W"
+msgstr "Razão da largura"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:114
 msgid "Razão H"
-msgstr "Razão H"
+msgstr "Razão da altura"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:124
 msgid "Cor de fundo"
@@ -1414,7 +1414,7 @@ msgstr "Sobrescrever o ficheiro"
 
 #: crates/bigiris/src/gui/dialogs/mod.rs:169
 msgid "Incrementar (_1, _2, …)"
-msgstr "Incrementar (_1, _2, …)"
+msgstr "Acrescentar sufixo (_1, _2, …)"
 
 #: crates/bigiris/src/gui/dialogs/mod.rs:190
 #: crates/bigiris/src/gui/dialogs/mod.rs:205
@@ -1562,7 +1562,7 @@ msgstr "Nenhuma imagem selecionada"
 
 #: crates/bigiris/src/gui/dialogs/remove_bg.rs:97
 msgid "Informe um ou mais arquivos ao abrir o diálogo."
-msgstr "Informe um ou mais ficheiros ao abrir o diálogo."
+msgstr "Indique um ou mais ficheiros ao abrir o diálogo."
 
 #: crates/bigiris/src/gui/dialogs/remove_bg.rs:127
 msgid "Modelo"
@@ -1584,7 +1584,7 @@ msgid ""
 "sem upload, sem conta, sem API externa."
 msgstr ""
 "O modelo funciona inteiramente no seu computador. Nenhuma imagem sai do "
-"disco — sem upload, sem conta, sem API externa."
+"disco — sem envios, sem conta, sem API externa."
 
 #: crates/bigiris/src/gui/dialogs/remove_bg.rs:262
 msgid "Falha ao carregar o modelo: {error}"
@@ -1638,7 +1638,7 @@ msgstr "Bilinear"
 
 #: crates/bigiris/src/gui/dialogs/resize.rs:12
 msgid "Nearest (sem anti-aliasing)"
-msgstr "Nearest (sem anti-aliasing)"
+msgstr "Vizinho mais próximo (sem anti-aliasing)"
 
 #: crates/bigiris/src/gui/dialogs/resize.rs:29
 msgid "Redimensionar imagens — Prisma"

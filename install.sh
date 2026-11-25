@@ -1,33 +1,31 @@
 #!/usr/bin/env bash
-# install.sh — build + instala o BigIris para o usuário atual (~/.local), sem root.
+# install.sh: build and install BigIris for the current user (~/.local), without root.
 #
-# Espelha o que o PKGBUILD faz system-wide, mas com prefixo do usuário:
-#   binário, gschema e traduções em $PREFIX; .desktop, ícone, metainfo e
-#   service menus dos gerenciadores de arquivos via
-#   `bigiris install-integrations --user`. Compila SEMPRE com
-#   `--features "gui ai"` (visualizador GTK4 + remover-fundo por IA), que é o
-#   ponto fácil de errar ao rodar `cargo build` na mão.
+# Mirrors what the PKGBUILD does system-wide, under the user's prefix:
+#   binary, gschema and translations in $PREFIX; .desktop, icon, metainfo and
+#   file manager service menus through `bigiris install-integrations --user`.
+#   Always builds with `--features "gui ai"` (GTK4 viewer and AI background
+#   removal), the part a manual `cargo build` most easily gets wrong.
 #
-# Uso:
-#   ./install.sh                 # build + instala em ~/.local
-#   PREFIX=~/.local ./install.sh # idem (prefixo customizável)
-#   ./install.sh --no-build      # pula o cargo build; instala o target já compilado
-#   ./install.sh --bin-only      # só o binário (sem .desktop/ícone/integrações)
-#   ./install.sh --uninstall     # remove o que este script instalou em $PREFIX
+# Usage:
+#   ./install.sh                 # build and install into ~/.local
+#   PREFIX=~/.local ./install.sh # same, with a custom prefix
+#   ./install.sh --no-build      # skip cargo build; install the binary already built
+#   ./install.sh --bin-only      # binary only (no .desktop, icon or integrations)
+#   ./install.sh --uninstall     # remove what this script installed in $PREFIX
 #   ./install.sh --help
 #
-# .desktop, ícone e metainfo vão sempre para $XDG_DATA_HOME (~/.local/share),
-# onde os ambientes gráficos procuram, mesmo com PREFIX customizado: quem
-# os grava é `install-integrations --user`, que também os pula quando o
-# pacote da distribuição já os fornece e os remove em
-# `bigiris uninstall-integrations`.
+# .desktop, icon and metainfo always go to $XDG_DATA_HOME (~/.local/share),
+# where desktops look for them, even with a custom PREFIX: they are written by
+# `install-integrations --user`, which skips them when the distribution
+# package already provides them, and removed by `bigiris uninstall-integrations`.
 #
-# Para instalação system-wide, use o pacote da distribuição (há receitas
-# para OpenMandriva e Arch em packaging/ e pkgbuild/).
+# For a system-wide install, use the distribution package (recipes for
+# OpenMandriva and Arch live in packaging/ and pkgbuild/).
 
 set -euo pipefail
 
-# ── Localização do projeto (funciona de qualquer cwd; tolera espaços no path) ──
+# ── Project location (works from any cwd and with spaces in the path) ──
 SRC="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PREFIX="${PREFIX:-$HOME/.local}"
 BUILD=1
@@ -43,7 +41,7 @@ for arg in "$@"; do
         -h|--help)
             sed -n '2,/^set -euo/p' "$0" | sed 's/^# \{0,1\}//; /^set -euo/d'
             exit 0 ;;
-        *) echo "Argumento desconhecido: $arg (use --help)" >&2; exit 2 ;;
+        *) echo "Unknown argument: $arg (see --help)" >&2; exit 2 ;;
     esac
 done
 
@@ -52,16 +50,16 @@ ok()   { printf '\033[1;32m✓ %s\033[0m\n' "$*"; }
 warn() { printf '\033[1;33m! %s\033[0m\n' "$*" >&2; }
 die()  { printf '\033[1;31m✗ %s\033[0m\n' "$*" >&2; exit 1; }
 
-# ── Desinstalação ─────────────────────────────────────────────────────────────
+# ── Uninstall ─────────────────────────────────────────────────────────────────
 if [ "$UNINSTALL" -eq 1 ]; then
     SHARE="$PREFIX/share"
     if [ -x "$PREFIX/bin/bigiris" ]; then
-        say "Removendo integrações dos gerenciadores de arquivos, .desktop, ícone e metainfo"
+        say "Removing file manager integrations, .desktop, icon and metainfo"
         "$PREFIX/bin/bigiris" uninstall-integrations \
-            || warn "uninstall-integrations falhou (veja as mensagens acima)"
+            || warn "uninstall-integrations failed (see the messages above)"
     fi
-    # Cópias literais que versões antigas deste script gravavam em
-    # $PREFIX/share; só removidas se idênticas ao arquivo do repositório.
+    # Earlier versions of this script copied these files into $PREFIX/share;
+    # a copy is removed only while it matches the repository file.
     for f in applications/com.biglinux.Iris.desktop metainfo/com.biglinux.Iris.metainfo.xml \
         icons/hicolor/scalable/apps/com.biglinux.Iris.svg; do
         src="$SRC/data/${f##*/}"
@@ -73,10 +71,10 @@ if [ "$UNINSTALL" -eq 1 ]; then
     rm -f -- "$SHARE/glib-2.0/schemas/com.biglinux.Iris.gschema.xml"
     if compgen -G "$SHARE/glib-2.0/schemas/*.xml" >/dev/null; then
         if command -v glib-compile-schemas >/dev/null; then
-            glib-compile-schemas "$SHARE/glib-2.0/schemas" || warn "glib-compile-schemas falhou"
+            glib-compile-schemas "$SHARE/glib-2.0/schemas" || warn "glib-compile-schemas failed"
         fi
     else
-        # Sem nenhum schema, o cache compilado só guardaria o nosso, já removido.
+        # With no schema left, the compiled cache would hold only ours, already removed.
         rm -f -- "$SHARE/glib-2.0/schemas/gschemas.compiled"
     fi
     if [ -f "$SRC/data/po/LINGUAS" ]; then
@@ -87,26 +85,26 @@ if [ "$UNINSTALL" -eq 1 ]; then
         done < "$SRC/data/po/LINGUAS"
     fi
     rm -f -- "$PREFIX/bin/bigiris"
-    ok "BigIris removido de $PREFIX"
+    ok "BigIris removed from $PREFIX"
     exit 0
 fi
 
-# ── Pré-requisitos ────────────────────────────────────────────────────────────
-say "Verificando dependências"
-command -v bwrap >/dev/null || die "bubblewrap ausente — instale o pacote bubblewrap"
-command -v prlimit >/dev/null || die "prlimit ausente — instale o pacote util-linux"
-command -v cargo  >/dev/null || die "cargo não encontrado — instale Rust e Cargo pela sua distribuição"
-command -v msgfmt >/dev/null || warn "msgfmt (gettext) ausente — traduções serão puladas"
+# ── Prerequisites ─────────────────────────────────────────────────────────────
+say "Checking dependencies"
+command -v bwrap >/dev/null || die "bubblewrap is missing: install the bubblewrap package"
+command -v prlimit >/dev/null || die "prlimit is missing: install the util-linux package"
+command -v cargo  >/dev/null || die "cargo not found: install Rust and Cargo from your distribution"
+command -v msgfmt >/dev/null || warn "msgfmt (gettext) is missing: translations will be skipped"
 
-# Dependências de runtime para gui+ai. Aviso brando: nem toda distro é Arch.
+# Build and runtime dependencies for gui+ai. Only a warning: not every distribution is Arch.
 if [ -f /etc/openmandriva-release ] && command -v dnf >/dev/null; then
     miss=()
     for p in rust cargo lib64gtk4.0-devel lib64adwaita-devel shaderc gettext; do
         rpm -q "$p" >/dev/null 2>&1 || miss+=("$p")
     done
     if [ "${#miss[@]}" -gt 0 ]; then
-        warn "Pacotes de compilação possivelmente faltando: ${miss[*]}"
-        warn "No OpenMandriva: sudo dnf install ${miss[*]}"
+        warn "Build packages possibly missing: ${miss[*]}"
+        warn "On OpenMandriva: sudo dnf install ${miss[*]}"
     fi
 elif command -v pacman >/dev/null; then
     miss=()
@@ -114,28 +112,25 @@ elif command -v pacman >/dev/null; then
         pacman -Qq "$p" >/dev/null 2>&1 || miss+=("$p")
     done
     if [ "${#miss[@]}" -gt 0 ]; then
-        warn "Pacotes possivelmente faltando: ${miss[*]}"
-        warn "Instale com: sudo pacman -S ${miss[*]}"
+        warn "Packages possibly missing: ${miss[*]}"
+        warn "Install them with: sudo pacman -S ${miss[*]}"
     fi
     ai=()
     for p in birefnet-native realesrgan-native scunet-native lama-native; do
         pacman -Qq "$p" >/dev/null 2>&1 || ai+=("$p")
     done
     if (( ${#ai[@]} > 0 )); then
-        warn "Ferramentas de IA opcionais sem pesos: ${ai[*]}"
-        warn "Para usá-las: sudo pacman -S ${ai[*]}"
+        warn "Optional AI tools without weights: ${ai[*]}"
+        warn "To use them: sudo pacman -S ${ai[*]}"
     fi
 else
-    warn "pacman ausente — confirme manualmente: gtk4, libadwaita e glslc (shaderc) instalados."
+    warn "pacman not found: check by hand that gtk4, libadwaita and glslc (shaderc) are installed."
 fi
-ok "Checagem de dependências concluída"
+ok "Dependency check finished"
 
 # ── Build ─────────────────────────────────────────────────────────────────────
-# O target-dir não é necessariamente `$SRC/target`: o ~/.cargo/config.toml
-# desta máquina aponta para fora da pasta sincronizada, porque o `target/`
-# do Rust reescreve milhares de arquivos por build e afogava o Nextcloud.
-# Perguntar ao cargo é o único jeito que respeita config.toml, CARGO_TARGET_DIR
-# e o padrão, sem duplicar a regra aqui.
+# The target directory is not necessarily `$SRC/target`: only asking cargo
+# honors config.toml, CARGO_TARGET_DIR and the default without restating the rule.
 TARGET_DIR=""
 if command -v python3 >/dev/null; then
     TARGET_DIR="$(
@@ -147,21 +142,21 @@ fi
 [ -n "$TARGET_DIR" ] || TARGET_DIR="$SRC/target"
 BIN="$TARGET_DIR/release/bigiris"
 if [ "$BUILD" -eq 1 ]; then
-    say "Compilando bigiris (release, features: gui ai) — pode levar alguns minutos"
+    say "Building bigiris (release, features: gui ai); this can take a few minutes"
     ( cd "$SRC" && cargo build --locked --release --features "gui ai" --package bigiris )
-    ok "Build concluído"
+    ok "Build finished"
 else
-    say "--no-build: usando binário já compilado"
+    say "--no-build: using the binary already built"
 fi
-[ -x "$BIN" ] || die "Binário não encontrado em $BIN (target-dir: $TARGET_DIR; rode sem --no-build)"
+[ -x "$BIN" ] || die "Binary not found at $BIN (target-dir: $TARGET_DIR; run without --no-build)"
 
-# Confirma que saiu com gui+ai linkados (evita reinstalar uma build headless).
+# Refuse a headless build, which would replace the GUI binary.
 if ! ldd "$BIN" 2>/dev/null | grep -qi gtk-4; then
-    die "O binário NÃO está linkado ao GTK4 — build headless. Recompile com --features \"gui ai\"."
+    die "The binary is NOT linked against GTK4 (headless build). Rebuild with --features \"gui ai\"."
 fi
 
-# ── Instalação do binário ─────────────────────────────────────────────────────
-say "Instalando binário em $PREFIX/bin"
+# ── Binary ────────────────────────────────────────────────────────────────────
+say "Installing the binary into $PREFIX/bin"
 install -Dm755 "$BIN" "$PREFIX/bin/bigiris"
 ok "bigiris → $PREFIX/bin/bigiris"
 
@@ -169,23 +164,23 @@ if [ "$BIN_ONLY" -eq 0 ]; then
     DATA="$SRC/data"
     SHARE="$PREFIX/share"
 
-    # GSettings schema (necessário para o app GUI ler/gravar preferências)
-    say "Instalando e compilando gschema"
+    # The GUI reads and writes its preferences through this GSettings schema.
+    say "Installing and compiling the gschema"
     install -Dm644 "$DATA/com.biglinux.Iris.gschema.xml" "$SHARE/glib-2.0/schemas/com.biglinux.Iris.gschema.xml"
     if command -v glib-compile-schemas >/dev/null; then
-        # `cmd && ok` dentro de um if não dispara o set -e: a falha sumiria.
+        # `cmd && ok` inside an if does not trigger set -e: the failure would vanish.
         if glib-compile-schemas "$SHARE/glib-2.0/schemas"; then
-            ok "schemas compilados"
+            ok "schemas compiled"
         else
-            warn "glib-compile-schemas falhou — o app pode reclamar de schema na 1ª execução"
+            warn "glib-compile-schemas failed: the app may report a missing schema on first run"
         fi
     else
-        warn "glib-compile-schemas ausente — o app pode reclamar de schema na 1ª execução"
+        warn "glib-compile-schemas is missing: the app may report a missing schema on first run"
     fi
 
-    # Traduções (.po → .mo) conforme data/po/LINGUAS
+    # Translations (.po → .mo) for every locale in data/po/LINGUAS.
     if command -v msgfmt >/dev/null && [ -f "$DATA/po/LINGUAS" ]; then
-        say "Compilando traduções"
+        say "Compiling translations"
         I18N_TMP="$(mktemp -d -t bigiris-i18n.XXXXXX)"
         trap 'rm -rf -- "$I18N_TMP"' EXIT
         while read -r lang; do
@@ -199,30 +194,30 @@ if [ "$BIN_ONLY" -eq 0 ]; then
         done < "$DATA/po/LINGUAS"
     fi
 
-    # .desktop, ícone, metainfo e service menus dos gerenciadores de arquivos
-    # (pula o que o pacote da distro já fornece e atualiza os caches XDG).
-    say "Instalando integrações dos gerenciadores de arquivos (--user)"
-    # Uma falha aqui deixa menus de contexto ausentes ou desatualizados, mas
-    # o binário já está instalado: o self-test e a dica de PATH ainda rodam,
-    # e o script termina com erro no fim.
+    # .desktop, icon, metainfo and file manager service menus; skips what the
+    # distribution package already provides and refreshes the XDG caches.
+    say "Installing file manager integrations (--user)"
+    # A failure here leaves context menus missing or stale, but the binary is
+    # already installed: the self-test and the PATH hint still run, and the
+    # script exits with an error at the end.
     if "$PREFIX/bin/bigiris" install-integrations --user; then
-        ok "integrações instaladas"
+        ok "integrations installed"
     else
         INTEGRATIONS_FAILED=1
-        warn "install-integrations --user falhou (veja as mensagens acima)"
+        warn "install-integrations --user failed (see the messages above)"
     fi
 fi
 
-# ── Verificação final ─────────────────────────────────────────────────────────
+# ── Final check ───────────────────────────────────────────────────────────────
 say "Self-test"
 "$PREFIX/bin/bigiris" --self-test
 
 echo
-ok "BigIris instalado em $PREFIX"
+ok "BigIris installed in $PREFIX"
 case ":$PATH:" in
     *":$PREFIX/bin:"*) : ;;
-    *) warn "$PREFIX/bin não está no PATH — adicione: export PATH=\"$PREFIX/bin:\$PATH\"" ;;
+    *) warn "$PREFIX/bin is not on PATH; add: export PATH=\"$PREFIX/bin:\$PATH\"" ;;
 esac
 if [ "$INTEGRATIONS_FAILED" -eq 1 ]; then
-    die "Integrações incompletas: corrija o erro acima e rode \"$PREFIX/bin/bigiris install-integrations --user\""
+    die "Integrations incomplete: fix the error above and run \"$PREFIX/bin/bigiris install-integrations --user\""
 fi

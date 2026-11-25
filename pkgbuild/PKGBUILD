@@ -15,7 +15,7 @@ depends=(
   'libadwaita>=1.6'
   'dav1d'            # AVIF decoder
   'hicolor-icon-theme'
-  # Real-ESRGAN weights (~5 MB). Without them "Aumentar resolução" silently
+  # Real-ESRGAN weights (~5 MB). Without them "Upscale" silently
   # falls back to Lanczos3, so the AI upscale ships with the app. The larger
   # weights packages stay optional.
   'realesrgan-native'

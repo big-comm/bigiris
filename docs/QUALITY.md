@@ -1,243 +1,252 @@
-# Qualidade do BigIris para BigCommunity GNOME
+# BigIris quality for BigCommunity GNOME
 
-A campanha local de 11 de outubro de 2026 produziu uma candidata com correções,
-testes reproduzíveis e pacote para homologação. Os resultados abaixo permitem
-avaliar o checkout; a adoção como aplicativo oficial depende dos critérios
-pendentes. Não há certificação de ausência universal de bugs ou vazamentos.
+The local campaign of October 11, 2026 produced a candidate with fixes,
+reproducible tests and a package for acceptance testing. The results below make
+it possible to assess the checkout; adoption as an official application depends
+on the pending criteria. There is no certification of the universal absence of
+bugs or leaks.
 
-## Ambiente e rastreabilidade
+## Environment and traceability
 
-BigCommunity GNOME/Wayland, x86_64, Ryzen 7 5800H, 16 CPUs lógicas,
-Rust 1.98.1, GTK 4.22.4, libadwaita 1.9.3 e dav1d 1.5.4.
-MSRV do projeto: 1.95. Runtime GTK mínimo: 4.12; libadwaita: 1.6.
+BigCommunity GNOME/Wayland, x86_64, Ryzen 7 5800H, 16 logical CPUs,
+Rust 1.98.1, GTK 4.22.4, libadwaita 1.9.3 and dav1d 1.5.4.
+Project MSRV: 1.95. Minimum GTK runtime: 4.12; libadwaita: 1.6.
 
-Somente imagens sintéticas, fixtures de regressão e diretórios de teste foram
-usados. Alterações preexistentes foram preservadas. Evidências locais ficam
-em `target/quality/` e não integram o pacote distribuído:
+Only synthetic images, regression fixtures and test directories were used.
+Pre-existing changes were preserved. Local evidence lives in `target/quality/`
+and is not part of the distributed package:
 
-- `zoom-transition/gates/summary.json`: verificações da correção da transição de zoom.
-- `zoom-transition/painted-frames.json`: quadros pintados e escalas intermediárias.
-- `round3/package-fixed-gates/summary.json`: verificações finais, com logs por gate.
-- `round2/acceptance/{benchmark,stress,soak}.log`: performance e estabilidade.
-- `fuzz/summary.json`, `decode.log` e `icc.log`: última campanha instrumentada.
-- `round2/fuzz-before-gif*`, `fuzz-before-avif*` e `fuzz-artifacts/`: descobertas anteriores.
-- `round3/release-final/release-smoke.json`: binário release, SHA-256 e 40 verificações.
-- `round3/ai-release/summary.json`: inferência real com o motor ONNX anterior, antes da correção do empacotamento Nautilus.
-- `round3/ai-final/summary.json`: repetição no binário final; conferir o resultado e o orçamento disponível.
-- `round3/ai-preflight-final/summary.json`: recusa sob 4 GiB e runtime opcional ausente, conferidos no release do motor ONNX anterior.
-- `round2/nautilus-real.json`: menu construído com GI/Nautilus instalado.
-- `long-soak/status.json`: estado explícito do ensaio prolongado.
-- `candidate/`: pacote candidato, hashes e manifesto.
-- `screenshots-final/` e `screenshots-light-final/`: inspeção das janelas sintéticas.
-- `valgrind.log`: impedimento local do Memcheck.
+- `zoom-transition/gates/summary.json`: checks for the zoom transition fix.
+- `zoom-transition/painted-frames.json`: painted frames and intermediate scales.
+- `round3/package-fixed-gates/summary.json`: final checks, with logs per gate.
+- `round2/acceptance/{benchmark,stress,soak}.log`: performance and stability.
+- `fuzz/summary.json`, `decode.log` and `icc.log`: the latest instrumented campaign.
+- `round2/fuzz-before-gif*`, `fuzz-before-avif*` and `fuzz-artifacts/`: earlier findings.
+- `round3/release-final/release-smoke.json`: release binary, SHA-256 and 40 checks.
+- `round3/ai-release/summary.json`: real inference with the previous ONNX engine, before the Nautilus packaging fix.
+- `round3/ai-final/summary.json`: rerun on the final binary; check the result and the available budget.
+- `round3/ai-preflight-final/summary.json`: refusal under 4 GiB and missing optional runtime, checked on the release with the previous ONNX engine.
+- `round2/nautilus-real.json`: menu built with GI/Nautilus installed.
+- `long-soak/status.json`: explicit state of the long-running test.
+- `candidate/`: candidate package, hashes and manifest.
+- `screenshots-final/` and `screenshots-light-final/`: inspection of the synthetic windows.
+- `valgrind.log`: the local Memcheck blocker.
 
-A rodada 3 adiciona proteção de RAM para IA e zoom ancorado. Performance,
-fuzzing e soak da rodada 2 continuam referidos ao core, que não mudou nessa
-rodada. Os gates iniciais da rodada 3 registram falhas de Clippy e sincronização
-do zoom; foram corrigidas antes dos gates finais.
+Round 3 adds RAM protection for AI and anchored zoom. Performance, fuzzing and
+soak from round 2 still refer to the core, which did not change in that round.
+The initial round 3 gates recorded Clippy failures and a zoom synchronization
+failure; they were fixed before the final gates.
 
-Relatórios anteriores que falharam continuam registrados como falha. A execução
-`round2/acceptance/summary.json` teve uma falha de Clippy headless, corrigida
-antes dos gates finais; seus três ensaios de performance passaram. Resultados
-históricos não foram reescritos para aparentar aprovação.
+Earlier reports that failed stay recorded as failures. The
+`round2/acceptance/summary.json` run had a headless Clippy failure, fixed
+before the final gates; its three performance tests passed. Historical results
+were not rewritten to look like approvals.
 
-## Cobertura executada
+## Coverage run
 
-| Área | Resultado | Alcance |
+| Area | Result | Reach |
 | --- | --- | --- |
-| Rust, todos os recursos/targets | 216 testes passaram | Workspace, GUI compilada, core, IA e integrações |
-| Rust, headless | 178 testes passaram | Sobrepõe parte dos 216; não somar as contagens |
-| GTK, teste gráfico separado | Passou | 30 aberturas/fechamentos do viewer, 13 janelas de ferramentas/propriedades e seleção sintética de 10 mil arquivos; estado liberado e no máximo 41 miniaturas simultâneas; seis cenários de zoom conferidos quadro a quadro, escalas intermediárias e pixels renderizados |
-| Nautilus | 6 contratos passaram; GI real criou menus | FileInfo simulado; clique em Nautilus e política da distribuição exigem homologação |
-| Rustfmt e Clippy | Passaram, warnings como erros | Headless e todos os recursos |
-| Distribuição | Desktop, AppStream offline, schemas, inglês e sintaxe passaram | Sem instalar ou alterar associações padrão no host |
-| Fidelidade | Testes passaram | EXIF, ICC RGB→sRGB, alpha, PNG 16 bits, todos os 13 formatos; RGB não linear/float dentro do comportamento anunciado |
-| Preservação de conteúdo | Testes passaram | Transformações estáticas recusam GIF/APNG/WebP animados e TIFF multipágina |
-| Gravação e concorrência | Testes passaram | Publicação atômica, preservação do destino em falhas, Skip/Increment concorrentes |
-| CLI e release | 40 verificações no release | Self-test de isolamento, conversão, resize e reabertura dos 13 formatos |
-| Fuzzing ASan/LSan | Última campanha passou | 17.304 execuções decode e 33.331 ICC, 61 s por alvo; sem erro reportado nessa amostra |
-| Stress | 64 conversões, 4 trabalhadores, todas reabertas | Passou; 0,593 s medidos pelo probe, pico de 51.008 KiB |
-| Estabilidade curta | 300,079 s, 3.029 ciclos | RSS estável, descritores e threads estáveis |
-| IA real (motor ONNX anterior) | Passou antes da correção do empacotamento; 21,172 s para duas imagens | RGB/alpha preservados, sessão reutilizada; pico de 6.847.848 KiB (~6,53 GiB). Repetição no binário final recusada por RAM disponível abaixo de 8 GiB |
-| RustSec | Gate final passou | Zero vulnerabilidades e zero avisos unsound na base consultada; um aviso de manutenção |
-| Memcheck | Passou no CI em oito ciclos sintéticos do core | Zero erros, zero bytes definitivamente/indiretamente perdidos; 48 bytes possivelmente perdidos e 548 bytes ainda alcançáveis. Não cobre GUI ou IA; impedimento local do loader glibc permanece |
-| Oito horas do core | Passou; 28.800,047 s e 298.657 ciclos | RSS inicial/final de 13.200/7.988 KiB, pico de 26.108 KiB; quatro descritores e uma thread antes/depois. Binário e estado final registrados em `long-soak/`; não cobre o produto completo |
+| Rust, all features/targets | 216 tests passed | Workspace, compiled GUI, core, AI and integrations |
+| Rust, headless | 178 tests passed | Overlaps part of the 216; do not add the counts |
+| GTK, separate graphical test | Passed | 30 viewer opens/closes, 13 tool/properties windows and a synthetic selection of 10,000 files; state released and at most 41 simultaneous thumbnails; six zoom scenarios checked frame by frame, intermediate scales and rendered pixels |
+| Nautilus | 6 contracts passed; real GI created menus | Simulated FileInfo; a click in Nautilus and the distribution policy need acceptance testing |
+| Rustfmt and Clippy | Passed, warnings as errors | Headless and all features |
+| Distribution | Desktop entry, offline AppStream, schemas, English and syntax passed | Without installing or changing default associations on the host |
+| Fidelity | Tests passed | EXIF, ICC RGB→sRGB, alpha, 16-bit PNG, all 13 formats; non-linear/float RGB within the advertised behavior |
+| Content preservation | Tests passed | Static transforms refuse animated GIF/APNG/WebP and multi-page TIFF |
+| Writing and concurrency | Tests passed | Atomic publication, target preserved on failures, concurrent Skip/Increment |
+| CLI and release | 40 checks on the release | Sandbox self-test, conversion, resize and reopening of the 13 formats |
+| ASan/LSan fuzzing | Latest campaign passed | 17,304 decode and 33,331 ICC executions, 61 s per target; no error reported in that sample |
+| Stress | 64 conversions, 4 workers, all reopened | Passed; 0.593 s measured by the probe, peak of 51,008 KiB |
+| Short stability | 300.079 s, 3,029 cycles | Stable RSS, stable descriptors and threads |
+| Real AI (previous ONNX engine) | Passed before the packaging fix; 21.172 s for two images | RGB/alpha preserved, session reused; peak of 6,847,848 KiB (~6.53 GiB). Rerun on the final binary refused because available RAM was below 8 GiB |
+| RustSec | Final gate passed | Zero vulnerabilities and zero unsound warnings in the database queried; one maintenance warning |
+| Memcheck | Passed in CI over eight synthetic core cycles | Zero errors, zero bytes definitely/indirectly lost; 48 bytes possibly lost and 548 bytes still reachable. Does not cover GUI or AI; the local glibc loader blocker remains |
+| Eight hours of the core | Passed; 28,800.047 s and 298,657 cycles | Initial/final RSS of 13,200/7,988 KiB, peak of 26,108 KiB; four descriptors and one thread before/after. Binary and final state recorded in `long-soak/`; does not cover the complete product |
 
-Os testes GTK executam loaders locais no binário de teste. O executável final
-usa o worker confinado, exercitado pelos testes da CLI/release. Nenhum desses
-ensaios substitui uma sessão prolongada do produto completo com GPU e Orca.
+The GTK tests run local loaders in the test binary. The final executable uses
+the confined worker, exercised by the CLI/release tests. None of these tests
+replaces a long session of the complete product with GPU and Orca.
 
-O fuzzing é guiado por cobertura LLVM, instrumenta o código Rust do core e usa
-corpus sintético dos formatos e perfis ICC. A entrada mutada é limitada a 16 KiB;
-o decode completo, a um milhão de pixels. Cabeçalhos de imagens maiores continuam
-inspecionados. As bibliotecas nativas externas não são instrumentadas. Limites
-maiores têm regressões e contenção pelo sandbox; o resultado não cobre todo
-arquivo possível ou todos os encoders, GTK, IA e argumentos CLI.
+Fuzzing is guided by LLVM coverage, instruments the core's Rust code and uses a
+synthetic corpus of the formats and ICC profiles. The mutated input is limited
+to 16 KiB; the full decode, to one million pixels. Headers of larger images are
+still inspected. External native libraries are not instrumented. Larger limits
+have regressions and are contained by the sandbox; the result does not cover
+every possible file nor all encoders, GTK, AI and CLI arguments.
 
-Durante a campanha, GIF com frame maior que a tela lógica e AVIF com caixa além
-do arquivo provocaram timeout/alocação excessiva. Foram acrescentadas inspeções
-estruturais sem buffers proporcionais aos tamanhos declarados e regressões
-reproduzíveis. Outro timeout vinha de um GIF válido com tela de 33 MP; o orçamento
-de pixels do alvo instrumentado foi explicitado, sem reduzir a cobertura de
-cabeçalhos ou fingir que esse caso era uma falha de memória corrigida.
+During the campaign, a GIF with a frame larger than the logical screen and an
+AVIF with a box beyond the end of the file caused a timeout and excessive
+allocation. Structural inspections without buffers proportional to the
+declared sizes were added, with reproducible regressions. Another timeout came
+from a valid GIF with a 33 MP screen; the pixel budget of the instrumented
+target was made explicit, without reducing header coverage or pretending that
+case was a fixed memory failure.
 
-## Performance medida
+## Measured performance
 
-Imagem sintética de 1920 × 1080, release, cache aquecido, três amostras por
-operação. Amostragem exploratória na sessão de desenvolvimento; não é uma
-comparação controlada com outro visualizador nem mede abertura fria da GUI.
+Synthetic 1920 × 1080 image, release build, warm cache, three samples per
+operation. Exploratory sampling in the development session; it is not a
+controlled comparison with another viewer and does not measure a cold GUI
+start.
 
-| Operação | Mediana em ms | P95 em ms |
+| Operation | Median in ms | P95 in ms |
 | --- | ---: | ---: |
-| Decode PNG | 11,206 | 11,230 |
-| Resize para aresta 1080 | 15,030 | 16,653 |
-| Preview até 800 | 15,673 | 16,840 |
-| PNG | 23,588 | 23,626 |
-| JPEG | 66,197 | 66,403 |
-| WebP lossless | 33,396 | 34,892 |
-| AVIF | 7.388,941 | 7.559,215 |
+| PNG decode | 11.206 | 11.230 |
+| Resize to 1080 edge | 15.030 | 16.653 |
+| Preview up to 800 | 15.673 | 16.840 |
+| PNG | 23.588 | 23.626 |
+| JPEG | 66.197 | 66.403 |
+| WebP lossless | 33.396 | 34.892 |
+| AVIF | 7,388.941 | 7,559.215 |
 
-Resize/preview incluem decode; conversão inclui decode, preparação, encode,
-gravação e sincronização. Pico do benchmark: 79.660 KiB. AVIF continua o gargalo;
-limitar suas threads a duas contém a multiplicação de trabalhadores de lote,
-mas esses números não demonstram uma melhoria percentual atribuível à mudança.
+Resize and preview include decoding; conversion includes decoding,
+preparation, encoding, writing and syncing. Benchmark peak: 79,660 KiB. AVIF
+remains the bottleneck; limiting its threads to two contains the
+multiplication of batch workers, but these numbers do not show a percentage
+improvement attributable to that change.
 
-No soak de cinco minutos, RSS após aquecimento: 13.136 KiB, antes e depois;
-pico: 26.056 KiB; quatro descritores e uma thread antes e depois. O probe usa
-allocator padrão; o executável usa mimalloc. As medições não abrangem GPU,
-memória da IA ou um acervo grande. O binário do ensaio prolongado tem hash
-registrado; um resultado só vale para aquela compilação e aquele roteiro.
+In the five-minute soak, RSS after warm-up: 13,136 KiB, before and after; peak:
+26,056 KiB; four descriptors and one thread before and after. The probe uses
+the default allocator; the executable uses mimalloc. The measurements do not
+cover GPU, AI memory or a large collection. The binary of the long-running test
+has its hash recorded; a result holds only for that build and that script.
 
-## Correções e arquitetura
+## Fixes and architecture
 
-O executável delega decode, dimensões, metadados e previews a um worker
-Bubblewrap sem rede/home/run/etc, com entrada por descritor somente leitura,
-`/usr` e executável somente leitura e tmpfs de 64 MiB. `prlimit` limita espaço
-virtual a 2 GiB, CPU a 30 s, descritores a 64, core dumps a zero e cada arquivo
-de saída a 512 MiB mais cabeçalho. O supervisor encerra o filho após 60 s ou
-cancelamento. O protocolo de pixels é validado antes da alocação no pai.
-Se o isolamento falhar, a imagem é recusada. Não há fallback sem sandbox.
+The executable delegates decoding, dimensions, metadata and previews to a
+Bubblewrap worker without network/home/run/etc, with input through a read-only
+descriptor, `/usr` and the executable read-only, and a 64 MiB tmpfs. `prlimit`
+limits virtual address space to 2 GiB, CPU to 30 s, descriptors to 64, core
+dumps to zero and each output file to 512 MiB plus header. The supervisor ends
+the child after 60 s or on cancellation. The pixel protocol is validated before
+allocation in the parent. If the sandbox fails, the image is refused. There is
+no fallback without the sandbox.
 
-Isso não é quota de RSS/cgroup nem filtro seccomp. Encoders, GTK e a inferência de IA
-continuam no pai. Consumidores autônomos da biblioteca core executam localmente
-por padrão. O worker restringe entrada e saída; scratch interno dos codecs
-não tem contabilização precisa por buffer. `/usr` inteiro é visível somente
-leitura, em vez de uma allowlist mínima de bibliotecas.
+This is not an RSS/cgroup quota nor a seccomp filter. Encoders, GTK and AI
+inference stay in the parent. Standalone consumers of the core library run
+locally by default. The worker restricts input and output; the codecs' internal
+scratch has no precise per-buffer accounting. The whole of `/usr` is visible
+read-only, instead of a minimal allowlist of libraries.
 
-O pipeline limita entrada regular a 1 GiB, até 256 × 1024² pixels e 512 MiB por
-buffer. Lotes usam estimativa de CPU/RAM e até quatro trabalhadores. Escrita
-usa temporário único, flush/sync e publicação atômica. PNG preserva 16 bits;
-ICO normaliza RGBA e limita dimensões. ICC RGB é convertido a sRGB preservando
-alpha/precisão; perfis inválidos ou não RGB são recusados. PNG/JPEG recebem
-perfil sRGB gerado sem campos identificadores da origem. Metadados pessoais
-não são copiados na conversão.
+The pipeline limits regular input to 1 GiB, up to 256 × 1024² pixels and
+512 MiB per buffer. Batches use a CPU/RAM estimate and up to four workers.
+Writing uses a unique temporary file, flush/sync and atomic publication. PNG
+keeps 16 bits; ICO normalizes RGBA and limits dimensions. RGB ICC is converted
+to sRGB preserving alpha and precision; invalid or non-RGB profiles are
+refused. PNG/JPEG receive an sRGB profile generated without identifying fields
+from the source. Personal metadata is not copied during conversion.
 
-Descoberta de pastas, properties, carregamento dos diálogos, comparação e
-preparo dos pixels de impressão saíram da thread GTK. Previews têm um trabalhador
-coalescente, buffers limitados e apenas a revisão atual é apresentada. A fita
-é paginada em até 41 widgets. Referências fracas e desconexão de sinais reduzem
-retenções; testes verificam liberação. A impressão usa alpha premultiplicado,
-com regressão específica; não foi enviado trabalho a uma impressora real.
+Folder discovery, properties, dialog loading, comparison and preparing the
+print pixels were moved off the GTK thread. Previews have one coalescing
+worker, bounded buffers, and only the current revision is presented. The strip
+is paged at up to 41 widgets. Weak references and signal disconnection reduce
+retention; tests check the release. Printing uses premultiplied alpha, with a
+specific regression test; no job was sent to a real printer.
 
-Os ensaios de IA desta campanha usaram ONNX Runtime 1.29.0 com modelos
-baixados sob demanda; esse motor foi substituído e os números de IA da tabela acima não se
-aplicam ao produto atual. A IA agora usa os motores image-engine-native do
-BigLinux (Rust puro, CPU ou Vulkan) e nada é baixado: cada ferramenta lê os
-pesos do seu pacote opcional (`birefnet-native`, `realesrgan-native`,
-`scunet-native`, `lama-native`) em `/usr/share/<pacote>/`. O modelo carregado é
-reutilizado entre arquivos do lote, a máscara preserva o alpha original e o
-cancelamento é atendido entre etapas, não no meio de uma.
+The AI tests of this campaign used ONNX Runtime 1.29.0 with models downloaded
+on demand; that engine was replaced, and the AI numbers in the table above do
+not apply to the current product. The AI uses BigLinux's image-engine-native
+engines (pure Rust, CPU or Vulkan) and nothing is downloaded: each tool reads
+its weights from its optional package (`birefnet-native`, `realesrgan-native`,
+`scunet-native`, `lama-native`) in `/usr/share/<package>/`. The loaded model is
+reused across the files of a batch, the mask preserves the original alpha, and
+cancellation is honored between stages, not in the middle of one.
 
-Antes de carregar e antes de cada execução, cada modelo estima a memória de
-que precisa (de 0,1 a 0,7 GB medidos nos maiores casos, mais a área de
-trabalho da imagem) e compara com o menor entre MemAvailable, os limites
-cgroup v2 dos ancestrais e RLIMIT_AS, sem somar swap. Isso é admissão
-preventiva, não quota rígida de RSS: a disponibilidade pode mudar após a
-conferência e cgroup v1 não é abrangido. Visualização e conversão continuam
-disponíveis sem nenhum pacote de pesos. Medir RAM, tempo e qualidade dos
-motores nativos em hardware modesto permanece pendente.
+Before loading and before each run, each model estimates the memory it needs
+(0.1 to 0.7 GB measured in the largest cases, plus the image's working area)
+and compares it with the smallest of MemAvailable, the cgroup v2 limits of the
+ancestors and RLIMIT_AS, without adding swap. This is preventive admission, not
+a hard RSS quota: availability can change after the check and cgroup v1 is not
+covered. Viewing and conversion stay available without any weight package.
+Measuring the RAM, time and quality of the native engines on modest hardware
+remains pending.
 
-O zoom foi extraído para `gui/zoom.rs`. Roda, atalhos e botões usam o ponto do
-cursor; sem posição válida, usam o centro. A regressão original conferia apenas
-a posição após o término. Um novo teste em `after-paint` reproduziu dois quadros
-com deslocamento transitório de aproximadamente 185 pixels da imagem no eixo
-horizontal. A posição e os limites de rolagem agora são configurados antes da
-nova escala; a transição usa o relógio de quadros do GTK e interpolação gradual
-em escala logarítmica. Eventos fracionários do touchpad preservam sua magnitude.
-A preferência `gtk-enable-animations=false` aplica o zoom imediatamente.
+Zoom lives in `gui/zoom.rs`. The wheel, shortcuts and buttons use the cursor
+point; without a valid position, they use the center. The original regression
+test checked only the position after the transition ended. A new test in
+`after-paint` reproduced two frames with a transient offset of about 185 image
+pixels on the horizontal axis. The position and scroll limits are set before
+the new scale; the transition uses the GTK frame clock and gradual
+interpolation on a logarithmic scale. Fractional touchpad events keep their
+magnitude. The `gtk-enable-animations=false` preference applies zoom
+immediately.
 
-Comandos rápidos atualizam o destino da mesma animação, preservando a âncora
-quando o cursor permanece no lugar. Arrastar, ajustar à janela, navegar e fechar
-cancelam a animação. O zoom referencia a textura existente, sem redimensionar
-pixels na thread gráfica. `1` corresponde a 100% e `0` restaura o ajuste à janela.
-Quando a imagem cabe na janela ou alcança uma borda, a rolagem é limitada.
+Quick commands update the target of the same animation, keeping the anchor
+when the cursor stays in place. Dragging, fitting to the window, navigating and
+closing cancel the animation. Zoom references the existing texture, without
+resizing pixels on the GUI thread. `1` corresponds to 100% and `0` restores
+fit to window. When the image fits in the window or reaches an edge, scrolling
+is limited.
 
-O teste gráfico confere cada quadro pintado contra a projeção geométrica com
-esses limites, com tolerância inferior a 1,5 pixel da tela por eixo, monotonicidade
-da escala, presença de quadros intermediários e pixels renderizados no destino.
-Inclui teclado, botões, ampliações rápidas, inversão, 100%, animações desativadas,
-arrasto manual, navegação e fechamento. Essa verificação não certifica conforto
-visual pessoal nem ausência de frames perdidos em todo hardware; a avaliação
-com mouse e touchpad reais permanece no roteiro de homologação.
+The graphical test checks each painted frame against the geometric projection
+with those limits, with a tolerance below 1.5 screen pixels per axis,
+monotonic scale, the presence of intermediate frames and rendered pixels at the
+target. It includes keyboard, buttons, fast zoom-ins, reversal, 100%, disabled
+animations, manual drag, navigation and closing. This check does not certify
+personal visual comfort or the absence of dropped frames on all hardware;
+evaluation with a real mouse and touchpad remains in the acceptance script.
 
-O SVG do ícone também recebeu correção de cabeçalho: o comentário extenso foi
-movido para dentro do elemento raiz. O desenho permaneceu igual, e o arquivo
-passou a ser reconhecido pelo carregador GdkPixbuf usado no GNOME.
+The icon SVG also got a header fix: the long comment was moved inside the root
+element. The drawing stayed the same, and the file became recognized by the
+GdkPixbuf loader used in GNOME.
 
-A validação do pacote também revelou que a extensão Nautilus já instalada no
-host fazia o gerador omiti-la do DESTDIR. O escopo agora é explícito, sem inferir
-instalação pessoal por prefixo do caminho. Regressões verificam inclusão no
-pacote apesar da extensão existente, preservação do arquivo do host e prevenção
-de duplicação na instalação pessoal. O arquivo incompleto anterior foi mantido
-em `round3/package-before-nautilus-fix/`, sem aprovação de distribuição.
+Package validation also revealed that a Nautilus extension already installed on
+the host made the generator leave it out of the DESTDIR. The scope is explicit,
+without inferring a personal installation from the path prefix. Regression
+tests check inclusion in the package despite the existing extension,
+preservation of the host's file and prevention of duplication in the personal
+installation. The earlier incomplete file was kept in
+`round3/package-before-nautilus-fix/`, without distribution approval.
 
-## Pendências para adoção oficial
+## Pending work for official adoption
 
-| Prioridade | Pendência | Aceitação |
+| Priority | Pending item | Acceptance |
 | --- | --- | --- |
-| Alta | Instalação limpa BigCommunity | Build da receita completa; instalar, atualizar, remover; MIME, schemas, idiomas e Nautilus reais |
-| Alta | Acessibilidade e uso | Orca, teclado, foco, alto contraste, claro/escuro, escalas 100/150/200% e múltiplos monitores |
-| Alta | Estabilidade prolongada | Resultado de oito horas do core mais sessão GNOME/slideshow com memória CPU/GPU monitorada |
-| Alta | Memória nativa | Memcheck em ambiente compatível; CI remoto verde e revisão dos logs |
-| Alta | Acervo e fidelidade | Comparação visual/colorimétrica de imagens reais autorizadas, ICC e 16 bits; definir política para HDR, animação e páginas |
-| Alta | IA em hardware modesto | Medir RAM, tempo, qualidade da máscara e cancelamento dos motores image-engine-native, na CPU e em GPU Vulkan |
-| Média | Performance do produto | Primeiro frame frio, navegação e latência comparados ao visualizador nativo no mesmo hardware/acervo |
-| Média | Dívida arquitetural restante | Extrair estado/controllers/diálogos do `gui.rs`; ampliar testes dos fluxos interativos |
-| Média | Dependência sem manutenção | Retirar `paste` transitivo via rav1e/ravif, RUSTSEC-2024-0436, com regressão AVIF |
-| Média | Confinamento adicional | Avaliar encoders/IA fora do pai, seccomp/cgroup e allowlist de bibliotecas |
+| High | Clean BigCommunity installation | Build of the complete recipe; install, upgrade, remove; real MIME, schemas, languages and Nautilus |
+| High | Accessibility and use | Orca, keyboard, focus, high contrast, light/dark, 100/150/200% scales and multiple monitors |
+| High | Long-running stability | Eight-hour core result plus a GNOME/slideshow session with CPU/GPU memory monitored |
+| High | Native memory | Memcheck in a compatible environment; green remote CI and log review |
+| High | Collection and fidelity | Visual/colorimetric comparison of authorized real images, ICC and 16 bits; define a policy for HDR, animation and pages |
+| High | AI on modest hardware | Measure RAM, time, mask quality and cancellation of the image-engine-native engines, on the CPU and on a Vulkan GPU |
+| Medium | Product performance | Cold first frame, navigation and latency compared with the native viewer on the same hardware and collection |
+| Medium | Remaining architectural debt | Extract state, controllers and dialogs from `gui.rs`; widen tests of the interactive flows |
+| Medium | Unmaintained dependency | Drop the transitive `paste` through rav1e/ravif, RUSTSEC-2024-0436, with an AVIF regression test |
+| Medium | Additional confinement | Evaluate encoders/AI outside the parent, seccomp/cgroup and a library allowlist |
 
-O viewer mostra primeiro quadro/página; não há reprodução de animações,
-navegação TIFF multipágina ou gestão HDR/tone mapping completa. A estabilidade
-medida e a liberação de referências não provam ausência de leaks nativos.
-Os logs GTK registraram aviso de tema e indisponibilidade do barramento AT-SPI;
-Orca permanece pendente. O pacote é recomposto do release testado, não um build
-limpo certificado.
+The viewer shows the first frame or page; there is no animation playback,
+multi-page TIFF navigation or full HDR handling/tone mapping. The measured
+stability and reference release do not prove the absence of native leaks. The
+GTK logs recorded a theme warning and an unavailable AT-SPI bus; Orca remains
+pending. The package is reassembled from the tested release, not a certified
+clean build.
 
-O primeiro [CI remoto do PR nº 1](https://github.com/xathay/bigiris/actions/runs/38161983238)
-terminou com dez jobs aprovados e quatro falhas. O fuzzing selecionou stable
-por causa de `rust-toolchain.toml`, antes de testar o corpus. Os dois jobs de
-testes funcionais e o self-test do release foram bloqueados na configuração
-de loopback do Bubblewrap no runner Ubuntu. O build release em si compilou.
-A correção define `RUSTUP_TOOLCHAIN=nightly` apenas no fuzzing e carrega o
-perfil de Bubblewrap fornecido pelo pacote `apparmor-profiles` nos três jobs
-de runtime, com perfil dos filhos que nega capabilities. Um preflight exige
-isolamento e capabilities efetivas zeradas antes de compilar. AppArmor e as
-restrições globais permanecem ativos; o contêiner Arch não recebe privilégios
-amplos. A nova configuração exige nova execução remota antes de aprovação.
-O teste gráfico já inclui as transições de zoom e agora publica o relatório
-dos quadros pintados como artefato do CI.
+The first [remote CI of PR #1](https://github.com/xathay/bigiris/actions/runs/38161983238)
+ended with ten jobs passed and four failures. Fuzzing selected stable because
+of `rust-toolchain.toml`, before testing the corpus. The two functional test
+jobs and the release self-test were blocked by Bubblewrap's loopback setup on
+the Ubuntu runner. The release build itself compiled. The fix sets
+`RUSTUP_TOOLCHAIN=nightly` only for fuzzing and loads the Bubblewrap profile
+provided by the `apparmor-profiles` package in the three runtime jobs, with a
+child profile that denies capabilities. A preflight requires the sandbox and
+zero effective capabilities before compiling. AppArmor and the global
+restrictions stay active; the Arch container does not get broad privileges.
+The new configuration needs a new remote run before approval. The graphical
+test already includes the zoom transitions and publishes the painted-frame
+report as a CI artifact.
 
-## Referências e reprodução
+## References and reproduction
 
 [GNOME HIG](https://developer.gnome.org/hig/index.html),
-[acessibilidade](https://developer.gnome.org/hig/guidelines/accessibility.html),
+[accessibility](https://developer.gnome.org/hig/guidelines/accessibility.html),
 [image::Limits](https://docs.rs/image/latest/image/struct.Limits.html),
 [Bubblewrap](https://github.com/containers/bubblewrap),
 [RustSec](https://github.com/RustSec/advisory-db),
-[Valgrind](https://valgrind.org/docs/manual/manual-core.html) e
-[restrições de namespaces do Ubuntu](https://documentation.ubuntu.com/release-notes/24.04/#unprivileged-user-namespace-restrictions)
-orientam os critérios. Em runners Ubuntu, conferir o perfil de Bubblewrap da
-distribuição; sandbox indisponível deve falhar, sem desativar proteções globais.
+[Valgrind](https://valgrind.org/docs/manual/manual-core.html) and
+[Ubuntu's namespace restrictions](https://documentation.ubuntu.com/release-notes/24.04/#unprivileged-user-namespace-restrictions)
+guide the criteria. On Ubuntu runners, check the distribution's Bubblewrap
+profile; an unavailable sandbox must fail, without disabling global
+protections.
 
-Comandos em [CONTRIBUTING.md](../CONTRIBUTING.md#campanha-de-qualidade-no-gnome).
-Entrega e roteiro de homologação em [RELEASE-CANDIDATE.md](RELEASE-CANDIDATE.md).
+Commands in [CONTRIBUTING.md](../CONTRIBUTING.md#quality-campaign-on-gnome).
+Delivery and acceptance script in [RELEASE-CANDIDATE.md](RELEASE-CANDIDATE.md).

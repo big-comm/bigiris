@@ -1,44 +1,44 @@
-# ADR-002 — backend de decodificação
+# ADR-002: Decoding backend
 
-- **Status:** Implementado com worker Bubblewrap; expansão de formatos adiada
-- **Data:** 2026-04-19
-- **Revisão:** 2026-10-11
+- **Status:** Implemented with a Bubblewrap worker; format expansion deferred
+- **Date:** 2026-04-19
+- **Revised:** 2026-10-11
 
-## Contexto
+## Context
 
-O visualizador e a CLI precisam entregar os mesmos pixels, orientação EXIF e
-limites contra imagens hostis. Usar backends diferentes antes de existir uma
-camada comum aumentaria a chance de divergência e anunciaria formatos que o
-produto ainda não abre.
+The viewer and the CLI must deliver the same pixels, EXIF orientation and
+limits against hostile images. Using different backends before a common layer
+exists would raise the chance of divergence and would advertise formats the
+product cannot open yet.
 
-## Decisão atual
+## Current decision
 
-GUI e CLI usam `bigimage_core::open_image`, baseado no crate `image`, com
-detecção por conteúdo, orientação EXIF e limites de 1 GiB/256 MP. No viewer, a
-decodificação roda em uma thread dedicada e pedidos sucessivos são coalescidos,
-evitando bloquear o loop do GTK.
+GUI and CLI use `bigimage_core::open_image`, based on the `image` crate, with
+content-based detection, EXIF orientation and 1 GiB/256 MP limits. In the
+viewer, decoding runs on a dedicated thread and successive requests are
+coalesced, so the GTK loop is not blocked.
 
-No executável, o core recebe um backend que delega decode, dimensões, previews
-e metadados a um worker Bubblewrap separado. Esse worker usa a mesma
-implementação `image`, lê a entrada por descritor e entrega pixels por um
-protocolo validado, com limites de processo e cancelamento supervisionado.
-O aplicativo recusa a imagem se o sandbox não iniciar. A biblioteca standalone
-continua local por padrão; encoders e inferência ONNX não foram isolados.
-Detalhes e limites em [QUALITY.md](QUALITY.md).
+In the executable, the core receives a backend that delegates decoding,
+dimensions, previews and metadata to a separate Bubblewrap worker. That worker
+uses the same `image` implementation, reads the input through a descriptor and
+delivers pixels over a validated protocol, with process limits and supervised
+cancellation. The application refuses the image if the sandbox does not start.
+The standalone library stays local by default; encoders and AI inference are
+not isolated. Details and limits in [QUALITY.md](QUALITY.md).
 
-Os formatos efetivamente suportados são apenas os expostos por
-`bigimage_core::Format`. HEIC, JPEG XL, SVG e RAW não têm feature flags vazias
-nem aparecem nos metadados do desktop.
+The formats actually supported are only those exposed by
+`bigimage_core::Format`. HEIC, JPEG XL, SVG and RAW have no empty feature flags
+and do not appear in the desktop metadata.
 
-## Evolução considerada
+## Evolution considered
 
-Glycin continua sendo uma opção para substituir ou ampliar os loaders atuais,
-desde que:
+Glycin remains an option to replace or extend the current loaders, provided
+that:
 
-1. exista adaptação única para o tipo interno do core;
-2. os mesmos testes de orientação, dimensão e limites cubram os dois backends;
-3. cada formato só seja anunciado depois de passar por testes reais;
-4. a dependência esteja disponível nas distribuições suportadas.
+1. there is a single adapter to the core's internal type;
+2. the same orientation, dimension and limit tests cover both backends;
+3. each format is advertised only after passing real tests;
+4. the dependency is available in the supported distributions.
 
-Até esses critérios serem atendidos, o backend atual é a implementação oficial,
-não um fallback temporário.
+Until these criteria are met, the current backend is the official
+implementation, not a temporary fallback.

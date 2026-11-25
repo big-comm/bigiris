@@ -9,12 +9,12 @@ BigIris built with the `ai` feature includes image-engine-native
 adbe1784bafd9329c8d667f28759aedfbf841d29): the native-engine,
 native-vulkan, birefnet-native, realesrgan-native, scunet-native and
 lama-native crates, MIT-licensed, with parts under BSD-3-Clause. Their
-licence and notices follow.
+license and notices follow.
 
 The model weights are not part of BigIris. They are installed by the
 BigLinux packages birefnet-native (BiRefNet-lite, MIT), realesrgan-native
 (Real-ESRGAN, BSD-3-Clause), scunet-native (SCUNet, Apache-2.0) and
-lama-native (Big LaMa, Apache-2.0), each with its licence under
+lama-native (Big LaMa, Apache-2.0), each with its license under
 /usr/share/licenses/<package>.
 
 ----------------------------------------------------------------------

@@ -186,6 +186,37 @@ fn realesrgan_enlarges_by_each_factor_and_keeps_alpha() {
 }
 
 #[test]
+#[ignore = "needs realesrgan-native weights"]
+fn realesrgan_bands_reduce_like_the_whole_image() {
+    if !ready(&upscale::MODEL) {
+        return;
+    }
+    // 1000 rows run as three bands; the oracle is Lanczos3 over the 4× run.
+    let (w, h) = (160u32, 1000u32);
+    let mut seed = 0x51_7cc1_b727_220au64;
+    let clean = backdrop(w, h);
+    let textured = RgbImage::from_fn(w, h, |x, y| {
+        let p = clean.get_pixel(x, y);
+        Rgb(p.0.map(|v| (i32::from(v) + noise(&mut seed, 20)).clamp(0, 255) as u8))
+    });
+    let source = DynamicImage::ImageRgb8(textured);
+    let started = Instant::now();
+    let four = upscale::upscale(&source, 4, upscale::Method::RealEsrgan, go).unwrap();
+    let two = upscale::upscale(&source, 2, upscale::Method::RealEsrgan, go).unwrap().into_rgb8();
+    report("realesrgan 160x1000 x4 and x2", started, upscale::device());
+    let reference = bigimage_core::resize::apply_to(
+        &four,
+        bigimage_core::ResizeMode::Exact { width: w * 2, height: h * 2 },
+        bigimage_core::Filter::Lanczos3,
+    )
+    .unwrap()
+    .into_rgb8();
+    let worst =
+        two.as_raw().iter().zip(reference.as_raw()).map(|(&a, &b)| a.abs_diff(b)).max().unwrap();
+    assert!(worst <= 2, "largest difference {worst}");
+}
+
+#[test]
 #[ignore = "needs scunet-native weights"]
 fn scunet_removes_added_noise() {
     if !ready(&denoise::MODEL) {

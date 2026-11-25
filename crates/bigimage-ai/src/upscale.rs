@@ -2,11 +2,13 @@
 //! Super-resolution with Real-ESRGAN general x4v3 (`realesrgan-native`),
 //! with Lanczos3 as the fallback when the weights are not installed.
 //!
-//! The network always enlarges 4×. For 2× and 3× its output is reduced
-//! to the requested size with Lanczos3, which keeps the detail the
-//! network drew. The network sees RGB only: an alpha channel is enlarged
-//! with Lanczos3 straight to the final size. The engine works in tiles,
-//! so only the input and the output grow with the image.
+//! The network always enlarges 4×. It runs on bands of rows, each with
+//! the context the network and the resampling reach, and for 2× and 3×
+//! each band is reduced to the requested size with Lanczos3 as it comes
+//! out, which keeps the detail the network drew. The full 4× image is
+//! never held, so only the input and the output grow with the image. The
+//! network sees RGB only: an alpha channel is enlarged with Lanczos3
+//! straight to the final size.
 //!
 //! Real-ESRGAN works on 8-bit sRGB: 16-bit and float sources come out as
 //! 8-bit (`Rgb8`, or `Rgba8` with alpha). [`Method::Lanczos`] keeps the
@@ -15,7 +17,7 @@
 //! The weights come from the BigLinux package `realesrgan-native`
 //! (BSD-3-Clause); `BIGIRIS_REALESRGAN_WEIGHTS` points at another file.
 
-use std::ops::ControlFlow;
+use std::ops::{ControlFlow, Range};
 
 use image::DynamicImage;
 
@@ -44,10 +46,20 @@ const LOAD_BYTES: u64 = 32 * MIB;
 /// One tile (512² on the CPU, 768² on a GPU) of 64-channel maps, margin
 /// included.
 const TILE_BYTES: u64 = 512 * MIB;
-/// Largest 4× intermediate (RGB8), the core pixel limit.
-const MAX_NETWORK_PIXELS: u64 = 256 * 1024 * 1024;
 /// Largest result, as RGBA8 (the core buffer limit).
 const MAX_OUTPUT_BYTES: u64 = 512 * MIB;
+/// Source rows the network sees per band, context included: the CPU tile,
+/// so each band is a single row of the engine's tiles there.
+const BAND_ROWS: u32 = 512;
+/// Network context on each side of a band.
+const NETWORK_MARGIN: u32 = 34;
+#[cfg(feature = "native")]
+const _: () = assert!(NETWORK_MARGIN as usize == realesrgan_native::MARGIN);
+/// Source rows resampled beyond a band on each side: 8 network rows,
+/// beyond Lanczos3's 6-row reach when 4× is reduced to 2×.
+const RESAMPLE_ROWS: u32 = 2;
+/// Source rows each band produces.
+const BAND_STEP: u32 = BAND_ROWS - 2 * (NETWORK_MARGIN + RESAMPLE_ROWS);
 
 #[cfg(feature = "native")]
 static SLOT: Slot<realesrgan_native::Model> = Slot::new();
@@ -108,13 +120,12 @@ fn check_factor(factor: u8) -> Result<(), AiError> {
 
 /// Refuse results the core could not hold or encode.
 fn check_limits(width: u32, height: u32, factor: u8) -> Result<(), AiError> {
-    let network = u64::from(width) * u64::from(height) * u64::from(SCALE * SCALE);
     let (fw, fh) = output_size(width, height, factor);
     let output = u64::from(fw) * u64::from(fh);
     if width == 0 || height == 0 {
         return Err(AiError::Processing("imagem vazia".into()));
     }
-    if network > MAX_NETWORK_PIXELS || output.saturating_mul(4) > MAX_OUTPUT_BYTES {
+    if output.saturating_mul(4) > MAX_OUTPUT_BYTES {
         return Err(AiError::Processing(format!(
             "{fw}×{fh} excede o limite de saída de 512 MiB; reduza a imagem ou o fator"
         )));
@@ -122,16 +133,28 @@ fn check_limits(width: u32, height: u32, factor: u8) -> Result<(), AiError> {
     Ok(())
 }
 
-/// Memory one Real-ESRGAN run needs: a tile, the source (RGBA8 + RGB8),
-/// the 4× RGB8 result, the final RGB8/RGBA8 image and, for 2× and 3×,
-/// the resampled copy.
-fn budget(width: u32, height: u32, factor: u8) -> Budget {
+/// Memory one Real-ESRGAN run needs: a tile; the source as RGBA8, RGB8
+/// and alpha; one band's 4× RGB8 and, for 2× and 3×, the resampler's
+/// horizontal pass and the reduced band; the final RGB8, and with alpha
+/// the enlarged alpha and the RGBA8 copy.
+fn budget(width: u32, height: u32, factor: u8, alpha: bool) -> Budget {
     let input = u64::from(width) * u64::from(height);
-    let network = input * u64::from(SCALE * SCALE);
+    let f = u64::from(factor);
+    let band_rows = u64::from(BAND_ROWS.min(height));
+    let band_network = u64::from(width) * band_rows * u64::from(SCALE * SCALE) * 3;
+    let band_resample = if u32::from(factor) == SCALE {
+        0
+    } else {
+        let resampled_width = u64::from(width) * f;
+        resampled_width * band_rows * u64::from(SCALE) * 3 + resampled_width * band_rows * f * 3
+    };
     let (fw, fh) = output_size(width, height, factor);
     let output = u64::from(fw) * u64::from(fh);
-    let resample = if u32::from(factor) == SCALE { 0 } else { output * 4 };
-    Budget { load: LOAD_BYTES, run: TILE_BYTES + input * 7 + network * 3 + output * 5 + resample }
+    let output_bytes = if alpha { output * 8 } else { output * 3 };
+    Budget {
+        load: LOAD_BYTES,
+        run: TILE_BYTES + input * 8 + band_network + band_resample + output_bytes,
+    }
 }
 
 /// Enlarge `input` `factor` times (2, 3 or 4) with `method`.
@@ -168,7 +191,7 @@ fn real_esrgan(
     progress: &mut dyn FnMut(Stage) -> ControlFlow<()>,
 ) -> Result<DynamicImage, AiError> {
     let (width, height) = (input.width(), input.height());
-    let mut budget = budget(width, height, factor);
+    let mut budget = budget(width, height, factor, input.color().has_alpha());
     budget.run = budget.run.saturating_add(engine::float_copy_bytes(input));
     #[cfg(feature = "native")]
     {
@@ -177,10 +200,28 @@ fn real_esrgan(
             let alpha = engine::alpha_of(input, &source);
             let rgb = engine::rgb_bytes(&source);
             drop(source);
-            let (w, h) = engine::dims(width, height);
-            let large = model.run_with_progress(&rgb, w, h, engine::running(progress))?;
-            drop(rgb);
-            finish(large, alpha.as_deref(), (width, height), factor)
+            let row = width as usize * 3;
+            // Bands overlap by their resampling context: report the furthest share.
+            let mut reported = 0.0f32;
+            let rgb = banded((width, height), factor, BAND_STEP, |rows| {
+                let first = rows.start.saturating_sub(NETWORK_MARGIN);
+                let last = rows.end.saturating_add(NETWORK_MARGIN).min(height);
+                let source = &rgb[first as usize * row..last as usize * row];
+                let (w, h) = engine::dims(width, last - first);
+                let done = f64::from(rows.start) / f64::from(height);
+                let share = f64::from(rows.end - rows.start) / f64::from(height);
+                let mut large = model.run_with_progress(source, w, h, |part: f32| {
+                    reported = reported.max((done + share * f64::from(part)) as f32);
+                    progress(Stage::Running(reported.min(1.0)))
+                })?;
+                let large_row = row * (SCALE * SCALE) as usize;
+                large.truncate((rows.end - first) as usize * large_row);
+                large.drain(..(rows.start - first) as usize * large_row);
+                Ok(large)
+            })?;
+            let alpha = enlarge_alpha(alpha.as_deref(), (width, height), factor)?;
+            let (fw, fh) = output_size(width, height, factor);
+            engine::assemble(rgb, alpha.as_deref(), fw, fh)
         })
     }
     #[cfg(not(feature = "native"))]
@@ -190,39 +231,70 @@ fn real_esrgan(
     }
 }
 
-/// From the network's 4× RGB to the requested factor, with the alpha
-/// channel (`width × height`, one byte per pixel) enlarged by Lanczos3.
-pub(crate) fn finish(
-    large: Vec<u8>,
+fn resize(image: DynamicImage, (width, height): (u32, u32)) -> Result<DynamicImage, AiError> {
+    bigimage_core::resize::apply_to(
+        &image,
+        bigimage_core::ResizeMode::Exact { width, height },
+        bigimage_core::Filter::Lanczos3,
+    )
+    .map_err(|e| AiError::Processing(e.to_string()))
+}
+
+/// The `factor`× RGB8 of a `width × height` image, built `step` source rows
+/// at a time from `network(rows)`, the 4× RGB8 of exactly those rows. For
+/// 2× and 3× each band is reduced with `RESAMPLE_ROWS` of context on each
+/// side, so the result is the reduction of the whole 4× image.
+pub(crate) fn banded(
+    (width, height): (u32, u32),
+    factor: u8,
+    step: u32,
+    mut network: impl FnMut(Range<u32>) -> Result<Vec<u8>, AiError>,
+) -> Result<Vec<u8>, AiError> {
+    let wrong = || AiError::Processing("saída do Real-ESRGAN com tamanho inesperado".into());
+    let (fw, fh) = output_size(width, height, factor);
+    let f = u32::from(factor);
+    let row = fw as usize * 3;
+    let mut out = Vec::with_capacity(row * fh as usize);
+    let mut start = 0;
+    while start < height {
+        let end = start.saturating_add(step).min(height);
+        if f == SCALE {
+            let large = network(start..end)?;
+            if large.len() != row * ((end - start) * SCALE) as usize {
+                return Err(wrong());
+            }
+            out.extend_from_slice(&large);
+        } else {
+            let first = start.saturating_sub(RESAMPLE_ROWS);
+            let last = end.saturating_add(RESAMPLE_ROWS).min(height);
+            let large = image::RgbImage::from_raw(
+                width * SCALE,
+                (last - first) * SCALE,
+                network(first..last)?,
+            )
+            .ok_or_else(wrong)?;
+            let reduced = resize(DynamicImage::ImageRgb8(large), (fw, (last - first) * f))?;
+            let skip = row * ((start - first) * f) as usize;
+            let len = row * ((end - start) * f) as usize;
+            out.extend_from_slice(&reduced.as_bytes()[skip..skip + len]);
+        }
+        start = end;
+    }
+    Ok(out)
+}
+
+/// The alpha channel (`width × height`, one byte per pixel) enlarged by
+/// Lanczos3 to the requested factor.
+fn enlarge_alpha(
     alpha: Option<&[u8]>,
     (width, height): (u32, u32),
     factor: u8,
-) -> Result<DynamicImage, AiError> {
-    let resize = |image: DynamicImage, (w, h): (u32, u32)| {
-        bigimage_core::resize::apply_to(
-            &image,
-            bigimage_core::ResizeMode::Exact { width: w, height: h },
-            bigimage_core::Filter::Lanczos3,
-        )
-        .map_err(|e| AiError::Processing(e.to_string()))
-    };
+) -> Result<Option<Vec<u8>>, AiError> {
+    let Some(alpha) = alpha else { return Ok(None) };
+    let alpha = image::GrayImage::from_raw(width, height, alpha.to_vec())
+        .ok_or_else(|| AiError::Processing("alfa com tamanho inesperado".into()))?;
     let target = output_size(width, height, factor);
-    let large = image::RgbImage::from_raw(width * SCALE, height * SCALE, large)
-        .ok_or_else(|| AiError::Processing("saída do Real-ESRGAN com tamanho inesperado".into()))?;
-    let rgb = if u32::from(factor) == SCALE {
-        large
-    } else {
-        resize(DynamicImage::ImageRgb8(large), target)?.into_rgb8()
-    };
-    let alpha = match alpha {
-        None => None,
-        Some(alpha) => {
-            let alpha = image::GrayImage::from_raw(width, height, alpha.to_vec())
-                .ok_or_else(|| AiError::Processing("alfa com tamanho inesperado".into()))?;
-            Some(resize(DynamicImage::ImageLuma8(alpha), target)?.into_luma8().into_raw())
-        }
-    };
-    engine::assemble(rgb.into_raw(), alpha.as_deref(), target.0, target.1)
+    Ok(Some(resize(DynamicImage::ImageLuma8(alpha), target)?.into_luma8().into_raw()))
 }
 
 #[cfg(test)]
@@ -247,18 +319,51 @@ mod tests {
         assert!(matches!(out, DynamicImage::ImageRgba16(_)));
     }
 
+    /// Rows `rows` of the 4× RGB8 image `large` of a `width`-wide source.
+    fn rows_of(large: &[u8], width: u32, rows: Range<u32>) -> Vec<u8> {
+        let row = (width * SCALE * 3 * SCALE) as usize;
+        large[rows.start as usize * row..rows.end as usize * row].to_vec()
+    }
+
     #[test]
     fn network_output_is_resampled_to_the_requested_factor() {
         // A 4× gray 3×2 image: 12×8 RGB.
         let (w, h) = (3u32, 2u32);
         let large = vec![200u8; (w * 4 * h * 4 * 3) as usize];
         for factor in [2u8, 3, 4] {
-            let out = finish(large.clone(), None, (w, h), factor).unwrap();
-            assert!(matches!(out, DynamicImage::ImageRgb8(_)));
-            assert_eq!((out.width(), out.height()), output_size(w, h, factor));
-            assert!(out.to_rgb8().pixels().all(|p| p.0 == [200, 200, 200]));
+            let out = banded((w, h), factor, 1, |rows| Ok(rows_of(&large, w, rows))).unwrap();
+            let (fw, fh) = output_size(w, h, factor);
+            assert_eq!(out.len(), (fw * fh * 3) as usize);
+            assert!(out.iter().all(|&v| v == 200));
+            assert!(banded((w, h), factor, 1, |_| Ok(vec![0; 5])).is_err());
         }
-        assert!(finish(vec![0; 5], None, (w, h), 2).is_err());
+    }
+
+    #[test]
+    fn bands_match_the_whole_image_reduction() {
+        // Oracle: Lanczos3 over the whole 4× image, the unbanded path.
+        let (w, h) = (7u32, 23u32);
+        let mut state = 0x2545_f491_4f6c_dd1du64;
+        let large: Vec<u8> = (0..w * SCALE * h * SCALE * 3)
+            .map(|_| {
+                state ^= state << 13;
+                state ^= state >> 7;
+                state ^= state << 17;
+                (state >> 56) as u8
+            })
+            .collect();
+        let whole = image::RgbImage::from_raw(w * SCALE, h * SCALE, large.clone()).unwrap();
+        for factor in [2u8, 3, 4] {
+            let reference =
+                resize(DynamicImage::ImageRgb8(whole.clone()), output_size(w, h, factor))
+                    .unwrap()
+                    .into_bytes();
+            for step in [1, 3, 5, h, 100] {
+                let out =
+                    banded((w, h), factor, step, |rows| Ok(rows_of(&large, w, rows))).unwrap();
+                assert!(out == reference, "factor {factor}, step {step}");
+            }
+        }
     }
 
     #[test]
@@ -267,28 +372,37 @@ mod tests {
         let large = vec![10u8; (w * 4 * h * 4 * 3) as usize];
         // Left half opaque, right half transparent.
         let alpha: Vec<u8> = (0..w * h).map(|i| if i % w < 8 { 255 } else { 0 }).collect();
-        let out = finish(large, Some(&alpha), (w, h), 2).unwrap();
+        let rgb = banded((w, h), 2, BAND_STEP, |rows| Ok(rows_of(&large, w, rows))).unwrap();
+        let alpha = enlarge_alpha(Some(&alpha), (w, h), 2).unwrap();
+        let out = engine::assemble(rgb, alpha.as_deref(), 32, 4).unwrap();
         let DynamicImage::ImageRgba8(out) = out else { panic!("RGBA expected") };
-        assert_eq!(out.dimensions(), (32, 4));
         assert_eq!(out.get_pixel(0, 0).0, [10, 10, 10, 255]);
         assert_eq!(out.get_pixel(31, 3)[3], 0);
     }
 
     #[test]
-    fn limits_and_budget_follow_the_output_size() {
-        assert!(check_limits(1000, 1000, 4).is_ok());
+    fn limits_follow_the_output_size() {
         assert!(check_limits(0, 10, 2).is_err());
-        // 8192² × 4 = 32768² RGBA is far beyond 512 MiB.
-        assert!(check_limits(8192, 8192, 4).is_err());
-        // 3000×2000 at 2× = 6000×4000 RGBA, 96 MB: fine, but its 4×
-        // network pass is 96 M pixels: still under the core pixel limit.
-        assert!(check_limits(3000, 2000, 2).is_ok());
-        let small = budget(384, 256, 4);
-        let large = budget(3000, 2000, 4);
-        assert!(large.run > small.run);
-        // 4× of 3000×2000 holds 96 M RGB pixels (288 MB) beside the tile.
-        assert!(large.run > TILE_BYTES + 288_000_000);
-        // Asking for 2× still pays for the network's 4× pass.
-        assert!(budget(3000, 2000, 2).run > 288_000_000);
+        // The RGBA output may reach 512 MiB, 128 Mi pixels, exactly.
+        assert!(check_limits(8192, 4096, 2).is_ok());
+        assert!(check_limits(8192, 4097, 2).is_err());
+        assert!(check_limits(4096, 2048, 4).is_ok());
+        assert!(check_limits(4096, 2049, 4).is_err());
+        // 3861² × 9 is 134 165 889 pixels, 3862² × 9 is 134 235 396.
+        assert!(check_limits(3861, 3861, 3).is_ok());
+        assert!(check_limits(3862, 3862, 3).is_err());
+        // A 20 MP phone photo at 2×, whose 4× pass alone is 319 M pixels.
+        assert!(check_limits(5472, 3648, 2).is_ok());
+    }
+
+    #[test]
+    fn budget_holds_one_band_of_the_network() {
+        assert!(budget(3000, 2000, 4, false).run > budget(384, 256, 4, false).run);
+        // Twice the rows add only the source and the output, never a larger
+        // network pass.
+        let (short, tall) = (budget(1000, 5000, 2, false), budget(1000, 10_000, 2, false));
+        assert_eq!(tall.run - short.run, 1000 * 5000 * 8 + 2000 * 10_000 * 3);
+        // With alpha the output is also held as alpha and as RGBA8.
+        assert_eq!(budget(1000, 5000, 2, true).run - short.run, 2000 * 10_000 * 5);
     }
 }

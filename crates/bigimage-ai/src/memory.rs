@@ -5,8 +5,9 @@
 //! working sets, see each module's budget), so the old fixed 8 GiB rule
 //! for ONNX Runtime is gone: a run is admitted when the memory it is
 //! estimated to need fits in what is available right now, taking the
-//! smallest of `MemAvailable`, every cgroup v2 `memory.max` above this
-//! process and the address-space rlimit. Swap never counts. This is an
+//! smallest of `MemAvailable`, the room under every cgroup v2 `memory.max`
+//! above this process (inactive file cache counted as free) and the
+//! address-space rlimit. Swap never counts. This is an
 //! admission check, not a quota or a guarantee against OOM.
 
 use crate::AiError;
@@ -22,6 +23,18 @@ fn kilobytes(text: &str, key: &str) -> Option<u64> {
         return None;
     }
     value.checked_mul(1024)
+}
+
+/// A `memory.stat` counter, in bytes.
+fn stat_bytes(stat: &str, key: &str) -> Option<u64> {
+    stat.lines().find_map(|line| line.strip_prefix(key)?.strip_prefix(' ')?.parse().ok())
+}
+
+/// Room left under a cgroup's `memory.max`: inactive file cache counts as
+/// free, since the kernel reclaims it before charging past the limit (as
+/// systemd-oomd reckons).
+fn cgroup_room(maximum: u64, current: u64, inactive_file: u64) -> u64 {
+    maximum.saturating_sub(current.saturating_sub(inactive_file))
 }
 
 fn decide(model: &str, available: u64, need: u64) -> Result<(), AiError> {
@@ -74,7 +87,11 @@ pub(crate) fn available() -> Result<u64, AiError> {
                         .trim()
                         .parse()
                         .map_err(unknown)?;
-                    available = available.min(maximum.saturating_sub(current));
+                    let stat =
+                        std::fs::read_to_string(directory.join("memory.stat")).map_err(unknown)?;
+                    let inactive = stat_bytes(&stat, "inactive_file")
+                        .ok_or_else(|| unknown("inactive_file ausente em memory.stat"))?;
+                    available = available.min(cgroup_room(maximum, current, inactive));
                 }
                 Ok(_) => {}
                 Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
@@ -133,6 +150,18 @@ mod tests {
         );
         assert_eq!(kilobytes("MemAvailable: 4096 MB", "MemAvailable:"), None);
         assert_eq!(kilobytes("MemAvailable: 18446744073709551615 kB", "MemAvailable:"), None);
+    }
+
+    #[test]
+    fn cgroup_room_counts_inactive_cache_as_free() {
+        let stat = "anon 100\nactive_file 30\ninactive_file 4000\ninactive_anon 5\n";
+        assert_eq!(stat_bytes(stat, "inactive_file"), Some(4000));
+        assert_eq!(stat_bytes(stat, "inactive_anon"), Some(5));
+        assert_eq!(stat_bytes("inactive_filex 9\n", "inactive_file"), None);
+        // 4 GiB limit, 3.5 GiB charged of which 3 GiB is inactive cache.
+        assert_eq!(cgroup_room(4 * GIB, 3 * GIB + GIB / 2, 3 * GIB), 3 * GIB + GIB / 2);
+        assert_eq!(cgroup_room(GIB, 2 * GIB, 0), 0);
+        assert_eq!(cgroup_room(GIB, GIB / 2, GIB), GIB);
     }
 
     #[test]

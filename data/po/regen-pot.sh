@@ -37,12 +37,13 @@ xgettext \
   -o "$POT" \
   "${rust_sources[@]}"
 
+mapfile -t python_sources < <(grep '\.py$' "$POTFILES")
 # Extract Python markers with its own parser, without touching Nautilus' domain.
 xgettext --language=Python --keyword=_ --keyword=n_ --from-code=UTF-8 \
   --join-existing --package-name=bigiris --package-version=0.1.0 \
   --msgid-bugs-address=https://github.com/big-comm/bigiris/issues \
   --copyright-holder="BigCommunity Team" -o "$POT" \
-  $(grep '\.py$' "$POTFILES")
+  "${python_sources[@]}"
 
 # Merge the new msgids into each catalog, keeping existing translations.
 while read -r lang; do

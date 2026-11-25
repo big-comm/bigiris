@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: bigiris 0.1.0\n"
 "Report-Msgid-Bugs-To: https://github.com/big-comm/bigiris/issues\n"
-"POT-Creation-Date: 2026-11-25 18:29-0300\n"
+"POT-Creation-Date: 2026-11-25 18:32-0300\n"
 "PO-Revision-Date: 2026-10-14 01:36-0300\n"
 "Last-Translator: BigCommunity Team\n"
 "Language-Team: BigCommunity Team\n"
@@ -485,7 +485,7 @@ msgid "Remove background (AI)…"
 msgstr "Fjarlægja bakgrunn (gervigreind)…"
 
 #: crates/bigiris/src/gui.rs:4234
-#: crates/bigimage-integrations/src/action.rs:518
+#: crates/bigimage-integrations/src/action.rs:514
 msgid "Upscale…"
 msgstr "Auka upplausn…"
 
@@ -1768,7 +1768,7 @@ msgid "90° (clockwise)"
 msgstr "90° (réttsælis)"
 
 #: crates/bigiris/src/gui/dialogs/rotate.rs:31
-#: crates/bigimage-integrations/src/action.rs:260
+#: crates/bigimage-integrations/src/action.rs:259
 msgid "180°"
 msgstr "180°"
 
@@ -2527,155 +2527,155 @@ msgstr "Vinna úr þessari möppu…"
 msgid "JPG"
 msgstr "JPG"
 
-#: crates/bigimage-integrations/src/action.rs:194
-#: crates/bigimage-integrations/src/action.rs:243
-#: crates/bigimage-integrations/src/action.rs:284
-#: crates/bigimage-integrations/src/action.rs:309
-#: crates/bigimage-integrations/src/action.rs:358
+#: crates/bigimage-integrations/src/action.rs:193
+#: crates/bigimage-integrations/src/action.rs:242
+#: crates/bigimage-integrations/src/action.rs:283
+#: crates/bigimage-integrations/src/action.rs:308
+#: crates/bigimage-integrations/src/action.rs:357
 msgid "More options…"
 msgstr "Fleiri valkostir…"
 
-#: crates/bigimage-integrations/src/action.rs:203
+#: crates/bigimage-integrations/src/action.rs:202
 msgid "25%"
 msgstr "25%"
 
-#: crates/bigimage-integrations/src/action.rs:211
+#: crates/bigimage-integrations/src/action.rs:210
 msgid "50%"
 msgstr "50%"
 
-#: crates/bigimage-integrations/src/action.rs:219
+#: crates/bigimage-integrations/src/action.rs:218
 msgid "200%"
 msgstr "200%"
 
-#: crates/bigimage-integrations/src/action.rs:227
+#: crates/bigimage-integrations/src/action.rs:226
 msgid "HD (1920 px)"
 msgstr "HD (1920 px)"
 
-#: crates/bigimage-integrations/src/action.rs:235
+#: crates/bigimage-integrations/src/action.rs:234
 msgid "4K (3840 px)"
 msgstr "4K (3840 px)"
 
-#: crates/bigimage-integrations/src/action.rs:252
+#: crates/bigimage-integrations/src/action.rs:251
 msgid "90°"
 msgstr "90°"
 
-#: crates/bigimage-integrations/src/action.rs:268
+#: crates/bigimage-integrations/src/action.rs:267
 msgid "270°"
 msgstr "270°"
 
-#: crates/bigimage-integrations/src/action.rs:276
+#: crates/bigimage-integrations/src/action.rs:275
 msgid "Automatic (EXIF)"
 msgstr "Sjálfvirkt (EXIF)"
 
-#: crates/bigimage-integrations/src/action.rs:293
+#: crates/bigimage-integrations/src/action.rs:292
 msgid "Horizontal"
 msgstr "Lárétt"
 
-#: crates/bigimage-integrations/src/action.rs:301
+#: crates/bigimage-integrations/src/action.rs:300
 msgid "Vertical"
 msgstr "Lóðrétt"
 
-#: crates/bigimage-integrations/src/action.rs:318
+#: crates/bigimage-integrations/src/action.rs:317
 msgid "+ Brightness (+10)"
 msgstr "+ Birtustig (+10)"
 
-#: crates/bigimage-integrations/src/action.rs:326
+#: crates/bigimage-integrations/src/action.rs:325
 msgid "− Brightness (-10)"
 msgstr "− Birtustig (-10)"
 
-#: crates/bigimage-integrations/src/action.rs:334
+#: crates/bigimage-integrations/src/action.rs:333
 msgid "+ Contrast (+20)"
 msgstr "+ Birtuskil (+20)"
 
-#: crates/bigimage-integrations/src/action.rs:342
+#: crates/bigimage-integrations/src/action.rs:341
 msgid "Black and white"
 msgstr "Svarthvítt"
 
-#: crates/bigimage-integrations/src/action.rs:350
+#: crates/bigimage-integrations/src/action.rs:349
 msgid "Vivid colors (+40)"
 msgstr "Líflegir litir (+40)"
 
-#: crates/bigimage-integrations/src/action.rs:370
+#: crates/bigimage-integrations/src/action.rs:367
 msgid "WhatsApp (1280 px · JPG q85)"
 msgstr "WhatsApp (1280 px · JPG q85)"
 
-#: crates/bigimage-integrations/src/action.rs:378
+#: crates/bigimage-integrations/src/action.rs:375
 msgid "Instagram (1080 px · JPG q90)"
 msgstr "Instagram (1080 px · JPG q90)"
 
-#: crates/bigimage-integrations/src/action.rs:386
+#: crates/bigimage-integrations/src/action.rs:383
 msgid "Facebook (2048 px · JPG q85)"
 msgstr "Facebook (2048 px · JPG q85)"
 
-#: crates/bigimage-integrations/src/action.rs:394
+#: crates/bigimage-integrations/src/action.rs:391
 msgid "Twitter · X (1200 px · JPG q85)"
 msgstr "Twitter · X (1200 px · JPG q85)"
 
-#: crates/bigimage-integrations/src/action.rs:402
+#: crates/bigimage-integrations/src/action.rs:399
 msgid "Telegram (2560 px · JPG q85)"
 msgstr "Telegram (2560 px · JPG q85)"
 
-#: crates/bigimage-integrations/src/action.rs:410
+#: crates/bigimage-integrations/src/action.rs:407
 msgid "Discord (2048 px · JPG q80)"
 msgstr "Discord (2048 px · JPG q80)"
 
-#: crates/bigimage-integrations/src/action.rs:418
+#: crates/bigimage-integrations/src/action.rs:415
 msgid "Optimize PNG (maximum compression)"
 msgstr "Fínstilla PNG (hámarksþjöppun)"
 
-#: crates/bigimage-integrations/src/action.rs:431
+#: crates/bigimage-integrations/src/action.rs:427
 msgid "Letterbox YouTube post (1:1)"
 msgstr "Letterbox YouTube-færsla (1:1)"
 
-#: crates/bigimage-integrations/src/action.rs:439
+#: crates/bigimage-integrations/src/action.rs:435
 msgid "Letterbox Instagram feed (4:5)"
 msgstr "Letterbox Instagram-straumur (4:5)"
 
-#: crates/bigimage-integrations/src/action.rs:447
+#: crates/bigimage-integrations/src/action.rs:443
 msgid "Letterbox Stories / Shorts (9:16)"
 msgstr "Letterbox Stories / Shorts (9:16)"
 
-#: crates/bigimage-integrations/src/action.rs:455
+#: crates/bigimage-integrations/src/action.rs:451
 msgid "Custom letterbox…"
 msgstr "Sérsniðið letterbox…"
 
-#: crates/bigimage-integrations/src/action.rs:464
+#: crates/bigimage-integrations/src/action.rs:460
 msgid "View metadata…"
 msgstr "Skoða lýsigögn…"
 
-#: crates/bigimage-integrations/src/action.rs:472
+#: crates/bigimage-integrations/src/action.rs:468
 msgid "Remove all metadata (clean re-encode)"
 msgstr "Fjarlægja allt (hrein endurkóðun)"
 
-#: crates/bigimage-integrations/src/action.rs:483
+#: crates/bigimage-integrations/src/action.rs:479
 msgid "Batch convert (Prisma)…"
 msgstr "Runuumbreyting (Prisma)…"
 
-#: crates/bigimage-integrations/src/action.rs:491
+#: crates/bigimage-integrations/src/action.rs:487
 msgid "Create animated GIF…"
 msgstr "Búa til GIF-hreyfimynd…"
 
-#: crates/bigimage-integrations/src/action.rs:499
+#: crates/bigimage-integrations/src/action.rs:495
 msgid "Compare 2 images…"
 msgstr "Bera saman 2 myndir…"
 
-#: crates/bigimage-integrations/src/action.rs:508
+#: crates/bigimage-integrations/src/action.rs:504
 msgid "Remove background (BiRefNet)"
 msgstr "Fjarlægja bakgrunn (BiRefNet)"
 
-#: crates/bigimage-integrations/src/action.rs:529
+#: crates/bigimage-integrations/src/action.rs:525
 msgid "Convert to PDF (LibreOffice)"
 msgstr "Umbreyta í PDF (LibreOffice)"
 
-#: data/nautilus/bigiris-menu.py:125
+#: data/nautilus/bigiris-menu.py:115
 msgid "BigIris actions"
 msgstr "BigIris-aðgerðir"
 
-#: data/nautilus/bigiris-menu.py:150
+#: data/nautilus/bigiris-menu.py:140
 msgid "BigIris: Process this folder…"
 msgstr "BigIris: Vinna úr þessari möppu…"
 
-#: data/nautilus/bigiris-menu.py:151
+#: data/nautilus/bigiris-menu.py:141
 msgid "Convert folder images with Prisma"
 msgstr "Umbreyta myndum möppunnar með Prisma"
 

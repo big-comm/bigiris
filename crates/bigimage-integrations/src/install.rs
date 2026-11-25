@@ -262,8 +262,7 @@ enum AssetKind {
 }
 
 /// FNV-1a 64 and length of every icon BigIris released before the marker
-/// existed and that differs from the current asset (the history of
-/// `data/icons/hicolor/scalable/apps/com.biglinux.Iris.svg`: b82d47a).
+/// existed and that differs from the current asset.
 /// The icon carries no textual id to recognize it by, so only these exact
 /// files count as ours. FNV is not a security boundary here: the file sits
 /// in the user's own home under our application id.

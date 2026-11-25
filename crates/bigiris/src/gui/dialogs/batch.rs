@@ -39,7 +39,6 @@ pub(in crate::gui) fn build_batch_dialog(
     let title = adw::WindowTitle::new(&gettext("Batch conversion"), "Prisma");
     header.set_title_widget(Some(&title));
 
-    // ── Group: files ────────────────────────────────────────────────────
     // Files and folders can be added after the dialog opens; every change
     // to the list goes through `refresh_files_row`.
     let files_group = adw::PreferencesGroup::builder().title(gettext("Files")).build();
@@ -61,7 +60,6 @@ pub(in crate::gui) fn build_batch_dialog(
     files_group.add(&summary_row);
     refresh_files_row(&summary_row, &files.borrow());
 
-    // ── Group: conversion ───────────────────────────────────────────────
     let convert_group = adw::PreferencesGroup::builder().title(gettext("Conversion")).build();
 
     let format_row = format_row();
@@ -72,7 +70,6 @@ pub(in crate::gui) fn build_batch_dialog(
     convert_group.add(&encode.advanced);
     encode.bind(&window, &format_row);
 
-    // ── Group: destination ──────────────────────────────────────────────
     let dest_group = adw::PreferencesGroup::builder().title(gettext("Destination")).build();
     let overwrite_row = overwrite_row();
     dest_group.add(&overwrite_row);
@@ -97,7 +94,6 @@ pub(in crate::gui) fn build_batch_dialog(
     folder_row.add_suffix(&clear_folder_btn);
     dest_group.add(&folder_row);
 
-    // ── Footer: progress bar, status and buttons ────────────────────────
     let progress = gtk::ProgressBar::builder().show_text(true).text(gettext("Ready")).build();
     progress.set_margin_start(18);
     progress.set_margin_end(18);
@@ -126,7 +122,6 @@ pub(in crate::gui) fn build_batch_dialog(
     btn_bar.append(&cancel_btn);
     btn_bar.append(&apply_btn);
 
-    // ── Scroll wrapper ──────────────────────────────────────────────────
     let options_col = gtk::Box::new(gtk::Orientation::Vertical, 14);
     options_col.set_margin_start(18);
     options_col.set_margin_end(18);

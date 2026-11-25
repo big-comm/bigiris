@@ -41,14 +41,12 @@ fn fill_convert_dialog(
     let encode = EncodeControls::new();
     encode.bind(&window, &format_row);
 
-    // ── Conversion group ──────────────────────────────────────────────
     let conv_group = adw::PreferencesGroup::builder().title(gettext("Conversion")).build();
     conv_group.add(&files_row);
     conv_group.add(&format_row);
     conv_group.add(&encode.target);
     conv_group.add(&encode.advanced);
 
-    // ── Destination group: overwrite policy + optional output folder ──
     let dest_group = adw::PreferencesGroup::builder().title(gettext("Destination")).build();
     dest_group.add(&overwrite_row);
 

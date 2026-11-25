@@ -3,8 +3,8 @@
 
 use super::*;
 
-/// Default crop: a centered 50% rectangle — a safe non-empty starting
-/// point for the UI that's unlikely to match the full image.
+/// Default crop: a centered 50% rectangle, a non-empty starting point
+/// that is unlikely to match the full image.
 pub(in crate::gui) fn default_crop(img_w: u32, img_h: u32) -> CropRect {
     let w = (img_w / 2).max(1);
     let h = (img_h / 2).max(1);

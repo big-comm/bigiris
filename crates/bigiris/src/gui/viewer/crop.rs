@@ -809,7 +809,7 @@ mod tests {
     }
 
     #[test]
-    fn scale_down_fit_never_enlarges_and_centers() {
+    fn fit_never_enlarges_and_centers() {
         let small = scale_down_fit((0.0, 0.0, 1000.0, 800.0), (400, 300));
         assert_eq!(small, Fit { scale: 1.0, ox: 300.0, oy: 250.0 });
         let big = scale_down_fit((10.0, 20.0, 400.0, 300.0), (800, 300));
@@ -874,7 +874,7 @@ mod tests {
     }
 
     #[test]
-    fn ratio_rect_is_the_largest_centered_box() {
+    fn ratio_rect_largest_centered_box() {
         assert!(close(ratio_rect(NAT, None), Rect::full(NAT)));
         assert!(close(ratio_rect(NAT, Some(1.0)), Rect { x: 50.0, y: 0.0, w: 300.0, h: 300.0 }));
         let wide = ratio_rect(NAT, Some(16.0 / 9.0));

@@ -163,13 +163,8 @@ pub fn run_viewer(files: Vec<PathBuf>) -> i32 {
     i32::from(u8::from(code))
 }
 
-/// For a single file, every image in its folder in natural order, with the
-/// index of that file. Two or more files are an explicit selection and are
-/// returned as given.
-///
-/// Any failure (unreadable folder, file outside the format list) returns
-/// the input unchanged: opening the requested image matters more than
-/// navigation.
+/// For a single file, every image in its folder in natural order and that
+/// file's index; an explicit selection, or any failure, keeps the input.
 #[cfg(test)]
 fn expand_to_folder(files: Vec<PathBuf>) -> (Vec<PathBuf>, usize) {
     expand_to_folder_cancellable(files, &AtomicBool::new(false))
@@ -1451,6 +1446,7 @@ fn thumb_picture(button: &gtk::Button) -> Option<gtk::Picture> {
 fn decode_thumbnail(path: &Path) -> Result<(Vec<u8>, u32, u32), Box<dyn std::error::Error>> {
     let cached = viewer::cached_thumbnail(path).and_then(|entry| {
         bigimage_core::open_image(&entry)
+            // allow-noisy-log: a broken cache entry falls back to the source file.
             .inspect_err(|error| tracing::debug!(?entry, %error, "unreadable cached thumbnail"))
             .ok()
     });
@@ -1859,11 +1855,8 @@ fn reveal_bottom(state: &Rc<RefCell<ViewerState>>) {
     };
     let first_reveal = !strip.reveals_child();
     strip.set_reveal_child(true);
-    // The strip starts scrolled to its beginning, which can hide the active
-    // thumbnail of a file in the middle of the folder. Centering waits for
-    // an allocation (`compute_bounds` reports zero width until then) and
-    // runs only on reveal: every motion at the bottom edge passes here, and
-    // centering on each would undo a manual scroll.
+    // Center the active thumbnail only on reveal, once allocated: every
+    // motion at the bottom edge passes here, and would undo a manual scroll.
     if first_reveal {
         schedule_center_film_strip(state);
     }
@@ -2934,11 +2927,9 @@ fn discard_edits(state: &Rc<RefCell<ViewerState>>) {
     sync_edit_actions(state);
 }
 
-/// Write the edited file atomically, so a power loss or an encoder failure
-/// leaves the original intact. Permissions, EXIF (orientation reset) and
-/// the color profile are kept where the format supports them, and a JPEG
-/// is written at its estimated source quality so each `Ctrl+S` does not
-/// degrade the photo. Returns the metadata that could not be kept.
+/// Replace the file atomically with the edits applied, keeping permissions,
+/// EXIF and color profile where the format allows and a JPEG's source
+/// quality. Returns the metadata that could not be kept.
 fn write_edits_to_disk(
     path: &Path,
     ops: &[EditOp],
@@ -3182,7 +3173,7 @@ fn neighbor_paths(s: &ViewerState) -> Vec<PathBuf> {
 }
 
 /// Decode the next missing neighbor, one at a time, once the current
-/// image is on screen. Frames that are no longer neighbors are freed.
+/// image is on screen, and free frames outside the neighbors.
 fn schedule_prefetch(state: &Rc<RefCell<ViewerState>>) {
     let mut s = state.borrow_mut();
     let wanted = neighbor_paths(&s);

@@ -105,7 +105,7 @@ fn fill_extent_dialog(
         .model(&translated_strings(&ratio_names))
         .build();
 
-    // Custom W:H entries — visible only when the "Custom…" preset is
+    // Custom W:H entries, visible only when the "Custom…" preset is
     // selected. Defaults to 1:1 so switching back and forth feels stable.
     let custom_w_spin = adw::SpinRow::with_range(1.0, 99.0, 1.0);
     custom_w_spin.set_title(&gettext("Width ratio"));

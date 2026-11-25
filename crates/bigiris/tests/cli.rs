@@ -835,7 +835,7 @@ fn quality_target_is_accepted_in_both_languages_and_validated() {
     );
 }
 
-/// A malformed embedded colour profile no longer fails the conversion: the
+/// A malformed embedded colour profile does not fail the conversion: the
 /// pixels are used as sRGB and the run says so on its file's line.
 #[test]
 fn broken_profile_converts_with_note() {

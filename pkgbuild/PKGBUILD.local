@@ -20,6 +20,9 @@ depends=(
   'util-linux'
   'gcc-libs'
   'glibc'
+  'glib2'
+  'cairo'
+  'graphene'
   'gtk4>=4.12'
   'libadwaita>=1.5'
   'dav1d'
@@ -32,6 +35,7 @@ optdepends=(
   'scunet-native: remove noise and JPEG artifacts with AI (SCUNet weights)'
   'lama-native: erase objects with AI (Big LaMa weights)'
   'vulkan-icd-loader: run the AI tools on a Vulkan GPU (CPU otherwise)'
+  'libreoffice-fresh: convert documents to PDF from the file manager'
 )
 # base-devel's C compiler also builds the vendored mozjpeg, libwebp and
 # libdeflate sources (no nasm or cmake needed).
@@ -68,6 +72,10 @@ prepare() {
         --exclude='./pkgbuild/*.pkg.tar.*' \
         -cf - .
   ) | tar -xf - -C "$srcdir/bigiris"
+  cd "$srcdir/bigiris"
+  export RUSTUP_TOOLCHAIN=stable
+  # Download every crate here so build() and check() run offline.
+  cargo fetch --locked --target "$(rustc -vV | sed -n 's/^host: //p')"
 }
 
 build() {
@@ -78,7 +86,7 @@ build() {
   # Build the viewer and AI tools together. The AI engines need glslc
   # (shaderc) to compile their GPU shaders; their weights come from the
   # optional *-native packages.
-  cargo build --locked --release --features "gui ai" --package bigiris
+  cargo build --frozen --release --features "gui ai" --package bigiris
 
   # Compile all translation catalogs listed in data/po/LINGUAS.
   while read -r lang; do

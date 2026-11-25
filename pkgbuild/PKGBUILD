@@ -8,6 +8,9 @@ depends=(
   'util-linux'
   'gcc-libs'
   'glibc'
+  'glib2'
+  'cairo'
+  'graphene'
   'gtk4>=4.12'
   'libadwaita>=1.6'
   'dav1d'            # AVIF decoder
@@ -23,6 +26,7 @@ optdepends=(
   'scunet-native: remove noise and JPEG artifacts with AI (SCUNet weights)'
   'lama-native: erase objects with AI (Big LaMa weights)'
   'vulkan-icd-loader: run the AI tools on a Vulkan GPU (CPU otherwise)'
+  'libreoffice-fresh: convert documents to PDF from the file manager'
 )
 # base-devel's C compiler also builds the vendored mozjpeg, libwebp and
 # libdeflate sources (no nasm or cmake needed).
@@ -56,8 +60,9 @@ fi
 
 prepare() {
   cd "${srcdir}/${pkgname}"
-  # Add blueprint-compiler when the GUI starts using .blp files.
-  true
+  export RUSTUP_TOOLCHAIN=stable
+  # Download every crate here so build() and check() run offline.
+  cargo fetch --locked --target "$(rustc -vV | sed -n 's/^host: //p')"
 }
 
 build() {
@@ -69,7 +74,7 @@ build() {
   # engines (image-engine-native) run on the CPU or a Vulkan GPU with no
   # runtime library; each tool needs its optional *-native weights
   # package and shows how to install it when missing.
-  cargo build --locked --release --features "gui ai" --package bigiris
+  cargo build --frozen --release --features "gui ai" --package bigiris
 
   # Compile every translation catalog listed in data/po/LINGUAS.
   # package() installs the resulting .mo files under /usr/share/locale.

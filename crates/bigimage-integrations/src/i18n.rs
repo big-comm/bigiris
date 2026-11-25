@@ -65,7 +65,7 @@ mod tests {
     #[test]
     fn desktop_values_escape_line_breaks() {
         let text = localized("Name", |_| "one\ntwo\\three".to_owned());
-        assert_eq!(text.lines().count(), 29);
+        assert_eq!(text.lines().count(), 30);
         assert!(text.contains("Name[en]=one\\ntwo\\\\three\n"));
     }
     #[test]

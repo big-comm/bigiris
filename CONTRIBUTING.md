@@ -163,10 +163,12 @@ refatoração estrutural.
 
 ## i18n
 
-O catálogo usa os mesmos 29 códigos do [Ashy Pass](https://github.com/big-comm/ashypass/tree/main/locale)
-e do [GitRepo](https://github.com/big-comm/gitrepo/tree/main/locale), conferidos em
-14/10/2026. `data/po/LINGUAS` lista: bg, cs, da, de, el, en, es, et, fi, fr,
-he, hr, hu, is, it, ja, ko, nb, nl, pl, pt, pt_BR, ro, ru, sk, sv, tr, uk e zh.
+O catálogo segue os idiomas do BigLinux. `data/po/LINGUAS` lista 30 códigos:
+bg, cs, da, de, el, en, es, et, fi, fr, he, hr, hu, is, it, ja, ko, nb, nl, pl,
+pt, pt_BR, ro, ru, sk, sv, tr, uk, zh_CN e zh_TW. Há um catálogo `en` porque o
+texto-fonte é português. O chinês tem dois catálogos, `zh_CN` (simplificado) e
+`zh_TW` (tradicional, com o vocabulário de Taiwan): um `zh` único mostraria a
+mesma escrita para os dois públicos.
 O norueguês fica em `nb`, não no `no` daqueles projetos: sistemas noruegueses
 usam `nb_NO`, que o gettext e os arquivos `.desktop` procuram como `nb_NO` e
 depois `nb`, nunca `no`.

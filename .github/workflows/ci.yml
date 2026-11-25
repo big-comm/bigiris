@@ -254,6 +254,10 @@ jobs:
           components: rustfmt
       - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends gettext
       - run: python3 scripts/translations.py check --check-generated
+      - name: POT matches the sources
+        run: |
+          bash data/po/regen-pot.sh
+          git diff --exit-code -I '^"POT-Creation-Date: ' data/po
 
   desktop:
     name: .desktop validation
@@ -288,7 +292,7 @@ jobs:
     steps:
       - name: install Arch deps
         run: |
-          pacman -Syu --noconfirm --needed base-devel rust git sudo
+          pacman -Syu --noconfirm --needed base-devel rust git sudo namcap
           useradd -m builder
           echo "builder ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
@@ -296,8 +300,19 @@ jobs:
           persist-credentials: false
       - name: chown for builder
         run: chown -R builder:builder .
-      # Usa PKGBUILD.local (build do checkout local, sem clone remoto).
-      # A receita principal clona o repo oficial; esta usa o checkout exato.
+      # CI builds PKGBUILD.local (the checked-out commit); the shipped
+      # PKGBUILD clones the repository. Their declarations must agree.
+      - name: compare PKGBUILD and PKGBUILD.local
+        run: sudo -u builder bash scripts/compare-pkgbuilds.sh
+      # realesrgan-native is a BigLinux package that Arch does not carry, so
+      # the dependencies are installed here and makepkg skips its own check.
+      - name: install build and runtime dependencies
+        working-directory: pkgbuild
+        shell: bash
+        run: |
+          mapfile -t deps < <(sudo -u builder makepkg --printsrcinfo -p PKGBUILD.local |
+            sed -n 's/^\t\(make\)\{0,1\}depends = //p' | grep -vx realesrgan-native)
+          pacman -S --noconfirm --needed "${deps[@]}"
       # check() probes nested sandbox support, runs all available tests and
       # reports the three functional tests filtered in restricted containers.
       # Host test/build jobs still require full sandbox functionality.
@@ -307,10 +322,16 @@ jobs:
           sudo -u builder PKGEXT=.pkg.tar makepkg \
             -p PKGBUILD.local \
             --noconfirm \
-            --syncdeps \
+            --nodeps \
             --skipchecksums \
             --skipinteg \
             --clean
+      - name: namcap on the built package
+        working-directory: pkgbuild
+        shell: bash
+        run: |
+          namcap bigiris-*.pkg.tar | tee namcap.log
+          ! grep ' E: ' namcap.log
 
   nautilus:
     name: Nautilus extension contracts

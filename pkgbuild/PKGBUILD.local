@@ -24,14 +24,14 @@ depends=(
   'cairo'
   'graphene'
   'gtk4>=4.12'
-  'libadwaita>=1.5'
+  'libadwaita>=1.6'
   'dav1d'
   'hicolor-icon-theme'
+  'realesrgan-native'
 )
 optdepends=(
   'nautilus-python: Nautilus context menu integration'
   'birefnet-native: remove backgrounds with AI (BiRefNet-lite weights)'
-  'realesrgan-native: upscale with AI (Real-ESRGAN weights; Lanczos3 without it)'
   'scunet-native: remove noise and JPEG artifacts with AI (SCUNet weights)'
   'lama-native: erase objects with AI (Big LaMa weights)'
   'vulkan-icd-loader: run the AI tools on a Vulkan GPU (CPU otherwise)'

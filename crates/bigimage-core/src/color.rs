@@ -6,7 +6,7 @@ use moxcms::{ColorProfile, DataColorSpace, Layout, ParsingOptions, TransformOpti
 fn error(message: impl std::fmt::Display) -> ImageError {
     ImageError::IoError(std::io::Error::new(
         std::io::ErrorKind::InvalidData,
-        format!("perfil ICC: {message}"),
+        format!("ICC profile: {message}"),
     ))
 }
 /// Convert ICC-tagged pixels into canonical sRGB, preserving sample

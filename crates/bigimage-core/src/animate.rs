@@ -81,7 +81,7 @@ pub fn make_gif_with_policy(
     policy: OverwritePolicy,
 ) -> Result<ConvertOutcome> {
     if frames.is_empty() {
-        return Err(BigImageError::InvalidInput("nenhum quadro informado".to_string()));
+        return Err(BigImageError::InvalidInput("no frames given".to_string()));
     }
     if matches!(policy, OverwritePolicy::Skip) && output.symlink_metadata().is_ok() {
         return Ok(ConvertOutcome::Skipped { output: output.to_path_buf() });

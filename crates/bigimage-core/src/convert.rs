@@ -68,7 +68,7 @@ pub fn convert_file(
 /// Like [`convert_file`], but honours `output_dir` when `Some` — writes
 /// the converted file into that directory keeping the source stem and
 /// honouring the overwrite policy (Skip/Replace/Increment). Passing
-/// `None` is equivalent to [`convert_file`] (grava ao lado do original).
+/// `None` is equivalent to [`convert_file`] (writes next to the source).
 pub fn convert_file_to(
     input: impl AsRef<Path>,
     output_dir: Option<&Path>,

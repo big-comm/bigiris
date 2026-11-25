@@ -83,7 +83,7 @@ fn encode_rgb_with(
             // from 1. 65519 = 65533 marker bytes − 14 bytes of header.
             let chunks: Vec<&[u8]> = icc.chunks(65_519).collect();
             let total = u8::try_from(chunks.len()).map_err(|_| {
-                std::io::Error::new(std::io::ErrorKind::InvalidInput, "perfil ICC grande demais")
+                std::io::Error::new(std::io::ErrorKind::InvalidInput, "ICC profile too large")
             })?;
             for (index, chunk) in chunks.iter().enumerate() {
                 let mut app2 = Vec::with_capacity(chunk.len() + 14);

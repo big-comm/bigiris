@@ -60,7 +60,7 @@ impl ResizeMode {
             ResizeMode::Percent(p) => {
                 if !p.is_finite() || p <= 0.0 || p > 1000.0 {
                     return Err(BigImageError::InvalidInput(format!(
-                        "percent fora do intervalo (0, 1000]: {p}"
+                        "percent outside (0, 1000]: {p}"
                     )));
                 }
                 let f = f64::from(p) / 100.0;
@@ -148,7 +148,7 @@ impl Filter {
 /// Resize a single file.
 ///
 /// `target = None` preserves the source encoding; the output file always
-/// carries a suffix describing the resize (e.g. `foto_1080.jpg`) so we never
+/// carries a suffix describing the resize (e.g. `photo_1080.jpg`) so we never
 /// overwrite the original unless policy explicitly asks for it.
 pub fn resize_file(
     input: impl AsRef<Path>,

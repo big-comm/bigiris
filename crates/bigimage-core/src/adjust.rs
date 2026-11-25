@@ -63,13 +63,13 @@ impl AdjustOps {
     fn validate(&self) -> Result<()> {
         if !(-100..=100).contains(&self.brightness) {
             return Err(BigImageError::InvalidInput(format!(
-                "brilho fora do intervalo [-100, 100]: {}",
+                "brightness outside [-100, 100]: {}",
                 self.brightness
             )));
         }
         if !self.contrast.is_finite() || !(-100.0..=100.0).contains(&self.contrast) {
             return Err(BigImageError::InvalidInput(format!(
-                "contraste fora do intervalo [-100, 100]: {}",
+                "contrast outside [-100, 100]: {}",
                 self.contrast
             )));
         }
@@ -81,7 +81,7 @@ impl AdjustOps {
         }
         if !self.gamma.is_finite() || !(0.1..=10.0).contains(&self.gamma) {
             return Err(BigImageError::InvalidInput(format!(
-                "gamma fora do intervalo (0.1, 10.0]: {}",
+                "gamma outside (0.1, 10.0]: {}",
                 self.gamma
             )));
         }

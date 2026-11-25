@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-//! Object removal ("Apagar objeto") with Big LaMa (`lama-native`): fill a
+//! Object removal ("Erase object") with Big LaMa (`lama-native`): fill a
 //! masked area of a photo from its surroundings.
 //!
 //! LaMa sees the whole image it is given at once (its Fourier units span

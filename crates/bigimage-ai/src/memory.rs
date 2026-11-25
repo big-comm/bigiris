@@ -55,16 +55,16 @@ fn unknown(error: impl std::fmt::Display) -> AiError {
 
 fn process_value(key: &str) -> Result<u64, AiError> {
     let status = std::fs::read_to_string("/proc/self/status").map_err(unknown)?;
-    kilobytes(&status, key).ok_or_else(|| unknown("/proc/self/status incompleto"))
+    kilobytes(&status, key).ok_or_else(|| unknown("/proc/self/status incomplete"))
 }
 
 /// Memory this process may still allocate without swapping.
 pub(crate) fn available() -> Result<u64, AiError> {
     use std::path::{Component, Path};
     let info = std::fs::read_to_string("/proc/meminfo").map_err(unknown)?;
-    let total = kilobytes(&info, "MemTotal:").ok_or_else(|| unknown("MemTotal ausente"))?;
+    let total = kilobytes(&info, "MemTotal:").ok_or_else(|| unknown("MemTotal missing"))?;
     let mut available =
-        kilobytes(&info, "MemAvailable:").ok_or_else(|| unknown("MemAvailable ausente"))?;
+        kilobytes(&info, "MemAvailable:").ok_or_else(|| unknown("MemAvailable missing"))?;
     // Respect every finite ancestor limit in cgroup v2, including a 4 GiB
     // container on a host with much more RAM. Never count swap as capacity.
     let groups = std::fs::read_to_string("/proc/self/cgroup").map_err(unknown)?;
@@ -89,7 +89,7 @@ pub(crate) fn available() -> Result<u64, AiError> {
                     let stat =
                         std::fs::read_to_string(directory.join("memory.stat")).map_err(unknown)?;
                     let inactive = stat_bytes(&stat, "inactive_file")
-                        .ok_or_else(|| unknown("inactive_file ausente em memory.stat"))?;
+                        .ok_or_else(|| unknown("inactive_file missing from memory.stat"))?;
                     available = available.min(cgroup_room(maximum, current, inactive));
                 }
                 Ok(_) => {}
@@ -100,7 +100,7 @@ pub(crate) fn available() -> Result<u64, AiError> {
                 break;
             }
             if !directory.pop() || !directory.starts_with(base) {
-                return Err(unknown("cgroup fora do mount"));
+                return Err(unknown("cgroup outside the mount"));
             }
         }
     }

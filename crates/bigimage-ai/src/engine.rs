@@ -190,7 +190,7 @@ pub enum AiError {
         error: String,
     },
     /// The progress callback asked to stop.
-    #[error("cancelado")]
+    #[error("canceled")]
     Cancelled,
     /// The GPU failed; the run is retried on the CPU before this escapes.
     #[error("GPU: {0}")]
@@ -199,7 +199,7 @@ pub enum AiError {
     #[error("inference: {0}")]
     Inference(String),
     /// Bad input or pre/post-processing error.
-    #[error("processamento: {0}")]
+    #[error("processing: {0}")]
     Processing(String),
     /// Not enough memory to start; nothing was allocated.
     #[error("memory for AI: {0}")]
@@ -379,7 +379,7 @@ impl<M: NativeModel> Slot<M> {
         let model = &mut loaded.as_mut().expect("loaded above").model;
         match work(model, progress) {
             Err(AiError::Gpu(error)) => {
-                tracing::warn!(model = info.name, %error, "GPU falhou; repetindo na CPU");
+                tracing::warn!(model = info.name, %error, "GPU failed; retrying on the CPU");
                 self.cpu_only.store(true, Ordering::Relaxed);
                 *loaded = None;
                 crate::memory::admit(info.name, budget.load + budget.run)?;
@@ -410,7 +410,7 @@ impl<M: NativeModel> Slot<M> {
             %device,
             path = %path.display(),
             ms = started.elapsed().as_millis() as u64,
-            "modelo carregado"
+            "model loaded"
         );
         *lock(&self.device) = Some(device);
         Ok(model)
@@ -516,20 +516,20 @@ mod tests {
     #[test]
     fn missing_model_error_names_the_package_to_install() {
         let info = ModelInfo {
-            name: "Teste",
-            package: "teste-native",
-            weights: "/nonexistent/bigiris/teste.weights",
+            name: "Test",
+            package: "test-native",
+            weights: "/nonexistent/bigiris/test.weights",
             env: "BIGIRIS_TEST_ENGINE_UNSET_WEIGHTS",
             license: "MIT",
         };
-        assert_eq!(info.install_command(), "sudo pacman -S teste-native");
+        assert_eq!(info.install_command(), "sudo pacman -S test-native");
         if !crate::engines_compiled() {
             assert!(matches!(info.ready_path(), Err(AiError::Disabled)));
             return;
         }
         let error = info.ready_path().unwrap_err();
-        assert!(matches!(error, AiError::Missing { package: "teste-native", .. }));
-        assert!(error.to_string().contains("sudo pacman -S teste-native"), "{error}");
+        assert!(matches!(error, AiError::Missing { package: "test-native", .. }));
+        assert!(error.to_string().contains("sudo pacman -S test-native"), "{error}");
     }
 
     #[test]

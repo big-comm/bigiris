@@ -82,7 +82,7 @@ impl ExtentSize {
                     let new_h_u64 = lhs / u64::from(w);
                     let new_h = u32::try_from(new_h_u64).map_err(|_| {
                         BigImageError::InvalidInput(format!(
-                            "extent: altura calculada excede u32 ({new_h_u64})"
+                            "extent: computed height exceeds u32 ({new_h_u64})"
                         ))
                     })?;
                     Ok((src_w, new_h.max(src_h)))
@@ -90,7 +90,7 @@ impl ExtentSize {
                     let new_w_u64 = rhs / u64::from(h);
                     let new_w = u32::try_from(new_w_u64).map_err(|_| {
                         BigImageError::InvalidInput(format!(
-                            "extent: largura calculada excede u32 ({new_w_u64})"
+                            "extent: computed width exceeds u32 ({new_w_u64})"
                         ))
                     })?;
                     Ok((new_w.max(src_w), src_h))

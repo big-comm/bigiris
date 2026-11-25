@@ -609,7 +609,7 @@ fn receive_with(mut output: std::fs::File, trailer: bool) -> ImageResult<(Pixels
         let exif = u64::from_le_bytes(lengths[..8].try_into().unwrap());
         let icc = u64::from_le_bytes(lengths[8..16].try_into().unwrap());
         if exif > MAX_RESAVE_EXIF || icc > MAX_RESAVE_ICC {
-            return Err(invalid("metadados excessivos"));
+            return Err(invalid("excessive metadata"));
         }
         let quality = match lengths[16] {
             0 => None,
@@ -828,7 +828,7 @@ pub fn information(path: &Path) -> ImageResult<Information> {
 /// Bounded JSON answer of the `metadata` and `information` modes.
 fn read_json<T: serde::de::DeserializeOwned>(output: std::fs::File) -> ImageResult<T> {
     if output.metadata()?.len() > MAX_METADATA {
-        return Err(invalid("metadados excessivos"));
+        return Err(invalid("excessive metadata"));
     }
     serde_json::from_reader(std::io::BufReader::new(output)).map_err(|e| invalid(e.to_string()))
 }
@@ -1219,7 +1219,7 @@ mod tests {
             let mut forged = payload.clone();
             forged[trailer + offset..trailer + offset + 8].copy_from_slice(&claim.to_le_bytes());
             let error = receive_bytes(&forged, true).unwrap_err().to_string();
-            assert!(error.contains("excessivos"), "{error}");
+            assert!(error.contains("excessive metadata"), "{error}");
         }
     }
 
@@ -1249,7 +1249,7 @@ mod tests {
         else {
             return;
         };
-        assert!(result.unwrap_err().to_string().contains("excessivos"));
+        assert!(result.unwrap_err().to_string().contains("excessive metadata"));
     }
 
     #[test]

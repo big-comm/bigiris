@@ -254,7 +254,7 @@ where
         }
         rounds += 1;
         let (score, bytes) = probe.evaluate(q, &encode)?;
-        tracing::trace!(quality = q, score, size = bytes.len(), "candidato");
+        tracing::trace!(quality = q, score, size = bytes.len(), "candidate");
         let passed = score >= threshold;
         same_side = if last_passed == Some(passed) { same_side + 1 } else { 0 };
         last_passed = Some(passed);
@@ -306,7 +306,7 @@ where
         score = found.score,
         rounds = found.rounds,
         elapsed_ms = started.elapsed().as_millis() as u64,
-        "busca de qualidade"
+        "quality search"
     );
     Ok(found)
 }

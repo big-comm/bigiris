@@ -266,7 +266,7 @@ pub fn save_image_preserving_metadata_report(
                 Ok(true) => MetadataLoss::IccMismatched,
                 Ok(false) => MetadataLoss::IccDiscarded,
                 Err(error) => {
-                    tracing::warn!(%error, "perfil ICC de origem descartado ao regravar");
+                    tracing::warn!(%error, "source ICC profile dropped while re-saving");
                     MetadataLoss::IccDiscarded
                 }
             };
@@ -377,7 +377,7 @@ mod tests {
     #[test]
     fn transform_file_names_skips_and_writes_like_the_builtin_transforms() {
         let dir = tempfile::tempdir().unwrap();
-        let input = dir.path().join("foto.png");
+        let input = dir.path().join("photo.png");
         image::RgbImage::from_pixel(4, 2, image::Rgb([10, 20, 30])).save(&input).unwrap();
         let opts = EncodeOptions::default();
         let double =
@@ -385,7 +385,7 @@ mod tests {
         let out =
             transform_file(&input, "_x2", None, &opts, OverwritePolicy::Skip, double).unwrap();
         let ConvertOutcome::Written { output } = out else { panic!("not written: {out:?}") };
-        assert_eq!(output, dir.path().join("foto_x2.png"));
+        assert_eq!(output, dir.path().join("photo_x2.png"));
         assert_eq!(image_dimensions(&output).unwrap(), (8, 4));
         // Skip never runs the transform again.
         let out = transform_file(&input, "_x2", None, &opts, OverwritePolicy::Skip, |_| {
@@ -400,10 +400,10 @@ mod tests {
             Some(Format::Jpeg),
             &opts,
             OverwritePolicy::Skip,
-            |_| Err(BigImageError::Other("modelo ausente".into())),
+            |_| Err(BigImageError::Other("model missing".into())),
         );
-        assert!(failed.unwrap_err().to_string().contains("modelo ausente"));
-        assert!(!dir.path().join("foto_err.jpg").exists());
+        assert!(failed.unwrap_err().to_string().contains("model missing"));
+        assert!(!dir.path().join("photo_err.jpg").exists());
     }
 
     #[test]

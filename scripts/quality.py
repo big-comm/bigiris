@@ -47,7 +47,7 @@ def main():
         (output / f"{name}.log").write_text(text)
         results.append({"name": name, "command": command, "exit_code": code,
                         "seconds": round(time.monotonic() - started, 3), "log": f"{name}.log"})
-        print(f"  {'OK' if code == 0 else 'FALHOU'} ({results[-1]['seconds']} s)", flush=True)
+        print(f"  {'OK' if code == 0 else 'FAILED'} ({results[-1]['seconds']} s)", flush=True)
         if code:
             print(text[-2500:], flush=True)
         return code

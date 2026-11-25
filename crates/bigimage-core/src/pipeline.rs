@@ -182,7 +182,7 @@ pub(crate) fn decode_local_with(
             // A broken profile must not make the photo unreadable: its pixels
             // are shown as sRGB and the caller is told (take_ignored_profile).
             if let Err(error) = crate::color::normalize_srgb(&mut image, &icc) {
-                tracing::warn!(%error, "perfil ICC malformado ignorado; pixels tratados como sRGB");
+                tracing::warn!(%error, "malformed ICC profile ignored; pixels treated as sRGB");
                 crate::color::note_ignored_profile();
             }
         }

@@ -398,8 +398,8 @@ mod tests {
         let needle = "<unique-id>bigiris-convert-png</unique-id>";
         let first_count = first.matches(needle).count();
         let second_count = second.matches(needle).count();
-        assert_eq!(first_count, 1, "primeira execucao duplicou? ({first_count})");
-        assert_eq!(second_count, 1, "segunda execucao duplicou? ({second_count})");
+        assert_eq!(first_count, 1, "first run duplicated the action ({first_count})");
+        assert_eq!(second_count, 1, "second run duplicated the action ({second_count})");
     }
 
     #[test]
@@ -421,7 +421,7 @@ mod tests {
         uninstall(&paths).unwrap();
         let body = read(&paths.thunar_uca());
         assert!(body.contains("user-keep-me"));
-        assert!(!body.contains("bigiris-"), "restou acao nossa apos uninstall");
+        assert!(!body.contains("bigiris-"), "one of our actions survived uninstall");
     }
 
     #[test]

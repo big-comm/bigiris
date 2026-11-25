@@ -26,6 +26,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
       - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # master (2026-10-16)
         with:
           toolchain: stable
@@ -37,6 +39,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
       # `image` is a non-optional dep with `avif-native` enabled, which
       # pulls dav1d-sys. dav1d is an image codec, not a UI lib, so even
       # the "headless" workspace build needs libdav1d-dev.
@@ -56,6 +60,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
       - name: install GTK4/libadwaita/dav1d dev
         run: |
           sudo apt-get update
@@ -73,6 +79,8 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
       - name: install libdav1d-dev
         run: |
           sudo apt-get update
@@ -92,6 +100,8 @@ jobs:
     runs-on: ubuntu-26.04  # libadwaita >= 1.6 (feature v1_6, AdwSpinner)
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
       - name: install GTK4/libadwaita/dav1d dev
         run: |
           sudo apt-get update
@@ -141,6 +151,8 @@ jobs:
     runs-on: ubuntu-26.04  # libadwaita >= 1.6 (feature v1_6, AdwSpinner)
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
       - name: install GTK4/libadwaita/dav1d dev
         run: |
           sudo apt-get update
@@ -165,6 +177,8 @@ jobs:
       IMAGE_ENGINE_NATIVE_GPU: '0'
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
       - name: install codec dev files and glslc
         run: |
           sudo apt-get update
@@ -183,7 +197,7 @@ jobs:
           mkdir -p "$RUNNER_TEMP/weights"
           cd "$RUNNER_TEMP/weights"
           while read -r sum file; do
-            curl --fail --location --silent --show-error --retry 3 -o "$file" "$REPO/$file"
+            curl --fail --proto =https --tlsv1.2 --location --silent --show-error --retry 3 -o "$file" "$REPO/$file"
             echo "$sum  $file" | sha256sum --check --strict
             tar --zstd -xf "$file" usr/share
           done <<'EOF'
@@ -216,6 +230,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
       - name: install appstreamcli
         run: |
           sudo apt-get update
@@ -230,6 +246,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
       - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # master (2026-10-16)
         with:
           toolchain: stable
@@ -242,6 +260,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
       - name: install desktop-file-utils
         run: |
           sudo apt-get update
@@ -251,7 +271,8 @@ jobs:
   makepkg:
     name: makepkg (Arch container, PKGBUILD.local)
     runs-on: ubuntu-latest
-    container: archlinux:latest
+    # Pinned by digest; the job upgrades it with pacman -Syu anyway.
+    container: archlinux:latest@sha256:375a401bb3c6376b37f40b6dfa25067db37ec78d0b7af67ae6315f43a0184a9d
     steps:
       - name: install Arch deps
         run: |
@@ -259,6 +280,8 @@ jobs:
           useradd -m builder
           echo "builder ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
       - name: chown for builder
         run: chown -R builder:builder .
       # Usa PKGBUILD.local (build do checkout local, sem clone remoto).
@@ -282,6 +305,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
       - run: PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -v
       - run: glib-compile-schemas --strict --dry-run data
 
@@ -290,6 +315,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
       - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # master (2026-10-16)
         with:
           toolchain: stable
@@ -302,6 +329,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
       - name: install codec dev files
         run: |
           sudo apt-get update
@@ -319,6 +348,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
       - name: install codec and debugger files
         run: |
           sudo apt-get update
@@ -343,6 +374,8 @@ jobs:
       RUSTUP_TOOLCHAIN: nightly
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
       - run: sudo apt-get update && sudo apt-get install -y libdav1d-dev pkg-config
       - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # master (2026-10-16)
         with:

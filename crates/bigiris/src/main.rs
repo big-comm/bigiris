@@ -1690,7 +1690,7 @@ fn run_batch(profile: &std::path::Path, inputs: &[PathBuf]) -> color_eyre::Resul
     for worker in workers {
         if worker.join().is_err() {
             failed += 1;
-            eprintln!("erro: {}", gettext("a worker ended unexpectedly"));
+            eprintln!("err batch: {}", gettext("a worker ended unexpectedly"));
         }
     }
     println!("{}", tally("batch", ok, skipped, failed));

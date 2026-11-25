@@ -13,12 +13,17 @@ pub fn ensure_static(path: &Path) -> Result<()> {
 }
 /// Local inspection entry point for the confined worker.
 pub fn ensure_static_local(path: &Path) -> Result<()> {
-    // Validate size and regular-file status before any container parser.
-    crate::pipeline::bounded_dimensions(path)
-        .map_err(|source| BigImageError::Decode { path: path.into(), source })?;
+    // bounded_reader validates size, regular-file status and AVIF box bounds
+    // before any container parser.
     let reader = crate::pipeline::bounded_reader(path)
         .map_err(|source| BigImageError::Decode { path: path.into(), source })?;
     let format = reader.format();
+    // Probing dimensions builds the decoder, which for AVIF decodes the
+    // whole AV1 picture; the decode that follows checks those limits anyway.
+    if format != Some(image::ImageFormat::Avif) {
+        crate::pipeline::bounded_dimensions(path)
+            .map_err(|source| BigImageError::Decode { path: path.into(), source })?;
+    }
     let mut file = reader.into_inner();
     let result: image::ImageResult<bool> = (|| {
         Ok(match format {

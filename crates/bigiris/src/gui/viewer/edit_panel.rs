@@ -149,6 +149,9 @@ enum ToolProgress {
 #[derive(Default)]
 pub(in crate::gui) struct EditPanelState {
     open: bool,
+    /// What the AI tools lack, probed on the weights files when the panel
+    /// opens instead of on every sync.
+    ai: Option<AiTools>,
     /// Hidden while the crop mode owns the picture.
     suspended: bool,
     /// Values on the sliders right now.
@@ -867,6 +870,10 @@ fn set_open(state: &Rc<RefCell<ViewerState>>, open: bool) {
             return;
         }
         s.edit.open = open;
+        // A weights package may have been installed since the last look.
+        if open {
+            s.edit.ai = None;
+        }
     }
     if !open {
         flush_commit(state);
@@ -979,7 +986,15 @@ pub(in crate::gui) fn sync_sensitivity(state: &Rc<RefCell<ViewerState>>) {
     let usable = !s.saving && !s.files.is_empty() && s.texture.is_some() && !s.edit.busy();
     let saving = s.saving;
     let ui = handles(&s);
+    let cached = s.edit.ai.clone();
     drop(s);
+    let ai = cached.unwrap_or_else(|| {
+        let ai = AiTools::probe();
+        if let Ok(mut s) = state.try_borrow_mut() {
+            s.edit.ai = Some(ai.clone());
+        }
+        ai
+    });
     for scale in &ui.scales {
         scale.set_sensitive(usable);
     }
@@ -989,15 +1004,33 @@ pub(in crate::gui) fn sync_sensitivity(state: &Rc<RefCell<ViewerState>>) {
     ui.save_as.set_sensitive(usable);
     ui.original.set_sensitive(usable);
     ui.upscale.set_sensitive(usable);
-    sync_ai_tools(&ui, usable);
+    sync_ai_tools(&ui, usable, ai);
     ui.content.set_sensitive(!saving);
 }
 
-/// Sensitivity, tooltips and the install note of the AI tools. The
-/// packages may be installed while the viewer runs: checked every time.
-fn sync_ai_tools(ui: &Handles, usable: bool) {
-    let remove_bg = model_unavailable(&bigimage_ai::background::MODEL);
-    let denoise = model_unavailable(&bigimage_ai::denoise::MODEL);
+/// Availability of the AI tools' weights.
+#[derive(Clone)]
+struct AiTools {
+    remove_bg: Option<String>,
+    denoise: Option<String>,
+    upscale_ready: bool,
+    note: Option<String>,
+}
+
+impl AiTools {
+    fn probe() -> Self {
+        Self {
+            remove_bg: model_unavailable(&bigimage_ai::background::MODEL),
+            denoise: model_unavailable(&bigimage_ai::denoise::MODEL),
+            upscale_ready: bigimage_ai::upscale::availability().is_ready(),
+            note: ai_note_text(),
+        }
+    }
+}
+
+/// Sensitivity, tooltips and the install note of the AI tools.
+fn sync_ai_tools(ui: &Handles, usable: bool, ai: AiTools) {
+    let AiTools { remove_bg, denoise, upscale_ready, note } = ai;
     ui.remove_bg.set_sensitive(usable && remove_bg.is_none());
     ui.denoise.set_sensitive(usable && denoise.is_none());
     ui.remove_bg.set_tooltip_text(Some(&remove_bg.unwrap_or_else(|| {
@@ -1012,13 +1045,12 @@ fn sync_ai_tools(ui: &Handles, usable: bool) {
             bigimage_ai::denoise::device(),
         )
     })));
-    let upscale = if bigimage_ai::upscale::availability().is_ready() {
+    let upscale = if upscale_ready {
         tool_tooltip(gettext("Real-ESRGAN (IA), no seu computador"), bigimage_ai::upscale::device())
     } else {
         gettext("Lanczos3 (sem IA)")
     };
     ui.upscale.set_tooltip_text(Some(&upscale));
-    let note = ai_note_text();
     ui.ai_note.set_visible(note.is_some());
     ui.ai_note.set_text(note.as_deref().unwrap_or(""));
 }

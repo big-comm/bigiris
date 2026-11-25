@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: bigiris 0.1.0\n"
 "Report-Msgid-Bugs-To: https://github.com/big-comm/bigiris/issues\n"
-"POT-Creation-Date: 2026-11-25 18:32-0300\n"
+"POT-Creation-Date: 2026-11-25 18:42-0300\n"
 "PO-Revision-Date: 2026-10-14 01:37-0300\n"
 "Last-Translator: BigCommunity Team\n"
 "Language-Team: BigCommunity Team\n"
@@ -49,126 +49,126 @@ msgstr "BigIris uppdaterades medan det var öppet; starta om det"
 msgid "the isolated codec rejected the image ({status}){hint}: {details}"
 msgstr "den isolerade kodeken avvisade bilden ({status}){hint}: {details}"
 
-#: crates/bigiris/src/gui.rs:765
+#: crates/bigiris/src/gui.rs:735
 msgid "BigIris"
 msgstr "BigIris"
 
-#: crates/bigiris/src/gui.rs:800 crates/bigiris/src/gui/previews.rs:267
+#: crates/bigiris/src/gui.rs:769 crates/bigiris/src/gui/previews.rs:267
 msgid "Could not open the image"
 msgstr "Det gick inte att öppna bilden"
 
-#: crates/bigiris/src/gui.rs:919 crates/bigiris/src/gui.rs:2795
-#: crates/bigiris/src/gui.rs:4108 crates/bigiris/src/gui/dialogs/animate.rs:184
-#: crates/bigiris/src/gui/dialogs/batch.rs:122
-#: crates/bigiris/src/gui/dialogs/batch.rs:255
-#: crates/bigiris/src/gui/dialogs/batch.rs:349
+#: crates/bigiris/src/gui.rs:887 crates/bigiris/src/gui.rs:2736
+#: crates/bigiris/src/gui.rs:4015 crates/bigiris/src/gui/dialogs/animate.rs:165
+#: crates/bigiris/src/gui/dialogs/batch.rs:99
+#: crates/bigiris/src/gui/dialogs/batch.rs:205
+#: crates/bigiris/src/gui/dialogs/batch.rs:299
 #: crates/bigiris/src/gui/viewer/crop.rs:393
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:410
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:411
-#: crates/bigiris/src/gui/dialogs/mod.rs:228
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:219
-#: crates/bigiris/src/gui/dialogs/resize.rs:385
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:406
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:407
+#: crates/bigiris/src/gui/dialogs/mod.rs:273
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:196
+#: crates/bigiris/src/gui/dialogs/resize.rs:374
 #: crates/bigiris/src/gui/previews.rs:230
 msgid "Cancel"
 msgstr "Avbryt"
 
-#: crates/bigiris/src/gui.rs:931
+#: crates/bigiris/src/gui.rs:899
 msgid "Recomputing the edit…"
 msgstr "Beräknar om redigeringen…"
 
-#: crates/bigiris/src/gui.rs:1079 crates/bigiris/src/gui.rs:3833
+#: crates/bigiris/src/gui.rs:1047 crates/bigiris/src/gui.rs:3752
 #: crates/bigiris/src/gui/viewer/crop.rs:623
 msgid "Wait for saving to finish"
 msgstr "Vänta tills sparandet är klart"
 
-#: crates/bigiris/src/gui.rs:1093
+#: crates/bigiris/src/gui.rs:1061
 msgid "Discard changes?"
 msgstr "Förkasta ändringar?"
 
-#: crates/bigiris/src/gui.rs:1094
+#: crates/bigiris/src/gui.rs:1062
 msgid "The image has unsaved changes."
 msgstr "Bilden har osparade ändringar."
 
-#: crates/bigiris/src/gui.rs:1096
+#: crates/bigiris/src/gui.rs:1064
 msgid "Continue editing"
 msgstr "Fortsätt redigera"
 
-#: crates/bigiris/src/gui.rs:1097
+#: crates/bigiris/src/gui.rs:1065
 msgid "Discard"
 msgstr "Förkasta"
 
-#: crates/bigiris/src/gui.rs:1167
+#: crates/bigiris/src/gui.rs:1132
 msgid "Previous image"
 msgstr "Föregående bild"
 
-#: crates/bigiris/src/gui.rs:1168
+#: crates/bigiris/src/gui.rs:1133
 msgid "Next image"
 msgstr "Nästa bild"
 
-#: crates/bigiris/src/gui.rs:1184
+#: crates/bigiris/src/gui.rs:1149
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:303
 msgid "Edit"
 msgstr "Redigera"
 
-#: crates/bigiris/src/gui.rs:1187
+#: crates/bigiris/src/gui.rs:1152
 msgid "Edit (E)"
 msgstr "Redigera (E)"
 
-#: crates/bigiris/src/gui.rs:1194
+#: crates/bigiris/src/gui.rs:1159
 msgid "Image properties (Ctrl+I)"
 msgstr "Bildegenskaper (Ctrl+I)"
 
-#: crates/bigiris/src/gui.rs:1200
+#: crates/bigiris/src/gui.rs:1165
 msgid "Fullscreen (F11)"
 msgstr "Helskärm (F11)"
 
-#: crates/bigiris/src/gui.rs:1209
+#: crates/bigiris/src/gui.rs:1174
 msgid "Zoom out"
 msgstr "Zooma ut"
 
-#: crates/bigiris/src/gui.rs:1213 crates/bigiris/src/gui.rs:4204
+#: crates/bigiris/src/gui.rs:1178 crates/bigiris/src/gui.rs:4111
 msgid "Fit to window"
 msgstr "Anpassa till fönster"
 
-#: crates/bigiris/src/gui.rs:1214 crates/bigiris/src/gui.rs:4205
+#: crates/bigiris/src/gui.rs:1179 crates/bigiris/src/gui.rs:4112
 msgid "Actual size (100%)"
 msgstr "Faktisk storlek (100%)"
 
-#: crates/bigiris/src/gui.rs:1223 crates/bigiris/src/gui.rs:4201
+#: crates/bigiris/src/gui.rs:1188 crates/bigiris/src/gui.rs:4108
 msgid "Zoom"
 msgstr "Zoom"
 
-#: crates/bigiris/src/gui.rs:1227
+#: crates/bigiris/src/gui.rs:1192
 msgid "Zoom in"
 msgstr "Zooma in"
 
-#: crates/bigiris/src/gui.rs:2314
+#: crates/bigiris/src/gui.rs:2268
 msgid "Slideshow: paused"
 msgstr "Bildspel: pausat"
 
-#: crates/bigiris/src/gui.rs:2342
+#: crates/bigiris/src/gui.rs:2295
 msgid "Slideshow: every {interval} s"
 msgstr "Bildspel: var {interval} s"
 
-#: crates/bigiris/src/gui.rs:2361
+#: crates/bigiris/src/gui.rs:2313
 msgid "Histogram on"
 msgstr "Histogram på"
 
-#: crates/bigiris/src/gui.rs:2363
+#: crates/bigiris/src/gui.rs:2315
 msgid "Histogram off"
 msgstr "Histogram av"
 
-#: crates/bigiris/src/gui.rs:2486 crates/bigiris/src/gui.rs:2597
-#: crates/bigiris/src/gui/dialogs/batch.rs:341
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:1710
+#: crates/bigiris/src/gui.rs:2428 crates/bigiris/src/gui.rs:2539
+#: crates/bigiris/src/gui/dialogs/batch.rs:291
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:1705
 msgid "Canceled"
 msgstr "Avbruten"
 
-#: crates/bigiris/src/gui.rs:2598
+#: crates/bigiris/src/gui.rs:2540
 msgid "AI failed: {error}"
 msgstr "AI-fel: {error}"
 
-#: crates/bigiris/src/gui.rs:2604
+#: crates/bigiris/src/gui.rs:2546
 msgid ""
 "This build does not include AI. Rebuild with `cargo build --features ai` "
 "(requires glslc, from the shaderc package)."
@@ -176,15 +176,15 @@ msgstr ""
 "Det här bygget innehåller inte AI. Bygg om med `cargo build --features ai` "
 "(kräver glslc från paketet shaderc)."
 
-#: crates/bigiris/src/gui.rs:2610
+#: crates/bigiris/src/gui.rs:2552
 msgid "{model} is not installed. Install it with: sudo pacman -S {package}"
 msgstr "{model} är inte installerad. Installera med: sudo pacman -S {package}"
 
-#: crates/bigiris/src/gui.rs:2624
+#: crates/bigiris/src/gui.rs:2566
 msgid "Could not read {path}: {error}"
 msgstr "Kunde inte läsa {path}: {error}"
 
-#: crates/bigiris/src/gui.rs:2784
+#: crates/bigiris/src/gui.rs:2725
 msgid ""
 "The file will be overwritten. JPEG is re-encoded every time it is saved; "
 "this may reduce quality."
@@ -192,11 +192,11 @@ msgstr ""
 "Filen kommer att skrivas över. JPEG kodas om varje gång den sparas, vilket "
 "kan försämra kvaliteten."
 
-#: crates/bigiris/src/gui.rs:2786
+#: crates/bigiris/src/gui.rs:2727
 msgid "The file will be overwritten."
 msgstr "Filen kommer att skrivas över."
 
-#: crates/bigiris/src/gui.rs:2792
+#: crates/bigiris/src/gui.rs:2733
 msgid ""
 "This format does not keep all of the photo's metadata (date, camera, color "
 "profile); anything it does not support will be removed or converted."
@@ -204,21 +204,21 @@ msgstr ""
 "Det här formatet sparar inte all metadata i fotot (datum, kamera, "
 "färgprofil); det som inte stöds tas bort eller konverteras."
 
-#: crates/bigiris/src/gui.rs:2794
+#: crates/bigiris/src/gui.rs:2735
 msgid "Save changes?"
 msgstr "Vill du spara ändringar?"
 
-#: crates/bigiris/src/gui.rs:2796
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:423
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:425
+#: crates/bigiris/src/gui.rs:2737
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:418
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:420
 msgid "Save"
 msgstr "Spara"
 
-#: crates/bigiris/src/gui.rs:2856
+#: crates/bigiris/src/gui.rs:2798
 msgid "Saved"
 msgstr "Sparad"
 
-#: crates/bigiris/src/gui.rs:2938
+#: crates/bigiris/src/gui.rs:2880
 msgid ""
 "This file is animated, has multiple pages or could not be checked. Rotating "
 "or flipping and saving would discard the other frames, so it was not changed."
@@ -227,7 +227,7 @@ msgstr ""
 "Att rotera eller spegla och spara skulle kasta de andra bildrutorna, så den "
 "ändrades inte."
 
-#: crates/bigiris/src/gui.rs:2939
+#: crates/bigiris/src/gui.rs:2881
 msgid ""
 "BigIris cannot write this format. The changes cannot be saved to the file "
 "itself."
@@ -235,302 +235,300 @@ msgstr ""
 "BigIris kan inte skriva det här formatet. Ändringarna kan inte sparas i "
 "själva filen."
 
-#: crates/bigiris/src/gui.rs:2940
+#: crates/bigiris/src/gui.rs:2882
 msgid "No permission to modify this file or its folder."
 msgstr "Behörighet saknas för att ändra den här filen eller dess mapp."
 
-#: crates/bigiris/src/gui.rs:2942
+#: crates/bigiris/src/gui.rs:2884
 msgid "The file was not changed. Details: {detail}"
 msgstr "Filen ändrades inte. Detaljer: {detail}"
 
-#: crates/bigiris/src/gui.rs:2954
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:1843
+#: crates/bigiris/src/gui.rs:2896
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:1838
 msgid "Could not save"
 msgstr "Kunde inte spara"
 
-#: crates/bigiris/src/gui.rs:2957
+#: crates/bigiris/src/gui.rs:2899
 msgid "Keep changes"
 msgstr "Behåll ändringar"
 
-#: crates/bigiris/src/gui.rs:2958
+#: crates/bigiris/src/gui.rs:2900
 msgid "Discard changes"
 msgstr "Förkasta ändringar"
 
-#: crates/bigiris/src/gui.rs:3048
+#: crates/bigiris/src/gui.rs:2986
 msgid "the format does not store EXIF"
 msgstr "formatet sparar inte EXIF"
 
-#: crates/bigiris/src/gui.rs:3049
+#: crates/bigiris/src/gui.rs:2987
 msgid "EXIF too large for JPEG"
 msgstr "EXIF för stor för JPEG"
 
-#: crates/bigiris/src/gui.rs:3050
+#: crates/bigiris/src/gui.rs:2988
 msgid "invalid EXIF"
 msgstr "ogiltig EXIF"
 
-#: crates/bigiris/src/gui.rs:3053
+#: crates/bigiris/src/gui.rs:2991
 msgid "color profile converted to sRGB"
 msgstr "färgprofil konverterad till sRGB"
 
-#: crates/bigiris/src/gui.rs:3054
+#: crates/bigiris/src/gui.rs:2992
 msgid "invalid color profile ignored"
 msgstr "ogiltig färgprofil ignorerad"
 
-#: crates/bigiris/src/gui.rs:3055
+#: crates/bigiris/src/gui.rs:2993
 msgid "unsupported metadata"
 msgstr "metadata som inte stöds"
 
-#: crates/bigiris/src/gui.rs:3065
+#: crates/bigiris/src/gui.rs:3003
 msgid "Saved. Some metadata could not be kept: {list}"
 msgstr "Sparad. Viss metadata kunde inte behållas: {list}"
 
-#: crates/bigiris/src/gui.rs:3168
+#: crates/bigiris/src/gui.rs:3106
 msgid "This image's color profile is corrupted; colors may be inaccurate"
 msgstr "Färgprofilen i den här bilden är skadad; färgerna kan vara felaktiga"
 
-#: crates/bigiris/src/gui.rs:3364
+#: crates/bigiris/src/gui.rs:3302
 msgid "Save or undo changes before navigating"
 msgstr "Spara eller ångra ändringarna innan du bläddrar"
 
-#: crates/bigiris/src/gui.rs:3457 crates/bigiris/src/gui.rs:4363
-#: crates/bigiris/src/gui.rs:5413 crates/bigiris/src/gui.rs:5547
+#: crates/bigiris/src/gui.rs:3393 crates/bigiris/src/gui.rs:4270
+#: crates/bigiris/src/gui.rs:5325 crates/bigiris/src/gui.rs:5459
 msgid "Open images…"
 msgstr "Öppna bilder…"
 
-#: crates/bigiris/src/gui.rs:3458 crates/bigiris/src/gui.rs:4245
+#: crates/bigiris/src/gui.rs:3394 crates/bigiris/src/gui.rs:4152
 msgid "Paste image files"
 msgstr "Klistra in bildfiler"
 
-#: crates/bigiris/src/gui.rs:3460 crates/bigiris/src/gui.rs:4244
+#: crates/bigiris/src/gui.rs:3396 crates/bigiris/src/gui.rs:4151
 msgid "Copy image"
 msgstr "Kopiera bild"
 
-#: crates/bigiris/src/gui.rs:3461
+#: crates/bigiris/src/gui.rs:3397
 msgid "Print…"
 msgstr "Skriv ut…"
 
-#: crates/bigiris/src/gui.rs:3463 crates/bigiris/src/gui.rs:4375
-#: crates/bigiris/src/gui.rs:5413
+#: crates/bigiris/src/gui.rs:3399 crates/bigiris/src/gui.rs:4282
+#: crates/bigiris/src/gui.rs:5325
 msgid "Process a folder…"
 msgstr "Bearbeta en mapp…"
 
-#: crates/bigiris/src/gui.rs:3469
+#: crates/bigiris/src/gui.rs:3405
 msgid "Edit image"
 msgstr "Redigera bild"
 
-#: crates/bigiris/src/gui.rs:3470 crates/bigiris/src/gui.rs:4223
+#: crates/bigiris/src/gui.rs:3406 crates/bigiris/src/gui.rs:4130
 msgid "Undo"
 msgstr "Ångra"
 
-#: crates/bigiris/src/gui.rs:3471 crates/bigiris/src/gui.rs:4224
+#: crates/bigiris/src/gui.rs:3407 crates/bigiris/src/gui.rs:4131
 msgid "Redo"
 msgstr "Gör om"
 
-#: crates/bigiris/src/gui.rs:3474 crates/bigiris/src/gui.rs:4235
+#: crates/bigiris/src/gui.rs:3410 crates/bigiris/src/gui.rs:4142
 msgid "Save changes"
 msgstr "Spara ändringar"
 
-#: crates/bigiris/src/gui.rs:3475 crates/bigiris/src/gui.rs:4248
+#: crates/bigiris/src/gui.rs:3411 crates/bigiris/src/gui.rs:4155
 msgid "Move to trash"
 msgstr "Flytta till papperskorgen"
 
-#: crates/bigiris/src/gui.rs:3479 crates/bigiris/src/gui.rs:4291
+#: crates/bigiris/src/gui.rs:3415 crates/bigiris/src/gui.rs:4198
 msgid "Keyboard shortcuts"
 msgstr "Tangentbordsgenvägar"
 
-#: crates/bigiris/src/gui.rs:3480
+#: crates/bigiris/src/gui.rs:3416
 msgid "About BigIris"
 msgstr "Om BigIris"
 
-#: crates/bigiris/src/gui.rs:3485
+#: crates/bigiris/src/gui.rs:3421
 msgid "Main menu"
 msgstr "Huvudmeny"
 
-#: crates/bigiris/src/gui.rs:3835
+#: crates/bigiris/src/gui.rs:3754
 msgid "Save or undo your changes before using this tool"
 msgstr "Spara eller ångra ändringarna innan du använder det här verktyget"
 
-#: crates/bigiris/src/gui.rs:3851 crates/bigiris/src/gui.rs:4419
-#: crates/bigiris/src/gui/dialogs/batch.rs:388
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:121
+#: crates/bigiris/src/gui.rs:3768 crates/bigiris/src/gui.rs:4325
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:105
 msgid "Images"
 msgstr "Bilder"
 
-#: crates/bigiris/src/gui.rs:3857 crates/bigiris/src/gui.rs:4243
+#: crates/bigiris/src/gui.rs:3774 crates/bigiris/src/gui.rs:4150
 msgid "Open images"
 msgstr "Öppna bilder"
 
-#: crates/bigiris/src/gui.rs:3899
+#: crates/bigiris/src/gui.rs:3814
 msgid "Wait for the image to finish loading"
 msgstr "Vänta tills bilden har lästs in"
 
-#: crates/bigiris/src/gui.rs:3924 crates/bigiris/src/gui.rs:3964
+#: crates/bigiris/src/gui.rs:3837 crates/bigiris/src/gui.rs:3877
 msgid "Could not prepare the page"
 msgstr "Kunde inte förbereda sidan"
 
-#: crates/bigiris/src/gui.rs:3946
+#: crates/bigiris/src/gui.rs:3859
 msgid "Print preparation failed"
 msgstr "Förberedelsen av utskriften misslyckades"
 
-#: crates/bigiris/src/gui.rs:4003
+#: crates/bigiris/src/gui.rs:3916
 msgid "Could not print"
 msgstr "Kunde inte skriva ut"
 
-#: crates/bigiris/src/gui.rs:4004 crates/bigiris/src/gui.rs:4134
-#: crates/bigiris/src/gui/dialogs/animate.rs:54
-#: crates/bigiris/src/gui/dialogs/batch.rs:347
+#: crates/bigiris/src/gui.rs:3917 crates/bigiris/src/gui.rs:4041
+#: crates/bigiris/src/gui/dialogs/batch.rs:297
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:309
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:1844
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:102
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:338
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:385
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:1839
+#: crates/bigiris/src/gui/dialogs/mod.rs:258
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:315
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:361
 #: crates/bigiris/src/gui/transfers.rs:95
 msgid "Close"
 msgstr "Stäng"
 
-#: crates/bigiris/src/gui.rs:4102
+#: crates/bigiris/src/gui.rs:4009
 msgid "Move to trash?"
 msgstr "Flytta till papperskorgen?"
 
-#: crates/bigiris/src/gui.rs:4105
+#: crates/bigiris/src/gui.rs:4012
 msgid "The file will be moved to the trash. You can restore it later."
 msgstr "Filen flyttas till papperskorgen. Du kan återställa den senare."
 
-#: crates/bigiris/src/gui.rs:4109
+#: crates/bigiris/src/gui.rs:4016
 msgid "Move"
 msgstr "Flytta"
 
-#: crates/bigiris/src/gui.rs:4131
+#: crates/bigiris/src/gui.rs:4038
 msgid "Could not move to trash"
 msgstr "Kunde inte flytta till papperskorgen"
 
-#: crates/bigiris/src/gui.rs:4193
+#: crates/bigiris/src/gui.rs:4100
 msgid "Navigation"
 msgstr "Navigering"
 
-#: crates/bigiris/src/gui.rs:4195
+#: crates/bigiris/src/gui.rs:4102
 msgid "Previous / next"
 msgstr "Föregående / nästa"
 
-#: crates/bigiris/src/gui.rs:4196
+#: crates/bigiris/src/gui.rs:4103
 msgid "First / last"
 msgstr "Första / sista"
 
-#: crates/bigiris/src/gui.rs:4197
+#: crates/bigiris/src/gui.rs:4104
 msgid "Slideshow (auto-advance)"
 msgstr "Bildspel (automatisk bläddring)"
 
-#: crates/bigiris/src/gui.rs:4203
+#: crates/bigiris/src/gui.rs:4110
 msgid "Zoom in / out"
 msgstr "Zooma in / ut"
 
-#: crates/bigiris/src/gui.rs:4206
+#: crates/bigiris/src/gui.rs:4113
 msgid "Continuous zoom"
 msgstr "Steglös zoom"
 
-#: crates/bigiris/src/gui.rs:4210
+#: crates/bigiris/src/gui.rs:4117
 msgid "Window"
 msgstr "Fönster"
 
-#: crates/bigiris/src/gui.rs:4212
+#: crates/bigiris/src/gui.rs:4119
 msgid "Fullscreen"
 msgstr "Helskärm"
 
-#: crates/bigiris/src/gui.rs:4213
+#: crates/bigiris/src/gui.rs:4120
 msgid "Theater mode"
 msgstr "Teaterläge"
 
-#: crates/bigiris/src/gui.rs:4214
+#: crates/bigiris/src/gui.rs:4121
 msgid "Thumbnail strip"
 msgstr "Miniatyrremsa"
 
-#: crates/bigiris/src/gui.rs:4215
+#: crates/bigiris/src/gui.rs:4122
 msgid "RGB histogram"
 msgstr "RGB-histogram"
 
-#: crates/bigiris/src/gui.rs:4216
+#: crates/bigiris/src/gui.rs:4123
 msgid "Keep controls visible"
 msgstr "Håll kontrollerna synliga"
 
-#: crates/bigiris/src/gui.rs:4217
+#: crates/bigiris/src/gui.rs:4124
 msgid "Leave fullscreen or close"
 msgstr "Lämna helskärm eller stäng"
 
-#: crates/bigiris/src/gui.rs:4221
+#: crates/bigiris/src/gui.rs:4128
 msgid "Editing"
 msgstr "Redigering"
 
-#: crates/bigiris/src/gui.rs:4225
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:324
+#: crates/bigiris/src/gui.rs:4132
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:323
 msgid "Rotate right"
 msgstr "Rotera åt höger"
 
-#: crates/bigiris/src/gui.rs:4226
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:323
+#: crates/bigiris/src/gui.rs:4133
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:322
 msgid "Rotate left"
 msgstr "Rotera åt vänster"
 
-#: crates/bigiris/src/gui.rs:4227
+#: crates/bigiris/src/gui.rs:4134
 msgid "Crop…"
 msgstr "Beskär…"
 
-#: crates/bigiris/src/gui.rs:4228
+#: crates/bigiris/src/gui.rs:4135
 msgid "Crop: move the selection"
 msgstr "Beskärning: flytta markeringen"
 
-#: crates/bigiris/src/gui.rs:4231
+#: crates/bigiris/src/gui.rs:4138
 msgid "Crop: resize the selection"
 msgstr "Beskärning: ändra storlek på markeringen"
 
-#: crates/bigiris/src/gui.rs:4233
+#: crates/bigiris/src/gui.rs:4140
 msgid "Remove background (AI)…"
 msgstr "Ta bort bakgrund (AI)…"
 
-#: crates/bigiris/src/gui.rs:4234
+#: crates/bigiris/src/gui.rs:4141
 #: crates/bigimage-integrations/src/action.rs:514
 msgid "Upscale…"
 msgstr "Öka upplösning…"
 
-#: crates/bigiris/src/gui.rs:4236
+#: crates/bigiris/src/gui.rs:4143
 msgid "Editing panel"
 msgstr "Redigeringspanel"
 
-#: crates/bigiris/src/gui.rs:4237
+#: crates/bigiris/src/gui.rs:4144
 msgid "View original (hold)"
 msgstr "Visa original (håll ned)"
 
-#: crates/bigiris/src/gui.rs:4241
-#: crates/bigiris/src/gui/dialogs/properties.rs:119
+#: crates/bigiris/src/gui.rs:4148
+#: crates/bigiris/src/gui/dialogs/properties.rs:115
 msgid "File"
 msgstr "Fil"
 
-#: crates/bigiris/src/gui.rs:4246
+#: crates/bigiris/src/gui.rs:4153
 msgid "Print"
 msgstr "Skriv ut"
 
-#: crates/bigiris/src/gui.rs:4247
-#: crates/bigiris/src/gui/dialogs/properties.rs:38
-#: crates/bigiris/src/gui/dialogs/properties.rs:80
+#: crates/bigiris/src/gui.rs:4154
+#: crates/bigiris/src/gui/dialogs/properties.rs:37
+#: crates/bigiris/src/gui/dialogs/properties.rs:79
 msgid "Properties"
 msgstr "Egenskaper"
 
-#: crates/bigiris/src/gui.rs:4252
+#: crates/bigiris/src/gui.rs:4159
 msgid "Help"
 msgstr "Hjälp"
 
-#: crates/bigiris/src/gui.rs:4253
+#: crates/bigiris/src/gui.rs:4160
 msgid "This dialog"
 msgstr "Den här dialogen"
 
-#: crates/bigiris/src/gui.rs:4253
+#: crates/bigiris/src/gui.rs:4160
 msgid "About"
 msgstr "Om"
 
-#: crates/bigiris/src/gui.rs:4263
+#: crates/bigiris/src/gui.rs:4170
 msgid "Mouse wheel"
 msgstr "Mushjul"
 
-#: crates/bigiris/src/gui.rs:4317
+#: crates/bigiris/src/gui.rs:4224
 msgid ""
 "Image viewer and converter for Linux. Fast, keyboard accessible and "
 "integrated with your file manager."
@@ -538,23 +536,23 @@ msgstr ""
 "Bildvisare och konverterare för Linux. Snabb, styrbar med tangentbordet och "
 "integrerad med din filhanterare."
 
-#: crates/bigiris/src/gui.rs:4350
+#: crates/bigiris/src/gui.rs:4257
 msgid "Open your images"
 msgstr "Öppna dina bilder"
 
-#: crates/bigiris/src/gui.rs:4354
+#: crates/bigiris/src/gui.rs:4261
 msgid "Drop images here or paste files with Ctrl+V."
 msgstr "Dra bilder hit eller klistra in filer med Ctrl+V."
 
-#: crates/bigiris/src/gui.rs:4397
+#: crates/bigiris/src/gui.rs:4304
 msgid "Select a folder with images"
 msgstr "Välj en mapp med bilder"
 
-#: crates/bigiris/src/gui.rs:4416
+#: crates/bigiris/src/gui.rs:4353
 msgid "Select images"
 msgstr "Välj bilder"
 
-#: crates/bigiris/src/gui.rs:4463
+#: crates/bigiris/src/gui.rs:4379
 msgid "{current} of {total}"
 msgstr "{current} av {total}"
 
@@ -579,9 +577,9 @@ msgstr ""
 "{average_after}"
 
 #: crates/bigiris/src/gui/batch_runner.rs:220
-#: crates/bigiris/src/gui/dialogs/animate.rs:309
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:1650
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:336
+#: crates/bigiris/src/gui/dialogs/animate.rs:290
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:1645
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:313
 msgid "Processing ended unexpectedly. Please try again."
 msgstr "Bearbetningen avslutades oväntat. Försök igen."
 
@@ -597,82 +595,82 @@ msgstr "oväntat fel i worker"
 msgid "Adjust colors — Prisma"
 msgstr "Justera färger — Prisma"
 
-#: crates/bigiris/src/gui/dialogs/adjust.rs:35
+#: crates/bigiris/src/gui/dialogs/adjust.rs:34
 #: crates/bigimage-integrations/src/action.rs:91
 msgid "Adjust colors"
 msgstr "Justera färger"
 
-#: crates/bigiris/src/gui/dialogs/adjust.rs:38
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:346
+#: crates/bigiris/src/gui/dialogs/adjust.rs:37
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:344
 msgid "Brightness"
 msgstr "Ljusstyrka"
 
-#: crates/bigiris/src/gui/dialogs/adjust.rs:39
+#: crates/bigiris/src/gui/dialogs/adjust.rs:38
 msgid "-100 dark · 0 neutral · +100 light"
 msgstr "-100 mörk · 0 neutral · +100 ljus"
 
-#: crates/bigiris/src/gui/dialogs/adjust.rs:43
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:347
+#: crates/bigiris/src/gui/dialogs/adjust.rs:42
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:345
 msgid "Contrast"
 msgstr "Kontrast"
 
-#: crates/bigiris/src/gui/dialogs/adjust.rs:44
+#: crates/bigiris/src/gui/dialogs/adjust.rs:43
 msgid "-100 flat · 0 neutral · +100 strong"
 msgstr "-100 platt · 0 neutral · +100 stark"
 
-#: crates/bigiris/src/gui/dialogs/adjust.rs:48
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:348
+#: crates/bigiris/src/gui/dialogs/adjust.rs:47
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:346
 msgid "Saturation"
 msgstr "Mättnad"
 
-#: crates/bigiris/src/gui/dialogs/adjust.rs:49
+#: crates/bigiris/src/gui/dialogs/adjust.rs:48
 msgid "-100 gray · 0 neutral · +100 vivid"
 msgstr "-100 grå · 0 neutral · +100 levande"
 
-#: crates/bigiris/src/gui/dialogs/adjust.rs:53
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:349
+#: crates/bigiris/src/gui/dialogs/adjust.rs:52
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:347
 msgid "Gamma"
 msgstr "Gamma"
 
-#: crates/bigiris/src/gui/dialogs/adjust.rs:55
+#: crates/bigiris/src/gui/dialogs/adjust.rs:54
 msgid "Below 1 lightens midtones · 1 preserves them · above 1 darkens them"
 msgstr "Under 1 ljusnar mellantonerna · 1 behåller · över 1 mörknar"
 
-#: crates/bigiris/src/gui/dialogs/adjust.rs:64
-#: crates/bigiris/src/gui/dialogs/batch.rs:374
+#: crates/bigiris/src/gui/dialogs/adjust.rs:63
+#: crates/bigiris/src/gui/dialogs/batch.rs:322
 #: crates/bigiris/src/gui/dialogs/convert.rs:39
-#: crates/bigiris/src/gui/dialogs/crop.rs:344
-#: crates/bigiris/src/gui/dialogs/extent.rs:92
+#: crates/bigiris/src/gui/dialogs/crop.rs:337
+#: crates/bigiris/src/gui/dialogs/extent.rs:85
 #: crates/bigiris/src/gui/dialogs/flip.rs:37
 #: crates/bigiris/src/gui/dialogs/resize.rs:124
 #: crates/bigiris/src/gui/dialogs/rotate.rs:42
-#: crates/bigiris/src/gui/dialogs/upscale.rs:88
+#: crates/bigiris/src/gui/dialogs/upscale.rs:81
 msgid "Selected files"
 msgstr "Valda filer"
 
-#: crates/bigiris/src/gui/dialogs/adjust.rs:69
+#: crates/bigiris/src/gui/dialogs/adjust.rs:68
 msgid "Tone"
 msgstr "Ton"
 
-#: crates/bigiris/src/gui/dialogs/adjust.rs:74
+#: crates/bigiris/src/gui/dialogs/adjust.rs:73
 msgid "Color"
 msgstr "Färg"
 
-#: crates/bigiris/src/gui/dialogs/adjust.rs:77
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:138
+#: crates/bigiris/src/gui/dialogs/adjust.rs:76
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:119
 msgid "Output"
 msgstr "Utdata"
 
-#: crates/bigiris/src/gui/dialogs/adjust.rs:83
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:379
+#: crates/bigiris/src/gui/dialogs/adjust.rs:82
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:376
 msgid "Apply"
 msgstr "Verkställ"
 
-#: crates/bigiris/src/gui/dialogs/adjust.rs:188
+#: crates/bigiris/src/gui/dialogs/adjust.rs:177
 msgid "Adjusting…"
 msgstr "Justerar…"
 
-#: crates/bigiris/src/gui/dialogs/adjust.rs:194
+#: crates/bigiris/src/gui/dialogs/adjust.rs:183
 msgid "Adjusting"
 msgstr "Justerar"
 
@@ -684,100 +682,100 @@ msgstr "Skapa animerad GIF — Prisma"
 msgid "Create animated GIF"
 msgstr "Skapa animerad GIF"
 
-#: crates/bigiris/src/gui/dialogs/animate.rs:48
+#: crates/bigiris/src/gui/dialogs/animate.rs:43
 msgid "Select at least 2 images"
 msgstr "Välj minst 2 bilder"
 
-#: crates/bigiris/src/gui/dialogs/animate.rs:49
+#: crates/bigiris/src/gui/dialogs/animate.rs:44
 msgid "Select multiple files to build the animation."
 msgstr "Ange flera filer på en gång för att bygga animeringen."
 
-#: crates/bigiris/src/gui/dialogs/animate.rs:67
+#: crates/bigiris/src/gui/dialogs/animate.rs:51
 msgid "Frame delay (ms)"
 msgstr "Fördröjning per bildruta (ms)"
 
-#: crates/bigiris/src/gui/dialogs/animate.rs:68
+#: crates/bigiris/src/gui/dialogs/animate.rs:52
 msgid "100 ≈ 10 fps · 40 ≈ 25 fps · 1000 = 1 s"
 msgstr "100 ≈ 10 fps · 40 ≈ 25 fps · 1000 = 1 s"
 
-#: crates/bigiris/src/gui/dialogs/animate.rs:73
+#: crates/bigiris/src/gui/dialogs/animate.rs:57
 msgid "Loop"
 msgstr "Upprepning"
 
-#: crates/bigiris/src/gui/dialogs/animate.rs:75
+#: crates/bigiris/src/gui/dialogs/animate.rs:59
 msgid "Infinite (default)"
 msgstr "Oändligt (standard)"
 
-#: crates/bigiris/src/gui/dialogs/animate.rs:76
+#: crates/bigiris/src/gui/dialogs/animate.rs:60
 msgid "Once"
 msgstr "En gång"
 
-#: crates/bigiris/src/gui/dialogs/animate.rs:77
+#: crates/bigiris/src/gui/dialogs/animate.rs:61
 msgid "2 times"
 msgstr "2 gånger"
 
-#: crates/bigiris/src/gui/dialogs/animate.rs:78
+#: crates/bigiris/src/gui/dialogs/animate.rs:62
 msgid "5 times"
 msgstr "5 gånger"
 
-#: crates/bigiris/src/gui/dialogs/animate.rs:79
+#: crates/bigiris/src/gui/dialogs/animate.rs:63
 msgid "10 times"
 msgstr "10 gånger"
 
-#: crates/bigiris/src/gui/dialogs/animate.rs:84
+#: crates/bigiris/src/gui/dialogs/animate.rs:68
 msgid "Encoder speed"
 msgstr "Kodarhastighet"
 
-#: crates/bigiris/src/gui/dialogs/animate.rs:86
+#: crates/bigiris/src/gui/dialogs/animate.rs:70
 msgid "higher = faster, slightly lower palette quality · default 10"
 msgstr "högre = snabbare, något lägre palettkvalitet · standard 10"
 
-#: crates/bigiris/src/gui/dialogs/animate.rs:95 crates/bigiris/src/main.rs:610
+#: crates/bigiris/src/gui/dialogs/animate.rs:79 crates/bigiris/src/main.rs:610
 msgid "Output file (.gif)"
 msgstr "Utdatafil (.gif)"
 
-#: crates/bigiris/src/gui/dialogs/animate.rs:98
+#: crates/bigiris/src/gui/dialogs/animate.rs:82
 msgid "Frames"
 msgstr "Bildrutor"
 
-#: crates/bigiris/src/gui/dialogs/animate.rs:111
+#: crates/bigiris/src/gui/dialogs/animate.rs:95
 msgid "Create GIF"
 msgstr "Skapa GIF"
 
-#: crates/bigiris/src/gui/dialogs/animate.rs:181
+#: crates/bigiris/src/gui/dialogs/animate.rs:162
 msgid "Replace existing file?"
 msgstr "Ersätta befintlig fil?"
 
-#: crates/bigiris/src/gui/dialogs/animate.rs:185
+#: crates/bigiris/src/gui/dialogs/animate.rs:166
 msgid "Replace"
 msgstr "Ersätt"
 
-#: crates/bigiris/src/gui/dialogs/animate.rs:203
+#: crates/bigiris/src/gui/dialogs/animate.rs:184
 msgid "Specify the output file."
 msgstr "Ange utdatafilen."
 
-#: crates/bigiris/src/gui/dialogs/animate.rs:212
+#: crates/bigiris/src/gui/dialogs/animate.rs:193
 msgid "The output file cannot be a folder."
 msgstr "Utdatafilen kan inte vara en mapp."
 
-#: crates/bigiris/src/gui/dialogs/animate.rs:216
+#: crates/bigiris/src/gui/dialogs/animate.rs:197
 msgid "The output file cannot be one of the frames."
 msgstr "Utdatafilen kan inte vara en av bildrutorna."
 
-#: crates/bigiris/src/gui/dialogs/animate.rs:249
+#: crates/bigiris/src/gui/dialogs/animate.rs:230
 msgid "Building GIF…"
 msgstr "Bygger GIF…"
 
-#: crates/bigiris/src/gui/dialogs/animate.rs:291
+#: crates/bigiris/src/gui/dialogs/animate.rs:272
 msgid "Done: {file}"
 msgstr "Klar: {file}"
 
-#: crates/bigiris/src/gui/dialogs/animate.rs:298
+#: crates/bigiris/src/gui/dialogs/animate.rs:279
 msgid ""
 "The file {file} appeared in the meantime and was kept; nothing was written."
 msgstr "Filen {file} skapades under tiden och behölls; inget skrevs."
 
-#: crates/bigiris/src/gui/dialogs/animate.rs:304
+#: crates/bigiris/src/gui/dialogs/animate.rs:285
 msgid "Failed"
 msgstr "Misslyckades"
 
@@ -789,71 +787,54 @@ msgstr "Prisma — Batch"
 msgid "Batch conversion"
 msgstr "Batchkonvertering"
 
-#: crates/bigiris/src/gui/dialogs/batch.rs:46
+#: crates/bigiris/src/gui/dialogs/batch.rs:44
 msgid "Files"
 msgstr "Filer"
 
-#: crates/bigiris/src/gui/dialogs/batch.rs:50
-#: crates/bigiris/src/gui/dialogs/batch.rs:386
+#: crates/bigiris/src/gui/dialogs/batch.rs:48
+#: crates/bigiris/src/gui/dialogs/batch.rs:331
 msgid "Add files"
 msgstr "Lägg till filer"
 
-#: crates/bigiris/src/gui/dialogs/batch.rs:56
+#: crates/bigiris/src/gui/dialogs/batch.rs:54
 msgid "Add folder (images)"
 msgstr "Lägg till mapp (bilder)"
 
-#: crates/bigiris/src/gui/dialogs/batch.rs:66
-#: crates/bigiris/src/gui/dialogs/convert.rs:45
+#: crates/bigiris/src/gui/dialogs/batch.rs:63
+#: crates/bigiris/src/gui/dialogs/convert.rs:44
 msgid "Conversion"
 msgstr "Konvertering"
 
-#: crates/bigiris/src/gui/dialogs/batch.rs:77
-#: crates/bigiris/src/gui/dialogs/convert.rs:52
+#: crates/bigiris/src/gui/dialogs/batch.rs:73
+#: crates/bigiris/src/gui/dialogs/convert.rs:50
 msgid "Destination"
 msgstr "Mål"
 
-#: crates/bigiris/src/gui/dialogs/batch.rs:84
-#: crates/bigiris/src/gui/dialogs/convert.rs:60
-msgid "Output folder"
-msgstr "Utdatamapp"
-
-#: crates/bigiris/src/gui/dialogs/batch.rs:85
-#: crates/bigiris/src/gui/dialogs/batch.rs:207
-#: crates/bigiris/src/gui/dialogs/convert.rs:61
-#: crates/bigiris/src/gui/dialogs/convert.rs:148
-msgid "Same folder as the source file"
-msgstr "Samma mapp som källfilen"
-
-#: crates/bigiris/src/gui/dialogs/batch.rs:93
-#: crates/bigiris/src/gui/dialogs/convert.rs:69
-msgid "Use the source file folder"
-msgstr "Använd källfilens mapp"
-
-#: crates/bigiris/src/gui/dialogs/batch.rs:102
+#: crates/bigiris/src/gui/dialogs/batch.rs:79
 msgid "Ready"
 msgstr "Klar"
 
-#: crates/bigiris/src/gui/dialogs/batch.rs:108
+#: crates/bigiris/src/gui/dialogs/batch.rs:85
 msgid "Ready. Click Process to start."
 msgstr "Väntar. Klicka på Bearbeta för att starta."
 
-#: crates/bigiris/src/gui/dialogs/batch.rs:119
+#: crates/bigiris/src/gui/dialogs/batch.rs:96
 msgid "Process"
 msgstr "Bearbeta"
 
-#: crates/bigiris/src/gui/dialogs/batch.rs:245
+#: crates/bigiris/src/gui/dialogs/batch.rs:195
 msgid "Add at least one image to process."
 msgstr "Lägg till minst en bild att bearbeta."
 
-#: crates/bigiris/src/gui/dialogs/batch.rs:257
+#: crates/bigiris/src/gui/dialogs/batch.rs:207
 msgid "Starting…"
 msgstr "Startar…"
 
-#: crates/bigiris/src/gui/dialogs/batch.rs:258
+#: crates/bigiris/src/gui/dialogs/batch.rs:208
 msgid "Processing…"
 msgstr "Bearbetar…"
 
-#: crates/bigiris/src/gui/dialogs/batch.rs:303
+#: crates/bigiris/src/gui/dialogs/batch.rs:253
 msgid ""
 "Canceled after {done}/{total} in {timing}. Written: {ok}, skipped: {skip}, "
 "failed: {fail}."
@@ -861,43 +842,43 @@ msgstr ""
 "Avbrutet efter {done}/{total} på {timing}. Skrivna: {ok}, överhoppade: "
 "{skip}, misslyckade: {fail}."
 
-#: crates/bigiris/src/gui/dialogs/batch.rs:305
+#: crates/bigiris/src/gui/dialogs/batch.rs:255
 msgid "Finished in {timing}. Written: {ok}, skipped: {skip}, failed: {fail}."
 msgstr ""
 "Klart på {timing}. Skrivna: {ok}, överhoppade: {skip}, misslyckade: {fail}."
 
-#: crates/bigiris/src/gui/dialogs/batch.rs:325
+#: crates/bigiris/src/gui/dialogs/batch.rs:275
 msgid ""
 "{before} → {after} ({delta}) · average per file {avg_before} → {avg_after}"
 msgstr ""
 "{before} → {after} ({delta}) · snitt per fil {avg_before} → {avg_after}"
 
-#: crates/bigiris/src/gui/dialogs/batch.rs:343
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:355
+#: crates/bigiris/src/gui/dialogs/batch.rs:293
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:332
 msgid "Done"
 msgstr "Slutfört"
 
-#: crates/bigiris/src/gui/dialogs/batch.rs:429
+#: crates/bigiris/src/gui/dialogs/batch.rs:354
 msgid "Add image folder"
 msgstr "Lägg till bildmapp"
 
-#: crates/bigiris/src/gui/dialogs/compare.rs:31
+#: crates/bigiris/src/gui/dialogs/compare.rs:25
 msgid "Compare images — Íris"
 msgstr "Jämför bilder — Íris"
 
-#: crates/bigiris/src/gui/dialogs/compare.rs:43
+#: crates/bigiris/src/gui/dialogs/compare.rs:37
 msgid "Compare images"
 msgstr "Jämför bilder"
 
-#: crates/bigiris/src/gui/dialogs/compare.rs:45
+#: crates/bigiris/src/gui/dialogs/compare.rs:39
 msgid "Before: {before}  ·  After: {after}"
 msgstr "Före: {before}  ·  Efter: {after}"
 
-#: crates/bigiris/src/gui/dialogs/compare.rs:69
+#: crates/bigiris/src/gui/dialogs/compare.rs:62
 msgid "Drag the divider to compare · Esc to close"
 msgstr "Dra avdelaren för att jämföra · Esc för att stänga"
 
-#: crates/bigiris/src/gui/dialogs/compare.rs:156
+#: crates/bigiris/src/gui/dialogs/compare.rs:146
 msgid "Could not open this image"
 msgstr "Kunde inte öppna den här bilden"
 
@@ -906,12 +887,12 @@ msgid "Convert images — Prisma"
 msgstr "Konvertera bilder — Prisma"
 
 #: crates/bigiris/src/gui/dialogs/convert.rs:32
-#: crates/bigiris/src/gui/dialogs/convert.rs:79
+#: crates/bigiris/src/gui/dialogs/convert.rs:58
 #: crates/bigimage-integrations/src/action.rs:75
 msgid "Convert"
 msgstr "Konvertera"
 
-#: crates/bigiris/src/gui/dialogs/convert.rs:85
+#: crates/bigiris/src/gui/dialogs/convert.rs:64
 msgid ""
 "This image has transparency — JPEG drops the alpha channel. Consider PNG or "
 "WebP."
@@ -919,7 +900,7 @@ msgstr ""
 "Den här bilden har genomskinlighet – JPEG tappar alfakanalen. Överväg PNG "
 "eller WebP."
 
-#: crates/bigiris/src/gui/dialogs/convert.rs:106
+#: crates/bigiris/src/gui/dialogs/convert.rs:85
 msgid ""
 "This image contains GPS (location) data in its EXIF. Be careful when sharing "
 "it publicly — our pipeline strips EXIF automatically when re-encoding."
@@ -927,11 +908,11 @@ msgstr ""
 "Den här bilden innehåller GPS (plats) i EXIF. Var försiktig när du delar den "
 "offentligt — vår pipeline tar bort EXIF automatiskt vid omkodning."
 
-#: crates/bigiris/src/gui/dialogs/convert.rs:193
+#: crates/bigiris/src/gui/dialogs/convert.rs:141
 msgid "Converting…"
 msgstr "Konverterar…"
 
-#: crates/bigiris/src/gui/dialogs/convert.rs:199
+#: crates/bigiris/src/gui/dialogs/convert.rs:147
 msgid "Converting"
 msgstr "Konverterar"
 
@@ -949,51 +930,51 @@ msgid "Crop — Prisma"
 msgstr "Beskär — Prisma"
 
 #: crates/bigiris/src/gui/dialogs/crop.rs:321
-#: crates/bigiris/src/gui/dialogs/crop.rs:389
+#: crates/bigiris/src/gui/dialogs/crop.rs:382
 #: crates/bigiris/src/gui/viewer/crop.rs:394
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:338
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:337
 msgid "Crop"
 msgstr "Beskär"
 
-#: crates/bigiris/src/gui/dialogs/crop.rs:348
-#: crates/bigiris/src/gui/dialogs/extent.rs:96
-#: crates/bigiris/src/gui/dialogs/upscale.rs:92
+#: crates/bigiris/src/gui/dialogs/crop.rs:341
+#: crates/bigiris/src/gui/dialogs/extent.rs:89
+#: crates/bigiris/src/gui/dialogs/upscale.rs:85
 msgid "Original size"
 msgstr "Originalstorlek"
 
-#: crates/bigiris/src/gui/dialogs/crop.rs:349
-#: crates/bigiris/src/gui/dialogs/extent.rs:97
-#: crates/bigiris/src/gui/dialogs/upscale.rs:96
+#: crates/bigiris/src/gui/dialogs/crop.rs:342
+#: crates/bigiris/src/gui/dialogs/extent.rs:90
+#: crates/bigiris/src/gui/dialogs/upscale.rs:89
 msgid "First file"
 msgstr "Första filen"
 
-#: crates/bigiris/src/gui/dialogs/crop.rs:355
+#: crates/bigiris/src/gui/dialogs/crop.rs:348
 msgid "X (px)"
 msgstr "X (px)"
 
-#: crates/bigiris/src/gui/dialogs/crop.rs:359
+#: crates/bigiris/src/gui/dialogs/crop.rs:352
 msgid "Y (px)"
 msgstr "Y (px)"
 
-#: crates/bigiris/src/gui/dialogs/crop.rs:363
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:359
+#: crates/bigiris/src/gui/dialogs/crop.rs:356
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:356
 msgid "Width (px)"
 msgstr "Bredd (px)"
 
-#: crates/bigiris/src/gui/dialogs/crop.rs:367
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:360
+#: crates/bigiris/src/gui/dialogs/crop.rs:360
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:357
 msgid "Height (px)"
 msgstr "Höjd (px)"
 
-#: crates/bigiris/src/gui/dialogs/crop.rs:388
+#: crates/bigiris/src/gui/dialogs/crop.rs:381
 msgid "Centered 50%"
 msgstr "Mitten 50%"
 
-#: crates/bigiris/src/gui/dialogs/crop.rs:447
+#: crates/bigiris/src/gui/dialogs/crop.rs:437
 msgid "Cropping…"
 msgstr "Beskärning pågår…"
 
-#: crates/bigiris/src/gui/dialogs/crop.rs:453
+#: crates/bigiris/src/gui/dialogs/crop.rs:443
 msgid "Cropping"
 msgstr "Beskärning pågår"
 
@@ -1007,7 +988,7 @@ msgstr "Original"
 
 #: crates/bigiris/src/gui/viewer/crop.rs:388
 #: crates/bigiris/src/gui/viewer/crop.rs:405
-#: crates/bigiris/src/gui/dialogs/properties.rs:204
+#: crates/bigiris/src/gui/dialogs/properties.rs:200
 msgid "Aspect ratio"
 msgstr "Bildförhållande"
 
@@ -1037,7 +1018,7 @@ msgstr ""
 "{package}"
 
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:286
-#: crates/bigiris/src/gui/dialogs/upscale.rs:254
+#: crates/bigiris/src/gui/dialogs/upscale.rs:244
 msgid "Runs on: {device}"
 msgstr "Körs på: {device}"
 
@@ -1053,153 +1034,153 @@ msgstr "Visa original"
 msgid "Shows the image without the edits (hold \\)"
 msgstr "Visar bilden utan redigeringarna (håll ned \\)"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:319
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:318
 msgid "Transform"
 msgstr "Transformera"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:325
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:324
 msgid "Flip horizontal"
 msgstr "Spegelvänd horisontellt"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:326
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:325
 msgid "Flip vertical"
 msgstr "Spegelvänd vertikalt"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:331
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:330
 msgid "Straighten"
 msgstr "Räta upp"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:334
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:333
 msgid "Rotates the photo and crops the empty edges to level the horizon"
 msgstr "Roterar fotot och beskär de tomma kanterna för att räta upp horisonten"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:339
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:338
 msgid "Crop in place (Ctrl+R)"
 msgstr "Beskär i själva bilden (Ctrl+R)"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:345
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:343
 msgid "Adjustments"
 msgstr "Justeringar"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:354
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:352
 msgid "Reset adjustments"
 msgstr "Återställ justeringar"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:358
-#: crates/bigiris/src/gui/dialogs/properties.rs:162
-#: crates/bigiris/src/gui/dialogs/properties.rs:169
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:355
+#: crates/bigiris/src/gui/dialogs/properties.rs:158
+#: crates/bigiris/src/gui/dialogs/properties.rs:165
 msgid "Size"
 msgstr "Storlek"
 
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:361
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:364
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:367
 msgid "Keep aspect ratio"
 msgstr "Behåll bildförhållande"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:376
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:377
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:373
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:374
 #: crates/bigiris/src/gui/dialogs/resize.rs:47
 msgid "Scale (%)"
 msgstr "Skala (%)"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:389
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:385
 msgid "Tools"
 msgstr "Verktyg"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:390
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:386
 msgid "Remove background (AI)"
 msgstr "Ta bort bakgrund (AI)"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:392
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:388
 msgid "Remove noise (AI)"
 msgstr "Ta bort brus (AI)"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:396
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:402
-#: crates/bigiris/src/gui/dialogs/upscale.rs:103
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:392
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:398
+#: crates/bigiris/src/gui/dialogs/upscale.rs:96
 msgid "Factor"
 msgstr "Faktor"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:397
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:544
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:393
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:520
 #: crates/bigiris/src/gui/dialogs/upscale.rs:40
-#: crates/bigiris/src/gui/dialogs/upscale.rs:148
+#: crates/bigiris/src/gui/dialogs/upscale.rs:141
 msgid "Upscale"
 msgstr "Öka upplösning"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:426
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:421
 msgid "Save changes (Ctrl+S)"
 msgstr "Spara ändringar (Ctrl+S)"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:430
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:425
 msgid "Save as…"
 msgstr "Spara som…"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:439
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:441
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:434
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:436
 msgid "Quality for Save as"
 msgstr "Kvalitet vid Spara som"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:1036
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:1031
 msgid "Cuts out the main subject with BiRefNet-lite, on your computer"
 msgstr "Frilägger huvudmotivet med BiRefNet-lite, på din dator"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:1042
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:1037
 msgid "Cleans up noise and compression artifacts with SCUNet, on your computer"
 msgstr "Tar bort brus och komprimeringsartefakter med SCUNet, på din dator"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:1047
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:1042
 msgid "Real-ESRGAN (AI), on your computer"
 msgstr "Real-ESRGAN (AI), på din dator"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:1049
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:1044
 msgid "Lanczos3 (no AI)"
 msgstr "Lanczos3 (utan AI)"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:1532
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:1527
 msgid "{width}×{height} exceeds the processing limit"
 msgstr "{width}×{height} överskrider bearbetningsgränsen"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:1576
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:224
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:1571
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:201
 msgid "Preparing…"
 msgstr "Förbereder…"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:1676
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:400
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:1671
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:376
 msgid "Loading the model…"
 msgstr "Läser in modellen…"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:1686
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:1681
 msgid "Removing background…"
 msgstr "Tar bort bakgrunden…"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:1687
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:1682
 msgid "Removing noise…"
 msgstr "Tar bort brus…"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:1688
-#: crates/bigiris/src/gui/dialogs/upscale.rs:201
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:1683
+#: crates/bigiris/src/gui/dialogs/upscale.rs:191
 msgid "Upscaling…"
 msgstr "Skalar upp…"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:1727
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:1722
 msgid "{name}-edited"
 msgstr "{name}-redigerad"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:1729
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:1724
 msgid "Save as"
 msgstr "Spara som"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:1760
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:1755
 msgid "To change the file itself, use Save."
 msgstr "Använd Spara för att ändra själva filen."
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:1799
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:1794
 msgid "Copy saved: {name}"
 msgstr "Kopia sparad: {name}"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:1839
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:1834
 msgid ""
 "BigIris cannot write this format. Use, for example, .png, .jpg or .webp."
 msgstr ""
@@ -1270,7 +1251,7 @@ msgstr "Letterbox"
 msgid "Prisma · no cropping"
 msgstr "Prisma · utan beskärning"
 
-#: crates/bigiris/src/gui/dialogs/extent.rs:85
+#: crates/bigiris/src/gui/dialogs/extent.rs:78
 msgid ""
 "Extends the canvas around the image to fit a fixed format (YouTube posts, "
 "Instagram feeds, Stories…) without cropping any pixels. The original image "
@@ -1280,48 +1261,48 @@ msgstr ""
 "inlägg, Instagram-flöde, Stories…) utan att beskära en enda pixel. "
 "Originalbilden centreras och resten fylls med den valda färgen."
 
-#: crates/bigiris/src/gui/dialogs/extent.rs:104
+#: crates/bigiris/src/gui/dialogs/extent.rs:97
 msgid "Target aspect ratio"
 msgstr "Målbildförhållande"
 
-#: crates/bigiris/src/gui/dialogs/extent.rs:111
+#: crates/bigiris/src/gui/dialogs/extent.rs:104
 msgid "Width ratio"
 msgstr "Förhållande B"
 
-#: crates/bigiris/src/gui/dialogs/extent.rs:114
+#: crates/bigiris/src/gui/dialogs/extent.rs:107
 msgid "Height ratio"
 msgstr "Förhållande H"
 
-#: crates/bigiris/src/gui/dialogs/extent.rs:124
+#: crates/bigiris/src/gui/dialogs/extent.rs:117
 msgid "Background color"
 msgstr "Bakgrundsfärg"
 
-#: crates/bigiris/src/gui/dialogs/extent.rs:130
+#: crates/bigiris/src/gui/dialogs/extent.rs:123
 msgid "Hex (#RRGGBB)"
 msgstr "Hex (#RRGGBB)"
 
-#: crates/bigiris/src/gui/dialogs/extent.rs:138
+#: crates/bigiris/src/gui/dialogs/extent.rs:131
 msgid "Image position"
 msgstr "Bildposition"
 
-#: crates/bigiris/src/gui/dialogs/extent.rs:144
-#: crates/bigiris/src/gui/dialogs/upscale.rs:109
+#: crates/bigiris/src/gui/dialogs/extent.rs:137
+#: crates/bigiris/src/gui/dialogs/upscale.rs:102
 msgid "Predicted destination"
 msgstr "Förväntat mål"
 
-#: crates/bigiris/src/gui/dialogs/extent.rs:171
+#: crates/bigiris/src/gui/dialogs/extent.rs:164
 msgid "Extend"
 msgstr "Utöka"
 
-#: crates/bigiris/src/gui/dialogs/extent.rs:240
+#: crates/bigiris/src/gui/dialogs/extent.rs:230
 msgid "—"
 msgstr "—"
 
-#: crates/bigiris/src/gui/dialogs/extent.rs:324
+#: crates/bigiris/src/gui/dialogs/extent.rs:314
 msgid "Extending…"
 msgstr "Utökar…"
 
-#: crates/bigiris/src/gui/dialogs/extent.rs:330
+#: crates/bigiris/src/gui/dialogs/extent.rs:320
 msgid "Extending"
 msgstr "Utökar"
 
@@ -1347,11 +1328,11 @@ msgstr "Vertikalt (upp ↔ ner)"
 msgid "Axis"
 msgstr "Axel"
 
-#: crates/bigiris/src/gui/dialogs/flip.rs:85
+#: crates/bigiris/src/gui/dialogs/flip.rs:75
 msgid "Flipping…"
 msgstr "Spegelvänder…"
 
-#: crates/bigiris/src/gui/dialogs/flip.rs:91
+#: crates/bigiris/src/gui/dialogs/flip.rs:81
 msgid "Flipping"
 msgstr "Spegelvänder"
 
@@ -1476,102 +1457,115 @@ msgstr "Behåll ursprungligt format"
 msgid "If the output file exists"
 msgstr "Om utdatafilen finns"
 
-#: crates/bigiris/src/gui/dialogs/mod.rs:260
+#: crates/bigiris/src/gui/dialogs/mod.rs:305
 msgid "{first} and {count} more"
 msgstr "{first} och {count} till"
 
-#: crates/bigiris/src/gui/dialogs/mod.rs:275
+#: crates/bigiris/src/gui/dialogs/mod.rs:319
+msgid "Output folder"
+msgstr "Utdatamapp"
+
+#: crates/bigiris/src/gui/dialogs/mod.rs:320
+#: crates/bigiris/src/gui/dialogs/mod.rs:349
+msgid "Same folder as the source file"
+msgstr "Samma mapp som källfilen"
+
+#: crates/bigiris/src/gui/dialogs/mod.rs:328
+msgid "Use the source file folder"
+msgstr "Använd källfilens mapp"
+
+#: crates/bigiris/src/gui/dialogs/mod.rs:365
 msgid "Choose output folder"
 msgstr "Välj utdatamapp"
 
-#: crates/bigiris/src/gui/dialogs/properties.rs:61
+#: crates/bigiris/src/gui/dialogs/properties.rs:60
 msgid "Could not read the file information"
 msgstr "Kunde inte läsa filinformationen"
 
-#: crates/bigiris/src/gui/dialogs/properties.rs:89
+#: crates/bigiris/src/gui/dialogs/properties.rs:88
 msgid "Privacy"
 msgstr "Sekretess"
 
-#: crates/bigiris/src/gui/dialogs/properties.rs:93
+#: crates/bigiris/src/gui/dialogs/properties.rs:92
 msgid "GPS coordinates present"
 msgstr "GPS-koordinater finns"
 
-#: crates/bigiris/src/gui/dialogs/properties.rs:95
+#: crates/bigiris/src/gui/dialogs/properties.rs:94
 msgid "Camera/software identification present"
 msgstr "Kamera-/programvaruidentifiering finns"
 
-#: crates/bigiris/src/gui/dialogs/properties.rs:97
+#: crates/bigiris/src/gui/dialogs/properties.rs:96
 msgid "Remove it before publishing if it is sensitive."
 msgstr "Ta bort före publicering om det är känsligt."
 
-#: crates/bigiris/src/gui/dialogs/properties.rs:125
+#: crates/bigiris/src/gui/dialogs/properties.rs:121
 msgid "Name"
 msgstr "Namn"
 
-#: crates/bigiris/src/gui/dialogs/properties.rs:130
+#: crates/bigiris/src/gui/dialogs/properties.rs:126
 msgid "Folder"
 msgstr "Mapp"
 
-#: crates/bigiris/src/gui/dialogs/properties.rs:148
-#: crates/bigiris/src/gui/dialogs/properties.rs:155
-#: crates/bigiris/src/gui/dialogs/properties.rs:156
+#: crates/bigiris/src/gui/dialogs/properties.rs:144
+#: crates/bigiris/src/gui/dialogs/properties.rs:151
+#: crates/bigiris/src/gui/dialogs/properties.rs:152
 msgid "Format"
 msgstr "Format"
 
-#: crates/bigiris/src/gui/dialogs/properties.rs:150
+#: crates/bigiris/src/gui/dialogs/properties.rs:146
 msgid "{format} (extension: {extension})"
 msgstr "{format} (filändelse: {extension})"
 
-#: crates/bigiris/src/gui/dialogs/properties.rs:164
+#: crates/bigiris/src/gui/dialogs/properties.rs:160
 msgid "Modified"
 msgstr "Ändrad"
 
-#: crates/bigiris/src/gui/dialogs/properties.rs:170
+#: crates/bigiris/src/gui/dialogs/properties.rs:166
 msgid "(unavailable: {error})"
 msgstr "(inte tillgänglig: {error})"
 
-#: crates/bigiris/src/gui/dialogs/properties.rs:179
+#: crates/bigiris/src/gui/dialogs/properties.rs:175
 msgid "Image"
 msgstr "Bild"
 
-#: crates/bigiris/src/gui/dialogs/properties.rs:196
-#: crates/bigiris/src/gui/dialogs/properties.rs:213
+#: crates/bigiris/src/gui/dialogs/properties.rs:192
+#: crates/bigiris/src/gui/dialogs/properties.rs:209
 msgid "Dimensions"
 msgstr "Dimensioner"
 
-#: crates/bigiris/src/gui/dialogs/properties.rs:200
+#: crates/bigiris/src/gui/dialogs/properties.rs:196
 msgid "Megapixels"
 msgstr "Megapixel"
 
-#: crates/bigiris/src/gui/dialogs/properties.rs:207
+#: crates/bigiris/src/gui/dialogs/properties.rs:203
 msgid "Color mode"
 msgstr "Färgläge"
 
-#: crates/bigiris/src/gui/dialogs/properties.rs:208
+#: crates/bigiris/src/gui/dialogs/properties.rs:204
 msgid "Bits per channel"
 msgstr "Bitar per kanal"
 
-#: crates/bigiris/src/gui/dialogs/properties.rs:214
+#: crates/bigiris/src/gui/dialogs/properties.rs:210
 msgid "(failed: could not identify the format from the content)"
 msgstr "(fel: kunde inte identifiera formatet utifrån innehållet)"
 
-#: crates/bigiris/src/gui/dialogs/properties.rs:224
+#: crates/bigiris/src/gui/dialogs/properties.rs:220
 msgid "EXIF orientation"
 msgstr "EXIF-orientering"
 
-#: crates/bigiris/src/gui/dialogs/properties.rs:226
+#: crates/bigiris/src/gui/dialogs/properties.rs:222
 msgid "{orientation} · use Rotate ▸ Automatic to fix it"
 msgstr "{orientation} · använd Rotera ▸ Automatisk för att rätta"
 
-#: crates/bigiris/src/gui/dialogs/properties.rs:241
+#: crates/bigiris/src/gui/dialogs/properties.rs:237
 msgid "Grayscale"
 msgstr "Gråskala"
 
-#: crates/bigiris/src/gui/dialogs/properties.rs:242
+#: crates/bigiris/src/gui/dialogs/properties.rs:238
 msgid "Grayscale + alpha"
 msgstr "Gråskala + alfa"
 
-#: crates/bigiris/src/gui/dialogs/properties.rs:279
+#: crates/bigiris/src/gui/dialogs/properties.rs:275
 msgid "Fields present: {count}"
 msgstr "Fält som finns: {count}"
 
@@ -1588,9 +1582,9 @@ msgid "Remove background — Prisma"
 msgstr "Ta bort bakgrund — Prisma"
 
 #: crates/bigiris/src/gui/dialogs/remove_bg.rs:78
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:164
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:531
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:556
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:145
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:507
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:532
 msgid "Remove background"
 msgstr "Ta bort bakgrund"
 
@@ -1598,20 +1592,20 @@ msgstr "Ta bort bakgrund"
 msgid "Prisma · BiRefNet-lite"
 msgstr "Prisma · BiRefNet-lite"
 
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:96
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:91
 #: crates/bigiris/src/gui/previews.rs:250
 msgid "No image selected"
 msgstr "Ingen bild vald"
 
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:97
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:92
 msgid "Select one or more files when opening the dialog."
 msgstr "Välj en eller flera filer när dialogrutan öppnas."
 
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:127
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:111
 msgid "Model"
 msgstr "Modell"
 
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:140
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:121
 msgid ""
 "“source”_nobg.png · PNG with alpha, never overwrites (_1, _2… if it already "
 "exists)"
@@ -1619,11 +1613,11 @@ msgstr ""
 "”källa”_nobg.png · PNG med alfa, utan överskrivning (_1, _2… om den redan "
 "finns)"
 
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:147
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:128
 msgid "Remove background with local AI"
 msgstr "Ta bort bakgrund med lokal AI"
 
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:148
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:129
 msgid ""
 "The model runs entirely on your computer. No image leaves your disk — no "
 "upload, no account, no external API."
@@ -1631,32 +1625,32 @@ msgstr ""
 "Modellen körs helt på din dator. Ingen bild lämnar disken — ingen "
 "uppladdning, inget konto, inget externt API."
 
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:262
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:239
 msgid "Failed to load the model: {error}"
 msgstr "Kunde inte läsa in modellen: {error}"
 
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:354
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:379
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:331
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:355
 msgid "Saved images"
 msgstr "Sparade bilder"
 
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:380
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:356
 msgid "Failures"
 msgstr "Fel"
 
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:382
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:358
 msgid "With errors"
 msgstr "Med fel"
 
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:406
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:382
 msgid "Processing {current}/{total} — {file}"
 msgstr "Bearbetar {current}/{total} — {file}"
 
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:421
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:397
 msgid "BiRefNet-lite (MIT) · runs offline on {device}"
 msgstr "BiRefNet-lite (MIT) · körs offline på {device}"
 
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:424
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:400
 msgid "BiRefNet-lite (MIT) · runs offline on your computer"
 msgstr "BiRefNet-lite (MIT) · körs offline på din dator"
 
@@ -1686,7 +1680,7 @@ msgstr "Ändra storlek på bilder — Prisma"
 
 #: crates/bigiris/src/gui/dialogs/resize.rs:41
 #: crates/bigiris/src/gui/dialogs/resize.rs:139
-#: crates/bigiris/src/gui/dialogs/resize.rs:364
+#: crates/bigiris/src/gui/dialogs/resize.rs:353
 #: crates/bigimage-integrations/src/action.rs:79
 msgid "Resize"
 msgstr "Ändra storlek"
@@ -1748,11 +1742,11 @@ msgstr "Storleksändringsläge"
 msgid "Options"
 msgstr "Alternativ"
 
-#: crates/bigiris/src/gui/dialogs/resize.rs:285
+#: crates/bigiris/src/gui/dialogs/resize.rs:274
 msgid "Resizing…"
 msgstr "Ändrar storlek…"
 
-#: crates/bigiris/src/gui/dialogs/resize.rs:291
+#: crates/bigiris/src/gui/dialogs/resize.rs:280
 msgid "Resizing"
 msgstr "Ändrar storlek"
 
@@ -1783,11 +1777,11 @@ msgstr "270° (moturs)"
 msgid "Rotation"
 msgstr "Rotation"
 
-#: crates/bigiris/src/gui/dialogs/rotate.rs:91
+#: crates/bigiris/src/gui/dialogs/rotate.rs:81
 msgid "Rotating…"
 msgstr "Roterar…"
 
-#: crates/bigiris/src/gui/dialogs/rotate.rs:97
+#: crates/bigiris/src/gui/dialogs/rotate.rs:87
 msgid "Rotating"
 msgstr "Roterar"
 
@@ -1795,19 +1789,19 @@ msgstr "Roterar"
 msgid "Upscale — Prisma"
 msgstr "Öka upplösning — Prisma"
 
-#: crates/bigiris/src/gui/dialogs/upscale.rs:65
+#: crates/bigiris/src/gui/dialogs/upscale.rs:58
 msgid "Use AI (Real-ESRGAN)"
 msgstr "Använd AI (Real-ESRGAN)"
 
-#: crates/bigiris/src/gui/dialogs/upscale.rs:118
+#: crates/bigiris/src/gui/dialogs/upscale.rs:111
 msgid "× {factor} (size unavailable)"
 msgstr "× {factor} (storlek inte tillgänglig)"
 
-#: crates/bigiris/src/gui/dialogs/upscale.rs:240
+#: crates/bigiris/src/gui/dialogs/upscale.rs:230
 msgid "Upscaling"
 msgstr "Skalar upp"
 
-#: crates/bigiris/src/gui/dialogs/upscale.rs:255
+#: crates/bigiris/src/gui/dialogs/upscale.rs:245
 msgid "Sharper details than Lanczos3; runs on your computer"
 msgstr "Skarpare detaljer än Lanczos3; körs på din dator"
 

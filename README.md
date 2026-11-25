@@ -174,7 +174,7 @@ extensão no sistema; não é necessário executar `install-integrations --user`
 Para carregar a extensão após instalar ou atualizar, feche o Nautilus com
 `nautilus -q` e abra-o novamente.
 
-O pacote inclui catálogos para os 29 idiomas adotados pelos aplicativos
+O pacote inclui catálogos para os 30 idiomas adotados pelos aplicativos
 BigCommunity. A interface e a extensão Nautilus seguem o idioma da sessão;
 veja o inventário e o fluxo de manutenção em [CONTRIBUTING.md](CONTRIBUTING.md#i18n).
 

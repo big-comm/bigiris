@@ -184,7 +184,7 @@ fn config_dirs_from(value: Option<std::ffi::OsString>) -> Vec<PathBuf> {
 pub(crate) const GENERATED_MARKER: &str = "X-BigIris-Generated=true";
 
 /// Upper bound on how much of a candidate file we read to identify it.
-/// Our generated files are a few KiB even with 29 locales.
+/// Our generated files are a few KiB even with 30 locales.
 const MAX_IDENTIFY_BYTES: u64 = 256 * 1024;
 
 /// Is `body` a file our generators wrote? Current files carry

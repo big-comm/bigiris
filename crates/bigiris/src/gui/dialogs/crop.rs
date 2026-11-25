@@ -320,14 +320,7 @@ fn fill_crop_dialog(
     let header = adw::HeaderBar::new();
     header.set_title_widget(Some(&adw::WindowTitle::new(&gettext("Crop"), "Prisma")));
 
-    let content_h = gtk::Box::builder()
-        .orientation(gtk::Orientation::Horizontal)
-        .spacing(16)
-        .margin_top(16)
-        .margin_bottom(16)
-        .margin_start(16)
-        .margin_end(16)
-        .build();
+    let content_h = padded_box(gtk::Orientation::Horizontal, 16);
 
     // Preview is keyed off the first file — multi-file dialogs share the
     // rect and per-file validation catches out-of-bounds at apply time.
@@ -400,10 +393,7 @@ fn fill_crop_dialog(
         content_h.append(&column);
     }
 
-    let toolbar_view = adw::ToolbarView::new();
-    toolbar_view.add_top_bar(&header);
-    toolbar_view.set_content(Some(&content_h));
-    window.set_content(Some(&toolbar_view));
+    set_dialog_content(&window, &header, &content_h);
 
     // Reset button → re-center to 50% of the first image.
     {

@@ -70,10 +70,7 @@ pub(in crate::gui) fn build_compare_dialog(
     content.append(&paned);
     content.append(&hint);
 
-    let toolbar_view = adw::ToolbarView::new();
-    toolbar_view.add_top_bar(&header);
-    toolbar_view.set_content(Some(&content));
-    window.set_content(Some(&toolbar_view));
+    set_dialog_content(&window, &header, &content);
 
     // Position the divider at 50% once the window has real dimensions.
     {

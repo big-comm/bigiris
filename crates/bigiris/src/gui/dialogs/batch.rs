@@ -73,25 +73,7 @@ pub(in crate::gui) fn build_batch_dialog(
     let dest_group = adw::PreferencesGroup::builder().title(gettext("Destination")).build();
     let overwrite_row = overwrite_row();
     dest_group.add(&overwrite_row);
-    // None writes next to each source file.
-    let output_dir: Rc<RefCell<Option<PathBuf>>> = Rc::new(RefCell::new(None));
-    let folder_row = adw::ActionRow::builder()
-        .use_markup(false)
-        .title(gettext("Output folder"))
-        .subtitle(gettext("Same folder as the source file"))
-        .activatable(true)
-        .build();
-    let folder_icon = gtk::Image::from_icon_name("folder-open-symbolic");
-    folder_icon.add_css_class("dim-label");
-    folder_row.add_suffix(&folder_icon);
-    let clear_folder_btn = gtk::Button::builder()
-        .icon_name("edit-clear-symbolic")
-        .tooltip_text(gettext("Use the source file folder"))
-        .css_classes(["flat"])
-        .valign(gtk::Align::Center)
-        .visible(false)
-        .build();
-    folder_row.add_suffix(&clear_folder_btn);
+    let (folder_row, output_dir) = output_folder_row(&window);
     dest_group.add(&folder_row);
 
     let progress = gtk::ProgressBar::builder().show_text(true).text(gettext("Ready")).build();
@@ -142,10 +124,7 @@ pub(in crate::gui) fn build_batch_dialog(
     main_col.append(&status);
     main_col.append(&btn_bar);
 
-    let toolbar_view = adw::ToolbarView::new();
-    toolbar_view.add_top_bar(&header);
-    toolbar_view.set_content(Some(&main_col));
-    window.set_content(Some(&toolbar_view));
+    set_dialog_content(&window, &header, &main_col);
 
     // Shared with the worker thread: set by Cancel during a run, reset on
     // each Process.
@@ -177,26 +156,6 @@ pub(in crate::gui) fn build_batch_dialog(
         let window = window.clone();
         dialog_signal!(window, add_folder_btn, connect_clicked, move |_| {
             add_folder_to_batch(&window, &files, &summary_row);
-        });
-    }
-
-    {
-        let output_dir = output_dir.clone();
-        let folder_row = folder_row.clone();
-        let clear_btn = clear_folder_btn.clone();
-        let window = window.clone();
-        dialog_signal!(window, folder_row.clone(), connect_activated, move |_| {
-            pick_output_folder(&window, &output_dir, &folder_row, &clear_btn);
-        });
-    }
-    {
-        let output_dir = output_dir.clone();
-        let folder_row = folder_row.clone();
-        let clear_btn = clear_folder_btn.clone();
-        dialog_signal!(window, clear_folder_btn, connect_clicked, move |_| {
-            *output_dir.borrow_mut() = None;
-            folder_row.set_subtitle(&gettext("Same folder as the source file"));
-            clear_btn.set_visible(false);
         });
     }
 
@@ -369,34 +328,14 @@ fn add_files_to_batch(
     files: &Rc<RefCell<Vec<PathBuf>>>,
     row: &adw::ActionRow,
 ) {
-    let dialog = gtk::FileDialog::builder().title(gettext("Add files")).modal(true).build();
-    let filter = gtk::FileFilter::new();
-    filter.set_name(Some(&gettext("Images")));
-    for mime in [
-        "image/jpeg",
-        "image/png",
-        "image/webp",
-        "image/avif",
-        "image/gif",
-        "image/tiff",
-        "image/bmp",
-    ] {
-        filter.add_mime_type(mime);
-    }
-    let filters = gio::ListStore::new::<gtk::FileFilter>();
-    filters.append(&filter);
-    dialog.set_filters(Some(&filters));
+    let dialog = crate::gui::image_file_dialog(&gettext("Add files"));
 
     let parent = window.clone();
     let files = files.clone();
     let row = row.clone();
     dialog.open_multiple(Some(&parent), None::<&gio::Cancellable>, move |result| {
         let Ok(list) = result else { return };
-        let paths: Vec<PathBuf> = (0..list.n_items())
-            .filter_map(|i| list.item(i))
-            .filter_map(|o| o.downcast::<gio::File>().ok())
-            .filter_map(|f| f.path())
-            .collect();
+        let paths = crate::gui::local_paths(&list);
         if paths.is_empty() {
             return;
         }

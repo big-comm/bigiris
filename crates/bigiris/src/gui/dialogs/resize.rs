@@ -138,14 +138,7 @@ fn fill_resize_dialog(
 
     let (cancel_btn, apply_btn, actions) = action_buttons(&gettext("Resize"));
 
-    let content = gtk::Box::builder()
-        .orientation(gtk::Orientation::Vertical)
-        .spacing(16)
-        .margin_top(16)
-        .margin_bottom(16)
-        .margin_start(16)
-        .margin_end(16)
-        .build();
+    let content = padded_box(gtk::Orientation::Vertical, 16);
     content.append(&group_files);
     content.append(&group_mode);
     content.append(&stack);
@@ -178,10 +171,7 @@ fn fill_resize_dialog(
         None
     };
 
-    let toolbar_view = adw::ToolbarView::new();
-    toolbar_view.add_top_bar(&header);
-    toolbar_view.set_content(Some(&main_box));
-    window.set_content(Some(&toolbar_view));
+    set_dialog_content(&window, &header, &main_box);
 
     // Live preview: any change in mode / filter / dimensions re-renders.
     if let (Some(picture), Some(session)) = (preview_picture.as_ref(), preview_session.as_ref()) {

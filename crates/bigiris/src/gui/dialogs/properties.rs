@@ -102,10 +102,7 @@ fn fill_properties_window(
         }
     }
 
-    let toolbar_view = adw::ToolbarView::new();
-    toolbar_view.add_top_bar(&header);
-    toolbar_view.set_content(Some(&page));
-    window.set_content(Some(&toolbar_view));
+    set_dialog_content(&window, &header, &page);
 
     window
 }

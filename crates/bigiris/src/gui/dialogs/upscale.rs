@@ -42,14 +42,7 @@ fn fill_upscale_dialog(
     );
     header.set_title_widget(Some(&title));
 
-    let content_h = gtk::Box::builder()
-        .orientation(gtk::Orientation::Horizontal)
-        .spacing(16)
-        .margin_top(16)
-        .margin_bottom(16)
-        .margin_start(16)
-        .margin_end(16)
-        .build();
+    let content_h = padded_box(gtk::Orientation::Horizontal, 16);
 
     let natural = preview_session.as_ref().map(|s| s.natural_size()).unwrap_or((0, 0));
 
@@ -176,10 +169,7 @@ fn fill_upscale_dialog(
         dialog_signal!(window, factor_row, connect_selected_notify, move |_| refresh());
     }
 
-    let toolbar_view = adw::ToolbarView::new();
-    toolbar_view.add_top_bar(&header);
-    toolbar_view.set_content(Some(&content_h));
-    window.set_content(Some(&toolbar_view));
+    set_dialog_content(&window, &header, &content_h);
 
     close_on_click(&window, &cancel_btn);
 

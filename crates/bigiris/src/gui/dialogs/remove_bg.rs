@@ -80,33 +80,17 @@ pub(in crate::gui) fn build_remove_bg_dialog(
     )));
     let unavailable = model_unavailable(&bigimage_ai::background::MODEL);
 
-    let content = gtk::Box::builder()
-        .orientation(gtk::Orientation::Vertical)
-        .spacing(12)
-        .margin_top(16)
-        .margin_bottom(16)
-        .margin_start(16)
-        .margin_end(16)
-        .build();
+    let content = padded_box(gtk::Orientation::Vertical, 12);
 
     // Empty input — fail closed with clear message.
     if files.is_empty() {
-        let status = adw::StatusPage::builder()
-            .icon_name("dialog-warning-symbolic")
-            .title(gettext("No image selected"))
-            .description(gettext("Select one or more files when opening the dialog."))
-            .vexpand(true)
-            .build();
-        content.append(&status);
-
-        let close = gtk::Button::with_label(&gettext("Close"));
-        close_on_click(&window, &close);
-        content.append(&close);
-
-        let tv = adw::ToolbarView::new();
-        tv.add_top_bar(&header);
-        tv.set_content(Some(&content));
-        window.set_content(Some(&tv));
+        show_selection_problem(
+            &window,
+            &header,
+            &content,
+            &gettext("No image selected"),
+            &gettext("Select one or more files when opening the dialog."),
+        );
         return window;
     }
 
@@ -162,10 +146,7 @@ pub(in crate::gui) fn build_remove_bg_dialog(
     apply_btn.set_sensitive(unavailable.is_none());
     content.append(&actions_box);
 
-    let tv = adw::ToolbarView::new();
-    tv.add_top_bar(&header);
-    tv.set_content(Some(&content));
-    window.set_content(Some(&tv));
+    set_dialog_content(&window, &header, &content);
 
     // Shared by the UI, the worker and the close handler: closing the window
     // (X, Esc, Cancel) stops the remaining files and keeps the Compare window

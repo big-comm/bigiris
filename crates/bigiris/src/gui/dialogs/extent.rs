@@ -63,14 +63,7 @@ fn fill_extent_dialog(
         &gettext("Prisma · no cropping"),
     )));
 
-    let content_h = gtk::Box::builder()
-        .orientation(gtk::Orientation::Horizontal)
-        .spacing(16)
-        .margin_top(16)
-        .margin_bottom(16)
-        .margin_start(16)
-        .margin_end(16)
-        .build();
+    let content_h = padded_box(gtk::Orientation::Horizontal, 16);
 
     let natural = preview_session.as_ref().map(|s| s.natural_size()).unwrap_or((1, 1));
 
@@ -182,10 +175,7 @@ fn fill_extent_dialog(
         None
     };
 
-    let toolbar_view = adw::ToolbarView::new();
-    toolbar_view.add_top_bar(&header);
-    toolbar_view.set_content(Some(&content_h));
-    window.set_content(Some(&toolbar_view));
+    set_dialog_content(&window, &header, &content_h);
 
     // Shared closure that reads every control and produces an ExtentOptions
     // (or None if the form is in an invalid state — e.g. malformed hex).

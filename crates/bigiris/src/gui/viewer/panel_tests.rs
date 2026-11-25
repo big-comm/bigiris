@@ -4,28 +4,7 @@
 //! `GSETTINGS_BACKEND=memory cargo test -p bigiris --features "gui ai"
 //! viewer_edit_panel -- --ignored --test-threads=1`
 use super::super::*;
-
-fn settle(context: &glib::MainContext, millis: u64) {
-    let until = std::time::Instant::now() + Duration::from_millis(millis);
-    while std::time::Instant::now() < until {
-        while context.pending() {
-            context.iteration(false);
-        }
-        std::thread::sleep(Duration::from_millis(5));
-    }
-}
-
-#[track_caller]
-fn wait(context: &glib::MainContext, what: &str, condition: &dyn Fn() -> bool) {
-    let deadline = std::time::Instant::now() + Duration::from_secs(30);
-    while !condition() {
-        while context.pending() {
-            context.iteration(false);
-        }
-        assert!(std::time::Instant::now() < deadline, "timed out: {what}");
-        std::thread::sleep(Duration::from_millis(5));
-    }
-}
+use super::gui_tests::{settle, wait};
 
 fn action_enabled(window: &adw::ApplicationWindow, name: &str) -> bool {
     window.lookup_action(name).unwrap().is_enabled()

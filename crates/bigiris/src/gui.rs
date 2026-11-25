@@ -4318,8 +4318,9 @@ fn open_batch_folder_dialog(window: &adw::ApplicationWindow) {
 
 /// Start page file chooser: the chosen images open in a new viewer process,
 /// the same path as files given on the command line.
-fn open_files_dialog(window: &adw::ApplicationWindow) {
-    let dialog = gtk::FileDialog::builder().title(gettext("Select images")).modal(true).build();
+/// A modal file chooser that offers the image formats the viewer opens.
+pub(in crate::gui) fn image_file_dialog(title: &str) -> gtk::FileDialog {
+    let dialog = gtk::FileDialog::builder().title(title).modal(true).build();
     let filter = gtk::FileFilter::new();
     filter.set_name(Some(&gettext("Images")));
     for mime in [
@@ -4336,16 +4337,26 @@ fn open_files_dialog(window: &adw::ApplicationWindow) {
     let filters = gio::ListStore::new::<gtk::FileFilter>();
     filters.append(&filter);
     dialog.set_filters(Some(&filters));
+    dialog
+}
+
+/// The local paths of a file chooser's result; remote entries have none.
+pub(in crate::gui) fn local_paths(files: &gio::ListModel) -> Vec<PathBuf> {
+    (0..files.n_items())
+        .filter_map(|i| files.item(i))
+        .filter_map(|o| o.downcast::<gio::File>().ok())
+        .filter_map(|f| f.path())
+        .collect()
+}
+
+fn open_files_dialog(window: &adw::ApplicationWindow) {
+    let dialog = image_file_dialog(&gettext("Select images"));
 
     let window = window.clone();
     let parent = window.clone();
     dialog.open_multiple(Some(&parent), None::<&gio::Cancellable>, move |result| {
         let Ok(files) = result else { return };
-        let paths: Vec<PathBuf> = (0..files.n_items())
-            .filter_map(|i| files.item(i))
-            .filter_map(|o| o.downcast::<gio::File>().ok())
-            .filter_map(|f| f.path())
-            .collect();
+        let paths = local_paths(&files);
         if paths.is_empty() {
             return;
         }

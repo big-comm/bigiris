@@ -33,32 +33,16 @@ pub(in crate::gui) fn build_animate_dialog(
     header
         .set_title_widget(Some(&adw::WindowTitle::new(&gettext("Create animated GIF"), "Prisma")));
 
-    let content = gtk::Box::builder()
-        .orientation(gtk::Orientation::Vertical)
-        .spacing(16)
-        .margin_top(16)
-        .margin_bottom(16)
-        .margin_start(16)
-        .margin_end(16)
-        .build();
+    let content = padded_box(gtk::Orientation::Vertical, 16);
 
     if files.len() < 2 {
-        let status = adw::StatusPage::builder()
-            .icon_name("dialog-warning-symbolic")
-            .title(gettext("Select at least 2 images"))
-            .description(gettext("Select multiple files to build the animation."))
-            .vexpand(true)
-            .build();
-        content.append(&status);
-
-        let close = gtk::Button::with_label(&gettext("Close"));
-        close_on_click(&window, &close);
-        content.append(&close);
-
-        let tv = adw::ToolbarView::new();
-        tv.add_top_bar(&header);
-        tv.set_content(Some(&content));
-        window.set_content(Some(&tv));
+        show_selection_problem(
+            &window,
+            &header,
+            &content,
+            &gettext("Select at least 2 images"),
+            &gettext("Select multiple files to build the animation."),
+        );
         return window;
     }
 
@@ -111,10 +95,7 @@ pub(in crate::gui) fn build_animate_dialog(
     let (cancel_btn, apply_btn, actions_box) = action_buttons(&gettext("Create GIF"));
     content.append(&actions_box);
 
-    let tv = adw::ToolbarView::new();
-    tv.add_top_bar(&header);
-    tv.set_content(Some(&content));
-    window.set_content(Some(&tv));
+    set_dialog_content(&window, &header, &content);
 
     close_on_click(&window, &cancel_btn);
 

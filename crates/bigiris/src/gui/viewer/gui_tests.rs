@@ -6,7 +6,7 @@
 //! viewer_review_fixes -- --ignored --test-threads=1`
 use super::super::*;
 
-fn settle(context: &glib::MainContext, millis: u64) {
+pub(super) fn settle(context: &glib::MainContext, millis: u64) {
     let until = std::time::Instant::now() + Duration::from_millis(millis);
     while std::time::Instant::now() < until {
         while context.pending() {
@@ -16,8 +16,9 @@ fn settle(context: &glib::MainContext, millis: u64) {
     }
 }
 
-fn wait(context: &glib::MainContext, what: &str, condition: &dyn Fn() -> bool) {
-    let deadline = std::time::Instant::now() + Duration::from_secs(15);
+#[track_caller]
+pub(super) fn wait(context: &glib::MainContext, what: &str, condition: &dyn Fn() -> bool) {
+    let deadline = std::time::Instant::now() + Duration::from_secs(30);
     while !condition() {
         while context.pending() {
             context.iteration(false);

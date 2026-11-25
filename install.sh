@@ -121,7 +121,7 @@ elif command -v pacman >/dev/null; then
     for p in birefnet-native realesrgan-native scunet-native lama-native; do
         pacman -Qq "$p" >/dev/null 2>&1 || ai+=("$p")
     done
-    if [ "${#ai[@]}" -gt 0 ]; then
+    if (( ${#ai[@]} > 0 )); then
         warn "Ferramentas de IA opcionais sem pesos: ${ai[*]}"
         warn "Para usá-las: sudo pacman -S ${ai[*]}"
     fi

@@ -5,7 +5,7 @@
   <project_license>GPL-3.0-or-later</project_license>
   <name>BigIris</name>
   <summary>Modern image viewer and converter</summary>
-  <summary xml:lang="bg">Модерна програма за разглеждане и конвертиране на изображения</summary>
+  <summary xml:lang="bg">Модерна програма за преглед и конвертиране на изображения</summary>
   <summary xml:lang="cs">Moderní prohlížeč a konvertor obrázků</summary>
   <summary xml:lang="da">Moderne billedfremviser og -konverter</summary>
   <summary xml:lang="de">Moderner Bildbetrachter und -konverter</summary>

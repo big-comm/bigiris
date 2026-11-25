@@ -22,7 +22,7 @@ msgstr "BigIris"
 
 #: crates/bigiris/src/gui.rs:745 crates/bigiris/src/gui/previews.rs:240
 msgid "Não foi possível abrir a imagem"
-msgstr "Не можах да отворя изображението"
+msgstr "Изображението не може да бъде отворено"
 
 #: crates/bigiris/src/gui.rs:998 crates/bigiris/src/gui.rs:3593
 #: crates/bigiris/src/gui/viewer/crop.rs:600
@@ -39,19 +39,19 @@ msgstr "Изображението има незаписани промени."
 
 #: crates/bigiris/src/gui.rs:1012
 msgid "Continuar editando"
-msgstr "Продължете да редактирате"
+msgstr "Продължаване на редактирането"
 
 #: crates/bigiris/src/gui.rs:1013
 msgid "Descartar"
-msgstr "Отхвърляне на промените"
+msgstr "Отхвърляне"
 
 #: crates/bigiris/src/gui.rs:1083
 msgid "Imagem anterior"
-msgstr "« Предишно изображение"
+msgstr "Предишно изображение"
 
 #: crates/bigiris/src/gui.rs:1084
 msgid "Próxima imagem"
-msgstr "Следващо изображение »"
+msgstr "Следващо изображение"
 
 #: crates/bigiris/src/gui.rs:1100
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:292
@@ -76,7 +76,7 @@ msgstr "Намаляване"
 
 #: crates/bigiris/src/gui.rs:1129 crates/bigiris/src/gui.rs:3952
 msgid "Ajustar à janela"
-msgstr "Поставете на прозореца"
+msgstr "Побиране в прозореца"
 
 #: crates/bigiris/src/gui.rs:1130 crates/bigiris/src/gui.rs:3953
 msgid "Tamanho real (100%)"
@@ -84,11 +84,11 @@ msgstr "Действителен размер (100%)"
 
 #: crates/bigiris/src/gui.rs:1139 crates/bigiris/src/gui.rs:3949
 msgid "Zoom"
-msgstr "Мащабиране"
+msgstr "Мащаб"
 
 #: crates/bigiris/src/gui.rs:1143
 msgid "Aproximar"
-msgstr "Увеличи мащаба"
+msgstr "Увеличаване"
 
 #: crates/bigiris/src/gui.rs:2189
 msgid "Slideshow: pausado"
@@ -136,8 +136,8 @@ msgid ""
 "O arquivo será sobrescrito. JPEG é recodificado a cada gravação; isso pode "
 "reduzir a qualidade."
 msgstr ""
-"Файлът ще бъде презаписан. се прекодира всеки път, когато се записва; това "
-"може да намали качеството. (JPEG)"
+"Файлът ще бъде презаписан. JPEG се прекодира при всяко записване; това може "
+"да намали качеството."
 
 #: crates/bigiris/src/gui.rs:2604
 msgid "O arquivo será sobrescrito."
@@ -177,7 +177,7 @@ msgstr "Запазване"
 
 #: crates/bigiris/src/gui.rs:2664
 msgid "Salvo"
-msgstr "Файлът е запазен."
+msgstr "Запазено"
 
 #: crates/bigiris/src/gui.rs:2743
 msgid ""
@@ -212,7 +212,7 @@ msgstr "Запазването не е възможно"
 
 #: crates/bigiris/src/gui.rs:2762
 msgid "Manter alterações"
-msgstr "Запазване на промените"
+msgstr "Задържане на промените"
 
 #: crates/bigiris/src/gui.rs:2763
 msgid "Descartar alterações"
@@ -248,7 +248,8 @@ msgstr "Запазено. Някои метаданни не можаха да �
 
 #: crates/bigiris/src/gui.rs:3132
 msgid "Salve ou desfaça as alterações antes de navegar"
-msgstr "Записване или отмяна на промените преди навигация"
+msgstr ""
+"Запазете или отменете промените, преди да преминете към друго изображение"
 
 #: crates/bigiris/src/gui.rs:3215 crates/bigiris/src/gui.rs:4107
 #: crates/bigiris/src/gui.rs:5157 crates/bigiris/src/gui.rs:5292
@@ -270,7 +271,7 @@ msgstr "Печат…"
 #: crates/bigiris/src/gui.rs:3221 crates/bigiris/src/gui.rs:4119
 #: crates/bigiris/src/gui.rs:5157
 msgid "Processar uma pasta…"
-msgstr "Обработка на тази папка…"
+msgstr "Обработка на папка…"
 
 #: crates/bigiris/src/gui.rs:3227
 msgid "Editar imagem"
@@ -298,7 +299,7 @@ msgstr "Клавишни комбинации"
 
 #: crates/bigiris/src/gui.rs:3238
 msgid "Sobre o BigIris"
-msgstr "Всичко за БигИрис (BigIris)"
+msgstr "Относно BigIris"
 
 #: crates/bigiris/src/gui.rs:3243
 msgid "Menu principal"
@@ -328,7 +329,7 @@ msgstr "Подготовката за печат е неуспешна"
 
 #: crates/bigiris/src/gui.rs:3748
 msgid "Não foi possível imprimir"
-msgstr "Не можах да отпечатам"
+msgstr "Отпечатването не е възможно"
 
 #: crates/bigiris/src/gui.rs:3751 crates/bigiris/src/gui.rs:3883
 #: crates/bigiris/src/gui/dialogs/animate.rs:53
@@ -366,11 +367,11 @@ msgstr "Навигация"
 
 #: crates/bigiris/src/gui.rs:3943
 msgid "Anterior / próximo"
-msgstr "Предишна / следваща"
+msgstr "Предишно / следващо"
 
 #: crates/bigiris/src/gui.rs:3944
 msgid "Primeiro / último"
-msgstr "Първи / последен"
+msgstr "Първо / последно"
 
 #: crates/bigiris/src/gui.rs:3945
 msgid "Slideshow (auto-avanço)"
@@ -394,7 +395,7 @@ msgstr "На цял екран"
 
 #: crates/bigiris/src/gui.rs:3961
 msgid "Modo teatro"
-msgstr "Режим на театър"
+msgstr "Театрален режим"
 
 #: crates/bigiris/src/gui.rs:3962
 msgid "Fita de miniaturas"
@@ -406,7 +407,7 @@ msgstr "RGB хистограма"
 
 #: crates/bigiris/src/gui.rs:3964
 msgid "Fixar barras visíveis"
-msgstr "Поддържане на контролите видими"
+msgstr "Без скриване на лентите"
 
 #: crates/bigiris/src/gui.rs:3965
 msgid "Sair da tela cheia ou fechar"
@@ -461,7 +462,7 @@ msgstr "Печат"
 #: crates/bigiris/src/gui/dialogs/properties.rs:38
 #: crates/bigiris/src/gui/dialogs/properties.rs:80
 msgid "Propriedades"
-msgstr "Настройки"
+msgstr "Свойства"
 
 #: crates/bigiris/src/gui.rs:3995
 msgid "Ajuda"
@@ -488,16 +489,16 @@ msgid ""
 "Visualizador e conversor de imagens para Linux. Rápido, acessível por "
 "teclado e integrado ao gerenciador de arquivos."
 msgstr ""
-"Преглед на изображения и конвертор за Бърз, достъпен от клавиатурата и "
-"интегриран с вашия файлов мениджър."
+"Програма за преглед и конвертиране на изображения за Linux. Бърза, достъпна "
+"от клавиатурата и интегрирана с файловия мениджър."
 
 #: crates/bigiris/src/gui.rs:4093
 msgid "Abra suas imagens"
-msgstr "Отваряне на вашите изображения"
+msgstr "Отворете своите изображения"
 
 #: crates/bigiris/src/gui.rs:4098
 msgid "Arraste imagens para cá ou cole arquivos com Ctrl+V."
-msgstr "Пуснете изображения тук или поставете файлове с клавишите. (Ctrl+V)"
+msgstr "Пуснете изображения тук или поставете файлове с Ctrl+V."
 
 #: crates/bigiris/src/gui.rs:4141
 msgid "Selecionar pasta com imagens"
@@ -540,15 +541,15 @@ msgstr "Обработката приключи неочаквано. Опита
 
 #: crates/bigiris/src/gui/batch_runner.rs:311
 msgid "falha inesperada no worker"
-msgstr "неочаквана грешка в worker"
+msgstr "неочаквана грешка в работен процес"
 
 #: crates/bigiris/src/gui/batch_runner.rs:359
 msgid "um worker terminou inesperadamente"
-msgstr "един worker приключи неочаквано"
+msgstr "работен процес приключи неочаквано"
 
 #: crates/bigiris/src/gui/dialogs/adjust.rs:20
 msgid "Ajustar cores — Prisma"
-msgstr "Настройване на цветовете — Призма (Prisma)"
+msgstr "Регулиране на цветовете — Prisma"
 
 #: crates/bigiris/src/gui/dialogs/adjust.rs:35
 #: crates/bigimage-integrations/src/action.rs:91
@@ -563,7 +564,7 @@ msgstr "Яркост"
 
 #: crates/bigiris/src/gui/dialogs/adjust.rs:39
 msgid "-100 escuro · 0 neutro · +100 claro"
-msgstr "-100 тъмно · 0 неутрално · +101 светло"
+msgstr "-100 тъмно · 0 неутрално · +100 светло"
 
 #: crates/bigiris/src/gui/dialogs/adjust.rs:43
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:335
@@ -572,7 +573,7 @@ msgstr "Контраст"
 
 #: crates/bigiris/src/gui/dialogs/adjust.rs:44
 msgid "-100 plano · 0 neutro · +100 agressivo"
-msgstr "-100 плосък · 0 неутрален · +101 силен"
+msgstr "-100 плосък · 0 неутрален · +100 силен"
 
 #: crates/bigiris/src/gui/dialogs/adjust.rs:48
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:336
@@ -581,7 +582,7 @@ msgstr "Насищане"
 
 #: crates/bigiris/src/gui/dialogs/adjust.rs:49
 msgid "-100 cinza · 0 neutro · +100 vibrante"
-msgstr "-100 сиво · 0 неутрално · +101 ярко"
+msgstr "-100 сиво · 0 неутрално · +100 ярко"
 
 #: crates/bigiris/src/gui/dialogs/adjust.rs:53
 msgid "Gamma"
@@ -623,7 +624,7 @@ msgstr "Прилагане"
 
 #: crates/bigiris/src/gui/dialogs/adjust.rs:190
 msgid "Ajustando…"
-msgstr "Регулиране на…"
+msgstr "Регулиране…"
 
 #: crates/bigiris/src/gui/dialogs/adjust.rs:196
 msgid "Ajustando"
@@ -631,11 +632,11 @@ msgstr "Регулиране"
 
 #: crates/bigiris/src/gui/dialogs/animate.rs:29
 msgid "Criar GIF animado — Prisma"
-msgstr "Създаване на анимирани файлове — Призма (Prisma) (GIF)"
+msgstr "Създаване на анимиран GIF — Prisma"
 
 #: crates/bigiris/src/gui/dialogs/animate.rs:33
 msgid "Criar GIF animado"
-msgstr "Създаване на анимирани файлове (GIF)"
+msgstr "Създаване на анимиран GIF"
 
 #: crates/bigiris/src/gui/dialogs/animate.rs:47
 msgid "Selecione pelo menos 2 imagens"
@@ -651,11 +652,11 @@ msgstr "Забавяне на кадъра (мс)"
 
 #: crates/bigiris/src/gui/dialogs/animate.rs:67
 msgid "100 ≈ 10 fps · 40 ≈ 25 fps · 1000 = 1 s"
-msgstr "100 ≈ 12 fps · 40 = 25 fps· 1, 000 = 1 s"
+msgstr "100 ≈ 10 кадъра/с · 40 ≈ 25 кадъра/с · 1000 = 1 с"
 
 #: crates/bigiris/src/gui/dialogs/animate.rs:72
 msgid "Loop"
-msgstr "Повтаряне на анимацията"
+msgstr "Повторение"
 
 #: crates/bigiris/src/gui/dialogs/animate.rs:74
 msgid "Infinito (padrão)"
@@ -663,7 +664,7 @@ msgstr "Безкрайно (по подразбиране)"
 
 #: crates/bigiris/src/gui/dialogs/animate.rs:75
 msgid "Uma vez"
-msgstr "Веднъж."
+msgstr "Веднъж"
 
 #: crates/bigiris/src/gui/dialogs/animate.rs:76
 msgid "2 vezes"
@@ -693,11 +694,11 @@ msgstr "Изходен файл (.gif)"
 
 #: crates/bigiris/src/gui/dialogs/animate.rs:98
 msgid "Quadros"
-msgstr "Рамки"
+msgstr "Кадри"
 
 #: crates/bigiris/src/gui/dialogs/animate.rs:111
 msgid "Criar GIF"
-msgstr "Създаване на файл (GIF)"
+msgstr "Създаване на GIF"
 
 #: crates/bigiris/src/gui/dialogs/animate.rs:184
 msgid "Substituir arquivo existente?"
@@ -721,7 +722,7 @@ msgstr "Изходният файл не може да бъде един от к
 
 #: crates/bigiris/src/gui/dialogs/animate.rs:255
 msgid "Montando GIF…"
-msgstr "Изграждане на ГИФ… (GIF)"
+msgstr "Създаване на GIF…"
 
 #: crates/bigiris/src/gui/dialogs/animate.rs:297
 #: crates/bigiris/src/gui/dialogs/batch.rs:102
@@ -739,11 +740,11 @@ msgstr "Неуспех"
 
 #: crates/bigiris/src/gui/dialogs/batch.rs:35
 msgid "Prisma — Lote"
-msgstr "Prisma – Партида"
+msgstr "Prisma — Пакетна обработка"
 
 #: crates/bigiris/src/gui/dialogs/batch.rs:39
 msgid "Conversão em lote"
-msgstr "Конвертиране на партиди"
+msgstr "Пакетно конвертиране"
 
 #: crates/bigiris/src/gui/dialogs/batch.rs:46
 msgid "Arquivos"
@@ -766,7 +767,7 @@ msgstr "Преобразуване"
 #: crates/bigiris/src/gui/dialogs/batch.rs:77
 #: crates/bigiris/src/gui/dialogs/convert.rs:52
 msgid "Destino"
-msgstr "Дестинация"
+msgstr "Местоназначение"
 
 #: crates/bigiris/src/gui/dialogs/batch.rs:84
 #: crates/bigiris/src/gui/dialogs/convert.rs:60
@@ -783,15 +784,15 @@ msgstr "Същата папка като файла източник"
 #: crates/bigiris/src/gui/dialogs/batch.rs:93
 #: crates/bigiris/src/gui/dialogs/convert.rs:69
 msgid "Usar a mesma pasta do arquivo de origem"
-msgstr "Използване на папката с файловете източник"
+msgstr "Използване на папката на файла източник"
 
 #: crates/bigiris/src/gui/dialogs/batch.rs:108
 msgid "Aguardando. Clique em Processar para iniciar."
-msgstr "Кликнете върху Процес, за да започнете."
+msgstr "Изчакване. Натиснете „Обработка“, за да започнете."
 
 #: crates/bigiris/src/gui/dialogs/batch.rs:119
 msgid "Processar"
-msgstr "Изображения на процеса"
+msgstr "Обработка"
 
 #: crates/bigiris/src/gui/dialogs/batch.rs:245
 msgid "Adicione ao menos uma imagem para processar."
@@ -799,11 +800,11 @@ msgstr "Добавете поне едно изображение за обра�
 
 #: crates/bigiris/src/gui/dialogs/batch.rs:257
 msgid "Iniciando…"
-msgstr "Започва се…"
+msgstr "Стартиране…"
 
 #: crates/bigiris/src/gui/dialogs/batch.rs:258
 msgid "Processando…"
-msgstr "Обработване на заявката…"
+msgstr "Обработване…"
 
 #: crates/bigiris/src/gui/dialogs/batch.rs:302
 msgid ""
@@ -836,7 +837,7 @@ msgstr "Добавяне на папка с изображения"
 
 #: crates/bigiris/src/gui/dialogs/compare.rs:31
 msgid "Comparar imagens — Íris"
-msgstr "Сравнение на изображения — Ирис"
+msgstr "Сравнение на изображения — Iris"
 
 #: crates/bigiris/src/gui/dialogs/compare.rs:43
 msgid "Comparar imagens"
@@ -848,7 +849,7 @@ msgstr "Преди: {before}  ·  След: {after}"
 
 #: crates/bigiris/src/gui/dialogs/compare.rs:69
 msgid "Arraste o divisor para comparar · Esc fecha"
-msgstr "Плъзнете разделителя, за да сравните · за да затворите"
+msgstr "Плъзнете разделителя, за да сравните · Esc затваря"
 
 #: crates/bigiris/src/gui/dialogs/compare.rs:157
 msgid "Não foi possível abrir esta imagem"
@@ -856,22 +857,22 @@ msgstr "Това изображение не може да бъде отворе
 
 #: crates/bigiris/src/gui/dialogs/convert.rs:20
 msgid "Converter imagens — Prisma"
-msgstr "Конвертиране на изображения — Призма (Prisma)"
+msgstr "Конвертиране на изображения — Prisma"
 
 #: crates/bigiris/src/gui/dialogs/convert.rs:32
 #: crates/bigiris/src/gui/dialogs/convert.rs:79
 #: crates/bigimage-integrations/src/action.rs:75
 #: data/nautilus/bigiris-menu.py:100
 msgid "Converter"
-msgstr "Конвертиране на изображения"
+msgstr "Конвертиране"
 
 #: crates/bigiris/src/gui/dialogs/convert.rs:85
 msgid ""
 "Esta imagem tem transparência — JPEG perde o canal alfa. Considere PNG ou "
 "WebP."
 msgstr ""
-"Това изображение има прозрачност — изпуска алфа канала. Помислете за това. "
-"(PNG) (JPEG) (WebP)"
+"Това изображение има прозрачност — JPEG премахва алфа канала. По-добре "
+"изберете PNG или WebP."
 
 #: crates/bigiris/src/gui/dialogs/convert.rs:106
 msgid ""
@@ -879,12 +880,11 @@ msgid ""
 "publicamente — nosso pipeline remove o EXIF automaticamente no re-encode."
 msgstr ""
 "Това изображение съдържа GPS (местоположение) в EXIF. Внимавайте при "
-"публично споделяне — нашият pipeline премахва EXIF автоматично при "
-"прекодиране."
+"публично споделяне — при прекодиране програмата премахва EXIF автоматично."
 
 #: crates/bigiris/src/gui/dialogs/convert.rs:195
 msgid "Convertendo…"
-msgstr "Преобразуване на…"
+msgstr "Преобразуване…"
 
 #: crates/bigiris/src/gui/dialogs/convert.rs:201
 msgid "Convertendo"
@@ -901,20 +901,20 @@ msgstr ""
 
 #: crates/bigiris/src/gui/dialogs/crop.rs:309
 msgid "Recortar — Prisma"
-msgstr "Изрязване — призма (Prisma)"
+msgstr "Изрязване — Prisma"
 
 #: crates/bigiris/src/gui/dialogs/crop.rs:321
 #: crates/bigiris/src/gui/dialogs/crop.rs:389
 #: crates/bigiris/src/gui/viewer/crop.rs:375
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:326
 msgid "Recortar"
-msgstr "Изрязване на изображението"
+msgstr "Изрязване"
 
 #: crates/bigiris/src/gui/dialogs/crop.rs:348
 #: crates/bigiris/src/gui/dialogs/extent.rs:96
 #: crates/bigiris/src/gui/dialogs/upscale.rs:86
 msgid "Tamanho original"
-msgstr "Оригинален размер 1"
+msgstr "Оригинален размер"
 
 #: crates/bigiris/src/gui/dialogs/crop.rs:349
 #: crates/bigiris/src/gui/dialogs/extent.rs:97
@@ -924,21 +924,21 @@ msgstr "Първи файл"
 
 #: crates/bigiris/src/gui/dialogs/crop.rs:355
 msgid "X (px)"
-msgstr "X (пиксели)"
+msgstr "X (px)"
 
 #: crates/bigiris/src/gui/dialogs/crop.rs:359
 msgid "Y (px)"
-msgstr "Y (пиксели)"
+msgstr "Y (px)"
 
 #: crates/bigiris/src/gui/dialogs/crop.rs:363
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:347
 msgid "Largura (px)"
-msgstr "Ширина (в пиксели)"
+msgstr "Ширина (px)"
 
 #: crates/bigiris/src/gui/dialogs/crop.rs:367
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:348
 msgid "Altura (px)"
-msgstr "Височина (мм)"
+msgstr "Височина (px)"
 
 #: crates/bigiris/src/gui/dialogs/crop.rs:388
 msgid "Centro 50%"
@@ -1075,7 +1075,7 @@ msgstr "Премахване на шума (ИИ)"
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:383
 #: crates/bigiris/src/gui/dialogs/upscale.rs:97
 msgid "Fator"
-msgstr "Фактор"
+msgstr "Коефициент"
 
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:384
 #: crates/bigiris/src/gui/dialogs/upscale.rs:40
@@ -1092,7 +1092,7 @@ msgstr "Запазване като…"
 
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:424
 msgid "Qualidade ao salvar como"
-msgstr "Качество при Запазване като"
+msgstr "Качество при „Запазване като“"
 
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:978
 msgid "Recorta o objeto principal com BiRefNet-lite, no seu computador"
@@ -1131,7 +1131,7 @@ msgstr "Премахване на шума…"
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:1619
 #: crates/bigiris/src/gui/dialogs/upscale.rs:197
 msgid "Aumentando…"
-msgstr "Мащабиране нагоре…"
+msgstr "Увеличаване на резолюцията…"
 
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:1649
 msgid "{name}-editada"
@@ -1143,7 +1143,7 @@ msgstr "Запазване като"
 
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:1682
 msgid "Para alterar o próprio arquivo, use Salvar."
-msgstr "За да промените самия файл, използвайте Запазване."
+msgstr "За да промените самия файл, използвайте „Запазване“."
 
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:1719
 msgid "Cópia salva: {name}"
@@ -1159,15 +1159,15 @@ msgstr ""
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:12
 msgid "YouTube community (1:1)"
-msgstr "Общност (1:1) (YouTube)"
+msgstr "Общност в YouTube (1:1)"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:13
 msgid "Instagram feed (4:5)"
-msgstr "Инстаграм емисия (4:5) (Instagram)"
+msgstr "Емисия в Instagram (4:5)"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:14
 msgid "Stories / Shorts (9:16)"
-msgstr "Разкази / късометражни филми (9:16)"
+msgstr "Stories / Shorts (9:16)"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:15
 msgid "Widescreen (16:9)"
@@ -1175,19 +1175,19 @@ msgstr "Широк екран (16:9)"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:16
 msgid "Personalizado…"
-msgstr "Персонализирани…"
+msgstr "Друго…"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:22
 msgid "Preto suave (#0d0e12)"
-msgstr "Меко черно (#0д0е12)"
+msgstr "Меко черно (#0d0e12)"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:23
 msgid "Preto puro (#000000)"
-msgstr "Чисто черно (#000 001)"
+msgstr "Чисто черно (#000000)"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:24
 msgid "Branco (#ffffff)"
-msgstr "Бял (# ffffff)"
+msgstr "Бяло (#ffffff)"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:25
 msgid "Transparente"
@@ -1195,7 +1195,7 @@ msgstr "Прозрачен"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:26
 msgid "Personalizada (hex)"
-msgstr "По избор (шестнадесетично)"
+msgstr "Персонализиран (hex)"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:33
 msgid "Centro"
@@ -1203,19 +1203,19 @@ msgstr "Център"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:33
 msgid "Topo"
-msgstr "Горен ръб"
+msgstr "Горе"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:33
 msgid "Base"
-msgstr "Долният ръб"
+msgstr "Долу"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:49
 msgid "Letterbox — Prisma"
-msgstr "Пощенска кутия — Призма (Prisma)"
+msgstr "Вписване с ленти — Prisma"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:62
 msgid "Letterbox"
-msgstr "Letterbox"
+msgstr "Вписване с ленти"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:63
 msgid "Prisma · sem corte"
@@ -1228,8 +1228,9 @@ msgid ""
 "original é centralizada e o resto é preenchido com a cor escolhida."
 msgstr ""
 "Разширява платното около изображението, за да се побере във фиксиран формат "
-"(публикации в Оригиналното изображение е центрирано, а останалата област е "
-"запълнена с избрания цвят. (Instagram) (YouTube)"
+"(публикации в YouTube, емисия в Instagram, Stories…), без да се изрязва нито "
+"един пиксел. Оригиналното изображение се центрира, а останалата област се "
+"запълва с избрания цвят."
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:104
 msgid "Proporção alvo"
@@ -1237,11 +1238,11 @@ msgstr "Целево съотношение на страните"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:111
 msgid "Razão W"
-msgstr "Съотношение на ширината"
+msgstr "Съотношение: ширина"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:114
 msgid "Razão H"
-msgstr "Съотношение на височината"
+msgstr "Съотношение: височина"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:124
 msgid "Cor de fundo"
@@ -1249,7 +1250,7 @@ msgstr "Цвят за фон"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:130
 msgid "Hex (#RRGGBB)"
-msgstr "Шестнадесетично число (# RRGGBB)"
+msgstr "Hex (#RRGGBB)"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:138
 msgid "Posição da imagem"
@@ -1258,7 +1259,7 @@ msgstr "Позиция на изображението"
 #: crates/bigiris/src/gui/dialogs/extent.rs:144
 #: crates/bigiris/src/gui/dialogs/upscale.rs:103
 msgid "Destino previsto"
-msgstr "Предвидена дестинация"
+msgstr "Очаквано местоназначение"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:171
 msgid "Estender"
@@ -1278,14 +1279,14 @@ msgstr "Разширяване"
 
 #: crates/bigiris/src/gui/dialogs/flip.rs:20
 msgid "Espelhar imagens — Prisma"
-msgstr "Обръщане на изображения — Призма (Prisma)"
+msgstr "Огледално обръщане на изображения — Prisma"
 
 #: crates/bigiris/src/gui/dialogs/flip.rs:24
 #: crates/bigiris/src/gui/dialogs/flip.rs:47
 #: crates/bigimage-integrations/src/action.rs:87
 #: data/nautilus/bigiris-menu.py:142
 msgid "Espelhar"
-msgstr "Обърни изображението"
+msgstr "Огледално обръщане"
 
 #: crates/bigiris/src/gui/dialogs/flip.rs:26
 msgid "Horizontal (esquerda ↔ direita)"
@@ -1301,11 +1302,11 @@ msgstr "Ос"
 
 #: crates/bigiris/src/gui/dialogs/flip.rs:87
 msgid "Espelhando…"
-msgstr "Преобръщам…"
+msgstr "Огледално обръщане…"
 
 #: crates/bigiris/src/gui/dialogs/flip.rs:93
 msgid "Espelhando"
-msgstr "Преобръщане"
+msgstr "Огледално обръщане"
 
 #: crates/bigiris/src/gui/dialogs/mod.rs:64
 #: crates/bigimage-integrations/src/action.rs:151
@@ -1345,7 +1346,7 @@ msgstr "GIF"
 
 #: crates/bigiris/src/gui/dialogs/mod.rs:71
 msgid "ICO (até 256 × 256)"
-msgstr "Размер на изображението: 256 × 200 пиксела"
+msgstr "ICO (до 256 × 256)"
 
 #: crates/bigiris/src/gui/dialogs/mod.rs:72
 msgid "PNM (Netpbm)"
@@ -1423,7 +1424,7 @@ msgstr "Добавяне на суфикс (_1, _2, …)"
 #: crates/bigiris/src/gui/dialogs/mod.rs:190
 #: crates/bigiris/src/gui/dialogs/mod.rs:205
 msgid "Formato de destino"
-msgstr "Формат на целта"
+msgstr "Целеви формат"
 
 #: crates/bigiris/src/gui/dialogs/mod.rs:201
 msgid "Manter o formato original"
@@ -1526,11 +1527,11 @@ msgstr "{orientation} · използвайте Завъртане ▸ Авто�
 
 #: crates/bigiris/src/gui/dialogs/properties.rs:242
 msgid "Tons de cinza"
-msgstr "Нива на сивото"
+msgstr "Нюанси на сивото"
 
 #: crates/bigiris/src/gui/dialogs/properties.rs:243
 msgid "Tons de cinza + alfa"
-msgstr "Нива на сивото + алфа"
+msgstr "Нюанси на сивото + алфа"
 
 #: crates/bigiris/src/gui/dialogs/properties.rs:280
 msgid "Campos presentes: {count}"
@@ -1546,7 +1547,7 @@ msgstr "Резултатът не може да бъде записан: {error}
 
 #: crates/bigiris/src/gui/dialogs/remove_bg.rs:73
 msgid "Remover fundo — Prisma"
-msgstr "Премахване на фона — Призма (Prisma)"
+msgstr "Премахване на фона — Prisma"
 
 #: crates/bigiris/src/gui/dialogs/remove_bg.rs:78
 #: crates/bigiris/src/gui/dialogs/remove_bg.rs:164
@@ -1581,7 +1582,7 @@ msgstr ""
 
 #: crates/bigiris/src/gui/dialogs/remove_bg.rs:147
 msgid "Remover fundo com IA local"
-msgstr "Премахване на фона с местен изкуствен интелект"
+msgstr "Премахване на фона с локален ИИ"
 
 #: crates/bigiris/src/gui/dialogs/remove_bg.rs:148
 msgid ""
@@ -1602,7 +1603,7 @@ msgstr "Запазени изображения"
 
 #: crates/bigiris/src/gui/dialogs/remove_bg.rs:376
 msgid "Falhas"
-msgstr "Неизправности"
+msgstr "Неуспешни"
 
 #: crates/bigiris/src/gui/dialogs/remove_bg.rs:378
 msgid "Com erros"
@@ -1623,11 +1624,11 @@ msgstr "BiRefNet-lite (MIT) · работи офлайн на вашия ком�
 #: crates/bigiris/src/gui/dialogs/remove_bg.rs:538
 #: crates/bigiris/src/gui/dialogs/upscale.rs:142
 msgid "Aumentar"
-msgstr "Изображение с по-високо качество"
+msgstr "Увеличаване"
 
 #: crates/bigiris/src/gui/dialogs/resize.rs:8
 msgid "Lanczos3 (padrão)"
-msgstr "По подразбиране (Lanczos3)"
+msgstr "Lanczos3 (по подразбиране)"
 
 #: crates/bigiris/src/gui/dialogs/resize.rs:9
 msgid "Mitchell"
@@ -1639,15 +1640,15 @@ msgstr "CatmullRom"
 
 #: crates/bigiris/src/gui/dialogs/resize.rs:11
 msgid "Bilinear"
-msgstr "Bilinear"
+msgstr "Билинейна"
 
 #: crates/bigiris/src/gui/dialogs/resize.rs:12
 msgid "Nearest (sem anti-aliasing)"
-msgstr "Най-близък (без изглаждане)"
+msgstr "Най-близък съсед (без изглаждане)"
 
 #: crates/bigiris/src/gui/dialogs/resize.rs:29
 msgid "Redimensionar imagens — Prisma"
-msgstr "Преоразмеряване на изображения — Призма (Prisma)"
+msgstr "Преоразмеряване на изображения — Prisma"
 
 #: crates/bigiris/src/gui/dialogs/resize.rs:41
 #: crates/bigiris/src/gui/dialogs/resize.rs:144
@@ -1655,12 +1656,12 @@ msgstr "Преоразмеряване на изображения — Приз�
 #: crates/bigimage-integrations/src/action.rs:79
 #: data/nautilus/bigiris-menu.py:115
 msgid "Redimensionar"
-msgstr "Преоразмеряване на изображения"
+msgstr "Преоразмеряване"
 
 #: crates/bigiris/src/gui/dialogs/resize.rs:47
 #: crates/bigiris/src/gui/dialogs/resize.rs:61
 msgid "Aresta máxima"
-msgstr "Максимален ръб"
+msgstr "Максимална страна"
 
 #: crates/bigiris/src/gui/dialogs/resize.rs:49
 msgid "Dimensão exata (WxH)"
@@ -1668,7 +1669,7 @@ msgstr "Точен размер (WxH)"
 
 #: crates/bigiris/src/gui/dialogs/resize.rs:50
 msgid "Encaixar em (WxH)"
-msgstr "Побира се вътре (WxH)"
+msgstr "Вписване в (WxH)"
 
 #: crates/bigiris/src/gui/dialogs/resize.rs:54
 msgid "Modo"
@@ -1676,7 +1677,7 @@ msgstr "Режим"
 
 #: crates/bigiris/src/gui/dialogs/resize.rs:62
 msgid "pixels (lado maior)"
-msgstr "пиксела (най-дълъг ръб)"
+msgstr "пиксела (по-дългата страна)"
 
 #: crates/bigiris/src/gui/dialogs/resize.rs:66
 msgid "Porcentagem"
@@ -1696,11 +1697,11 @@ msgstr "Височина"
 
 #: crates/bigiris/src/gui/dialogs/resize.rs:78
 msgid "Largura máxima"
-msgstr "Максимална ширина 200 мм"
+msgstr "Максимална ширина"
 
 #: crates/bigiris/src/gui/dialogs/resize.rs:81
 msgid "Altura máxima"
-msgstr "Максимална височина 120 см"
+msgstr "Максимална височина"
 
 #: crates/bigiris/src/gui/dialogs/resize.rs:120
 msgid "Kernel de interpolação"
@@ -1708,7 +1709,7 @@ msgstr "Ядро за интерполация"
 
 #: crates/bigiris/src/gui/dialogs/resize.rs:134
 msgid "Modo de redimensionamento"
-msgstr "Преоразмеряване"
+msgstr "Режим на преоразмеряване"
 
 #: crates/bigiris/src/gui/dialogs/resize.rs:137
 msgid "Opções"
@@ -1724,7 +1725,7 @@ msgstr "Преоразмеряване"
 
 #: crates/bigiris/src/gui/dialogs/rotate.rs:25
 msgid "Girar imagens — Prisma"
-msgstr "Завъртане на изображения — Призма (Prisma)"
+msgstr "Завъртане на изображения — Prisma"
 
 #: crates/bigiris/src/gui/dialogs/rotate.rs:29
 #: crates/bigiris/src/gui/dialogs/rotate.rs:52
@@ -1749,19 +1750,19 @@ msgstr "270° (обратно на часовниковата стрелка)"
 
 #: crates/bigiris/src/gui/dialogs/rotate.rs:34
 msgid "Rotação"
-msgstr "Ротация"
+msgstr "Завъртане"
 
 #: crates/bigiris/src/gui/dialogs/rotate.rs:93
 msgid "Girando…"
-msgstr "Въртене…"
+msgstr "Завъртане…"
 
 #: crates/bigiris/src/gui/dialogs/rotate.rs:99
 msgid "Girando"
-msgstr "Въртене"
+msgstr "Завъртане"
 
 #: crates/bigiris/src/gui/dialogs/upscale.rs:26
 msgid "Aumentar resolução — Prisma"
-msgstr "Първокласно — Призма (Prisma)"
+msgstr "Увеличаване на резолюцията — Prisma"
 
 #: crates/bigiris/src/gui/dialogs/upscale.rs:65
 msgid "Usar IA (Real-ESRGAN)"
@@ -1773,7 +1774,7 @@ msgstr "× {factor} (размерът е недостъпен)"
 
 #: crates/bigiris/src/gui/dialogs/upscale.rs:231
 msgid "Aumentando"
-msgstr "Мащабиране нагоре"
+msgstr "Увеличаване на резолюцията"
 
 #: crates/bigiris/src/gui/dialogs/upscale.rs:247
 msgid "Detalhes mais nítidos que Lanczos3; roda no seu computador"
@@ -1805,11 +1806,11 @@ msgstr "Пуснете или копирайте локални файлове �
 
 #: crates/bigiris/src/gui/transfers.rs:89
 msgid "A transferência demorou demais. Tente novamente."
-msgstr "Прехвърлянето изтече. Опитайте отново."
+msgstr "Времето за прехвърляне изтече. Опитайте отново."
 
 #: crates/bigiris/src/gui/transfers.rs:91
 msgid "Não foi possível iniciar o visualizador. Tente novamente."
-msgstr "Не можа да стартира прегледател. Опитайте отново."
+msgstr "Програмата за преглед не можа да се стартира. Опитайте отново."
 
 #: crates/bigiris/src/gui/transfers.rs:93
 msgid "Copie arquivos de imagem no gerenciador e tente novamente."
@@ -1818,12 +1819,12 @@ msgstr ""
 
 #: crates/bigiris/src/gui/transfers.rs:96
 msgid "Não foi possível abrir os arquivos"
-msgstr "Не можа да отвори файловете"
+msgstr "Файловете не могат да бъдат отворени"
 
 #: crates/bigimage-integrations/src/action.rs:97
 #: data/nautilus/bigiris-menu.py:167
 msgid "Para web"
-msgstr "За мрежата"
+msgstr "За уеб"
 
 #: crates/bigimage-integrations/src/action.rs:101
 #: data/nautilus/bigiris-menu.py:213
@@ -1833,7 +1834,7 @@ msgstr "Метаданни"
 #: crates/bigimage-integrations/src/action.rs:105
 #: data/nautilus/bigiris-menu.py:223
 msgid "Utilidades"
-msgstr "Комунални услуги"
+msgstr "Инструменти"
 
 #: crates/bigimage-integrations/src/action.rs:111
 #: data/nautilus/bigiris-menu.py:234
@@ -1848,7 +1849,7 @@ msgstr "PDF"
 #: crates/bigimage-integrations/src/action.rs:134
 #: data/nautilus/bigiris-menu.py:255
 msgid "Visualizar em BigIris"
-msgstr "Преглед в Google Maps (BigIris)"
+msgstr "Преглед в BigIris"
 
 #: crates/bigimage-integrations/src/action.rs:142
 msgid "Processar esta pasta…"
@@ -1888,12 +1889,12 @@ msgstr "200%"
 #: crates/bigimage-integrations/src/action.rs:227
 #: data/nautilus/bigiris-menu.py:122
 msgid "HD (1920 px)"
-msgstr "Високо качество (1920 пиксела)"
+msgstr "HD (1920 px)"
 
 #: crates/bigimage-integrations/src/action.rs:235
 #: data/nautilus/bigiris-menu.py:123
 msgid "4K (3840 px)"
-msgstr "4К (3840 пиксела)"
+msgstr "4K (3840 px)"
 
 #: crates/bigimage-integrations/src/action.rs:252
 #: data/nautilus/bigiris-menu.py:133
@@ -1923,12 +1924,12 @@ msgstr "Вертикално"
 #: crates/bigimage-integrations/src/action.rs:318
 #: data/nautilus/bigiris-menu.py:157
 msgid "+ Brilho (+10)"
-msgstr "+ Яркост на изображението (+10)"
+msgstr "+ Яркост (+10)"
 
 #: crates/bigimage-integrations/src/action.rs:326
 #: data/nautilus/bigiris-menu.py:158
 msgid "− Brilho (-10)"
-msgstr "− Яркост на изображението (-10)"
+msgstr "− Яркост (-10)"
 
 #: crates/bigimage-integrations/src/action.rs:334
 #: data/nautilus/bigiris-menu.py:159
@@ -1938,7 +1939,7 @@ msgstr "+ Контраст (+20)"
 #: crates/bigimage-integrations/src/action.rs:342
 #: data/nautilus/bigiris-menu.py:160
 msgid "Preto e branco"
-msgstr "Черно и бяло"
+msgstr "Черно-бяло"
 
 #: crates/bigimage-integrations/src/action.rs:350
 #: data/nautilus/bigiris-menu.py:161
@@ -1978,27 +1979,27 @@ msgstr "Discord (2048 px · JPG q80)"
 #: crates/bigimage-integrations/src/action.rs:418
 #: data/nautilus/bigiris-menu.py:195
 msgid "Otimizar PNG (compressão máxima)"
-msgstr "Оптимизиране на максимално компресиране) (PNG)"
+msgstr "Оптимизиране на PNG (максимално компресиране)"
 
 #: crates/bigimage-integrations/src/action.rs:430
 #: data/nautilus/bigiris-menu.py:199
 msgid "Letterbox YouTube post (1:1)"
-msgstr "Публикация в Пощенска кутия (1:1) (YouTube)"
+msgstr "Вписване с ленти: публикация в YouTube (1:1)"
 
 #: crates/bigimage-integrations/src/action.rs:438
 #: data/nautilus/bigiris-menu.py:202
 msgid "Letterbox Instagram feed (4:5)"
-msgstr "Информационен канал за пощенска кутия (4:5) (Instagram)"
+msgstr "Вписване с ленти: емисия в Instagram (4:5)"
 
 #: crates/bigimage-integrations/src/action.rs:446
 #: data/nautilus/bigiris-menu.py:205
 msgid "Letterbox Stories / Shorts (9:16)"
-msgstr "Разкази от пощенската кутия / Кратки филми (9:16)"
+msgstr "Вписване с ленти: Stories / Shorts (9:16)"
 
 #: crates/bigimage-integrations/src/action.rs:454
 #: data/nautilus/bigiris-menu.py:208
 msgid "Letterbox personalizado…"
-msgstr "Персонализирана пощенска кутия…"
+msgstr "Вписване с ленти: друг формат…"
 
 #: crates/bigimage-integrations/src/action.rs:463
 #: data/nautilus/bigiris-menu.py:217
@@ -2013,17 +2014,17 @@ msgstr "Премахване на всички метаданни (чисто п
 #: crates/bigimage-integrations/src/action.rs:482
 #: data/nautilus/bigiris-menu.py:227
 msgid "Converter em lote (Prisma)…"
-msgstr "Конвертиране на партиди (Призма)… (Prisma)"
+msgstr "Пакетно конвертиране (Prisma)…"
 
 #: crates/bigimage-integrations/src/action.rs:490
 #: data/nautilus/bigiris-menu.py:228
 msgid "Criar GIF animado…"
-msgstr "Създаване на анимирани файлове… (GIF)"
+msgstr "Създаване на анимиран GIF…"
 
 #: crates/bigimage-integrations/src/action.rs:498
 #: data/nautilus/bigiris-menu.py:229
 msgid "Comparar 2 imagens…"
-msgstr "Сравни 2 изображения…"
+msgstr "Сравняване на 2 изображения…"
 
 #: crates/bigimage-integrations/src/action.rs:507
 #: data/nautilus/bigiris-menu.py:238
@@ -2033,7 +2034,7 @@ msgstr "Премахване на фона (BiRefNet)"
 #: crates/bigimage-integrations/src/action.rs:528
 #: data/nautilus/bigiris-menu.py:248
 msgid "Converter para PDF (LibreOffice)"
-msgstr "Конвертиране на файлове в формат (LibreOffice)"
+msgstr "Конвертиране в PDF (LibreOffice)"
 
 #: data/nautilus/bigiris-menu.py:295
 msgid "Operações BigIris"
@@ -2045,7 +2046,7 @@ msgstr "BigIris: Обработка на тази папка…"
 
 #: data/nautilus/bigiris-menu.py:375
 msgid "Converter imagens da pasta com o Prisma"
-msgstr "Конвертирайте изображения на папки с Призма (Prisma)"
+msgstr "Конвертиране на изображенията от папката с Prisma"
 
 #: scripts/translations.py:20
 msgid "Visualizador de imagens"

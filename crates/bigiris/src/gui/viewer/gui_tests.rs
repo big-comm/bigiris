@@ -710,7 +710,7 @@ fn viewer_inline_crop() {
     });
     let saved = image::open(&photo).unwrap().to_rgb8();
     assert_eq!(saved.dimensions(), (150, 150));
-    // Centre square of the red 200×150 crop: all red.
+    // Center square of the red 200×150 crop: all red.
     assert_eq!(saved.get_pixel(0, 0).0, [255, 0, 0]);
     assert_eq!(saved.get_pixel(149, 149).0, [255, 0, 0]);
 

@@ -77,7 +77,7 @@ fn labeled_button(root: &impl IsA<gtk::Widget>, label: &str) -> gtk::Button {
 }
 
 /// A synthetic 640 × 480 landscape: sky gradient, sun, hills, and a flat
-/// grey patch (100, 100, 100) at 20..80 × 400..460 to measure tone edits.
+/// gray patch (100, 100, 100) at 20..80 × 400..460 to measure tone edits.
 pub(super) fn landscape(path: &Path) {
     image::RgbImage::from_fn(640, 480, |x, y| {
         let (fx, fy) = (x as f32, y as f32);
@@ -237,7 +237,7 @@ fn viewer_edit_panel() {
     wait_frame(&context, &state, (640, 480));
     action_button(&panel, "win.flip-h").emit_clicked();
     wait_frame(&context, &state, (640, 480));
-    // The grey patch moved to the right edge.
+    // The gray patch moved to the right edge.
     assert_eq!(texture_pixel(&state, 639 - 30, 430), [100, 100, 100, 255]);
     action_button(&panel, "win.flip-v").emit_clicked();
     wait(&context, "flip-v", &|| state.borrow().pending_ops.len() == 4);
@@ -403,7 +403,7 @@ fn viewer_edit_panel() {
     assert_eq!(std::fs::read(&photo).unwrap(), original_bytes, "original changed");
     let saved = image::open(&copy).unwrap().to_rgb8();
     assert_eq!(saved.dimensions(), (320, 240));
-    // Flipped: the grey patch is on the right.
+    // Flipped: the gray patch is on the right.
     assert_eq!(saved.get_pixel(319 - 15, 215).0, [100, 100, 100]);
     {
         let s = state.borrow();

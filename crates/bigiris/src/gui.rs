@@ -5,7 +5,7 @@
 //! MVP+zoom/pan: `gtk::Picture` wrapped in `gtk::ScrolledWindow`. `Fit` mode
 //! uses `ContentFit::Contain` and lets the picture ride the viewport; the
 //! moment the user zooms, we switch to `Fill` with an explicit size request
-//! so the scroll view can give actual scrollbars and pan behaviour.
+//! so the scroll view can give actual scrollbars and pan behavior.
 //!
 //! The viewing surface stays intentionally quiet; advanced editing and
 //! batch tools live behind the menu and the folder workflow.
@@ -111,24 +111,18 @@ fn name_drop_down(drop_down: &gtk::DropDown, name: &str) -> gtk::Label {
 
 /// Start the viewer event loop. Returns the exit code GTK produced.
 pub fn run_viewer(files: Vec<PathBuf>) -> i32 {
-    // Um clique no gerenciador de arquivos entrega um caminho só. Sem isto,
-    // `files.len() == 1` desliga setas, film strip e slideshow, e o
-    // visualizador vira uma janela de imagem única.
-    // Directory enumeration must never block the GTK thread.
-    // NON_UNIQUE: sem isso o GApplication tenta single-instance via D-Bus
-    // e, se uma janela do BigIris tá se fechando no momento em que outra
-    // tenta abrir (ex.: dashboard spawna novo processo e fecha), a nova
-    // ativação é descartada. NON_UNIQUE garante que cada `bigiris …`
-    // seja um processo independente com seu próprio event loop.
+    // NON_UNIQUE: a single D-Bus instance drops the activation of a viewer
+    // that opens while another BigIris window is closing, so each `bigiris`
+    // runs as its own process with its own event loop.
     let app = adw::Application::builder()
         .application_id(APP_ID)
         .flags(gio::ApplicationFlags::NON_UNIQUE)
         .build();
 
-    // Abrir precisa parecer instantâneo: a decodificação da imagem pedida
-    // começa antes do GTK iniciar e corre em paralelo com a criação da
-    // janela, e a varredura da pasta (setas, film strip) acontece em
-    // segundo plano. Nenhuma janela intermediária aparece antes da foto.
+    // Opening must feel instant: the requested image decodes while GTK
+    // starts and the window is built, and the folder scan (arrows, film
+    // strip) runs in the background off the GTK thread. A file manager
+    // passes a single path, so the scan is what enables navigation.
     let preload = files.first().map(|first| {
         let loader = ViewerLoader::new();
         loader.request(LoadRequest {
@@ -169,19 +163,8 @@ pub fn run_viewer(files: Vec<PathBuf>) -> i32 {
     i32::from(u8::from(code))
 }
 
-/// Quando o visualizador recebe um arquivo só, varre a pasta dele e
-/// devolve todas as imagens irmãs em ordem natural, junto do índice do
-/// arquivo pedido. É o que faz o clique no gerenciador de arquivos abrir
-/// a coleção inteira em vez de uma imagem sozinha: setas, `Home`/`End`,
-/// film strip e slideshow já operam sobre `files`, então basta entregar a
-/// lista certa.
-///
-/// Com dois ou mais arquivos na entrada nada muda: quem passou uma seleção
-/// explícita na linha de comando quer exatamente aquela seleção.
-///
-/// Qualquer tropeço na varredura (pasta ilegível, arquivo pedido fora da
-/// lista de formatos) cai de volta na entrada original. Abrir a imagem que
-/// o usuário pediu importa mais do que oferecer navegação.
+/// For a single file, every image in its folder in natural order and that
+/// file's index; an explicit selection, or any failure, keeps the input.
 #[cfg(test)]
 fn expand_to_folder(files: Vec<PathBuf>) -> (Vec<PathBuf>, usize) {
     expand_to_folder_cancellable(files, &AtomicBool::new(false))
@@ -196,8 +179,8 @@ fn expand_to_folder_cancellable(files: Vec<PathBuf>, cancel: &AtomicBool) -> (Ve
         return (files, 0);
     }
 
-    // `parent()` de um caminho sem diretório ("foto.png") devolve "", que
-    // não é legível por read_dir; nesse caso a pasta é a atual.
+    // A bare file name ("photo.png") has an empty parent, which read_dir
+    // cannot read: the folder is the current one.
     let dir = match target.parent() {
         Some(d) if !d.as_os_str().is_empty() => d.to_path_buf(),
         Some(_) => PathBuf::from("."),
@@ -219,7 +202,7 @@ fn expand_to_folder_cancellable(files: Vec<PathBuf>, cancel: &AtomicBool) -> (Ve
             siblings.push(path);
         }
         if siblings.len() > 50_000 {
-            tracing::warn!("pasta excedeu 50 mil imagens; abrindo somente a imagem solicitada");
+            tracing::warn!("folder holds more than 50,000 images; opening only the requested one");
             return (files, 0);
         }
     }
@@ -231,13 +214,13 @@ fn expand_to_folder_cancellable(files: Vec<PathBuf>, cancel: &AtomicBool) -> (Ve
     siblings.sort_by(|a, b| {
         let an = a.file_name().unwrap_or_default().to_string_lossy().into_owned();
         let bn = b.file_name().unwrap_or_default().to_string_lossy().into_owned();
-        // Desempate pelo nome cru para a ordem não depender da ordem de
-        // entrega do read_dir quando dois nomes só diferem em maiúsculas.
+        // Names that differ only in case fall back to the raw name, so the
+        // order never depends on read_dir's.
         natural_cmp(&an, &bn).then_with(|| an.cmp(&bn))
     });
 
-    // O gerenciador de arquivos pode entregar symlink ou caminho relativo
-    // diferente do que o read_dir devolve, então o caminho canônico decide.
+    // The file manager may pass a symlink or a relative path that differs
+    // from what read_dir returns, so the canonical path decides.
     let canonical_target = target.canonicalize().ok();
     let found = siblings.iter().position(|path| {
         path == target
@@ -251,28 +234,19 @@ fn expand_to_folder_cancellable(files: Vec<PathBuf>, cancel: &AtomicBool) -> (Ve
     }
 }
 
-/// `true` quando a extensão do arquivo é um formato que o BigIris abre.
-/// Usa a mesma tabela do resto do programa ([`bigimage_core::Format`]),
-/// para a varredura da pasta não divergir do que o visualizador aceita.
-///
-/// A checagem é por extensão de propósito: farejar o conteúdo de cada
-/// arquivo custaria uma leitura por item da pasta só para montar a lista.
-/// Um arquivo com extensão mentirosa continua abrindo normalmente quando é
-/// ele o alvo do clique, porque aí quem decodifica é
-/// [`bigimage_core::open_image`], que fareja o conteúdo.
+/// Whether the extension names a format [`bigimage_core::Format`] opens.
+/// Sniffing every file would cost a read per folder entry just to build the
+/// list; a file with a misleading extension still opens when it is the one
+/// requested, since [`bigimage_core::open_image`] sniffs the content.
 fn is_viewable(path: &Path) -> bool {
     path.extension()
         .and_then(|ext| ext.to_str())
         .is_some_and(|ext| bigimage_core::Format::parse(ext).is_ok())
 }
 
-/// Compara nomes tratando sequências de dígitos como número, e não como
-/// texto. É o que põe `2.png` antes de `10.png`; a ordem lexicográfica pura
-/// devolveria `1, 10, 100, 11, …`, que é justamente o padrão das coleções
-/// numeradas de wallpaper e das fotos saídas de câmera (`IMG_2.jpg`).
-///
-/// Entre dois números de mesmo valor, vence o que tem menos zeros à
-/// esquerda, então `7` vem antes de `007` e a ordem fica estável.
+/// Compares runs of digits as numbers, so `2.png` sorts before `10.png` as
+/// in numbered camera files (`IMG_2.jpg`). Of two equal numbers, the one
+/// with fewer leading zeros comes first: `7` before `007`.
 fn natural_cmp(a: &str, b: &str) -> std::cmp::Ordering {
     use std::cmp::Ordering;
 
@@ -296,7 +270,7 @@ fn natural_cmp(a: &str, b: &str) -> std::cmp::Ordering {
             let trim_a = num_a.trim_start_matches('0');
             let trim_b = num_b.trim_start_matches('0');
 
-            // Sem zeros à esquerda, mais dígitos significa número maior.
+            // Without leading zeros, more digits means a larger number.
             let ord = trim_a.len().cmp(&trim_b.len()).then_with(|| trim_a.cmp(trim_b));
             if ord != Ordering::Equal {
                 return ord;
@@ -363,7 +337,7 @@ struct ViewerState {
     /// the thumbnails it already has.
     film_strip_paths: Vec<PathBuf>,
     film_strip_start: usize,
-    /// Index the strip last highlighted and centred, so repeated refreshes
+    /// Index the strip last highlighted and centered, so repeated refreshes
     /// for the same image (zoom steps, edge reveals) do no work.
     film_strip_active: Option<usize>,
     film_strip_box: gtk::Box,
@@ -388,18 +362,16 @@ struct ViewerState {
     cursor_hidden: bool,
     /// Slideshow auto-advance tick (Space toggles). `None` = stopped.
     slideshow_source: Option<glib::SourceId>,
-    /// DrawingArea com o overlay de histograma (canto inferior-direito).
-    /// Visibilidade controlada pela tecla `G` — oculto por padrão.
+    /// Histogram overlay, hidden until `G` toggles it.
     histogram_area: gtk::DrawingArea,
-    /// Histograma RGB da imagem atual: `[0..256]=R, [256..512]=G, [512..768]=B`.
-    /// Recalculado em cada `update_display`.
+    /// RGB histogram of the shown image: `[0..256]=R, [256..512]=G, [512..768]=B`.
     histogram: [u32; 768],
     /// Current zoom level shown in the header, e.g. "23%".
     zoom_level: gtk::Label,
     /// Switches between the start page, the picture and the error page.
     stack: gtk::Stack,
     error_page: adw::StatusPage,
-    /// Invisible pixels that keep the neighbours uploaded to the GPU.
+    /// Invisible pixels that keep the neighbors uploaded to the GPU.
     warm_slots: [gtk::Image; 2],
     /// Decode and edit rendering happen away from GTK's main loop. A
     /// generation token makes rapid navigation discard stale results.
@@ -410,7 +382,7 @@ struct ViewerState {
     prefetcher: ViewerLoader,
     /// File the prefetcher is decoding right now.
     prefetching: Option<PathBuf>,
-    /// The current file and its neighbours, ready to show.
+    /// The current file and its neighbors, ready to show.
     frame_cache: Vec<CachedFrame>,
     /// Files too large to keep in memory ahead of time.
     prefetch_skip: Vec<PathBuf>,
@@ -429,14 +401,13 @@ struct ViewerState {
     deferred_thumbnails: Option<Box<dyn FnOnce()>>,
     /// Only shown while edits are written to disk; loading shows nothing.
     loading_spinner: adw::Spinner,
-    /// Dialog de propriedades atualmente aberto, se houver. Evita que
-    /// cliques repetidos no botão `i` empilhem janelas.
+    /// The open properties window, so repeated clicks on `i` reuse it.
     /// The modification time is part of the key: after an in-place save
     /// the same path describes different pixels and metadata.
     props_dialog: Option<(adw::ApplicationWindow, PathBuf, Option<std::time::SystemTime>)>,
-    /// Edições pendentes (rotate/flip) aplicadas in-memory sobre a
-    /// imagem decodificada. Vazio = arquivo "limpo". `Ctrl+S` grava e
-    /// limpa; a navegação é bloqueada enquanto houver alterações.
+    /// Unsaved edits applied in memory over the decoded image; empty when
+    /// the file is unchanged. `Ctrl+S` writes and clears them, and
+    /// navigation is blocked while any remain.
     pending_ops: Vec<EditOp>,
     /// Operations removed by Undo, available to Redo until a new edit or
     /// navigation invalidates the branch.
@@ -457,10 +428,9 @@ struct ViewerState {
     edit: viewer::edit_panel::EditPanelState,
 }
 
-/// Edição in-memory: o usuário gira/espelha sem tocar o
-/// arquivo; `•` aparece no título e só no `Ctrl+S` o disco é gravado.
-/// As ops são acumuladas em `ViewerState.pending_ops` e reaplicadas por
-/// cima do decode original a cada push.
+/// An in-memory edit: the file is untouched until `Ctrl+S`, and `•` marks
+/// the title meanwhile. Edits accumulate in `ViewerState::pending_ops` and
+/// are replayed over the original decode on every push.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum EditOp {
     RotateCw,
@@ -766,9 +736,8 @@ fn build_window_preloaded(
     let header = adw::HeaderBar::new();
     header.set_title_widget(Some(&title));
 
-    // As ações do menu hambúrguer precisam do `state`, então criamos o
-    // botão depois que o state existe — veja mais abaixo. Header fica com
-    // os quick-buttons (info/fullscreen) agora.
+    // The header buttons and main menu need `state`, so they are added
+    // once it exists, further down.
 
     let picture = gtk::Picture::new();
     picture.set_content_fit(gtk::ContentFit::Contain);
@@ -839,7 +808,7 @@ fn build_window_preloaded(
     let film_strip_box = gtk::Box::new(gtk::Orientation::Horizontal, 8);
     film_strip_box.add_css_class("film-strip");
     // A rounded bar that hugs the thumbnails and scrolls when they do not
-    // fit, centred like the OSD controls of GNOME's media apps.
+    // fit, centered like the OSD controls of GNOME's media apps.
     let film_strip_scroll = gtk::ScrolledWindow::builder()
         .hscrollbar_policy(gtk::PolicyType::Automatic)
         .vscrollbar_policy(gtk::PolicyType::Never)
@@ -895,9 +864,8 @@ fn build_window_preloaded(
         strip_revealer.set_visible(false);
     }
 
-    // Histograma RGB (overlay canto superior-direito). Oculto por padrão;
-    // tecla `G` alterna. Tamanho fixo porque o frame sempre renderiza
-    // 256 bins — deixar o widget esticar distorceria as colunas.
+    // Fixed size: the overlay always draws 256 bins, and a stretched widget
+    // would distort the columns.
     let histogram_area = gtk::DrawingArea::builder()
         .width_request(276)
         .height_request(120)
@@ -947,7 +915,7 @@ fn build_window_preloaded(
     // Crop bar on top of everything; its selection layer sits right above
     // the picture (added first) so the OSD hint is not dimmed by it.
     overlay.add_overlay(&crop_ui.bar);
-    // One-pixel, nearly transparent copies of the neighbours. Drawing them
+    // One-pixel, nearly transparent copies of the neighbors. Drawing them
     // in the normal frame makes the renderer upload them to the GPU ahead
     // of time without blocking, so an arrow key only swaps textures.
     let warm_slots = [gtk::Image::new(), gtk::Image::new()];
@@ -1142,7 +1110,6 @@ fn build_window_preloaded(
         });
     }
 
-    // draw callback lê o snapshot mais recente do histograma em state.
     {
         let state = Rc::downgrade(&state);
         histogram_area.set_draw_func(move |_, cr, w, h| {
@@ -1152,8 +1119,6 @@ fn build_window_preloaded(
         });
     }
 
-    // Quick-buttons do header (esquerda) e menu hamburger (direita).
-    // Registrados aqui porque todos fecham sobre `state`.
     install_viewer_actions(app, &window, &state);
     // Header layout follows GNOME's image viewer: navigation as one linked
     // pair on the left; zoom as one control that shows the current level,
@@ -1481,7 +1446,8 @@ fn thumb_picture(button: &gtk::Button) -> Option<gtk::Picture> {
 fn decode_thumbnail(path: &Path) -> Result<(Vec<u8>, u32, u32), Box<dyn std::error::Error>> {
     let cached = viewer::cached_thumbnail(path).and_then(|entry| {
         bigimage_core::open_image(&entry)
-            .inspect_err(|error| tracing::debug!(?entry, %error, "miniatura em cache ilegível"))
+            // allow-noisy-log: a broken cache entry falls back to the source file.
+            .inspect_err(|error| tracing::debug!(?entry, %error, "unreadable cached thumbnail"))
             .ok()
     });
     let img = match cached {
@@ -1498,7 +1464,7 @@ fn decode_thumbnail(path: &Path) -> Result<(Vec<u8>, u32, u32), Box<dyn std::err
 }
 
 /// Only [`viewer::FILM_STRIP_PAGE`] widgets and thumbnail requests exist,
-/// independently of folder size; the window is centred on the current file.
+/// independently of folder size; the window is centered on the current file.
 fn rebuild_film_strip(state: &Rc<RefCell<ViewerState>>) {
     const PAGE: usize = viewer::FILM_STRIP_PAGE;
     let (container, files, start, cancel, kept) = {
@@ -1669,20 +1635,20 @@ fn refresh_film_strip_active(state: &Rc<RefCell<ViewerState>>) {
             btn.update_state(&[gtk::accessible::State::Selected(Some(selected))]);
         }
     }
-    if !centre_film_strip(state) {
-        schedule_centre_film_strip(state);
+    if !center_film_strip(state) {
+        schedule_center_film_strip(state);
     }
 }
 
-/// Centre once the strip has a layout: a freshly built or just revealed
+/// Center once the strip has a layout: a freshly built or just revealed
 /// strip reports zero widths until the next frame.
-fn schedule_centre_film_strip(state: &Rc<RefCell<ViewerState>>) {
+fn schedule_center_film_strip(state: &Rc<RefCell<ViewerState>>) {
     let strip = state.borrow().film_strip_scroll.clone();
     let weak = Rc::downgrade(state);
     let frames = Cell::new(0u32);
     strip.add_tick_callback(move |_, _| {
         frames.set(frames.get() + 1);
-        let done = weak.upgrade().is_none_or(|state| centre_film_strip(&state));
+        let done = weak.upgrade().is_none_or(|state| center_film_strip(&state));
         if done || frames.get() > 30 {
             glib::ControlFlow::Break
         } else {
@@ -1694,7 +1660,7 @@ fn schedule_centre_film_strip(state: &Rc<RefCell<ViewerState>>) {
 /// Scroll the active thumbnail to the middle of the strip; uses the
 /// button's computed bounds (allocation() was deprecated in GTK 4.12).
 /// Returns false while the strip is not allocated yet.
-fn centre_film_strip(state: &Rc<RefCell<ViewerState>>) -> bool {
+fn center_film_strip(state: &Rc<RefCell<ViewerState>>) -> bool {
     let (btn, strip) = {
         let s = state.borrow();
         let Some(btn) =
@@ -1889,16 +1855,10 @@ fn reveal_bottom(state: &Rc<RefCell<ViewerState>>) {
     };
     let first_reveal = !strip.reveals_child();
     strip.set_reveal_child(true);
-    // A faixa nasce rolada no começo. Como o visualizador agora pode abrir
-    // no meio da pasta (clique num arquivo qualquer), a miniatura ativa
-    // ficaria fora de vista na primeira vez que o strip aparece. Recentrar
-    // fica para o idle seguinte porque, enquanto o revealer não alocou a
-    // faixa, `compute_bounds` devolve largura zero e a conta de centragem
-    // não teria em que se apoiar. Só na revelação: cada movimento do
-    // ponteiro na borda de baixo passa por aqui, e recentrar a cada evento
-    // impediria rolar a faixa à mão.
+    // Center the active thumbnail only on reveal, once allocated: every
+    // motion at the bottom edge passes here, and would undo a manual scroll.
     if first_reveal {
-        schedule_centre_film_strip(state);
+        schedule_center_film_strip(state);
     }
     cancel_bottom_hide(state);
     if state.borrow().ui_pinned || !state.borrow().autohide_ui {
@@ -1994,11 +1954,8 @@ fn arm_cursor_hide(state: &Rc<RefCell<ViewerState>>, delay: std::time::Duration)
     if s.ui_pinned || !s.autohide_ui || adw::StyleManager::default().is_high_contrast() {
         return;
     }
-    // AdwDialog (incluindo AdwAboutDialog) a partir da libadwaita 1.5 é
-    // um modal in-window — compartilha a surface com o viewer. Se o
-    // timer disparar enquanto o diálogo estiver aberto, o cursor sumiria
-    // no próprio diálogo (o user não consegue clicar em "Detalhes" etc).
-    // Pular a agenda enquanto houver diálogo visível na janela.
+    // An AdwDialog shares the viewer's surface, so hiding the cursor would
+    // hide it inside the dialog too.
     if s.window().visible_dialog().is_some() {
         return;
     }
@@ -2016,8 +1973,7 @@ fn arm_cursor_hide(state: &Rc<RefCell<ViewerState>>, delay: std::time::Duration)
             arm_cursor_hide(&state, full - idle);
             return;
         }
-        // Double-check na hora do disparo: user pode ter aberto um
-        // diálogo nos últimos CURSOR_HIDE_MS ms.
+        // A dialog may have opened since the timer was armed.
         let window = s.window();
         if window.visible_dialog().is_some() || s.crop.is_some() {
             return;
@@ -2260,8 +2216,8 @@ fn handle_key(
     }
 }
 
-/// Avança o índice em +1 (com wrap). Reseta zoom pra Fit como a nav
-/// normal faz, pra cada imagem aparecer inteira no slideshow.
+/// Next file, wrapping around, at Fit zoom so each slideshow image shows
+/// whole.
 fn advance_one(state: &Rc<RefCell<ViewerState>>) -> bool {
     let total = state.borrow().files.len();
     if total < 2 {
@@ -2297,9 +2253,7 @@ fn navigate_relative(state: &Rc<RefCell<ViewerState>>, delta: isize) {
     pulse_osd(state);
 }
 
-/// Alterna o slideshow (Space). Ignora quando só há um arquivo. Enquanto
-/// ativo, um timer configurável avança pra próxima imagem;
-/// uma nova pulsação no OSD confirma cada tick.
+/// Space: start or pause the slideshow; a single file has none.
 fn toggle_slideshow(state: &Rc<RefCell<ViewerState>>) {
     let total = state.borrow().files.len();
     if total < 2 {
@@ -2319,8 +2273,7 @@ fn toggle_slideshow(state: &Rc<RefCell<ViewerState>>) {
     let interval = state.borrow().slideshow_interval_s.max(1);
     let clone = state.clone();
     let id = glib::timeout_add_seconds_local(interval, move || {
-        // Se a janela fechou entre ticks, encerra — evita mexer em widgets
-        // já removidos do tree.
+        // The window may have closed between ticks: touch no widget then.
         {
             let s = clone.borrow();
             if !s.window().is_visible() || s.files.is_empty() {
@@ -2345,9 +2298,8 @@ fn toggle_slideshow(state: &Rc<RefCell<ViewerState>>) {
     pulse_osd(state);
 }
 
-/// Alterna o overlay de histograma RGB (tecla G). Quando aparece, pulsa
-/// o OSD pra confirmar visualmente — o quadrante superior-direito é
-/// discreto e sem o pulso o user pode não perceber que ligou.
+/// `G`: toggle the histogram overlay. The OSD confirms it, since the small
+/// overlay in the top-right corner is easy to miss.
 fn toggle_histogram(state: &Rc<RefCell<ViewerState>>) {
     let area = state.borrow().histogram_area.clone();
     let now_visible = !area.is_visible();
@@ -2366,11 +2318,9 @@ fn toggle_histogram(state: &Rc<RefCell<ViewerState>>) {
     pulse_osd(state);
 }
 
-/// Renderiza o histograma RGB sobre um fundo translúcido. Normaliza cada
-/// canal pelo seu próprio máximo pra que canais muito desbalanceados
-/// (ex: foto bem escura) ainda mostrem forma. Bins de 256 são quantizados
-/// pra largura do widget usando acúmulo por bucket — assim larguras
-/// menores que 256 não perdem picos isolados.
+/// Each channel is scaled to its own peak, so a very dark photo still shows
+/// a shape. Narrower than 256 pixels, a column sums its bins, so isolated
+/// peaks are not lost.
 fn draw_histogram(state: &Rc<RefCell<ViewerState>>, cr: &gtk::cairo::Context, w: i32, h: i32) {
     let hist = state.borrow().histogram;
     // The rounded OSD background comes from CSS; bars sit inside a margin
@@ -2380,8 +2330,6 @@ fn draw_histogram(state: &Rc<RefCell<ViewerState>>, cr: &gtk::cairo::Context, w:
     let w = (w as f64 - 2.0 * INSET).max(1.0);
     let h = (h as f64 - 2.0 * INSET).max(1.0);
 
-    // Colapsa os 256 bins pra largura do widget. Se w < 256, cada coluna
-    // representa um intervalo; somamos os bins pra não perder picos.
     let cols = (w as usize).max(1);
     let mut bars = vec![[0u32; 3]; cols];
     for (i, channel) in hist.chunks(256).enumerate() {
@@ -2396,8 +2344,7 @@ fn draw_histogram(state: &Rc<RefCell<ViewerState>>, cr: &gtk::cairo::Context, w:
         bars.iter().map(|b| b[2]).max().unwrap_or(1).max(1),
     ];
     let inner_h = h;
-    // Canais em ordem B, G, R — fica mais parecido com Photoshop (R mais
-    // destacado no topo dos overlaps aditivos).
+    // Drawn B, G, R so red ends on top where channels overlap.
     let channels: [(usize, (f64, f64, f64)); 3] =
         [(2, (0.20, 0.55, 1.00)), (1, (0.30, 0.90, 0.40)), (0, (1.00, 0.30, 0.30))];
     for (idx, (r, g, b)) in channels {
@@ -2411,11 +2358,9 @@ fn draw_histogram(state: &Rc<RefCell<ViewerState>>, cr: &gtk::cairo::Context, w:
     }
 }
 
-/// Aplica uma edição in-memory. O pipeline é: acumula op, reabre o
-/// arquivo do disco, reaplica todas as ops (inclusive as anteriores —
-/// barato mesmo com fotos grandes), produz a textura nova. Reaplicar
-/// tudo em vez de guardar a `DynamicImage` editada entre turnos evita
-/// drift cumulativo e simplifica o undo futuro (basta `pending_ops.pop`).
+/// Push an in-memory edit and render every pending edit over the file
+/// again. Rendering from the original avoids cumulative drift and makes
+/// Undo a pop of `pending_ops`.
 fn apply_edit(state: &Rc<RefCell<ViewerState>>, op: EditOp) {
     viewer::edit_panel::flush_commit(state);
     let path = {
@@ -2438,10 +2383,7 @@ fn apply_edit(state: &Rc<RefCell<ViewerState>>, op: EditOp) {
     pulse_osd(state);
 }
 
-/// Reaplica `pending_ops` sobre a imagem no disco e substitui a textura.
-/// Se não houver ops, recarrega o arquivo pelo worker do viewer.
-/// Falhas de decode logam e não mexem no paintable (o user vê a imagem
-/// anterior — melhor do que uma tela preta).
+/// Render `pending_ops` over the file on disk on the decode thread.
 /// `previous` is the history (pending, redo) on screen before this change:
 /// when the render has to run a heavy tool again, Cancel returns to it.
 fn rebuild_edited_texture(
@@ -2678,9 +2620,8 @@ fn render_cached(
     Ok(img)
 }
 
-/// Liga/desliga a action `win.save-edits` pra o item de menu e o acelerador
-/// Ctrl+S ficarem grey quando não houver nada pra salvar. Complementa o
-/// `•` no título como pista visual do estado "dirty".
+/// Enable the edit actions only when they can act, so their menu items and
+/// shortcuts (`Ctrl+S` with nothing to save) are insensitive otherwise.
 fn sync_edit_actions(state: &Rc<RefCell<ViewerState>>) {
     let s = state.borrow();
     // Crop mode suspends these actions and restores them when it ends.
@@ -2754,8 +2695,8 @@ fn redo_edit(state: &Rc<RefCell<ViewerState>>) {
     pulse_osd(state);
 }
 
-/// Salva as edições pendentes no próprio arquivo. Confirma antes — em
-/// JPEG o re-encode perde qualidade e o user precisa ciência disso.
+/// Save the pending edits into the file itself, after a confirmation: a
+/// JPEG loses quality on every re-encode.
 fn save_edits(state: &Rc<RefCell<ViewerState>>) {
     viewer::edit_panel::flush_commit(state);
     let (window, path) = {
@@ -2835,7 +2776,8 @@ fn save_edits(state: &Rc<RefCell<ViewerState>>) {
                     s.redo_ops.clear();
                     s.loader.clear_cache();
                     // The file on disk now holds the edits: working copies
-                    // and "Ver original" made from the old bytes are stale.
+                    // and the original view (hold `\`) made from the old
+                    // bytes are stale.
                     viewer::edit_panel::forget_file_pixels(&mut s);
                 }
                 s.loading_spinner.clone()
@@ -2848,7 +2790,7 @@ fn save_edits(state: &Rc<RefCell<ViewerState>>) {
                     adopt_saved_frame(&state, &path);
                     match metadata_loss_notice(&dropped) {
                         Some(notice) => {
-                            tracing::info!(?path, ?dropped, "save: metadados descartados");
+                            tracing::info!(?path, ?dropped, "save: metadata dropped");
                             state.borrow().osd_label.set_text(&notice);
                             pulse_osd_for(&state, OSD_NOTICE_MS);
                         }
@@ -2859,7 +2801,7 @@ fn save_edits(state: &Rc<RefCell<ViewerState>>) {
                     }
                 }
                 Err(failure) => {
-                    tracing::error!(?path, ?failure, "save: falha ao gravar edições");
+                    tracing::error!(?path, ?failure, "save: writing the edits failed");
                     present_save_failure(&state, &failure);
                 }
             }
@@ -2870,7 +2812,7 @@ fn save_edits(state: &Rc<RefCell<ViewerState>>) {
 
 /// The texture on screen is now what the file holds: cache it under the
 /// new modification time, show it in the film strip and resume the
-/// neighbour prefetch that pending edits had paused.
+/// neighbor prefetch that pending edits had paused.
 fn adopt_saved_frame(state: &Rc<RefCell<ViewerState>>, path: &Path) {
     {
         let mut s = state.borrow_mut();
@@ -2985,13 +2927,9 @@ fn discard_edits(state: &Rc<RefCell<ViewerState>>) {
     sync_edit_actions(state);
 }
 
-/// Grava em arquivo temporário no mesmo diretório, sincroniza e só então
-/// renomeia por cima do destino. Assim, queda de energia ou falha do encoder
-/// deixa o original intacto. Permissões existentes são preservadas, assim
-/// como EXIF (com orientação zerada) e o perfil de cor original quando o
-/// formato os suporta — as edições são só geométricas. JPEG é regravado na
-/// qualidade estimada do original (não no padrão 75), para que cada Ctrl+S
-/// não degrade a foto. Devolve os metadados que não puderam ser mantidos.
+/// Replace the file atomically with the edits applied, keeping permissions,
+/// EXIF and color profile where the format allows and a JPEG's source
+/// quality. Returns the metadata that could not be kept.
 fn write_edits_to_disk(
     path: &Path,
     ops: &[EditOp],
@@ -3006,7 +2944,7 @@ fn write_edits_to_disk(
     // The confined decoder reports animation as a generic decode error,
     // so any failure here is presented as "not a static image".
     bigimage_core::content::ensure_static(&target).map_err(|error| {
-        tracing::warn!(%error, "save: arquivo não é estático");
+        tracing::warn!(%error, "save: file is not a static image");
         SaveFailure::NotStatic
     })?;
     let (img, source, quality) =
@@ -3162,7 +3100,7 @@ fn show_cached_frame(state: &Rc<RefCell<ViewerState>>, path: &Path) -> bool {
     true
 }
 
-/// Tell the user the shown file's colour profile is broken and was ignored.
+/// Tell the user the shown file's color profile is broken and was ignored.
 fn notice_ignored_profile(state: &Rc<RefCell<ViewerState>>) {
     let osd = state.borrow().osd_label.clone();
     osd.set_text(&gettext("This image's color profile is corrupted; colors may be inaccurate"));
@@ -3199,11 +3137,11 @@ fn show_frame(
     s.histogram_area.queue_draw();
 }
 
-/// Keep the cached neighbours drawn in the invisible warm-up slots.
+/// Keep the cached neighbors drawn in the invisible warm-up slots.
 fn refresh_warm_slots(s: &ViewerState) {
-    let neighbours = neighbour_paths(s);
+    let neighbors = neighbor_paths(s);
     for (i, slot) in s.warm_slots.iter().enumerate() {
-        let texture = neighbours
+        let texture = neighbors
             .get(i)
             .and_then(|path| s.frame_cache.iter().find(|frame| &frame.path == path))
             .map(|frame| frame.texture.clone());
@@ -3220,7 +3158,7 @@ fn remember_frame(s: &mut ViewerState, frame: CachedFrame) {
 }
 
 /// Previous and next files, nearest first, without the current one.
-fn neighbour_paths(s: &ViewerState) -> Vec<PathBuf> {
+fn neighbor_paths(s: &ViewerState) -> Vec<PathBuf> {
     let total = s.files.len();
     if total < 2 {
         return Vec::new();
@@ -3234,11 +3172,11 @@ fn neighbour_paths(s: &ViewerState) -> Vec<PathBuf> {
     paths
 }
 
-/// Decode the next missing neighbour, one at a time, once the current
-/// image is on screen. Frames that are no longer neighbours are freed.
+/// Decode the next missing neighbor, one at a time, once the current
+/// image is on screen, and free frames outside the neighbors.
 fn schedule_prefetch(state: &Rc<RefCell<ViewerState>>) {
     let mut s = state.borrow_mut();
-    let wanted = neighbour_paths(&s);
+    let wanted = neighbor_paths(&s);
     let current = s.files.get(s.idx).cloned();
     s.frame_cache
         .retain(|frame| current.as_ref() == Some(&frame.path) || wanted.contains(&frame.path));
@@ -3274,7 +3212,7 @@ fn apply_prefetched_frame(state: &Rc<RefCell<ViewerState>>, frame: DecodedFrame)
                 if too_large {
                     s.prefetch_skip.push(frame.path.clone());
                 }
-                if is_current || (!too_large && neighbour_paths(&s).contains(&frame.path)) {
+                if is_current || (!too_large && neighbor_paths(&s).contains(&frame.path)) {
                     let texture = texture_from_rgba(raw, w, h);
                     remember_frame(
                         &mut s,
@@ -3427,7 +3365,7 @@ fn apply_decoded_frame(state: &Rc<RefCell<ViewerState>>, frame: DecodedFrame) {
             }
         }
         Err(error) => {
-            tracing::error!(path = ?frame.path, %error, "falha ao carregar imagem");
+            tracing::error!(path = ?frame.path, %error, "loading the image failed");
             s.texture = None;
             s.shown_path = None;
             s.picture.set_paintable(gdk::Paintable::NONE);
@@ -3446,10 +3384,8 @@ fn apply_decoded_frame(state: &Rc<RefCell<ViewerState>>, frame: DecodedFrame) {
     viewer::edit_panel::sync_sensitivity(state);
 }
 
-/// Constrói um menu curto para as funções menos frequentes. A navegação e
-/// abertura ficam visíveis na barra, enquanto ferramentas robustas aparecem
-/// sob demanda — o equilíbrio "simples por padrão, poderoso quando preciso".
-/// Ações ficam em `win.<nome>` (registradas em [`install_viewer_actions`]).
+/// The main menu, for the less frequent functions; navigation stays in the
+/// header bar. Items name `win.<name>` actions from [`install_viewer_actions`].
 fn build_header_menu_button(state: &Rc<RefCell<ViewerState>>) -> gtk::MenuButton {
     let menu = gio::Menu::new();
     let has_images = !state.borrow().files.is_empty();
@@ -3484,9 +3420,8 @@ fn build_header_menu_button(state: &Rc<RefCell<ViewerState>>) -> gtk::MenuButton
     btn.set_icon_name("open-menu-symbolic");
     btn.set_tooltip_text(Some(&gettext("Main menu")));
     btn.set_menu_model(Some(&menu));
-    // Fixa a header enquanto o popover está aberto — senão o timer de
-    // auto-hide do ToolbarView dispara com o cursor já dentro do popover
-    // e fecha o menu sozinho (flicker visível: abre e some no mesmo frame).
+    // Pin the header bar while the popover is open: the auto-hide timer
+    // would otherwise fire with the pointer inside it and close the menu.
     {
         let state = Rc::downgrade(state);
         btn.connect_active_notify(move |b| {
@@ -3505,15 +3440,13 @@ fn build_header_menu_button(state: &Rc<RefCell<ViewerState>>) -> gtk::MenuButton
     btn
 }
 
-/// Registra as actions `win.*` que alimentam o menu hamburger e os
-/// quick-buttons do header, mais os acelerators globais. Tudo fecha
-/// sobre `state` pra acessar a imagem corrente.
+/// Register the actions behind the main menu and the header buttons, with
+/// their keyboard accelerators.
 fn install_viewer_actions(
     app: &adw::Application,
     window: &adw::ApplicationWindow,
     state: &Rc<RefCell<ViewerState>>,
 ) {
-    // Sobre — já existia, reinstalamos aqui pra ficar tudo num lugar.
     let about = gio::SimpleAction::new("about", None);
     {
         let window = window.downgrade();
@@ -3525,7 +3458,6 @@ fn install_viewer_actions(
     }
     app.add_action(&about);
 
-    // win.fullscreen — alterna F11; quick-button do header aciona a mesma.
     let fullscreen = gio::SimpleAction::new("fullscreen", None);
     {
         let window = window.downgrade();
@@ -3538,8 +3470,6 @@ fn install_viewer_actions(
     }
     window.add_action(&fullscreen);
 
-    // win.open — FileDialog → spawna nova instância do bigiris nos arquivos
-    // escolhidos. Separar em nova janela mantém o histórico da atual.
     let open = gio::SimpleAction::new("open", None);
     {
         let window = window.downgrade();
@@ -3562,9 +3492,8 @@ fn install_viewer_actions(
     }
     window.add_action(&batch_folder);
 
-    // Actions dependentes de imagem carregada ficam grey na dashboard —
-    // senão o menu mostra opção clicável que não faz nada, e itens de
-    // ação inválida chegam a fechar o popover ao hover no GTK4.
+    // Image actions are disabled on the start page: an enabled item that
+    // does nothing misleads, and GTK closes the popover when one is hovered.
     let has_files = !state.borrow().files.is_empty();
     let has_multiple = state.borrow().files.len() > 1;
 
@@ -3625,8 +3554,6 @@ fn install_viewer_actions(
     }
     window.add_action(&zoom_to);
 
-    // win.copy — copia a textura atual pro clipboard. Qualquer app (Slack,
-    // Ctrl+V num chat) consegue colar.
     let copy = gio::SimpleAction::new("copy", None);
     copy.set_enabled(has_files);
     {
@@ -3668,8 +3595,6 @@ fn install_viewer_actions(
     window.add_action(&redo);
     app.set_accels_for_action("win.redo", &["<Ctrl><Shift>z", "<Ctrl>y"]);
 
-    // win.rotate-{cw,ccw,180}, win.flip-{h,v} — edições in-memory. Acumulam
-    // em `pending_ops`, atualizam textura na hora e marcam o título com `•`.
     let edits: [(&str, EditOp, &[&str]); 5] = [
         ("rotate-cw", EditOp::RotateCw, &["R"]),
         ("rotate-ccw", EditOp::RotateCcw, &["<Shift>R"]),
@@ -3695,8 +3620,7 @@ fn install_viewer_actions(
         }
     }
 
-    // win.save-edits — grava as `pending_ops` no arquivo. Sai grey quando
-    // não há nada pra salvar (controlado por `sync_edit_actions`).
+    // Enabled by `sync_edit_actions` once there is something to save.
     let save_edits_action = gio::SimpleAction::new("save-edits", None);
     save_edits_action.set_enabled(false);
     {
@@ -3711,8 +3635,6 @@ fn install_viewer_actions(
     window.add_action(&save_edits_action);
     app.set_accels_for_action("win.save-edits", &["<Ctrl>S"]);
 
-    // win.print — gtk::PrintOperation + cairo, escala a imagem pra página
-    // preservando aspecto (Contain).
     let print = gio::SimpleAction::new("print", None);
     print.set_enabled(has_files);
     {
@@ -3726,7 +3648,6 @@ fn install_viewer_actions(
     }
     window.add_action(&print);
 
-    // win.info — reabre o dialog de metadados no arquivo corrente.
     let info = gio::SimpleAction::new("info", None);
     info.set_enabled(has_files);
     {
@@ -3740,8 +3661,8 @@ fn install_viewer_actions(
     }
     window.add_action(&info);
 
-    // win.crop — recorte direto na imagem principal: seleção sobre a foto,
-    // e o corte vira uma edição como girar/espelhar (Ctrl+Z, Ctrl+S).
+    // Crops in place on the main picture; the crop becomes an edit like a
+    // rotation (Ctrl+Z, Ctrl+S).
     let crop = gio::SimpleAction::new("crop", None);
     crop.set_enabled(has_files);
     {
@@ -3773,8 +3694,6 @@ fn install_viewer_actions(
         window.add_action(&action);
     }
 
-    // win.trash — confirma e joga o arquivo na lixeira do XDG, depois mostra
-    // a imagem vizinha. Desligada enquanto um salvamento está em curso.
     let trash = gio::SimpleAction::new("trash", None);
     trash.set_enabled(has_files);
     {
@@ -3788,7 +3707,7 @@ fn install_viewer_actions(
     }
     window.add_action(&trash);
 
-    // Fullscreen só faz sentido com imagem; dashboard tem flow diferente.
+    // The start page has nothing to show fullscreen.
     let fullscreen_action = window.lookup_action("fullscreen").and_downcast::<gio::SimpleAction>();
     if let Some(action) = fullscreen_action {
         action.set_enabled(has_files);
@@ -3842,10 +3761,8 @@ fn path_for_external_tool(state: &Rc<RefCell<ViewerState>>) -> Option<PathBuf> {
     None
 }
 
-/// Apresenta um FileDialog de seleção múltipla com filtro de imagens.
-/// Abre cada seleção numa nova janela via `std::process::Command` pra
-/// preservar o histórico da janela atual (e porque a `files` no state
-/// é Rc<Vec<_>> imutável).
+/// The chosen images open in a new viewer process, which leaves this
+/// window's list and edit history alone.
 fn open_file_chooser(window: &adw::ApplicationWindow) {
     let filter = gtk::FileFilter::new();
     filter.set_name(Some(&gettext("Images")));
@@ -3871,9 +3788,7 @@ fn open_file_chooser(window: &adw::ApplicationWindow) {
     });
 }
 
-/// Copia a imagem corrente (pixels, não o path) pro clipboard do sistema.
-/// Usa `gdk::MemoryTexture` — qualquer consumidor que aceite imagens
-/// (paste em chat, editor de imagem) recebe a textura.
+/// Copy the shown pixels, edits included, not the file path.
 fn copy_current_to_clipboard(state: &Rc<RefCell<ViewerState>>) {
     let (window, texture) = {
         let s = state.borrow();
@@ -3901,9 +3816,7 @@ fn refuse_while_loading(state: &Rc<RefCell<ViewerState>>) -> bool {
     true
 }
 
-/// Envia a imagem corrente pra impressora via gtk::PrintOperation.
-/// Renderiza a imagem com cairo numa única página, escalada pra
-/// caber com aspect ratio preservado (Contain).
+/// Print the image on one page, scaled to fit with its aspect ratio kept.
 fn print_current(state: &Rc<RefCell<ViewerState>>) {
     let (window, path, edited) = {
         let s = state.borrow();
@@ -4026,17 +3939,15 @@ fn present_print_dialog(
         cr.translate((ctx.width() - iw * scale) / 2.0, (ctx.height() - ih * scale) / 2.0);
         cr.scale(scale, scale);
         if let Err(error) = cr.set_source_surface(&surface, 0.0, 0.0).and_then(|_| cr.paint()) {
-            tracing::warn!(%error, "erro ao renderizar página");
+            tracing::warn!(%error, "rendering the page failed");
         }
     });
     if let Err(error) = op.run(gtk::PrintOperationAction::PrintDialog, Some(window)) {
-        tracing::warn!(%error, "erro no diálogo de impressão");
+        tracing::warn!(%error, "print dialog failed");
         show_print_error(window, &error.to_string());
     }
 }
 
-/// Reusa o dialog de metadados existente com os arquivos do viewer.
-/// Spawna nova janela (o dialog é uma AppWindow independente).
 fn show_metadata_for_current(state: &Rc<RefCell<ViewerState>>) {
     let (window, path) = {
         let s = state.borrow();
@@ -4045,10 +3956,8 @@ fn show_metadata_for_current(state: &Rc<RefCell<ViewerState>>) {
         }
         (s.window().clone(), s.files[s.idx].clone())
     };
-    // Se já existe uma janela aberta para esta imagem, traz pra frente em
-    // vez de empilhar. Depois de navegar, ela descreveria a imagem errada:
-    // fecha e monta uma nova.
-    // An in-place save keeps the path but changes the file, so the
+    // A window already open for this image is raised; one for another
+    // image is replaced. An in-place save keeps the path but changes the file, so the
     // modification time is compared too.
     let modified = file_modified(&path);
     let existing = state.borrow_mut().props_dialog.take();
@@ -4066,7 +3975,6 @@ fn show_metadata_for_current(state: &Rc<RefCell<ViewerState>>) {
     // dialog, and the window closes with its parent.
     dialog.set_transient_for(Some(&window));
     dialog.set_destroy_with_parent(true);
-    // Quando o user fecha, soltamos a referência — próximo clique abre fresco.
     {
         let state = Rc::downgrade(state);
         dialog.connect_close_request(move |closing| {
@@ -4083,9 +3991,8 @@ fn show_metadata_for_current(state: &Rc<RefCell<ViewerState>>) {
     dialog.present();
 }
 
-/// Confirma com AdwAlertDialog e move o arquivo corrente pra lixeira
-/// via `gio::File::trash`. Depois segue para a próxima imagem da pasta
-/// (ou a anterior, se era a última); só fecha quando não sobra nenhuma.
+/// After a confirmation, move the shown file to the trash and show its
+/// neighbor (see [`remove_current_file`]).
 fn trash_current(state: &Rc<RefCell<ViewerState>>) {
     let (window, path) = {
         let s = state.borrow();
@@ -4125,7 +4032,7 @@ fn trash_current(state: &Rc<RefCell<ViewerState>>) {
                 remove_current_file(&state, &path);
             }
             Err(error) => {
-                tracing::warn!(?path, %error, "trash falhou");
+                tracing::warn!(?path, %error, "trash failed");
                 let window = state.borrow().window();
                 let alert = adw::AlertDialog::builder()
                     .heading(gettext("Could not move to trash"))
@@ -4140,7 +4047,7 @@ fn trash_current(state: &Rc<RefCell<ViewerState>>) {
 }
 
 /// Drop `path` (the file on screen) from the list after it went to the
-/// trash and show its neighbour: the next one, or the previous when it was
+/// trash and show its neighbor: the next one, or the previous when it was
 /// the last. The window closes only when the list becomes empty.
 fn remove_current_file(state: &Rc<RefCell<ViewerState>>, path: &Path) {
     let remaining = {
@@ -4298,8 +4205,8 @@ fn present_shortcuts_dialog(parent: &adw::ApplicationWindow) {
 
 /// About dialog with project, license and support links.
 fn present_about_dialog(parent: &adw::ApplicationWindow) -> adw::AboutDialog {
-    // Restaura o cursor antes de apresentar — o viewer pode tê-lo
-    // escondido por idle; o diálogo precisa dele para navegar nas páginas.
+    // The idle timer may have hidden the cursor, and the dialog's pages
+    // need it.
     parent.set_cursor(None);
 
     let about = adw::AboutDialog::builder()
@@ -4409,12 +4316,10 @@ fn open_batch_folder_dialog(window: &adw::ApplicationWindow) {
     });
 }
 
-/// File-chooser do dashboard: carrega uma lista de imagens e respawna o
-/// processo com esses arquivos para reusar a lógica de carregamento do
-/// CLI. Simples e previsível — evita duplicar o pipeline de load in-place.
+/// Start page file chooser: the chosen images open in a new viewer process,
+/// the same path as files given on the command line.
 fn open_files_dialog(window: &adw::ApplicationWindow) {
     let dialog = gtk::FileDialog::builder().title(gettext("Select images")).modal(true).build();
-    // Filtro de imagens: tudo que o nosso decoder aguenta.
     let filter = gtk::FileFilter::new();
     filter.set_name(Some(&gettext("Images")));
     for mime in [
@@ -4458,7 +4363,7 @@ fn refresh_title(state: &Rc<RefCell<ViewerState>>) {
         .file_name()
         .map(|n| n.to_string_lossy().into_owned())
         .unwrap_or_else(|| path.display().to_string());
-    // `•` à esquerda sinaliza edições pendentes. Convenção Loupe/TextEditor.
+    // A leading `•` marks unsaved edits, as in GNOME's image viewer and editor.
     let name = if s.pending_ops.is_empty() { base_name } else { format!("• {base_name}") };
     let subtitle = gettext("{current} of {total}")
         .replace("{current}", &(s.idx + 1).to_string())
@@ -4574,8 +4479,8 @@ mod anchor_tests {
     fn edit_ops_map_to_expected_transforms() {
         use super::{apply_op_to_image, EditOp};
         use image::{DynamicImage, Rgba, RgbaImage};
-        // 2×1: pixel esquerdo vermelho, direito verde. Giro à direita → 1×2
-        // com vermelho em cima. Cobre também CCW (inverso), 180, flip-H e -V.
+        // 2×1, red on the left and green on the right: turned clockwise it
+        // is 1×2 with red on top.
         let mut src = RgbaImage::new(2, 1);
         src.put_pixel(0, 0, Rgba([255, 0, 0, 255]));
         src.put_pixel(1, 0, Rgba([0, 255, 0, 255]));
@@ -4601,7 +4506,7 @@ mod anchor_tests {
         assert_eq!(fh.get_pixel(1, 0).0, [255, 0, 0, 255]);
 
         let fv = apply_op_to_image(img, EditOp::FlipV).to_rgba8();
-        // 1px alto → flip V é no-op visual
+        // One pixel tall: a vertical flip changes nothing.
         assert_eq!(fv.dimensions(), (2, 1));
         assert_eq!(fv.get_pixel(0, 0).0, [255, 0, 0, 255]);
     }
@@ -4695,8 +4600,7 @@ mod anchor_tests {
     #[test]
     fn histogram_counts_channels_and_ignores_alpha() {
         use super::sampled_histogram;
-        // 3 pixels: puro vermelho, puro verde (com alpha zero), puro azul.
-        // Alpha deve ser ignorado — só somamos R/G/B no ponto certo.
+        // Pure red, pure green with zero alpha, pure blue: alpha is ignored.
         let rgba = vec![
             255, 0, 0, 255, //
             0, 255, 0, 0, //
@@ -4712,7 +4616,7 @@ mod anchor_tests {
         // B: bin 255 += 1 (pixel 2); bin 0 += 2 (pixels 0, 1).
         assert_eq!(h[512 + 255], 1);
         assert_eq!(h[512], 2);
-        // Soma por canal confere com número de pixels.
+        // Each channel counts every pixel once.
         let sum = |chan: &[u32]| -> u32 { chan.iter().sum() };
         assert_eq!(sum(&h[0..256]), 3);
         assert_eq!(sum(&h[256..512]), 3);
@@ -4849,10 +4753,7 @@ mod anchor_tests {
 
     #[test]
     fn upscale_doubles_dimensions_lanczos() {
-        // Upscale was a thin wrapper over `resize_file` at factor*100 %.
-        // The helper went away with the worker-thread refactor; inline the
-        // same call here so the contract (factor 2 → 200 % Lanczos) keeps
-        // its regression coverage.
+        // The Lanczos3 upscale is `resize_file` at factor × 100 %.
         use bigimage_core::{
             resize_file, ConvertOutcome, EncodeOptions, Filter, OverwritePolicy, ResizeMode,
         };
@@ -4875,7 +4776,7 @@ mod anchor_tests {
 
         // Output name follows resize's Percent suffix: "_200pct".
         let out = dir.path().join("src_200pct.png");
-        assert!(out.exists(), "saída esperada não encontrada: {}", out.display());
+        assert!(out.exists(), "expected output missing: {}", out.display());
         let decoded = image::open(&out).unwrap();
         assert_eq!((decoded.width(), decoded.height()), (60, 40));
     }
@@ -4896,11 +4797,11 @@ mod anchor_tests {
         let p = nobg_output_path(&PathBuf::from("/tmp/foo/bar.jpg"));
         assert_eq!(p, PathBuf::from("/tmp/foo/bar_nobg.png"));
 
-        // Sem extensão → ainda vira .png no mesmo diretório.
+        // No extension: still a PNG in the same folder.
         let p = nobg_output_path(&PathBuf::from("/tmp/foo/bar"));
         assert_eq!(p, PathBuf::from("/tmp/foo/bar_nobg.png"));
 
-        // Caminho sem diretório → fica no CWD relativo.
+        // A bare file name stays relative to the working directory.
         let p = nobg_output_path(&PathBuf::from("solo.png"));
         assert_eq!(p, PathBuf::from("solo_nobg.png"));
     }
@@ -4914,7 +4815,7 @@ mod folder_nav_tests {
 
     fn touch(dir: &Path, name: &str) -> PathBuf {
         let path = dir.join(name);
-        std::fs::write(&path, b"").expect("escrever arquivo de teste");
+        std::fs::write(&path, b"").expect("write test file");
         path
     }
 
@@ -4943,13 +4844,13 @@ mod folder_nav_tests {
         assert!(is_viewable(Path::new("a.JPEG")));
         assert!(is_viewable(Path::new("a.avif")));
         assert!(!is_viewable(Path::new("a.txt")));
-        assert!(!is_viewable(Path::new("sem-extensao")));
+        assert!(!is_viewable(Path::new("no-extension")));
     }
 
     #[test]
     fn single_file_expands_to_its_folder_in_natural_order() {
         let dir = tempfile::tempdir().expect("tempdir");
-        for name in ["10.png", "2.png", "1.png", "notas.txt"] {
+        for name in ["10.png", "2.png", "1.png", "notes.txt"] {
             touch(dir.path(), name);
         }
         let clicked = dir.path().join("2.png");
@@ -4958,8 +4859,8 @@ mod folder_nav_tests {
 
         let names: Vec<String> =
             files.iter().map(|p| p.file_name().unwrap().to_string_lossy().into_owned()).collect();
-        assert_eq!(names, vec!["1.png", "2.png", "10.png"], "o .txt fica de fora");
-        assert_eq!(idx, 1, "abre posicionado no arquivo clicado");
+        assert_eq!(names, vec!["1.png", "2.png", "10.png"], "the .txt is left out");
+        assert_eq!(idx, 1, "opens at the clicked file");
     }
 
     #[test]
@@ -4971,15 +4872,15 @@ mod folder_nav_tests {
 
         let (files, idx) = expand_to_folder(vec![a.clone(), b.clone()]);
 
-        assert_eq!(files, vec![a, b], "seleção da linha de comando é respeitada");
+        assert_eq!(files, vec![a, b], "the command-line selection is kept");
         assert_eq!(idx, 0);
     }
 
     #[test]
     fn lone_image_in_folder_stays_alone() {
         let dir = tempfile::tempdir().expect("tempdir");
-        let only = touch(dir.path(), "unica.png");
-        touch(dir.path(), "leia-me.txt");
+        let only = touch(dir.path(), "only.png");
+        touch(dir.path(), "read-me.txt");
 
         let (files, idx) = expand_to_folder(vec![only.clone()]);
 
@@ -4990,7 +4891,7 @@ mod folder_nav_tests {
     #[test]
     fn missing_file_falls_back_to_the_input() {
         let dir = tempfile::tempdir().expect("tempdir");
-        let ghost = dir.path().join("nao-existe.png");
+        let ghost = dir.path().join("missing.png");
 
         let (files, idx) = expand_to_folder(vec![ghost.clone()]);
 
@@ -5331,12 +5232,12 @@ mod lifecycle_tests {
             }
         };
         let cached = |path: &PathBuf| state.borrow().frame_cache.iter().any(|f| &f.path == path);
-        wait("neighbours were not decoded", &|| {
+        wait("neighbors were not decoded", &|| {
             cached(&files[1]) && cached(&files[2]) && state.borrow().prefetching.is_none()
         });
         assert!(
             state.borrow().warm_slots.iter().all(|slot| slot.paintable().is_some()),
-            "neighbours are not kept uploaded"
+            "neighbors are not kept uploaded"
         );
 
         // The next image is on screen as soon as the key is handled.
@@ -5351,8 +5252,8 @@ mod lifecycle_tests {
         assert_eq!(state.borrow().texture.as_ref(), Some(&expected), "cached frame not shown");
         assert!(state.borrow().current_ready);
 
-        // A neighbour rewritten after it was decoded is read again.
-        wait("new neighbours were not decoded", &|| {
+        // A neighbor rewritten after it was decoded is read again.
+        wait("new neighbors were not decoded", &|| {
             cached(&files[2]) && cached(&files[0]) && state.borrow().prefetching.is_none()
         });
         std::thread::sleep(Duration::from_millis(20));

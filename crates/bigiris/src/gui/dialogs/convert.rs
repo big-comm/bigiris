@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-//! Converter: change the format of the selected images.
+//! Convert: change the format of the selected images.
 
 use super::*;
 
-/// Run the "Converter" modal. Returns GTK's exit code.
+/// Run the "Convert" modal. Returns GTK's exit code.
 pub fn run_convert_dialog(files: Vec<PathBuf>) -> i32 {
     let files = Rc::new(files);
     run_dialog_app(move |app| build_convert_dialog(app, files.clone()).present())
@@ -41,19 +41,16 @@ fn fill_convert_dialog(
     let encode = EncodeControls::new();
     encode.bind(&window, &format_row);
 
-    // ── Conversão group ───────────────────────────────────────────────
     let conv_group = adw::PreferencesGroup::builder().title(gettext("Conversion")).build();
     conv_group.add(&files_row);
     conv_group.add(&format_row);
     conv_group.add(&encode.target);
     conv_group.add(&encode.advanced);
 
-    // ── Destino group: overwrite policy + optional output folder ──────
     let dest_group = adw::PreferencesGroup::builder().title(gettext("Destination")).build();
     dest_group.add(&overwrite_row);
 
-    // Pasta de saída picker (mirror do Batch dialog) — None = mesma
-    // pasta do arquivo de origem (comportamento histórico).
+    // None writes next to each source file, as the batch dialog does.
     let output_dir: Rc<RefCell<Option<PathBuf>>> = Rc::new(RefCell::new(None));
     let folder_row = adw::ActionRow::builder()
         .use_markup(false)
@@ -100,8 +97,8 @@ fn fill_convert_dialog(
         }
     }
 
-    // Smart prompt: LGPD / privacidade — se a imagem tem coordenadas GPS
-    // no EXIF, avisa que o upload pode vazar a localização.
+    // Privacy: warn that GPS coordinates in the EXIF can reveal where the
+    // photo was taken once it is shared.
     let gps_banner = adw::Banner::builder()
         .title(gettext("This image contains GPS (location) data in its EXIF. Be careful when sharing it publicly — our pipeline strips EXIF automatically when re-encoding."))
         .revealed(false)

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //! Editing side panel.
 //!
-//! The "Editar" header button (or `E`) slides a translucent panel in from
+//! The "Edit" header button (or `E`) slides a translucent panel in from
 //! the right with every edit in one place: rotate, flip, straighten and
 //! crop, tone sliders, resize, the AI tools (background removal, upscale,
 //! denoise) and save.
@@ -34,7 +34,7 @@ const PREVIEW_MAX_PIXELS: u64 = 2_000_000;
 /// value is committed as an edit. Pointer drags commit on release.
 const COMMIT_IDLE_MS: u64 = 150;
 
-/// Encoding goal offered by "Salvar como…".
+/// Encoding goal offered by "Save as…".
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(in crate::gui) enum SaveQuality {
     Max,
@@ -48,7 +48,7 @@ const SAVE_QUALITIES: [(SaveQuality, &str); 3] = [
     (SaveQuality::Smallest, n_("Smallest file")),
 ];
 
-/// Encoder options for "Salvar como…": the smallest file that keeps the
+/// Encoder options for "Save as…": the smallest file that keeps the
 /// chosen visual quality (SSIMULACRA2 target), like the Prisma converter.
 pub(in crate::gui) fn save_as_options(format: Format, quality: SaveQuality) -> EncodeOptions {
     let _ = format;
@@ -315,7 +315,6 @@ pub(in crate::gui) fn build() -> EditPanelUi {
     let original = gtk::ToggleButton::with_label(&gettext("View original"));
     original.set_tooltip_text(Some(&gettext("Shows the image without the edits (hold \\)")));
 
-    // Transformar
     let transform = section(&gettext("Transform"));
     let buttons = gtk::Box::new(gtk::Orientation::Horizontal, 6);
     buttons.set_homogeneous(true);
@@ -341,7 +340,6 @@ pub(in crate::gui) fn build() -> EditPanelUi {
         .build();
     transform.append(&crop);
 
-    // Ajustes
     let adjust = section(&gettext("Adjustments"));
     let (brightness_row, brightness) = slider(&gettext("Brightness"), -100.0, 100.0, 1.0, 0.0);
     let (contrast_row, contrast) = slider(&gettext("Contrast"), -100.0, 100.0, 1.0, 0.0);
@@ -354,7 +352,6 @@ pub(in crate::gui) fn build() -> EditPanelUi {
     let reset_all = gtk::Button::with_label(&gettext("Reset adjustments"));
     adjust.append(&reset_all);
 
-    // Tamanho
     let size = section(&gettext("Size"));
     let width = size_spin(&gettext("Width (px)"));
     let height = size_spin(&gettext("Height (px)"));
@@ -385,7 +382,6 @@ pub(in crate::gui) fn build() -> EditPanelUi {
     scale_row.append(&resize_apply);
     size.append(&scale_row);
 
-    // Ferramentas
     let tools = section(&gettext("Tools"));
     let remove_bg = gtk::Button::with_label(&gettext("Remove background (AI)"));
     tools.append(&remove_bg);
@@ -419,7 +415,6 @@ pub(in crate::gui) fn build() -> EditPanelUi {
     tool_status.add_css_class("caption");
     tools.append(&tool_status);
 
-    // Salvar
     let save = section(&gettext("Save"));
     let save_button = gtk::Button::builder()
         .label(gettext("Save"))
@@ -690,7 +685,7 @@ pub(in crate::gui) fn connect(state: &Rc<RefCell<ViewerState>>, window: &adw::Ap
         scale.add_controller(pointer);
     }
     // A reset turns itself insensitive, which drops keyboard focus: hand it
-    // to the slider it reset (the first one for "Restaurar ajustes").
+    // to the slider it reset (the first one for "Reset adjustments").
     let resets: Vec<(gtk::Button, Option<usize>, gtk::Scale)> = {
         let s = state.borrow();
         let sliders = &s.edit_ui.sliders;
@@ -1660,7 +1655,7 @@ pub(in crate::gui) fn run_tool(state: &Rc<RefCell<ViewerState>>, op: EditOp) {
                 }
             }
             Err(error) => {
-                tracing::warn!(%error, ?op, "ferramenta do painel falhou");
+                tracing::warn!(%error, ?op, "panel tool failed");
                 ui.tool_status.set_text(&error);
                 ui.tool_status.set_visible(true);
             }
@@ -1722,7 +1717,7 @@ fn choose_save_as(state: &Rc<RefCell<ViewerState>>) {
         }
         (s.window(), s.files[s.idx].clone())
     };
-    let stem = path.file_stem().map_or_else(|| "imagem".into(), |s| s.to_string_lossy());
+    let stem = path.file_stem().map_or_else(|| "image".into(), |s| s.to_string_lossy());
     let extension = save_format(&path).map_or("png", |format| format.extension());
     let name = fill(&gettext("{name}-edited"), &[("name", &stem)]);
     let dialog = gtk::FileDialog::builder()
@@ -1801,7 +1796,7 @@ pub(in crate::gui) fn save_copy(state: &Rc<RefCell<ViewerState>>, target: PathBu
                 pulse_osd_for(&state, OSD_NOTICE_MS);
             }
             Err(failure) => {
-                tracing::error!(?target, ?failure, "salvar como: falha");
+                tracing::error!(?target, ?failure, "save as failed");
                 present_copy_failure(&state, &failure);
             }
         }

@@ -90,7 +90,7 @@ pub(in crate::gui) struct Fit {
 }
 
 /// Layout of a `ContentFit::ScaleDown` picture in a `(bx, by, bw, bh)` box:
-/// shrink to fit, never enlarge, centred.
+/// shrink to fit, never enlarge, centered.
 pub(in crate::gui) fn scale_down_fit(bounds: (f64, f64, f64, f64), natural: (u32, u32)) -> Fit {
     let (bx, by, bw, bh) = bounds;
     let (iw, ih) = (f64::from(natural.0), f64::from(natural.1));
@@ -228,7 +228,7 @@ pub(in crate::gui) fn drag_to(
                     )
                 }
                 // Side edges: move one side; a fixed ratio keeps the
-                // selection centred on the other axis.
+                // selection centered on the other axis.
                 (hx, 0) => {
                     let fixed = if hx > 0 { l } else { r };
                     let moved = (if hx > 0 { r } else { l } + dx).clamp(0.0, nat.0);
@@ -295,7 +295,7 @@ pub(in crate::gui) fn nudge(
     drag_to(Drag::Resize { start: rect, handle: Handle::SE }, delta, natural, ratio)
 }
 
-/// Largest selection with `ratio` (width / height) centred in the image;
+/// Largest selection with `ratio` (width / height) centered in the image;
 /// the whole image when `ratio` is `None`.
 pub(in crate::gui) fn ratio_rect(natural: (u32, u32), ratio: Option<f64>) -> Rect {
     let full = Rect::full(natural);
@@ -809,7 +809,7 @@ mod tests {
     }
 
     #[test]
-    fn scale_down_fit_never_enlarges_and_centres() {
+    fn fit_never_enlarges_and_centers() {
         let small = scale_down_fit((0.0, 0.0, 1000.0, 800.0), (400, 300));
         assert_eq!(small, Fit { scale: 1.0, ox: 300.0, oy: 250.0 });
         let big = scale_down_fit((10.0, 20.0, 400.0, 300.0), (800, 300));
@@ -858,7 +858,7 @@ mod tests {
     }
 
     #[test]
-    fn edge_resize_with_ratio_stays_centred() {
+    fn edge_resize_with_ratio_stays_centered() {
         let r = Rect { x: 100.0, y: 100.0, w: 100.0, h: 100.0 };
         let e = drag_to(Drag::Resize { start: r, handle: Handle::E }, (50.0, 0.0), NAT, Some(1.0));
         assert!(close(e, Rect { x: 100.0, y: 75.0, w: 150.0, h: 150.0 }), "{e:?}");
@@ -874,7 +874,7 @@ mod tests {
     }
 
     #[test]
-    fn ratio_rect_is_the_largest_centred_box() {
+    fn ratio_rect_largest_centered_box() {
         assert!(close(ratio_rect(NAT, None), Rect::full(NAT)));
         assert!(close(ratio_rect(NAT, Some(1.0)), Rect { x: 50.0, y: 0.0, w: 300.0, h: 300.0 }));
         let wide = ratio_rect(NAT, Some(16.0 / 9.0));

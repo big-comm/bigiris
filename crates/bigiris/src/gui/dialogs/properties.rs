@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-//! Propriedades: file, image and EXIF details of one image.
+//! Properties: file, image and EXIF details of one image.
 
 use super::*;
 
@@ -9,7 +9,7 @@ use super::*;
 // ---------------------------------------------------------------------------
 
 /// Run the metadata viewer for `files[0]`. Multi-select still opens but
-/// only the first file is inspected — a "próximo" navegator fica para M3.
+/// only the first file is inspected.
 pub fn run_metadata_dialog(files: Vec<PathBuf>) -> i32 {
     run_dialog_app(move |app| {
         if let Some(first) = files.first() {
@@ -18,10 +18,9 @@ pub fn run_metadata_dialog(files: Vec<PathBuf>) -> i32 {
     })
 }
 
-/// Janela de propriedades da imagem. Sempre traz as infos básicas do
-/// arquivo (nome, pasta, tamanho, modificado, dimensões) mesmo sem EXIF —
-/// é o que o usuário enxerga quando clica no "i". Se houver EXIF, uma
-/// seção extra aparece abaixo com os campos crus.
+/// The image properties window. File name, folder, size, modification time
+/// and dimensions show even without EXIF; EXIF tags, when present, follow
+/// in their own section.
 pub(in crate::gui) fn build_properties_window(
     app: &adw::Application,
     path: &Path,
@@ -216,7 +215,7 @@ fn build_properties_image_group(info: Option<&crate::codec::Information>) -> adw
         }
     }
 
-    // Orientação EXIF — só aparece se houver tag e != 1 (1 = upright).
+    // Shown only for an EXIF orientation other than 1 (upright).
     if let Some(meta) = info.and_then(|i| i.metadata.as_ref()) {
         if let Some(o) = meta.orientation {
             if o != 1 {
@@ -286,15 +285,13 @@ fn build_properties_exif_group(meta: &metadata::Metadata) -> adw::PreferencesGro
     group
 }
 
-/// ActionRow só-leitura com título+valor. Padrão visual usado no dialog
-/// de propriedades pra cada campo.
 fn info_row(title: &str, value: &str) -> adw::ActionRow {
     let row = adw::ActionRow::builder().use_markup(false).title(title).build();
     row.set_subtitle(value);
     row
 }
 
-/// Formata bytes pra uma escala humana (KB/MB/GB em base 1024).
+/// Human-readable size in binary (1024-based) units.
 fn format_bytes(n: u64) -> String {
     const UNITS: [&str; 4] = ["B", "KB", "MB", "GB"];
     let mut v = n as f64;
@@ -310,12 +307,9 @@ fn format_bytes(n: u64) -> String {
     }
 }
 
-/// Formata um SystemTime em `YYYY-MM-DD HH:MM` local. Usa apenas a API
-/// padrão (sem pegar `chrono`) — basta pra mostrar a data legível.
+/// Local `YYYY-MM-DD HH:MM`; glib handles the time zone and calendar.
 fn format_system_time(t: std::time::SystemTime) -> String {
     let secs = t.duration_since(std::time::UNIX_EPOCH).map(|d| d.as_secs() as i64).unwrap_or(0);
-    // glib::DateTime lida com timezone local automaticamente — usamos ela
-    // pra evitar reimplementar aritmética de calendário.
     match glib::DateTime::from_unix_local(secs) {
         Ok(dt) => {
             dt.format("%Y-%m-%d %H:%M").map(|g| g.to_string()).unwrap_or_else(|_| format!("{secs}"))

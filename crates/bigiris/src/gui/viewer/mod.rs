@@ -22,7 +22,7 @@ mod panel_tests;
 pub(super) const FILM_STRIP_PAGE: usize = 41;
 
 /// First index of the film-strip window that shows `idx`. The window is
-/// centred on the current image and slides back near the end of the list,
+/// centered on the current image and slides back near the end of the list,
 /// so it is always full when the folder has enough images: a page that
 /// held only the last file would make the strip look like a single image.
 pub(super) fn film_strip_start(len: usize, idx: usize, page: usize) -> usize {

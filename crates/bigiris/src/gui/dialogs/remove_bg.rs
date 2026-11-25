@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-//! Remover fundo: local BiRefNet background removal.
+//! Remove background: local BiRefNet background removal.
 
 use super::*;
 
@@ -27,7 +27,7 @@ fn remove_bg_one_with_session(
         .process_with_progress(&img, bigimage_ai::cancel_on(cancel))
         .map_err(|e| ai_error_text(&e))?;
     // Increment, never Replace: the dialog promises not to overwrite, and
-    // `foto.jpg` + `foto.png` in one batch both map to `foto_nobg.png`.
+    // `photo.jpg` + `photo.png` in one batch both map to `photo_nobg.png`.
     let outcome = bigimage_core::save_image(
         out,
         nobg_output_path(src),
@@ -130,9 +130,6 @@ pub(in crate::gui) fn build_remove_bg_dialog(
     let model_icon = gtk::Image::from_icon_name("application-x-executable-symbolic");
     model_row.add_prefix(&model_icon);
 
-    // Subtitle é Pango-markup em adw::ActionRow → angle-brackets ("<orig>")
-    // eram interpretados como tag malformada e a linha ficava vazia.
-    // Usar chevrons Unicode evita o parser sem escaping manual.
     let output_row = adw::ActionRow::builder()
         .use_markup(false)
         .title(gettext("Output"))
@@ -152,8 +149,8 @@ pub(in crate::gui) fn build_remove_bg_dialog(
     group.add(&output_row);
     content.append(&group);
 
-    // Progress bar — hidden until the user clicks Remover fundo. Shows
-    // download bytes on first run, then per-file inference progress.
+    // Hidden until Remove background is clicked. Shows download bytes on
+    // the first run, then per-file inference progress.
     let progress_bar =
         gtk::ProgressBar::builder().show_text(true).visible(false).margin_top(6).build();
     content.append(&progress_bar);
@@ -170,10 +167,9 @@ pub(in crate::gui) fn build_remove_bg_dialog(
     tv.set_content(Some(&content));
     window.set_content(Some(&tv));
 
-    // Cancellation flag — shared between UI, worker thread, and the
-    // close_request handler so fechar a janela (X, Esc, botão Cancelar)
-    // efetivamente encerra a interação: o Compare pós-sucesso NÃO abre,
-    // e o worker para de processar arquivos restantes.
+    // Shared by the UI, the worker and the close handler: closing the window
+    // (X, Esc, Cancel) stops the remaining files and keeps the Compare window
+    // that follows a success from opening.
     let cancelled = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
 
     {
@@ -215,7 +211,7 @@ pub(in crate::gui) fn build_remove_bg_dialog(
             }
             batch_runner::disarm_auto_close(&window);
             apply_btn.set_sensitive(false);
-            // Cancelar continua disponível — vira "abortar e fechar".
+            // Cancel stays available: during a run it aborts and closes.
             cancel_btn.set_label(&gettext("Cancel"));
             progress_bar.remove_css_class("error");
             progress_bar.remove_css_class("success");
@@ -304,9 +300,9 @@ pub(in crate::gui) fn build_remove_bg_dialog(
             }
 
             // Awaited on the GTK loop: it wakes only when the worker
-            // publishes progress. Se a janela já foi fechada (cancelled), não
-            // tocamos mais nos widgets, mas seguramos o app até o worker
-            // terminar: sair no meio da gravação deixaria `.part` órfãos.
+            // publishes progress. Once the window is closed it leaves the widgets
+            // alone but holds the app until the worker ends: quitting mid-write
+            // would strand `.part` files.
             let progress_bar = progress_bar.clone();
             let status = status.clone();
             let apply_btn = apply_btn.clone();
@@ -361,15 +357,14 @@ pub(in crate::gui) fn build_remove_bg_dialog(
                             }
                             _ => true,
                         };
-                        // Single-file: fecha imediato enquanto o Compare abre
-                        // (evita janela dupla visível); fica aberta para
-                        // mostrar o erro se ele não abrir.
+                        // A single file closes as Compare opens, so two windows
+                        // never show at once; it stays open to report a Compare
+                        // that failed to start.
                         if compared {
                             window.close();
                         }
                     } else {
-                        // Lote: segura 2 s pra o usuário conferir o
-                        // sumário antes de sumir.
+                        // A batch stays 2 s so the summary can be read.
                         batch_runner::arm_auto_close(&window, 2);
                     }
                 } else {
@@ -414,7 +409,7 @@ fn show_bg_progress(progress_bar: &gtk::ProgressBar, state: &BgUiState) {
     }
 }
 
-/// Model row subtitle: licence, and where the model runs once loaded.
+/// Model row subtitle: license, and where the model runs once loaded.
 fn model_subtitle() -> String {
     match bigimage_ai::background::device() {
         Some(device) => fill(
@@ -500,7 +495,7 @@ mod availability_tests {
         app.register(None::<&gio::Cancellable>).unwrap();
         let context = glib::MainContext::default();
         let dir = tempfile::tempdir().unwrap();
-        let source = dir.path().join("foto.png");
+        let source = dir.path().join("photo.png");
         image::RgbImage::from_pixel(320, 240, image::Rgb([90, 140, 200])).save(&source).unwrap();
         let files = Rc::new(vec![source]);
         let bg = &bigimage_ai::background::MODEL;

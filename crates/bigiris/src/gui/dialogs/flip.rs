@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-//! Espelhar: horizontal or vertical mirror.
+//! Flip: horizontal or vertical mirror.
 
 use super::*;
 

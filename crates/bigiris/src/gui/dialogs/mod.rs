@@ -51,7 +51,7 @@ pub(in crate::gui) const CONVERT_FORMATS: &[(&str, Format)] = &[
     (n_("OpenEXR"), Format::OpenExr),
 ];
 
-/// "Qualidade" choices: the visual target each encoder searches for.
+/// "Quality" choices: the visual target each encoder searches for.
 const TARGET_CHOICES: &[(&str, bigimage_core::QualityTarget)] = &[
     (n_("Maximum quality"), bigimage_core::QualityTarget::Maximum),
     (n_("Balanced"), bigimage_core::QualityTarget::Balanced),
@@ -59,8 +59,8 @@ const TARGET_CHOICES: &[(&str, bigimage_core::QualityTarget)] = &[
 ];
 
 /// Encoder controls shared by the convert and batch dialogs: the
-/// "Qualidade" target up front, the fixed-quality override and the slower
-/// lossless optimisation under "Avançado".
+/// "Quality" target up front, the fixed-quality override and the slower
+/// lossless optimization under "Advanced".
 pub(in crate::gui) struct EncodeControls {
     pub(in crate::gui) target: adw::ComboRow,
     pub(in crate::gui) fixed: adw::SwitchRow,
@@ -117,7 +117,7 @@ impl EncodeControls {
         }
     }
 
-    /// Enable only the controls the selected encoder honours.
+    /// Enable only the controls the selected encoder honors.
     pub(in crate::gui) fn bind(&self, window: &adw::ApplicationWindow, format_row: &adw::ComboRow) {
         let selected = format_row.clone();
         let (target, fixed, quality, optimize) =
@@ -159,7 +159,7 @@ fn run_dialog_app(activate: impl Fn(&adw::Application) + 'static) -> i32 {
     i32::from(u8::from(code))
 }
 
-/// "Formato de destino" combo listing [`CONVERT_FORMATS`].
+/// "Target format" combo listing [`CONVERT_FORMATS`].
 fn format_row() -> adw::ComboRow {
     let names: Vec<&str> = CONVERT_FORMATS.iter().map(|(n, _)| *n).collect();
     adw::ComboRow::builder()
@@ -173,7 +173,7 @@ fn selected_format(row: &adw::ComboRow) -> Format {
     CONVERT_FORMATS[row.selected() as usize].1
 }
 
-/// "Formato de destino" combo whose first entry keeps the source format.
+/// "Target format" combo whose first entry keeps the source format.
 fn target_format_row() -> adw::ComboRow {
     let mut names = vec![n_("Keep the original format")];
     names.extend(CONVERT_FORMATS.iter().map(|(n, _)| *n));
@@ -192,7 +192,7 @@ fn selected_target_format(row: &adw::ComboRow) -> Option<Format> {
     }
 }
 
-/// "Se o arquivo de saída existir" combo listing [`OVERWRITE_CHOICES`].
+/// "If the output file exists" combo listing [`OVERWRITE_CHOICES`].
 fn overwrite_row() -> adw::ComboRow {
     let names: Vec<&str> = OVERWRITE_CHOICES.iter().map(|(n, _)| *n).collect();
     adw::ComboRow::builder()
@@ -263,8 +263,8 @@ fn files_subtitle(files: &[PathBuf]) -> String {
     }
 }
 
-/// Abre FolderDialog; ao confirmar, atualiza `output_dir` e o subtitle
-/// da row. Revela o botão "limpar" para o usuário voltar ao padrão.
+/// On confirmation, stores the folder in `output_dir`, shows it in `row`
+/// and reveals `clear_btn` to return to the source folder.
 fn pick_output_folder(
     window: &adw::ApplicationWindow,
     output_dir: &Rc<RefCell<Option<PathBuf>>>,

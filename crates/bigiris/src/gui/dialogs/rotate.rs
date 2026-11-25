@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-//! Girar: rotate by 90, 180 or 270 degrees.
+//! Rotate: rotate by 90, 180 or 270 degrees.
 
 use super::*;
 

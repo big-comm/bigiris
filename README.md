@@ -211,8 +211,12 @@ No Arch, BigLinux ou Manjaro:
 
 ```bash
 cd pkgbuild
-makepkg -si
+makepkg -si -p PKGBUILD.local
 ```
+
+O `PKGBUILD` sem sufixo é o do build do BigCommunity: ele calcula a versão pela
+data e hora, que mudam durante uma compilação longa, e o `makepkg -si` local não
+encontra o pacote gerado. O `PKGBUILD.local` tem a mesma receita com versão fixa.
 
 Em outras distribuições, após instalar Rust (1.95 ou posterior), GTK4,
 libadwaita, dav1d, gettext e `glslc` (do shaderc, usado só na compilação):
@@ -300,13 +304,18 @@ também para `animate` (o `.gif` de destino), `remove-bg` (`<nome>_nobg.png`),
 `<nome>.pdf` já existente em vez de substituí-lo. `upscale --engine` aceita
 `auto` (padrão: Real-ESRGAN se instalado, senão Lanczos3), `realesrgan` (falha
 se o pacote faltar) e `lanczos`. Em `inpaint`, a máscara tem o tamanho da
-imagem; o branco é preenchido a partir dos arredores e o resto da imagem não
-muda. Sem o pacote do modelo, `remove-bg`, `denoise`, `inpaint` e
+imagem e o branco é preenchido a partir dos arredores. Além das áreas marcadas
+e de uma faixa estreita de transição em volta delas, os pixels ficam iguais em
+PNG e TIFF; JPEG, WebP e AVIF são recomprimidos na
+qualidade `maxima`, como em `denoise`. As saídas das ferramentas de IA são de
+8 bits e não levam o EXIF da origem. Sem o pacote do modelo, `remove-bg`, `denoise`, `inpaint` e
 `upscale --engine realesrgan` param com código 1 e dizem o que instalar.
 `to-pdf --timeout <segundos>` (1 a 3600, padrão 120) limita o tempo de cada
 documento no LibreOffice; ao estourar, o processo e seus filhos são encerrados
 e nenhum PDF parcial fica para trás. Saídas que colidiriam entre si no mesmo
-comando são recusadas antes de qualquer gravação.
+comando são recusadas antes de qualquer gravação. Com `--notify` (usado pelos
+menus de contexto, que não mostram o terminal), uma falha também aparece numa
+notificação do desktop, pelo `notify-send` do pacote `libnotify`.
 
 ### Códigos de saída
 
@@ -385,7 +394,10 @@ cargo test --release -p bigimage-ai --features native --test models -- \
 
 ## Licença
 
-GPL-3.0-or-later. Consulte [LICENSE](LICENSE).
+GPL-3.0-or-later. Consulte [LICENSE](LICENSE). As licenças das bibliotecas
+embutidas no binário (crates Rust, mozjpeg, libwebp, libdeflate, mimalloc) estão
+em [THIRD_PARTY_LICENSES](THIRD_PARTY_LICENSES), gerado por
+`scripts/third_party_licenses.py`.
 
 Os motores de IA vêm do
 [image-engine-native](https://github.com/biglinux/image-engine-native)

@@ -1,33 +1,33 @@
-# ADR-001 — Core separa GUI e CLI
+# ADR-001: The core separates GUI and CLI
 
-- **Status:** Aceito
-- **Data:** 2026-04-19
+- **Status:** Accepted
+- **Date:** 2026-04-19
 
-## Contexto
+## Context
 
-O prompt inicial exige (R3) que "as funcionalidades utilizadas pela interface gráfica também sejam acessíveis através da linha de comandos" para habilitar CI/CD que impeça regressões em recursos estabilizados. Sem essa separação, qualquer teste automatizado precisaria de display (Xvfb, Wayland headless) e introduziria flakiness.
+The initial requirements demand (R3) that "the features used by the graphical interface also be accessible through the command line", to enable CI/CD that prevents regressions in stabilized features. Without this separation, every automated test would need a display (Xvfb, headless Wayland) and would introduce flakiness.
 
-## Decisão
+## Decision
 
-Toda lógica de decode, encode, transforms, pipeline e IA mora em `bigimage-core` e `bigimage-ai` — **crates que NÃO dependem de `gtk4`, `adw` ou qualquer toolkit gráfico**. O binário `bigiris`:
+All decode, encode, transform, pipeline and AI logic lives in `bigimage-core` and `bigimage-ai`, **crates that do NOT depend on `gtk4`, `adw` or any graphical toolkit**. The `bigiris` binary:
 
-- **Subcomandos CLI** (`bigiris convert …`, `bigiris resize …`, etc.) invocam o core diretamente, sem abrir janela.
-- **GUI** (viewer + diálogos modais) é um cliente do core: captura parâmetros do usuário e chama a mesma API que o CLI.
+- **CLI subcommands** (`bigiris convert …`, `bigiris resize …`, etc.) call the core directly, without opening a window.
+- **GUI** (viewer + modal dialogs) is a client of the core: it captures the user's parameters and calls the same API as the CLI.
 
-Testes de integração disparam a MESMA operação pelas duas superfícies e comparam outputs byte-a-byte. Divergência quebra CI.
+Integration tests trigger the SAME operation through both surfaces and compare the outputs byte for byte. A divergence breaks CI.
 
-## Consequências
+## Consequences
 
-**Positivas**
-- CI em contêiner Arch sem display valida 100% das regras de negócio.
-- Usuários de terminal e scripts têm acesso nativo a tudo.
-- Refactor do core não pode vazar para a GUI (barreira de compilação).
+**Positive**
+- CI in an Arch container without a display validates 100% of the business rules.
+- Terminal users and scripts have native access to everything.
+- A core refactor cannot leak into the GUI (compile-time barrier).
 
-**Negativas**
-- Parâmetros duplos: cada opção precisa ser exposta em clap (CLI) e no widget (GUI). Mitigado por geração parcial: structs de parâmetro serializáveis via serde, usadas por ambos.
-- Tentação de colocar "só um detalhinho visual" no core. Revisões de PR devem recusar.
+**Negative**
+- Double parameters: each option must be exposed in clap (CLI) and in the widget (GUI). Mitigated by partial generation: parameter structs serializable through serde, used by both.
+- The temptation to put "just a small visual detail" into the core. Pull request reviews must refuse it.
 
-## Alternativas descartadas
+## Rejected alternatives
 
-- **Core dependendo de gtk4 para tipos de imagem**: acoplaria o core a um toolkit específico e inviabilizaria CI headless.
-- **CLI como camada fina de bindings sobre GUI**: inverteria a ordem, GUI passaria a ser source-of-truth, testes dependeriam de display.
+- **Core depending on gtk4 for image types**: would couple the core to a specific toolkit and rule out headless CI.
+- **CLI as a thin binding layer over the GUI**: would invert the order; the GUI would become the source of truth and tests would depend on a display.

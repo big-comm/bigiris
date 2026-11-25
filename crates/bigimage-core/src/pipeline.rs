@@ -179,7 +179,12 @@ pub(crate) fn decode_local_with(
     image = avif_transform.apply(image);
     if normalize {
         if let Some(icc) = icc {
-            crate::color::normalize_srgb(&mut image, &icc)?;
+            // A broken profile must not make the photo unreadable: its pixels
+            // are shown as sRGB and the caller is told (take_ignored_profile).
+            if let Err(error) = crate::color::normalize_srgb(&mut image, &icc) {
+                tracing::warn!(%error, "perfil ICC malformado ignorado; pixels tratados como sRGB");
+                crate::color::note_ignored_profile();
+            }
         }
         return Ok((image, format, crate::metadata::SourceMetadata::default()));
     }

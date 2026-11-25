@@ -22,8 +22,10 @@ fn error(message: impl std::fmt::Display) -> ImageError {
 ///   converted to RGB, RGB profile on gray pixels, Lab/XYZ…): the profile is
 ///   ignored with a warning — refusing to open the image would be worse.
 ///
-/// Only a malformed profile fails: relabeling those pixels silently would
-/// hide a corrupt file.
+/// Only a malformed profile fails. Decoding for display then keeps the
+/// pixels as sRGB and records it with [`note_ignored_profile`], so the
+/// viewer and the CLI can say the colours may be off instead of refusing the
+/// photo or relabeling it silently.
 pub fn normalize_srgb(image: &mut DynamicImage, icc: &[u8]) -> ImageResult<()> {
     normalize_srgb_applied(image, icc).map(drop)
 }
@@ -191,6 +193,22 @@ fn same_canonical_profile(a: &[u8], b: &[u8]) -> bool {
         && a[..24] == b[..24]
         && a[36..84] == b[36..84]
         && a[100..] == b[100..]
+}
+
+thread_local! {
+    static IGNORED_PROFILE: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+}
+
+/// Record that a decode on this thread showed the pixels of a malformed ICC
+/// profile as sRGB. The sandboxed codec relays it to the thread that asked.
+pub fn note_ignored_profile() {
+    IGNORED_PROFILE.with(|flag| flag.set(true));
+}
+
+/// Whether a decode on this thread ignored a malformed ICC profile since the
+/// last call; clears the note.
+pub fn take_ignored_profile() -> bool {
+    IGNORED_PROFILE.with(|flag| flag.replace(false))
 }
 
 /// Creation date stamped into the generated profile: 2026-01-01 00:00:00,

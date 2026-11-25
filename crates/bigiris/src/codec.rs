@@ -567,7 +567,7 @@ fn receive(output: std::fs::File) -> ImageResult<Pixels> {
 fn receive_with(mut output: std::fs::File, trailer: bool) -> ImageResult<(Pixels, ResaveExtras)> {
     let mut header = [0u8; HEADER];
     output.read_exact(&mut header)?;
-    if &header[..8] != MAGIC || header[10] > 1 || header[11] != 0 {
+    if &header[..8] != MAGIC || header[10] > 1 || header[11] > 1 {
         return Err(invalid("protocolo de codec inválido"));
     }
     let word = |offset| u32::from_le_bytes(header[offset..offset + 4].try_into().unwrap());
@@ -686,6 +686,9 @@ fn receive_with(mut output: std::fs::File, trailer: bool) -> ImageResult<(Pixels
         };
         extras.source.exif = blob(exif_length)?;
         extras.source.icc = blob(icc_length)?;
+    }
+    if header[11] == 1 {
+        bigimage_core::color::note_ignored_profile();
     }
     Ok((Pixels { image, format, natural, gps: header[10] == 1 }, extras))
 }
@@ -869,7 +872,9 @@ fn send_to(
         color,
         format.map_or(255, |f| Format::all().iter().position(|x| *x == f).unwrap() as u8),
         u8::from(gps),
-        0,
+        // The decode that produced `image` on this thread showed a malformed
+        // ICC profile as sRGB; the parent relays the note to its caller.
+        u8::from(bigimage_core::color::take_ignored_profile()),
     ]);
     for value in [image.width(), image.height(), natural.0, natural.1] {
         header.extend(value.to_le_bytes());

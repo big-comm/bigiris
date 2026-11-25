@@ -532,6 +532,8 @@ struct DecodedFrame {
     /// Pixels include in-memory edits, so they do not match the file.
     edited: bool,
     pixels: Result<RawFrame, String>,
+    /// The file's ICC profile was malformed; its pixels are shown as sRGB.
+    icc_ignored: bool,
 }
 
 /// A decoded file kept ready on the GTK side.
@@ -542,6 +544,8 @@ struct CachedFrame {
     texture: gdk::Texture,
     natural: (u32, u32),
     histogram: Histogram,
+    /// See [`DecodedFrame::icc_ignored`].
+    icc_ignored: bool,
 }
 
 /// Neighbours above this size are not decoded ahead: three of them would
@@ -617,6 +621,8 @@ impl ViewerLoader {
                     })
                     .map_err(|e| e.to_string())
                 };
+                // Noted by the decode that just ran on this thread.
+                let icc_ignored = bigimage_core::color::take_ignored_profile();
                 if worker_stopped.load(Ordering::Relaxed) {
                     break;
                 }
@@ -627,6 +633,7 @@ impl ViewerLoader {
                     modified,
                     edited,
                     pixels,
+                    icc_ignored,
                 });
                 worker_wake.notify();
             })
@@ -2880,6 +2887,7 @@ fn adopt_saved_frame(state: &Rc<RefCell<ViewerState>>, path: &Path) {
                 texture,
                 natural: s.natural,
                 histogram: s.histogram,
+                icc_ignored: false,
             };
             remember_frame(&mut s, frame);
         }
@@ -3130,7 +3138,7 @@ fn update_display(state: &Rc<RefCell<ViewerState>>) {
 /// there or the file changed on disk since it was decoded.
 fn show_cached_frame(state: &Rc<RefCell<ViewerState>>, path: &Path) -> bool {
     let modified = file_modified(path);
-    {
+    let icc_ignored = {
         let mut s = state.borrow_mut();
         let Some(pos) = s.frame_cache.iter().position(|frame| frame.path == path) else {
             return false;
@@ -3145,10 +3153,23 @@ fn show_cached_frame(state: &Rc<RefCell<ViewerState>>, path: &Path) -> bool {
         s.awaiting_prefetch = false;
         s.current_ready = true;
         show_frame(&mut s, frame.texture, frame.natural, frame.histogram, Some(path));
-    }
+        frame.icc_ignored
+    };
     show_page(state, "picture");
+    if icc_ignored {
+        notice_ignored_profile(state);
+    }
     schedule_prefetch(state);
     true
+}
+
+/// Tell the user the shown file's colour profile is broken and was ignored.
+fn notice_ignored_profile(state: &Rc<RefCell<ViewerState>>) {
+    let osd = state.borrow().osd_label.clone();
+    osd.set_text(&gettext(
+        "O perfil de cor desta imagem está corrompido; as cores podem estar imprecisas",
+    ));
+    pulse_osd_for(state, OSD_NOTICE_MS);
 }
 
 /// Switch the central stack to `page` (`picture`, `error` or `empty`).
@@ -3266,6 +3287,7 @@ fn apply_prefetched_frame(state: &Rc<RefCell<ViewerState>>, frame: DecodedFrame)
                             texture: texture.clone(),
                             natural: (w, h),
                             histogram,
+                            icc_ignored: frame.icc_ignored,
                         },
                     );
                     if is_current {
@@ -3294,6 +3316,9 @@ fn apply_prefetched_frame(state: &Rc<RefCell<ViewerState>>, frame: DecodedFrame)
         None => {
             if shown {
                 show_page(state, "picture");
+                if frame.icc_ignored {
+                    notice_ignored_profile(state);
+                }
             }
             schedule_prefetch(state);
         }
@@ -3392,6 +3417,7 @@ fn apply_decoded_frame(state: &Rc<RefCell<ViewerState>>, frame: DecodedFrame) {
                         texture: texture.clone(),
                         natural: (w, h),
                         histogram,
+                        icc_ignored: frame.icc_ignored,
                     },
                 );
             }
@@ -3399,6 +3425,9 @@ fn apply_decoded_frame(state: &Rc<RefCell<ViewerState>>, frame: DecodedFrame) {
             show_frame(&mut s, texture, (w, h), histogram, clean);
             drop(s);
             show_page(state, "picture");
+            if frame.icc_ignored {
+                notice_ignored_profile(state);
+            }
         }
         Err(error) => {
             tracing::error!(path = ?frame.path, %error, "falha ao carregar imagem");

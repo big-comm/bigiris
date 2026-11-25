@@ -5,7 +5,7 @@ Summary:        Fast image viewer and batch converter for Linux
 # The binary statically links the crates and vendored C libraries listed in
 # THIRD_PARTY_LICENSES (mozjpeg, libwebp, libdeflate and mimalloc among them).
 License:        GPL-3.0-or-later AND Apache-2.0 AND BSD-2-Clause AND BSD-3-Clause AND IJG AND MIT AND MPL-2.0 AND Unicode-3.0 AND Zlib
-URL:            https://github.com/xathay/bigiris
+URL:            https://github.com/big-comm/bigiris
 Source0:        %{url}/archive/refs/tags/v%{version}.tar.gz
 # Generated with packaging/openmandriva/make-vendor-tarball.sh. Keeping
 # crates vendored makes ABF builds reproducible and independent of crates.io.
@@ -26,8 +26,6 @@ BuildRequires:  pkgconfig(dav1d)
 BuildRequires:  %{_bindir}/glslc
 Requires:       bubblewrap
 Requires:       util-linux
-Requires:       gtk4.0
-Requires:       lib64adwaita
 Requires:       hicolor-icon-theme
 
 %description
@@ -113,10 +111,21 @@ fi
 %{_datadir}/glib-2.0/schemas/com.biglinux.Iris.gschema.xml
 %{_datadir}/icons/hicolor/scalable/apps/com.biglinux.Iris.svg
 %{_datadir}/locale/*/LC_MESSAGES/bigiris.mo
+# The file managers are optional, so their action directories are owned
+# here too; RPM lets several packages own one directory.
+%dir %{_datadir}/kio
+%dir %{_datadir}/kio/servicemenus
 %{_datadir}/kio/servicemenus/bigiris-*.desktop
+%dir %{_datadir}/nemo
+%dir %{_datadir}/nemo/actions
 %{_datadir}/nemo/actions/bigiris-*.nemo_action
+%dir %{_datadir}/file-manager
+%dir %{_datadir}/file-manager/actions
 %{_datadir}/file-manager/actions/bigiris-*.desktop
+%dir %{_datadir}/contractor
 %{_datadir}/contractor/bigiris-*.contract
+%dir %{_datadir}/nautilus-python
+%dir %{_datadir}/nautilus-python/extensions
 %{_datadir}/nautilus-python/extensions/bigiris-menu.py
 
 %changelog

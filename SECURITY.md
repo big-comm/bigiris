@@ -12,7 +12,7 @@ semanal.
 dos canais privados:
 
 1. **GitHub Security Advisories** — em
-   [github.com/xathay/bigiris/security/advisories/new](https://github.com/xathay/bigiris/security/advisories/new).
+   [github.com/big-comm/bigiris/security/advisories/new](https://github.com/big-comm/bigiris/security/advisories/new).
    Preferido: criptografa em trânsito e fica invisível até o disclosure.
 2. **E-mail** — `leoathayde@gmail.com` com o assunto começando com
    `[BigIris-Security]`. Se quiser PGP, peça a chave pública por esse

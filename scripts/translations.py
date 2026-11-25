@@ -11,7 +11,7 @@ import subprocess
 
 ROOT = Path(__file__).resolve().parents[1]
 PO = ROOT / 'data/po'
-LANGUAGES = ('bg', 'cs', 'da', 'de', 'el', 'en', 'es', 'et', 'fi', 'fr', 'he', 'hr', 'hu', 'is', 'it', 'ja', 'ko', 'nb', 'nl', 'pl', 'pt', 'pt_BR', 'ro', 'ru', 'sk', 'sv', 'tr', 'uk', 'zh')
+LANGUAGES = ('bg', 'cs', 'da', 'de', 'el', 'en', 'es', 'et', 'fi', 'fr', 'he', 'hr', 'hu', 'is', 'it', 'ja', 'ko', 'nb', 'nl', 'pl', 'pt', 'pt_BR', 'ro', 'ru', 'sk', 'sv', 'tr', 'uk', 'zh_CN', 'zh_TW')
 
 def n_(text):
     return text
@@ -60,7 +60,7 @@ def languages():
     found = tuple(line.strip() for line in (PO / 'LINGUAS').read_text().splitlines()
                   if line.strip() and not line.lstrip().startswith('#'))
     if found != LANGUAGES:
-        raise ValueError('LINGUAS must match the 29 BigCommunity locales documented in CONTRIBUTING.md')
+        raise ValueError('LINGUAS must match LANGUAGES')
     return found
 
 def catalogs():

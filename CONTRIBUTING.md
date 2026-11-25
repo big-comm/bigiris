@@ -180,7 +180,7 @@ Nautilus domain is local to the extension and does not replace the file
 manager's own texts. In the CLI, clap help uses `#[arg(help = gettext("…"))]`
 and `#[command(about = gettext("…"))]`: a `///` comment becomes fixed text at
 compile time and is never translated. The status prefixes (`ok`, `skip`,
-`err`, `info`, `erro`) and the `--self-test` line stay untranslated, because
+`err`, `info`) and the `--self-test` line stay untranslated, because
 scripts read them.
 
 ```bash

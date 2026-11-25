@@ -183,7 +183,7 @@ fn avif_without_decodable_picture_terminates() {
 /// A broken embedded profile must not make a photo unreadable: the pixels
 /// are shown as sRGB and the caller can tell the user.
 #[test]
-fn malformed_icc_opens_as_srgb_with_a_note() {
+fn malformed_icc_opens_as_srgb() {
     use image::ImageEncoder;
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().join("broken-profile.png");

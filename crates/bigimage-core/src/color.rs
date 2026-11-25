@@ -252,7 +252,7 @@ mod tests {
     /// Saves embed this profile: a clock-dependent stamp made identical
     /// saves differ, so it must not depend on when it was generated.
     #[test]
-    fn generated_srgb_profile_is_stable_and_valid() {
+    fn srgb_profile_is_stable() {
         let icc = srgb_profile().unwrap();
         assert_eq!(&icc[24..36], &PROFILE_DATE);
         assert!(icc[84..100].iter().all(|&b| b == 0));

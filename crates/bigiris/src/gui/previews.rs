@@ -113,20 +113,12 @@ impl Drop for PreviewRenderer {
 thread_local! {
     static PREVIEW_RENDERERS: RefCell<Vec<(glib::WeakRef<gtk::Picture>, Rc<PreviewRenderer>)>> = const { RefCell::new(Vec::new()) };
 }
-/// A render thread for `picture` and the main-loop task that shows its results.
-fn start_renderer(session: &PreviewSession, picture: &gtk::Picture) -> Rc<PreviewRenderer> {
-    let queue = Arc::new((
-        Mutex::new(PreviewRenderQueue { stopped: false, next: None, result: None }),
-        Condvar::new(),
-    ));
-    let rendered = viewer::Wake::default();
-    let renderer = Rc::new(PreviewRenderer {
-        queue: queue.clone(),
-        revision: std::cell::Cell::new(0),
-        rendered: rendered.clone(),
-    });
-    let session = session.clone();
-    let worker_rendered = rendered.clone();
+/// Renders the newest queued request until the queue is stopped.
+fn spawn_render_thread(
+    session: PreviewSession,
+    queue: Arc<(Mutex<PreviewRenderQueue>, Condvar)>,
+    rendered: viewer::Wake,
+) {
     std::thread::spawn(move || loop {
         let (lock, wake) = &*queue;
         let request = {
@@ -151,9 +143,23 @@ fn start_renderer(session: &PreviewSession, picture: &gtk::Picture) -> Rc<Previe
         let mut pending = lock.lock().unwrap();
         if !pending.stopped {
             pending.result = Some((request.0, image));
-            worker_rendered.notify();
+            rendered.notify();
         }
     });
+}
+/// A render thread for `picture` and the main-loop task that shows its results.
+fn start_renderer(session: &PreviewSession, picture: &gtk::Picture) -> Rc<PreviewRenderer> {
+    let queue = Arc::new((
+        Mutex::new(PreviewRenderQueue { stopped: false, next: None, result: None }),
+        Condvar::new(),
+    ));
+    let rendered = viewer::Wake::default();
+    let renderer = Rc::new(PreviewRenderer {
+        queue: queue.clone(),
+        revision: std::cell::Cell::new(0),
+        rendered: rendered.clone(),
+    });
+    spawn_render_thread(session.clone(), queue, rendered.clone());
     let weak = picture.downgrade();
     let weak_renderer = Rc::downgrade(&renderer);
     glib::MainContext::default().spawn_local(async move {

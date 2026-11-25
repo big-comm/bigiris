@@ -359,6 +359,9 @@ struct ViewerState {
     film_strip_scroll: gtk::ScrolledWindow,
     /// One button per file so we can flip `.active-thumb` on navigation.
     film_strip_buttons: Vec<gtk::Button>,
+    /// File each of `film_strip_buttons` shows, so a rebuilt page keeps
+    /// the thumbnails it already has.
+    film_strip_paths: Vec<PathBuf>,
     film_strip_start: usize,
     /// Index the strip last highlighted and centred, so repeated refreshes
     /// for the same image (zoom steps, edge reveals) do no work.
@@ -987,6 +990,7 @@ fn build_window_preloaded(
         strip_revealer: strip_revealer.clone(),
         film_strip_scroll: film_strip_scroll.clone(),
         film_strip_buttons: film_strip_buttons.clone(),
+        film_strip_paths: Vec::new(),
         film_strip_start: 0,
         film_strip_active: None,
         film_strip_box: film_strip_box.clone(),
@@ -1490,25 +1494,34 @@ fn decode_thumbnail(path: &Path) -> Result<(Vec<u8>, u32, u32), Box<dyn std::err
 /// independently of folder size; the window is centred on the current file.
 fn rebuild_film_strip(state: &Rc<RefCell<ViewerState>>) {
     const PAGE: usize = viewer::FILM_STRIP_PAGE;
-    let (container, files, start, cancel) = {
+    let (container, files, start, cancel, kept) = {
         let mut s = state.borrow_mut();
         s.thumbnail_cancel.store(true, Ordering::Release);
         s.thumbnail_cancel = Arc::new(AtomicBool::new(false));
         s.film_strip_start = viewer::film_strip_start(s.files.len(), s.idx, PAGE);
         s.film_strip_active = None;
         let container = s.film_strip_box.clone();
-        s.film_strip_buttons.clear();
-        (container, s.files.clone(), s.film_strip_start, s.thumbnail_cancel.clone())
+        let buttons = std::mem::take(&mut s.film_strip_buttons);
+        let kept: Vec<(PathBuf, gdk::Paintable)> = std::mem::take(&mut s.film_strip_paths)
+            .into_iter()
+            .zip(&buttons)
+            .filter_map(|(path, button)| Some((path, thumb_picture(button)?.paintable()?)))
+            .collect();
+        (container, s.files.clone(), s.film_strip_start, s.thumbnail_cancel.clone(), kept)
     };
     while let Some(child) = container.first_child() {
         container.remove(&child);
     }
     let mut buttons = Vec::new();
+    let mut decoded = Vec::new();
     for (offset, path) in files.iter().skip(start).take(PAGE).enumerate() {
         // The cell's size comes from a fixed square; the picture is an overlay
         // on it, so wide or tall images are cropped instead of widening it.
         let picture = gtk::Picture::new();
         picture.set_content_fit(gtk::ContentFit::Cover);
+        let thumbnail = kept.iter().find(|(kept, _)| kept == path).map(|(_, paintable)| paintable);
+        picture.set_paintable(thumbnail);
+        decoded.push(thumbnail.is_some());
         let cell = gtk::Overlay::new();
         let square = gtk::Box::new(gtk::Orientation::Horizontal, 0);
         square.set_size_request(THUMB_EDGE as i32, THUMB_EDGE as i32);
@@ -1537,8 +1550,12 @@ fn rebuild_film_strip(state: &Rc<RefCell<ViewerState>>) {
         buttons.push(button);
     }
     let weak_buttons: Vec<_> = buttons.iter().map(|b| b.downgrade()).collect();
-    state.borrow_mut().film_strip_buttons = buttons;
     let paths: Vec<_> = files.iter().skip(start).take(PAGE).cloned().collect();
+    {
+        let mut s = state.borrow_mut();
+        s.film_strip_buttons = buttons;
+        s.film_strip_paths = paths.clone();
+    }
     // The image on screen is already decoded: its thumbnail reuses the
     // texture instead of decoding the same file a second time.
     let current = state.borrow().idx.checked_sub(start).filter(|offset| *offset < paths.len());
@@ -1548,7 +1565,6 @@ fn rebuild_film_strip(state: &Rc<RefCell<ViewerState>>) {
         // `texture` may still be the previous image: reuse it only when it
         // is known to be this file, otherwise decode the cell like the rest.
         // A frame that arrives later paints the cell itself (show_frame).
-        let mut skip = None;
         if let (Some(state), Some(offset)) = (weak_state.upgrade(), current) {
             let s = state.borrow();
             let button = weak_buttons.get(offset).and_then(|w| w.upgrade());
@@ -1556,11 +1572,11 @@ fn rebuild_film_strip(state: &Rc<RefCell<ViewerState>>) {
             if let (true, Some(texture), Some(button)) = (matches, s.texture.as_ref(), button) {
                 if let Some(picture) = thumb_picture(&button) {
                     picture.set_paintable(Some(texture));
-                    skip = Some(offset);
+                    decoded[offset] = true;
                 }
             }
         }
-        start_thumbnail_decoding(paths, skip, cancel, weak_buttons);
+        start_thumbnail_decoding(paths, decoded, cancel, weak_buttons);
     };
     let mut s = state.borrow_mut();
     if s.first_frame_shown {
@@ -1582,7 +1598,7 @@ fn paint_current_thumb(s: &ViewerState, texture: &gdk::Texture) {
 
 fn start_thumbnail_decoding(
     paths: Vec<PathBuf>,
-    skip: Option<usize>,
+    decoded: Vec<bool>,
     cancel: Arc<AtomicBool>,
     weak_buttons: Vec<glib::WeakRef<gtk::Button>>,
 ) {
@@ -1594,7 +1610,7 @@ fn start_thumbnail_decoding(
             if cancel.load(Ordering::Acquire) {
                 break;
             }
-            if Some(index) == skip {
+            if decoded[index] {
                 continue;
             }
             let worker_cancel = cancel.clone();
@@ -3712,8 +3728,8 @@ fn install_viewer_actions(
     }
     window.add_action(&crop);
 
-    // win.remove-bg / win.upscale — mesmo padrão do crop: subprocesso
-    // dedicado para cada diálogo Prisma na imagem corrente.
+    // win.remove-bg / win.upscale open the Prisma dialog for the current
+    // image in a process of its own.
     for (name, dialog) in [("remove-bg", "remove-bg"), ("upscale", "upscale")] {
         let action = gio::SimpleAction::new(name, None);
         action.set_enabled(has_files);

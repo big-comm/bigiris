@@ -137,8 +137,19 @@ fn viewer_review_fixes() {
     }
 
     // Finding 5: the last image keeps a full strip and can reveal it.
+    // Thumbnails both pages show are kept, not decoded again.
+    let shared = &files[3];
+    let thumbnail = || {
+        let s = state.borrow();
+        let offset = s.film_strip_paths.iter().position(|path| path == shared)?;
+        thumb_picture(s.film_strip_buttons.get(offset)?)?.paintable()
+    };
+    wait(&context, "thumbnail on both pages", &|| thumbnail().is_some());
+    let before = thumbnail();
     let last = files.len() - 1;
     handle_key(&state, gdk::Key::End, gdk::ModifierType::empty());
+    assert!(state.borrow().film_strip_start > 0, "the strip did not change page");
+    assert_eq!(thumbnail(), before, "thumbnail decoded again on the new page");
     wait(&context, "last image", &|| state.borrow().idx == last);
     {
         let s = state.borrow();

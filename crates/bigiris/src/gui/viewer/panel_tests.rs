@@ -597,6 +597,11 @@ fn viewer_heavy_render_cancel() {
         let _held = cache.lock().unwrap();
         crate::gui::lifecycle_tests::capture_window(&window, "heavy-render-progress");
         assert!(bar.is_visible());
+        // The texture on screen is the previous edit: copying it is refused.
+        let osd = state.borrow().osd_label.clone();
+        osd.set_text("");
+        copy_current_to_clipboard(&state);
+        assert_eq!(osd.text(), gettext("Aguarde a imagem terminar de carregar"));
     }
     assert_eq!(
         handle_key(&state, gdk::Key::Escape, gdk::ModifierType::empty()),

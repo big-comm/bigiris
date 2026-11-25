@@ -3845,9 +3845,23 @@ fn copy_current_to_clipboard(state: &Rc<RefCell<ViewerState>>) {
         }
         (s.window().clone(), s.texture.clone())
     };
+    if refuse_while_loading(state) {
+        return;
+    }
     if let Some(texture) = texture {
         window.clipboard().set_texture(&texture);
     }
+}
+
+/// While the current frame is still decoding, `texture` holds the previous
+/// file or edit: say so instead of copying or printing it.
+fn refuse_while_loading(state: &Rc<RefCell<ViewerState>>) -> bool {
+    if state.borrow().current_ready {
+        return false;
+    }
+    state.borrow().osd_label.set_text(&gettext("Aguarde a imagem terminar de carregar"));
+    pulse_osd(state);
+    true
 }
 
 /// Envia a imagem corrente pra impressora via gtk::PrintOperation.
@@ -3864,6 +3878,9 @@ fn print_current(state: &Rc<RefCell<ViewerState>>) {
         let edited = s.texture.clone().filter(|_| !s.pending_ops.is_empty());
         (s.window().clone(), s.files[s.idx].clone(), edited)
     };
+    if edited.is_some() && refuse_while_loading(state) {
+        return;
+    }
     if let Some(texture) = edited {
         match cairo_surface_from_texture(&texture) {
             Some(surface) => present_print_dialog(&window, &path, surface),

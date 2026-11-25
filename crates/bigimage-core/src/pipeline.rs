@@ -70,10 +70,42 @@ pub(crate) fn bounded_reader(
         data.seek(SeekFrom::Start(0))?;
         reader = ImageReader::with_format(data, image::ImageFormat::Avif);
     }
+    if reader.format() == Some(image::ImageFormat::OpenExr) {
+        use std::io::{Seek, SeekFrom};
+        let mut data = reader.into_inner();
+        check_exr_layers(&mut data)?;
+        data.seek(SeekFrom::Start(0))?;
+        reader = ImageReader::with_format(data, image::ImageFormat::OpenExr);
+    }
     let mut limits = image::Limits::default();
     limits.max_alloc = Some(MAX_BUFFER_BYTES);
     reader.limits(limits);
     Ok(reader)
+}
+
+/// The OpenEXR decoder applies the limits to the display window but decodes
+/// the data window, which a header may declare far larger. The data window
+/// sizes the chunk table and one block (every channel) sizes each buffer
+/// exr allocates before reading it, so both are bounded up front.
+fn check_exr_layers(data: &mut impl std::io::Read) -> image::ImageResult<()> {
+    let meta = exr::meta::MetaData::read_from_buffered(data, false).map_err(|error| {
+        image::ImageError::Decoding(image::error::DecodingError::new(
+            image::ImageFormat::OpenExr.into(),
+            error,
+        ))
+    })?;
+    for header in &meta.headers {
+        let pixels = (header.layer_size.x() as u64).saturating_mul(header.layer_size.y() as u64);
+        // Computed here: exr's own `max_block_byte_size` overflows on huge tiles.
+        let block = header.max_block_pixel_size();
+        let block_bytes = (block.x() as u64)
+            .saturating_mul(block.y() as u64)
+            .saturating_mul(header.channels.bytes_per_pixel as u64);
+        if pixels > MAX_PIXELS || block_bytes > MAX_BUFFER_BYTES {
+            return Err(limit_error());
+        }
+    }
+    Ok(())
 }
 
 pub(crate) fn bounded_dimensions(input: &Path) -> image::ImageResult<(u32, u32)> {

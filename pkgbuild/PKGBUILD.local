@@ -20,16 +20,19 @@ depends=(
   'gtk4>=4.12'
   'libadwaita>=1.5'
   'dav1d'
-  'openssl'
-  'onnxruntime'
   'hicolor-icon-theme'
 )
 optdepends=(
   'nautilus-python: Nautilus context menu integration'
+  'birefnet-native: remove backgrounds with AI (BiRefNet-lite weights)'
+  'realesrgan-native: upscale with AI (Real-ESRGAN weights; Lanczos3 without it)'
+  'scunet-native: remove noise and JPEG artifacts with AI (SCUNet weights)'
+  'lama-native: erase objects with AI (Big LaMa weights)'
+  'vulkan-icd-loader: run the AI tools on a Vulkan GPU (CPU otherwise)'
 )
 # base-devel's C compiler also builds the vendored mozjpeg, libwebp and
 # libdeflate sources (no nasm or cmake needed).
-makedepends=('rust' 'cargo' 'pkgconf' 'gettext' 'python')
+makedepends=('rust' 'cargo' 'pkgconf' 'gettext' 'python' 'shaderc')
 # Disable LTO. Arch's default makepkg env appends `-flto=auto` to CFLAGS
 # and `-C linker-plugin-lto` to RUSTFLAGS, which makes cc-rs emit pure
 # LTO bitcode .o files for libmimalloc-sys. The final linker (bfd or
@@ -69,9 +72,9 @@ build() {
   python3 scripts/translations.py check
   export RUSTUP_TOOLCHAIN=stable
   export CARGO_TARGET_DIR="$srcdir/target"
-  # Build the viewer and AI dialogs together.
-  # ONNX Runtime is loaded dynamically; the distributed package declares
-  # onnxruntime as a runtime dependency.
+  # Build the viewer and AI tools together. The AI engines need glslc
+  # (shaderc) to compile their GPU shaders; their weights come from the
+  # optional *-native packages.
   cargo build --locked --release --features "gui ai" --package bigiris
 
   # Compile all translation catalogs listed in data/po/LINGUAS.
@@ -104,6 +107,7 @@ package() {
     "$pkgdir/usr/share/icons/hicolor/scalable/apps/com.biglinux.Iris.svg"
 
   install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+  install -Dm644 NOTICE "$pkgdir/usr/share/licenses/$pkgname/NOTICE"
   install -Dm644 README.md "$pkgdir/usr/share/doc/$pkgname/README.md"
 
   while read -r lang; do

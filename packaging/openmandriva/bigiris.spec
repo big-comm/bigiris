@@ -11,27 +11,33 @@ Source1:        %{name}-%{version}-vendor.tar.xz
 
 # The vendored crates also carry C sources (mozjpeg, libwebp, libdeflate)
 # built with the default C compiler through the `cc` crate; no nasm/cmake.
-BuildRequires:  cargo >= 1.92
-BuildRequires:  rust >= 1.92
+BuildRequires:  cargo >= 1.95
+BuildRequires:  rust >= 1.95
 BuildRequires:  gettext
 BuildRequires:  desktop-file-utils
 BuildRequires:  appstream
 BuildRequires:  pkgconfig(gtk4) >= 4.12
 BuildRequires:  pkgconfig(libadwaita-1) >= 1.6
 BuildRequires:  pkgconfig(dav1d)
-BuildRequires:  pkgconfig(openssl)
-BuildRequires:  onnxruntime-devel
+# glslc (from shaderc) compiles the AI engines' Vulkan shaders at build
+# time; a file dependency keeps the spec independent of the package name.
+BuildRequires:  %{_bindir}/glslc
 Requires:       bubblewrap
 Requires:       util-linux
 Requires:       gtk4.0
 Requires:       lib64adwaita
-Requires:       onnxruntime
 Requires:       hicolor-icon-theme
 
 %description
 BigIris combines a compact, responsive image viewer with Prisma, an optional
 workspace for conversions, resize, crop, colour adjustment, animation and
 parallel folder processing. It includes native Dolphin ServiceMenus and a CLI.
+
+The AI tools (background removal, AI upscale, denoise, object removal) are
+built in but need the image-engine-native weights packages (birefnet-native,
+realesrgan-native, scunet-native, lama-native), which OpenMandriva does not
+ship yet: until then those tools show as unavailable and upscaling uses
+Lanczos3.
 
 %prep
 %autosetup -p1 -a1
@@ -97,7 +103,7 @@ if command -v thunar >/dev/null 2>&1; then
 fi
 
 %files
-%license LICENSE
+%license LICENSE NOTICE
 %doc README.md
 %{_bindir}/bigiris
 %{_datadir}/applications/com.biglinux.Iris.desktop

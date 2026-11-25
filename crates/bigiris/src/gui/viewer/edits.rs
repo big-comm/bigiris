@@ -126,7 +126,7 @@ pub(in crate::gui) fn straighten_commit(ops: &[EditOp], tenths: i32) -> Option<E
 
 /// Operations too slow to redo on every edit: their results are cached.
 pub(in crate::gui) fn is_heavy(op: &EditOp) -> bool {
-    matches!(op, EditOp::RemoveBackground | EditOp::Upscale { .. })
+    matches!(op, EditOp::RemoveBackground | EditOp::Upscale { .. } | EditOp::Denoise)
 }
 
 /// Index and length of the longest of `prefixes` that `ops` starts with.
@@ -299,7 +299,9 @@ mod tests {
         assert_eq!(longest_prefix([&ab[..]], &a), None);
         assert_eq!(longest_prefix([&ab[..]], &ab), Some((0, 2)));
         assert_eq!(longest_prefix(std::iter::empty(), &ops), None);
-        assert!(is_heavy(&EditOp::Upscale { factor: 2 }) && !is_heavy(&EditOp::RotateCw));
+        assert!(
+            is_heavy(&EditOp::Upscale { factor: 2, ai: false }) && !is_heavy(&EditOp::RotateCw)
+        );
     }
 
     #[test]
@@ -325,7 +327,7 @@ mod tests {
         cache.insert(
             path,
             t0,
-            vec![EditOp::RemoveBackground, EditOp::Upscale { factor: 2 }],
+            vec![EditOp::RemoveBackground, EditOp::Upscale { factor: 2, ai: false }],
             img(3),
         );
         assert_eq!(cache.cached_ops().len(), EditCache::CAPACITY);

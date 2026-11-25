@@ -180,6 +180,18 @@ fn avif_without_decodable_picture_terminates() {
     assert!(dimensions_err && decode_err);
 }
 
+/// Fuzzer-found 1 KiB OpenEXR whose header made the decoder ask for 15 GB.
+#[test]
+fn exr_huge_header_refused() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("huge.exr");
+    std::fs::write(&path, include_bytes!("fixtures/exr-huge-chunk-table.exr")).unwrap();
+    assert!(bigimage_core::backend::dimensions_in_process(&path).is_err());
+    assert!(bigimage_core::backend::decode_in_process(&path).is_err());
+    let _ = bigimage_core::metadata::read(&path);
+    assert!(bigimage_core::content::ensure_static_local(&path).is_err());
+}
+
 /// TIFF EXIF: Make = "Cam", DateTimeOriginal-like DateTime, Orientation = 6.
 fn camera_exif() -> Vec<u8> {
     let mut exif = vec![b'I', b'I', 42, 0, 8, 0, 0, 0, 3, 0];

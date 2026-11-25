@@ -26,6 +26,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
       - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # master (2026-10-16)
         with:
           toolchain: stable
@@ -37,6 +39,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
       # `image` is a non-optional dep with `avif-native` enabled, which
       # pulls dav1d-sys. dav1d is an image codec, not a UI lib, so even
       # the "headless" workspace build needs libdav1d-dev.
@@ -56,11 +60,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
       - name: install GTK4/libadwaita/dav1d dev
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            libgtk-4-dev libadwaita-1-dev libdav1d-dev pkg-config bubblewrap util-linux
+            libgtk-4-dev libadwaita-1-dev libdav1d-dev pkg-config bubblewrap util-linux glslc
       - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # master (2026-10-16)
         with:
           toolchain: stable
@@ -73,6 +79,8 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
       - name: install libdav1d-dev
         run: |
           sudo apt-get update
@@ -92,11 +100,13 @@ jobs:
     runs-on: ubuntu-26.04  # libadwaita >= 1.6 (feature v1_6, AdwSpinner)
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
       - name: install GTK4/libadwaita/dav1d dev
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            libgtk-4-dev libadwaita-1-dev libdav1d-dev pkg-config bubblewrap util-linux xvfb dbus-x11 gettext locales
+            libgtk-4-dev libadwaita-1-dev libdav1d-dev pkg-config bubblewrap util-linux xvfb dbus-x11 gettext locales glslc
       - name: prepare distro Bubblewrap policy and verify isolation
         run: bash .github/scripts/prepare-sandbox.sh
       - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # master (2026-10-16)
@@ -141,27 +151,87 @@ jobs:
     runs-on: ubuntu-26.04  # libadwaita >= 1.6 (feature v1_6, AdwSpinner)
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
       - name: install GTK4/libadwaita/dav1d dev
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            libgtk-4-dev libadwaita-1-dev libdav1d-dev pkg-config bubblewrap util-linux
+            libgtk-4-dev libadwaita-1-dev libdav1d-dev pkg-config bubblewrap util-linux glslc
       - name: prepare distro Bubblewrap policy and verify isolation
         run: bash .github/scripts/prepare-sandbox.sh
       - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # master (2026-10-16)
         with:
           toolchain: stable
       - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
-      # `ai` usa load-dynamic do ort: compila sem libonnxruntime presente,
-      # so precisaria do .so em runtime (e self-test nao carrega o backend).
+      # `ai` compiles the image-engine-native shaders with glslc; the
+      # weights are optional packages, so the binary runs without them.
       - run: cargo build --release --locked --features "gui ai" -p bigiris
       - run: ./target/release/bigiris --self-test
+
+  ai-models:
+    name: AI models (BigLinux weights, CPU)
+    runs-on: ubuntu-26.04
+    env:
+      # GitHub runners have no GPU: test the CPU engines.
+      IMAGE_ENGINE_NATIVE_GPU: '0'
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - name: install codec dev files and glslc
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libdav1d-dev pkg-config bubblewrap util-linux glslc zstd
+      - name: prepare distro Bubblewrap policy and verify isolation
+        run: bash .github/scripts/prepare-sandbox.sh
+      # The weights packages, pinned by file name and SHA-256. Bump both
+      # together when BigLinux publishes new builds (the repository keeps
+      # only current files, so a stale pin fails here, loudly).
+      - name: fetch and verify the weights packages
+        env:
+          REPO: https://packages.biglinux.com.br/biglinux-stable/x86_64
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/weights"
+          cd "$RUNNER_TEMP/weights"
+          while read -r sum file; do
+            curl --fail --proto =https --tlsv1.2 --location --silent --show-error --retry 3 -o "$file" "$REPO/$file"
+            echo "$sum  $file" | sha256sum --check --strict
+            tar --zstd -xf "$file" usr/share
+          done <<'EOF'
+          3e17d7ead6e645dc111e5219c2918b22cecc4679618b41e85b221d05d16a6c58 birefnet-native-26.11.08-1835-x86_64.pkg.tar.zst
+          b170477088808a4209d7a2946ad7fbaddf93264bf1073240b13e7a20897e6aec realesrgan-native-26.11.08-1835-x86_64.pkg.tar.zst
+          8b62c49503c21b1e0b860964962698462076fce602c97c34c06ae2e587a58ed6 scunet-native-26.11.08-1835-x86_64.pkg.tar.zst
+          c6175d8da64569e7400b45b5fea5d13ce0d0b14bbd924be1a2fabafc265f16ea lama-native-26.11.08-1835-x86_64.pkg.tar.zst
+          EOF
+          share="$RUNNER_TEMP/weights/usr/share"
+          {
+            echo "BIGIRIS_BIREFNET_WEIGHTS=$share/birefnet-native/birefnet-lite-f16.weights"
+            echo "BIGIRIS_REALESRGAN_WEIGHTS=$share/realesrgan-native/realesr-general-x4v3-dn50.weights"
+            echo "BIGIRIS_SCUNET_WEIGHTS=$share/scunet-native/scunet-color-real-psnr-f16.weights"
+            echo "BIGIRIS_LAMA_WEIGHTS=$share/lama-native/big-lama-f16.weights"
+          } >> "$GITHUB_ENV"
+      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # master (2026-10-16)
+        with:
+          toolchain: stable
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+      - run: |
+          cargo test --release --locked -p bigimage-ai --features native --test models -- \
+            --ignored --test-threads=1 --nocapture
+      # The CLI end to end, sandboxed decode included.
+      - run: |
+          cargo test --release --locked -p bigiris --features ai --test cli -- \
+            ai_commands --nocapture
 
   appstream:
     name: AppStream metainfo validation
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
       - name: install appstreamcli
         run: |
           sudo apt-get update
@@ -176,6 +246,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
       - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # master (2026-10-16)
         with:
           toolchain: stable
@@ -188,6 +260,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
       - name: install desktop-file-utils
         run: |
           sudo apt-get update
@@ -197,7 +271,8 @@ jobs:
   makepkg:
     name: makepkg (Arch container, PKGBUILD.local)
     runs-on: ubuntu-latest
-    container: archlinux:latest
+    # Pinned by digest; the job upgrades it with pacman -Syu anyway.
+    container: archlinux:latest@sha256:375a401bb3c6376b37f40b6dfa25067db37ec78d0b7af67ae6315f43a0184a9d
     steps:
       - name: install Arch deps
         run: |
@@ -205,6 +280,8 @@ jobs:
           useradd -m builder
           echo "builder ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
       - name: chown for builder
         run: chown -R builder:builder .
       # Usa PKGBUILD.local (build do checkout local, sem clone remoto).
@@ -228,6 +305,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
       - run: PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -v
       - run: glib-compile-schemas --strict --dry-run data
 
@@ -236,6 +315,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
       - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # master (2026-10-16)
         with:
           toolchain: stable
@@ -248,6 +329,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
       - name: install codec dev files
         run: |
           sudo apt-get update
@@ -265,6 +348,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
       - name: install codec and debugger files
         run: |
           sudo apt-get update
@@ -289,6 +374,8 @@ jobs:
       RUSTUP_TOOLCHAIN: nightly
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
       - run: sudo apt-get update && sudo apt-get install -y libdav1d-dev pkg-config
       - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # master (2026-10-16)
         with:

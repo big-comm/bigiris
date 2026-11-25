@@ -127,11 +127,18 @@ pub(crate) fn installed_executable() -> std::io::Result<(PathBuf, bool)> {
 static TEST_WORKER: std::sync::OnceLock<PathBuf> = std::sync::OnceLock::new();
 
 /// The real `bigiris` binary next to the test harness: `target/<profile>/
-/// bigiris`, built by `cargo test --all-targets` for the CLI tests.
+/// bigiris`, built by `cargo test --all-targets` for the CLI tests. The
+/// harness sits in `target/<profile>/deps/` with the classic layout and in
+/// `target/<profile>/build/bigiris/<hash>/out/` with the newer build-dir
+/// layout, so the nearest ancestor holding a `bigiris` file wins.
 #[cfg(test)]
 pub(crate) fn built_worker() -> Option<PathBuf> {
     let exe = std::env::current_exe().ok()?;
-    Some(exe.parent()?.parent()?.join("bigiris")).filter(|path| path.is_file())
+    exe.ancestors()
+        .skip(1)
+        .take(5)
+        .map(|dir| dir.join("bigiris"))
+        .find(|path| path.is_file() && *path != exe)
 }
 
 /// Test-only: route every decode in this process through the real sandbox,

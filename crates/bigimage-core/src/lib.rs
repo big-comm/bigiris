@@ -72,6 +72,36 @@ pub fn open_image(path: impl AsRef<std::path::Path>) -> image::ImageResult<image
     pipeline::decode_image(path).map(|(img, _)| img)
 }
 
+/// Decode `input`, apply `transform` and write the result next to it as
+/// `<stem><suffix>.<ext>`, with the naming, `Skip` short-circuit (before
+/// decoding), size limits and atomic publication of the built-in
+/// transforms. `target` defaults to the source format. For transforms
+/// that live outside this crate, such as the AI tools.
+pub fn transform_file(
+    input: impl AsRef<std::path::Path>,
+    suffix: &str,
+    target: Option<Format>,
+    opts: &EncodeOptions,
+    policy: OverwritePolicy,
+    transform: impl FnOnce(image::DynamicImage) -> Result<image::DynamicImage>,
+) -> Result<ConvertOutcome> {
+    let input = input.as_ref();
+    if let Some(skipped) =
+        pipeline::skip_before_decode(input, suffix, target, policy, pipeline::any_size)?
+    {
+        return Ok(skipped);
+    }
+    let (src, src_format) = pipeline::decode_with_source_format(input)?;
+    let target = target.unwrap_or(src_format);
+    let output = pipeline::resolve_output(input, Some(suffix), target, policy)?;
+    if pipeline::existing_output(&output, target, policy) {
+        return Ok(ConvertOutcome::Skipped { output });
+    }
+    let result = transform(src)?;
+    pipeline::check_dimensions(result.width(), result.height(), result.color().bytes_per_pixel())?;
+    pipeline::encode_output(result, output, target, opts, policy)
+}
+
 /// Format of an image file by its content (magic bytes), with the extension
 /// as fallback, without decoding it. This is the format transforms keep (and
 /// name their output after) when no target format is given.
@@ -338,6 +368,38 @@ mod tests {
     #[test]
     fn version_is_set() {
         assert!(!version().is_empty());
+    }
+
+    #[test]
+    fn transform_file_names_skips_and_writes_like_the_builtin_transforms() {
+        let dir = tempfile::tempdir().unwrap();
+        let input = dir.path().join("foto.png");
+        image::RgbImage::from_pixel(4, 2, image::Rgb([10, 20, 30])).save(&input).unwrap();
+        let opts = EncodeOptions::default();
+        let double =
+            |img: image::DynamicImage| Ok(img.resize_exact(8, 4, image::imageops::Nearest));
+        let out =
+            transform_file(&input, "_x2", None, &opts, OverwritePolicy::Skip, double).unwrap();
+        let ConvertOutcome::Written { output } = out else { panic!("not written: {out:?}") };
+        assert_eq!(output, dir.path().join("foto_x2.png"));
+        assert_eq!(image_dimensions(&output).unwrap(), (8, 4));
+        // Skip never runs the transform again.
+        let out = transform_file(&input, "_x2", None, &opts, OverwritePolicy::Skip, |_| {
+            panic!("transform ran for an existing output")
+        })
+        .unwrap();
+        assert!(matches!(out, ConvertOutcome::Skipped { .. }));
+        // Errors of the transform come back as they are; nothing is written.
+        let failed = transform_file(
+            &input,
+            "_err",
+            Some(Format::Jpeg),
+            &opts,
+            OverwritePolicy::Skip,
+            |_| Err(BigImageError::Other("modelo ausente".into())),
+        );
+        assert!(failed.unwrap_err().to_string().contains("modelo ausente"));
+        assert!(!dir.path().join("foto_err.jpg").exists());
     }
 
     #[test]

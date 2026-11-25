@@ -476,7 +476,11 @@ fn viewer_edit_panel_tools() {
     upscale.emit_clicked();
     assert!(tool_box.is_visible(), "no progress while upscaling");
     assert!(!action_enabled(&window, "rotate-cw"), "edits live during a tool run");
-    wait(&context, "upscaled", &|| state.borrow().pending_ops == [EditOp::Upscale { factor: 2 }]);
+    // Real-ESRGAN when its weights are there, else Lanczos3; recorded.
+    let ai = bigimage_ai::upscale::availability().is_ready();
+    wait(&context, "upscaled", &|| {
+        state.borrow().pending_ops == [EditOp::Upscale { factor: 2, ai }]
+    });
     wait_frame(&context, &state, (1280, 960));
     assert!(!tool_box.is_visible());
     assert_eq!(heavy_runs(), runs + 1);
@@ -516,33 +520,158 @@ fn viewer_edit_panel_tools() {
     undo_edit(&state);
     wait_frame(&context, &state, (640, 480));
 
-    // Remover fundo: inline when the AI backend and model are present;
-    // otherwise the panel shows the same guidance as the dialog.
-    if !bigimage_ai::onnx_available() {
-        assert!(!remove_bg.is_sensitive());
-        super::edit_panel::run_tool(&state, EditOp::RemoveBackground);
-        assert!(status.text().contains("onnxruntime"), "no guidance: {}", status.text());
-    } else {
-        assert!(remove_bg.is_sensitive());
-        let model = bigimage_ai::download::local_path(&bigimage_ai::background::BIREFNET_LITE);
-        let ready = model.is_ok_and(|path| path.is_file())
-            && bigimage_ai::background::check_resources().is_ok();
-        if ready {
-            let runs = heavy_runs();
-            remove_bg.emit_clicked();
-            wait(&context, "background removed", &|| {
-                state.borrow().pending_ops == [EditOp::RemoveBackground]
-            });
-            wait_frame(&context, &state, (640, 480));
-            gtk::prelude::WidgetExt::activate_action(&window, "win.flip-h", None).unwrap();
-            wait(&context, "flipped", &|| state.borrow().pending_ops.len() == 2);
-            wait_frame(&context, &state, (640, 480));
-            assert_eq!(heavy_runs(), runs + 1, "background removal ran again");
+    // Remover fundo / Remover ruído: without their packages the buttons
+    // are off and the panel says which package to install.
+    let (denoise, note) = state.borrow().edit_ui.ai_controls();
+    for (button, model, op) in [
+        (&remove_bg, &bigimage_ai::background::MODEL, EditOp::RemoveBackground),
+        (&denoise, &bigimage_ai::denoise::MODEL, EditOp::Denoise),
+    ] {
+        if model.availability().is_ready() {
+            assert!(button.is_sensitive(), "{} off with its weights", model.name);
+            continue;
+        }
+        assert!(!button.is_sensitive(), "{} on without its weights", model.name);
+        let hint = if bigimage_ai::engines_compiled() {
+            format!("sudo pacman -S {}", model.package)
         } else {
-            eprintln!("skipping inline background removal: model or memory unavailable");
+            "--features ai".to_owned()
+        };
+        assert!(note.is_visible() && note.text().contains(&hint), "note: {}", note.text());
+        super::edit_panel::run_tool(&state, op);
+        assert!(status.text().contains(&hint), "no guidance: {}", status.text());
+        assert!(state.borrow().pending_ops.is_empty());
+    }
+    // The real models run in `viewer_edit_panel_ai`.
+
+    window.destroy();
+    drop(window);
+    settle(&context, 100);
+    drop(state);
+    wait(&context, "viewer state released", &|| witness.upgrade().is_none());
+}
+
+/// The panel's AI tools with the real models. Needs the BigLinux weights
+/// packages, or `BIGIRIS_{BIREFNET,REALESRGAN,SCUNET}_WEIGHTS`; a tool
+/// whose weights are missing is skipped with a message.
+#[test]
+#[ignore = "requires a graphical display and the AI weights; run alone with GSETTINGS_BACKEND=memory"]
+fn viewer_edit_panel_ai() {
+    let context = glib::MainContext::default();
+    let dir = tempfile::tempdir().unwrap();
+    let photo = dir.path().join("a.png");
+    landscape(&photo);
+    let (window, state, witness) =
+        open_viewer("com.biglinux.Iris.EditAiProbe", vec![photo.clone()], (1000, 700));
+    handle_key(&state, gdk::Key::e, gdk::ModifierType::empty());
+    settle(&context, 300);
+    let (remove_bg, upscale, factor, tool_box, status) = state.borrow().edit_ui.tool_controls();
+    let (denoise, note) = state.borrow().edit_ui.ai_controls();
+    let ready = |model: &bigimage_ai::ModelInfo| {
+        let ready = model.availability().is_ready();
+        if !ready {
+            eprintln!("skipping {}: weights absent (set {})", model.name, model.env);
+        }
+        ready
+    };
+    let mut expected: Vec<EditOp> = Vec::new();
+    let mut runs = heavy_runs();
+    let run =
+        |button: &gtk::Button, op: EditOp, natural: (u32, u32), expected: &mut Vec<EditOp>| {
+            status.set_visible(false);
+            let started = std::time::Instant::now();
+            button.emit_clicked();
+            assert!(tool_box.is_visible(), "no progress for {op:?}");
+            let mut want = expected.clone();
+            want.push(op);
+            wait(&context, &format!("{op:?} applied"), &|| {
+                assert!(!status.is_visible(), "{op:?} failed: {}", status.text());
+                state.borrow().pending_ops == want
+            });
+            wait_frame(&context, &state, natural);
+            eprintln!("{op:?}: {:.2} s in the panel", started.elapsed().as_secs_f64());
+            *expected = want;
+        };
+
+    let mut natural = (640, 480);
+    if ready(&bigimage_ai::background::MODEL) {
+        run(&remove_bg, EditOp::RemoveBackground, natural, &mut expected);
+        runs += 1;
+        assert_eq!(heavy_runs(), runs);
+        // The cut-out has transparent pixels; the device shows in the tooltip.
+        let rgba = super::edit_panel::texture_rgba(&state.borrow().texture.clone().unwrap());
+        assert!(rgba.pixels().any(|p| p[3] < 128), "nothing was cut out");
+        let tooltip = remove_bg.tooltip_text().unwrap_or_default();
+        assert!(tooltip.contains("CPU") || tooltip.contains("GPU"), "tooltip: {tooltip}");
+        crate::gui::lifecycle_tests::capture_window(&window, "panel-ai-1-remove-bg");
+    }
+    if ready(&bigimage_ai::upscale::MODEL) {
+        factor.set_selected(0);
+        natural = (1280, 960);
+        run(&upscale, EditOp::Upscale { factor: 2, ai: true }, natural, &mut expected);
+        runs += 1;
+        assert_eq!(heavy_runs(), runs);
+        crate::gui::lifecycle_tests::capture_window(&window, "panel-ai-2-upscale");
+    }
+    if ready(&bigimage_ai::denoise::MODEL) {
+        run(&denoise, EditOp::Denoise, natural, &mut expected);
+        runs += 1;
+        assert_eq!(heavy_runs(), runs);
+        let tooltip = denoise.tooltip_text().unwrap_or_default();
+        assert!(tooltip.contains("CPU") || tooltip.contains("GPU"), "tooltip: {tooltip}");
+    }
+    // With every panel model installed there is nothing to install.
+    if expected.len() == 3 {
+        assert!(!note.is_visible(), "install note with every model present: {}", note.text());
+    } else {
+        assert!(note.is_visible(), "no install note with a model missing");
+    }
+    let scroller = find(&state.borrow().edit_ui.revealer, &|w| w.is::<gtk::ScrolledWindow>())
+        .and_downcast::<gtk::ScrolledWindow>()
+        .unwrap();
+    let adjustment = scroller.vadjustment();
+    adjustment.set_value(adjustment.upper());
+    settle(&context, 100);
+    crate::gui::lifecycle_tests::capture_window(&window, "panel-ai-3-tools");
+    if expected.is_empty() {
+        eprintln!("no AI weights available: nothing ran");
+    } else {
+        // Later edits, Undo and Redo reuse the cached results.
+        gtk::prelude::WidgetExt::activate_action(&window, "win.flip-h", None).unwrap();
+        wait(&context, "flipped", &|| state.borrow().pending_ops.len() == expected.len() + 1);
+        wait_frame(&context, &state, natural);
+        undo_edit(&state);
+        wait_frame(&context, &state, natural);
+        redo_edit(&state);
+        wait_frame(&context, &state, natural);
+        assert_eq!(heavy_runs(), runs, "a heavy tool ran again on flip/undo/redo");
+        // Salvar como recomputes from the file's own pixels (metadata and
+        // colour profile kept): every heavy tool once more, same engines.
+        let copy = dir.path().join("a-copy.png");
+        super::edit_panel::save_copy(&state, copy.clone());
+        // Every heavy tool again: minutes for SCUNet on a slow CPU.
+        let deadline = std::time::Instant::now() + Duration::from_secs(600);
+        while state.borrow().saving {
+            assert!(std::time::Instant::now() < deadline, "timed out: save-as");
+            settle(&context, 50);
+        }
+        let saved = image::open(&copy).unwrap();
+        assert_eq!((saved.width(), saved.height()), natural);
+        assert_eq!(heavy_runs(), runs + expected.len(), "save-as skipped a tool");
+        if expected.contains(&EditOp::RemoveBackground) {
+            assert!(saved.to_rgba8().pixels().any(|p| p[3] < 128), "save lost the cut-out");
+        }
+        // Cancelling a running tool drops its result.
+        if bigimage_ai::upscale::availability().is_ready() {
+            let before = state.borrow().pending_ops.clone();
+            factor.set_selected(2);
+            upscale.emit_clicked();
+            assert!(tool_box.is_visible());
+            super::edit_panel::cancel_tool(&state);
+            settle(&context, 1500);
+            assert_eq!(state.borrow().pending_ops, before, "a cancelled upscale applied");
         }
     }
-
     window.destroy();
     drop(window);
     settle(&context, 100);

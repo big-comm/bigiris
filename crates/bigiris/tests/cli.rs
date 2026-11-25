@@ -75,25 +75,33 @@ fn invalid_arguments_return_failure() {
     }
 }
 
+/// A readable file that is not a weights file: availability passes, a
+/// load would fail. Commands that must not load the model stay green.
+#[cfg(feature = "ai")]
+fn fake_weights(dir: &Path) -> std::path::PathBuf {
+    let path = dir.join("fake.weights");
+    std::fs::write(&path, b"not a weights file").unwrap();
+    path
+}
+
 #[cfg(feature = "ai")]
 #[test]
-fn low_memory_refuses_ai_before_download_and_preserves_inputs() {
+fn low_memory_refuses_ai_before_loading_and_preserves_inputs() {
     let dir = tempfile::tempdir().unwrap();
     fixture(dir.path(), "source.png");
     let original = std::fs::read(dir.path().join("source.png")).unwrap();
-    let cache = dir.path().join("isolated-data");
     let output = Command::new("/usr/bin/prlimit")
-        .args(["--as=4294967296", "--core=0", "--"])
+        .args(["--as=536870912", "--core=0", "--"])
         .arg(env!("CARGO_BIN_EXE_bigiris"))
         .args(["remove-bg", "source.png"])
-        .env("XDG_DATA_HOME", &cache)
+        .env("BIGIRIS_BIREFNET_WEIGHTS", fake_weights(dir.path()))
         .current_dir(dir.path())
         .output()
         .unwrap();
-    assert!(!output.status.success());
+    assert_eq!(output.status.code(), Some(1));
     let error = String::from_utf8_lossy(&output.stderr);
-    assert!(error.contains("8 GiB"), "missing memory explanation: {error}");
-    assert!(!cache.exists(), "model download was attempted despite rejected budget");
+    // Refused by the budget, not by the (fake) weights.
+    assert!(error.contains("memória para IA") && error.contains("GiB"), "{error}");
     assert!(!dir.path().join("source_nobg.png").exists());
     assert_eq!(std::fs::read(dir.path().join("source.png")).unwrap(), original);
 }
@@ -251,31 +259,217 @@ fn remove_bg_validates_model_and_refuses_collisions() {
 
 #[cfg(feature = "ai")]
 #[test]
-fn remove_bg_skips_existing_output_without_loading_the_model() {
+fn ai_commands_skip_existing_outputs_without_loading_the_model() {
     let dir = tempfile::tempdir().unwrap();
     sized_fixture(dir.path(), "source.png", 8, 8);
     std::fs::write(dir.path().join("source_nobg.png"), b"keep").unwrap();
-    let cache = dir.path().join("isolated-data");
+    std::fs::write(dir.path().join("source_denoised.png"), b"keep").unwrap();
+    let fake = fake_weights(dir.path());
+    for (args, var) in [
+        (vec!["remove-bg", "source.png"], "BIGIRIS_BIREFNET_WEIGHTS"),
+        (vec!["denoise", "source.png"], "BIGIRIS_SCUNET_WEIGHTS"),
+    ] {
+        // Loading the fake weights would fail the file: a skip must not.
+        let output = Command::new(env!("CARGO_BIN_EXE_bigiris"))
+            .args(&args)
+            .env(var, &fake)
+            .current_dir(dir.path())
+            .output()
+            .unwrap();
+        if args[0] == "denoise" && !output.status.success() && !sandbox_available() {
+            continue;
+        }
+        success(output.clone());
+        assert!(String::from_utf8_lossy(&output.stdout).contains("skip "), "{args:?}");
+    }
+    assert_eq!(std::fs::read(dir.path().join("source_nobg.png")).unwrap(), b"keep");
+    assert_eq!(std::fs::read(dir.path().join("source_denoised.png")).unwrap(), b"keep");
+}
+
+#[cfg(feature = "ai")]
+#[test]
+fn ai_commands_name_the_missing_package_before_any_work() {
+    let dir = tempfile::tempdir().unwrap();
+    sized_fixture(dir.path(), "a.png", 16, 16);
+    sized_fixture(dir.path(), "mask.png", 16, 16);
+    let absent = dir.path().join("absent.weights");
+    for (args, var, package) in [
+        (vec!["remove-bg", "a.png"], "BIGIRIS_BIREFNET_WEIGHTS", "birefnet-native"),
+        (vec!["denoise", "a.png"], "BIGIRIS_SCUNET_WEIGHTS", "scunet-native"),
+        (vec!["inpaint", "--mask", "mask.png", "a.png"], "BIGIRIS_LAMA_WEIGHTS", "lama-native"),
+        (
+            vec!["upscale", "--engine", "realesrgan", "a.png"],
+            "BIGIRIS_REALESRGAN_WEIGHTS",
+            "realesrgan-native",
+        ),
+    ] {
+        let output = Command::new(env!("CARGO_BIN_EXE_bigiris"))
+            .args(&args)
+            .env(var, &absent)
+            .current_dir(dir.path())
+            .output()
+            .unwrap();
+        assert_eq!(output.status.code(), Some(1), "{args:?}");
+        let error = String::from_utf8_lossy(&output.stderr);
+        assert!(error.contains(&format!("sudo pacman -S {package}")), "{args:?}: {error}");
+    }
+    let names: Vec<_> = std::fs::read_dir(dir.path())
+        .unwrap()
+        .map(|e| e.unwrap().file_name().to_string_lossy().into_owned())
+        .collect();
+    assert_eq!(names.len(), 2, "something was written: {names:?}");
+}
+
+#[test]
+fn upscale_falls_back_to_lanczos_without_real_esrgan() {
+    if !sandbox_available() {
+        return;
+    }
+    let dir = tempfile::tempdir().unwrap();
+    sized_fixture(dir.path(), "a.png", 16, 12);
     let output = Command::new(env!("CARGO_BIN_EXE_bigiris"))
-        .args(["remove-bg", "source.png"])
-        .env("XDG_DATA_HOME", &cache)
+        .args(["upscale", "--factor", "3", "a.png"])
+        .env("BIGIRIS_REALESRGAN_WEIGHTS", dir.path().join("absent.weights"))
         .current_dir(dir.path())
         .output()
         .unwrap();
     success(output.clone());
-    assert!(String::from_utf8_lossy(&output.stdout).contains("skip "));
-    assert_eq!(std::fs::read(dir.path().join("source_nobg.png")).unwrap(), b"keep");
-    assert!(!cache.exists(), "model was loaded for a skipped file");
+    assert!(String::from_utf8_lossy(&output.stderr).contains("Lanczos3"));
+    assert_eq!(image::image_dimensions(dir.path().join("a_300pct.png")).unwrap(), (48, 36));
+    // Explicit Lanczos (and its old spelling) never mentions the model.
+    let output =
+        run(dir.path(), &["upscale", "--engine", "lanczos3", "--overwrite", "replace", "a.png"]);
+    success(output.clone());
+    assert!(!String::from_utf8_lossy(&output.stderr).contains("realesrgan-native"));
+    assert_eq!(image::image_dimensions(dir.path().join("a_200pct.png")).unwrap(), (32, 24));
+    let output = run(dir.path(), &["upscale", "--engine", "nope", "a.png"]);
+    assert_eq!(output.status.code(), Some(1));
+}
+
+#[cfg(feature = "ai")]
+#[test]
+fn inpaint_refuses_empty_masks_and_reports_size_mismatches() {
+    if !sandbox_available() {
+        return;
+    }
+    let dir = tempfile::tempdir().unwrap();
+    let fake = fake_weights(dir.path());
+    sized_fixture(dir.path(), "a.png", 16, 16);
+    image::GrayImage::new(16, 16).save(dir.path().join("empty.png")).unwrap();
+    image::GrayImage::from_pixel(10, 10, image::Luma([255]))
+        .save(dir.path().join("small.png"))
+        .unwrap();
+    let inpaint = |mask: &str| {
+        Command::new(env!("CARGO_BIN_EXE_bigiris"))
+            .args(["inpaint", "--mask", mask, "a.png"])
+            .env("BIGIRIS_LAMA_WEIGHTS", &fake)
+            .current_dir(dir.path())
+            .output()
+            .unwrap()
+    };
+    let output = inpaint("empty.png");
+    assert_eq!(output.status.code(), Some(1));
+    assert!(String::from_utf8_lossy(&output.stderr).contains("nenhuma área"));
+    let output = inpaint("small.png");
+    assert_eq!(output.status.code(), Some(2));
+    assert!(String::from_utf8_lossy(&output.stderr).contains("máscara tem 10×10"));
+    assert!(!dir.path().join("a_inpaint.png").exists());
+}
+
+/// Weights of `model` installed, or pointed at by its variable.
+#[cfg(feature = "ai")]
+fn weights_ready(model: &bigimage_ai::ModelInfo) -> bool {
+    let ready = model.availability().is_ready();
+    if !ready {
+        eprintln!("skipping {}: weights absent (set {})", model.name, model.env);
+    }
+    ready
+}
+
+#[cfg(feature = "ai")]
+#[test]
+fn ai_commands_write_their_outputs_with_installed_weights() {
+    if !sandbox_available() {
+        return;
+    }
+    let dir = tempfile::tempdir().unwrap();
+    let photo = image::RgbImage::from_fn(64, 48, |x, y| {
+        let inside = (x as i32 - 32).pow(2) + (y as i32 - 24).pow(2) < 225;
+        if inside {
+            image::Rgb([200, 30, 20])
+        } else {
+            image::Rgb([230, 230, 225])
+        }
+    });
+    photo.save(dir.path().join("photo.png")).unwrap();
+    let mut mask = image::GrayImage::new(64, 48);
+    for y in 20..28 {
+        for x in 4..12 {
+            mask.put_pixel(x, y, image::Luma([255]));
+        }
+    }
+    mask.save(dir.path().join("mask.png")).unwrap();
+    type Case<'a> = (&'a bigimage_ai::ModelInfo, Vec<&'a str>, &'a str, (u32, u32));
+    let cases: [Case; 4] = [
+        (
+            &bigimage_ai::background::MODEL,
+            vec!["remove-bg", "photo.png"],
+            "photo_nobg.png",
+            (64, 48),
+        ),
+        (
+            &bigimage_ai::upscale::MODEL,
+            vec!["upscale", "--engine", "realesrgan", "photo.png"],
+            "photo_200pct.png",
+            (128, 96),
+        ),
+        (
+            &bigimage_ai::denoise::MODEL,
+            vec!["denoise", "photo.png"],
+            "photo_denoised.png",
+            (64, 48),
+        ),
+        (
+            &bigimage_ai::inpaint::MODEL,
+            vec!["inpaint", "--mask", "mask.png", "photo.png"],
+            "photo_inpaint.png",
+            (64, 48),
+        ),
+    ];
+    for (model, args, output, size) in cases {
+        if !weights_ready(model) {
+            continue;
+        }
+        let result = run(dir.path(), &args);
+        success(result);
+        let written = bigimage_core::open_image(dir.path().join(output)).unwrap();
+        assert_eq!((written.width(), written.height()), size, "{output}");
+        if output.ends_with("_nobg.png") {
+            let rgba = written.to_rgba8();
+            assert!(rgba.get_pixel(32, 24)[3] > rgba.get_pixel(1, 1)[3], "no cut-out");
+        }
+        if output.ends_with("_inpaint.png") {
+            // Far from the mask nothing changes.
+            assert_eq!(written.to_rgb8().get_pixel(60, 2), photo.get_pixel(60, 2));
+        }
+    }
 }
 
 #[cfg(not(feature = "ai"))]
 #[test]
-fn remove_bg_without_ai_is_a_fatal_error() {
+fn ai_commands_without_ai_are_fatal_errors() {
     let dir = tempfile::tempdir().unwrap();
     sized_fixture(dir.path(), "a.png", 8, 8);
-    let output = run(dir.path(), &["remove-bg", "a.png"]);
-    assert_eq!(output.status.code(), Some(1));
-    assert!(String::from_utf8_lossy(&output.stderr).contains("ai"));
+    for args in [
+        vec!["remove-bg", "a.png"],
+        vec!["denoise", "a.png"],
+        vec!["inpaint", "--mask", "a.png", "a.png"],
+        vec!["upscale", "--engine", "realesrgan", "a.png"],
+    ] {
+        let output = run(dir.path(), &args);
+        assert_eq!(output.status.code(), Some(1), "{args:?}");
+        assert!(String::from_utf8_lossy(&output.stderr).contains("--features ai"), "{args:?}");
+    }
 }
 
 /// Stand-in for LibreOffice: checks the arguments bigiris must pass and

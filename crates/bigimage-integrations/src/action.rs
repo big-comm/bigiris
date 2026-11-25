@@ -105,7 +105,8 @@ pub const SUB_UTILS: Submenu =
     Submenu { id: "utils", label: n_("Utilidades"), icon: "applications-graphics-symbolic" };
 
 /// Submenu: IA local (background removal, upscale, denoise).
-/// Requer build com feature `ai` e o pacote `onnxruntime` instalado.
+/// Requer build com feature `ai`; cada ferramenta precisa do seu pacote de
+/// pesos (`birefnet-native`, `realesrgan-native`, ...).
 pub const SUB_AI: Submenu =
     Submenu { id: "ai", label: n_("IA"), icon: "applications-science-symbolic" };
 
@@ -507,6 +508,16 @@ pub const ACTIONS: &[Action] = &[
         // Dispara o diálogo GUI com barra de progresso + compare ao fim.
         // Headless puro (`bigiris remove-bg`) fica só na CLI.
         command: "bigiris --dialog=remove-bg %F",
+        icon: "applications-science-symbolic",
+        mime_types: IMAGE_MIME,
+    },
+    Action {
+        id: "ai-upscale",
+        submenu: Some(SUB_AI),
+        label: n_("Aumentar resolução…"),
+        // Same dialog as the viewer's edit panel: Real-ESRGAN when
+        // `realesrgan-native` is installed, Lanczos3 otherwise.
+        command: "bigiris --dialog=upscale %F",
         icon: "applications-science-symbolic",
         mime_types: IMAGE_MIME,
     },

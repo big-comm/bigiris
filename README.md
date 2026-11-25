@@ -42,8 +42,9 @@ seleção de arquivos locais ou cole arquivos copiados no gerenciador com
 - Painel de edição lateral e translúcido (botão **Editar** ou `E`): girar,
   espelhar, endireitar (−45° a +45°, com grade e recorte automático das bordas
   vazias) e recortar; brilho, contraste, saturação e gama com prévia ao vivo;
-  redimensionar com proporção travada ou em porcentagem; remover fundo (IA) e
-  aumentar resolução direto na imagem, com progresso e botão de cancelar;
+  redimensionar com proporção travada ou em porcentagem; remover fundo,
+  remover ruído e aumentar resolução com IA direto na imagem, com progresso e
+  botão de cancelar;
   **Salvar** e **Salvar como…** (grava uma cópia editada, sem tocar no
   original). Cada gesto vira um passo de desfazer, e o resultado das
   ferramentas pesadas fica guardado para que as edições seguintes não as
@@ -52,11 +53,13 @@ seleção de arquivos locais ou cole arquivos copiados no gerenciador com
   antes/depois.
 - Integração com Dolphin, Nautilus, Nemo, Thunar, PCManFM-Qt e elementary Files.
 - Ação de pasta no Nautilus e no Dolphin: **BigIris → Processar esta pasta…**.
-- Remoção de fundo local com BiRefNet-lite, modelo verificado por SHA-256 e sem
-  upload das imagens.
+- IA local, sem upload das imagens e sem downloads: remoção de fundo
+  (BiRefNet-lite), aumento de resolução (Real-ESRGAN), remoção de ruído
+  (SCUNet) e apagar objetos por máscara (LaMa, por enquanto na CLI). Veja
+  [IA local](#ia-local).
 - Limites preventivos de 1 GiB por arquivo, 256 MP e 512 MiB por buffer de imagem.
 
-## Zoom e memória da IA
+## Zoom
 
 Posicione o cursor sobre o detalhe da imagem e use a roda do mouse, `+`/`-`
 ou os botões de zoom. A transição é gradual, com movimentos proporcionais no
@@ -65,17 +68,49 @@ preserva esse ponto, respeitando os limites
 de rolagem da imagem. `1` exibe 100%; `0` ajusta à janela. Sem posição conhecida
 do cursor, o ponto de referência é o centro da área visível.
 
-A remoção de fundo é opcional. O modelo atual, BiRefNet-lite FP32, atingiu
-aproximadamente 6,53 GiB de RAM no ensaio local. O aplicativo exige um orçamento
-inicial de **8 GiB de RAM livre** antes de baixar/carregar esse modelo e volta
-a conferir o orçamento antes da inferência. Considera a memória disponível do
-Linux, limites cgroup v2 e de espaço virtual; swap não substitui essa margem.
-Isso é uma proteção preventiva, não uma quota rígida de memória.
+## IA local
 
-Em uma máquina com 4 GB, a remoção de fundo por esse modelo é recusada com
-explicação. O visualizador e as conversões continuam disponíveis, sujeitos ao
-tamanho das imagens e aos limites do pipeline. Ainda é necessária homologação
-em hardware físico de pouca RAM; não há promessa de suporte a qualquer acervo.
+As ferramentas de IA usam os motores do
+[image-engine-native](https://github.com/biglinux/image-engine-native), do
+BigLinux: os modelos escritos em Rust puro, sem ONNX Runtime, PyTorch ou
+Python. Rodam na GPU por Vulkan 1.2 quando há uma (a primeira carga na GPU
+compila os shaders, alguns segundos, e fica em cache) e na CPU caso contrário.
+O dispositivo em uso aparece na dica das ferramentas do painel e na saída da
+CLI. Os pesos **não são baixados**: vêm de pacotes do sistema, um por
+ferramenta, e cada ferramenta funciona sem as outras.
+
+| Ferramenta | Modelo | Pacote | Pesos |
+|---|---|---|---|
+| Remover fundo | BiRefNet-lite (MIT) | `birefnet-native` | 90 MB |
+| Aumentar resolução | Real-ESRGAN general x4v3 (BSD-3-Clause) | `realesrgan-native` | 4,9 MB |
+| Remover ruído | SCUNet (Apache-2.0) | `scunet-native` | 37 MB |
+| Apagar objeto | Big LaMa (Apache-2.0) | `lama-native` | 102 MB |
+
+```bash
+sudo pacman -S birefnet-native realesrgan-native scunet-native lama-native
+```
+
+O pacote do BigLinux já instala o `realesrgan-native` (4,9 MB) como
+dependência; os outros pesos são opcionais. Sem o pacote, a ferramenta aparece
+indisponível e diz qual pacote instalar; sem `realesrgan-native` (instalação
+manual ou outra distribuição), **Aumentar resolução** usa Lanczos3. Para testes e
+desenvolvimento, `BIGIRIS_BIREFNET_WEIGHTS`, `BIGIRIS_REALESRGAN_WEIGHTS`,
+`BIGIRIS_SCUNET_WEIGHTS` e `BIGIRIS_LAMA_WEIGHTS` apontam para outros arquivos
+de pesos; `IMAGE_ENGINE_NATIVE_GPU=0` força a CPU.
+
+Memória medida neste projeto (processo inteiro, CPU): cerca de 0,3 GB para a
+remoção de fundo, 0,1 a 0,4 GB mais a imagem de saída para o Real-ESRGAN
+(trabalha em blocos), 0,4 a 0,7 GB para o SCUNet (também em blocos) e 0,25 GB
+a 0,5 GB para o LaMa, que roda só numa caixa em volta da máscara, reduzida a
+1024 px no lado maior. Antes de carregar e de cada execução o aplicativo
+confere se a estimativa cabe na memória livre agora (memória disponível do
+Linux, limites cgroup v2 e de espaço virtual; swap não conta) e recusa com
+explicação se não couber. O visualizador e as conversões seguem disponíveis.
+
+As redes trabalham em sRGB de 8 bits: imagens de 16 bits ou de ponto
+flutuante saem em 8 bits destas ferramentas (o Lanczos3 mantém a
+profundidade). O canal alfa é preservado: ampliado com Lanczos3 no Real-ESRGAN,
+intacto no SCUNet e no LaMa.
 
 ## Formatos
 
@@ -154,7 +189,7 @@ Para instalar o checkout apenas no seu usuário:
 
 ```bash
 sudo dnf install rust cargo lib64gtk4.0-devel lib64adwaita-devel \
-  onnxruntime-devel gettext bubblewrap util-linux
+  shaderc gettext bubblewrap util-linux
 ./install.sh
 ```
 
@@ -162,6 +197,9 @@ O instalador compila a versão release, coloca o aplicativo em `~/.local`,
 registra somente os gerenciadores de arquivos detectados e atualiza o cache do
 Plasma (`kbuildsycoca6`). Se o menu não aparecer em uma janela antiga do Dolphin,
 feche essa janela e abra outra.
+
+Os pacotes de pesos da IA ainda não existem no OpenMandriva: lá as ferramentas
+de IA aparecem indisponíveis (e o aumento de resolução usa Lanczos3).
 
 Para o ABF/Cooker, use a receita e as instruções em
 [`packaging/openmandriva/`](packaging/openmandriva/README.md). Ela usa um
@@ -176,8 +214,8 @@ cd pkgbuild
 makepkg -si
 ```
 
-Em outras distribuições, após instalar Rust, GTK4, libadwaita, dav1d, OpenSSL,
-gettext e ONNX Runtime:
+Em outras distribuições, após instalar Rust (1.95 ou posterior), GTK4,
+libadwaita, dav1d, gettext e `glslc` (do shaderc, usado só na compilação):
 
 ```bash
 cargo build --locked --release --features "gui ai" -p bigiris
@@ -227,6 +265,7 @@ bigiris --dialog=crop foto.jpg
 bigiris --dialog=adjust *.jpg
 bigiris --dialog=compare antes.png depois.png
 bigiris --dialog=remove-bg foto.jpg
+bigiris --dialog=upscale foto.jpg
 
 # CLI
 bigiris convert --to avif --overwrite increment *.jpg
@@ -239,6 +278,10 @@ bigiris crop --rect 800x600+100+50 foto.jpg
 bigiris adjust --brightness 15 --contrast 10 foto.jpg
 bigiris animate -o saida.gif --delay 100 frame_*.png
 bigiris remove-bg --overwrite increment foto.jpg
+bigiris upscale --factor 4 foto.jpg               # Real-ESRGAN, ou Lanczos3
+bigiris upscale --factor 2 --engine lanczos *.png  # sem IA
+bigiris denoise foto-ruidosa.jpg                  # <nome>_denoised.jpg
+bigiris inpaint --mask mascara.png foto.jpg       # branco = apagar
 bigiris to-pdf --overwrite replace --timeout 300 documento.docx
 bigiris batch --profile docs/batch-profile.example.toml pasta-com-fotos
 
@@ -251,8 +294,15 @@ bigiris --self-test
 Todos os comandos que gravam arquivos aceitam
 `--overwrite skip|replace|increment` e, por padrão, **não sobrescrevem**
 (`skip`): o arquivo existente é mantido e a saída mostra `skip`. Isso vale
-também para `animate` (o `.gif` de destino), `remove-bg` (`<nome>_nobg.png`) e
-`to-pdf`, que agora ignora o `<nome>.pdf` já existente em vez de substituí-lo.
+também para `animate` (o `.gif` de destino), `remove-bg` (`<nome>_nobg.png`),
+`upscale` (`<nome>_<pct>pct.<ext>`), `denoise` (`<nome>_denoised.<ext>`),
+`inpaint` (`<nome>_inpaint.<ext>`) e `to-pdf`, que agora ignora o
+`<nome>.pdf` já existente em vez de substituí-lo. `upscale --engine` aceita
+`auto` (padrão: Real-ESRGAN se instalado, senão Lanczos3), `realesrgan` (falha
+se o pacote faltar) e `lanczos`. Em `inpaint`, a máscara tem o tamanho da
+imagem; o branco é preenchido a partir dos arredores e o resto da imagem não
+muda. Sem o pacote do modelo, `remove-bg`, `denoise`, `inpaint` e
+`upscale --engine realesrgan` param com código 1 e dizem o que instalar.
 `to-pdf --timeout <segundos>` (1 a 3600, padrão 120) limita o tempo de cada
 documento no LibreOffice; ao estourar, o processo e seus filhos são encerrados
 e nenhum PDF parcial fica para trás. Saídas que colidiriam entre si no mesmo
@@ -293,7 +343,7 @@ Os mesmos códigos aparecem em `bigiris --help`.
 bigiris/
 ├── crates/
 │   ├── bigimage-core/          pipeline headless e transformações
-│   ├── bigimage-ai/            modelos locais e download verificado
+│   ├── bigimage-ai/            IA local (motores image-engine-native)
 │   ├── bigimage-integrations/  ServiceMenus e ações de gerenciadores
 │   └── bigiris/                CLI, viewer Íris e diálogos Prisma
 ├── data/                       desktop, AppStream, GSettings, ícone e i18n
@@ -308,7 +358,7 @@ conforme CPU, dimensões das imagens e memória disponível (até quatro jobs).
 
 ## Desenvolvimento e qualidade
 
-Rust stable 1.92 ou posterior:
+Rust stable 1.95 ou posterior e `glslc` (shaderc) para a feature `ai`:
 
 ```bash
 cargo fmt --all --check
@@ -325,6 +375,22 @@ glib-compile-schemas --strict --dry-run data
 Relatos e patches são bem-vindos: leia [CONTRIBUTING.md](CONTRIBUTING.md).
 Vulnerabilidades devem seguir [SECURITY.md](SECURITY.md), sem issue pública.
 
+Os testes com os modelos reais são ignorados por padrão; com os pesos
+instalados (ou apontados pelas variáveis `BIGIRIS_*_WEIGHTS`):
+
+```bash
+cargo test --release -p bigimage-ai --features native --test models -- \
+  --ignored --test-threads=1 --nocapture
+```
+
 ## Licença
 
 GPL-3.0-or-later. Consulte [LICENSE](LICENSE).
+
+Os motores de IA vêm do
+[image-engine-native](https://github.com/biglinux/image-engine-native)
+(MIT, de Bruno Gonçalves / BigLinux; o exponencial segue o XNNPACK, BSD-3-Clause).
+Os pesos não fazem parte do BigIris: são instalados pelos pacotes
+`*-native`, cada um com a licença do modelo original (BiRefNet: MIT;
+Real-ESRGAN: BSD-3-Clause; SCUNet e LaMa: Apache-2.0). Detalhes em
+[NOTICE](NOTICE).

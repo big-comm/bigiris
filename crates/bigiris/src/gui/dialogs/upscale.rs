@@ -191,7 +191,6 @@ fn fill_upscale_dialog(
         let overwrite_row = overwrite_row.clone();
         let status = status.clone();
         let apply_btn = apply_btn.clone();
-        let cancel_btn = cancel_btn.clone();
         let window = window.clone();
         dialog_signal!(window, apply_btn.clone(), connect_clicked, move |_| {
             let factor = UPSCALE_FACTORS[factor_row.selected() as usize].1;
@@ -199,7 +198,6 @@ fn fill_upscale_dialog(
             let policy = selected_overwrite(&overwrite_row);
 
             apply_btn.set_sensitive(false);
-            cancel_btn.set_sensitive(false);
             status.set_text(&gettext("Aumentando…"));
 
             let work_files: Vec<PathBuf> = (*files).clone();
@@ -241,7 +239,6 @@ fn fill_upscale_dialog(
                 gettext("Aumentando"),
                 status.clone(),
                 apply_btn.clone(),
-                cancel_btn.clone(),
                 window.clone(),
             );
         });

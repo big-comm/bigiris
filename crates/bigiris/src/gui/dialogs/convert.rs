@@ -178,7 +178,6 @@ fn fill_convert_dialog(
         let encode = Rc::new(encode);
         let status = status.clone();
         let apply_btn = apply_btn.clone();
-        let cancel_btn = cancel_btn.clone();
         let window = window.clone();
         let output_dir = output_dir.clone();
         dialog_signal!(window, apply_btn.clone(), connect_clicked, move |_| {
@@ -191,7 +190,6 @@ fn fill_convert_dialog(
             let out_dir_snapshot = output_dir.borrow().clone();
 
             apply_btn.set_sensitive(false);
-            cancel_btn.set_sensitive(false);
             status.set_text(&gettext("Convertendo…"));
 
             let work_files: Vec<PathBuf> = (*files).clone();
@@ -201,7 +199,6 @@ fn fill_convert_dialog(
                 gettext("Convertendo"),
                 status.clone(),
                 apply_btn.clone(),
-                cancel_btn.clone(),
                 window.clone(),
             );
         });

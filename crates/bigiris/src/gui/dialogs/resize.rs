@@ -267,7 +267,6 @@ fn fill_resize_dialog(
         let fit_h = fit_h.clone();
         let status = status.clone();
         let apply_btn = apply_btn.clone();
-        let cancel_btn = cancel_btn.clone();
         let window = window.clone();
         dialog_signal!(window, apply_btn.clone(), connect_clicked, move |_| {
             let mode = match mode_row.selected() {
@@ -288,7 +287,6 @@ fn fill_resize_dialog(
             let opts = EncodeOptions::default();
 
             apply_btn.set_sensitive(false);
-            cancel_btn.set_sensitive(false);
             status.set_text(&gettext("Redimensionando…"));
 
             let work_files: Vec<PathBuf> = (*files).clone();
@@ -298,7 +296,6 @@ fn fill_resize_dialog(
                 gettext("Redimensionando"),
                 status.clone(),
                 apply_btn.clone(),
-                cancel_btn.clone(),
                 window.clone(),
             );
         });
@@ -387,6 +384,11 @@ mod apply_tests {
         let apply = find_apply(window.upcast_ref(), &label).unwrap();
         assert!(apply.is_sensitive());
         apply.emit_clicked();
+        // During the run Apply waits and Cancel stays usable: it closes the
+        // dialog, which cancels the run.
+        let cancel = apply.prev_sibling().and_downcast::<gtk::Button>().unwrap();
+        assert_eq!(cancel.label().as_deref(), Some(gettext("Cancelar").as_str()));
+        assert!(!apply.is_sensitive() && cancel.is_sensitive());
 
         let written = || {
             std::fs::read_dir(dir.path()).unwrap().flatten().map(|e| e.path()).find(|path| {

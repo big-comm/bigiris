@@ -126,7 +126,6 @@ pub(in crate::gui) fn build_animate_dialog(
         let output_row = output_row.clone();
         let status = status.clone();
         let apply_btn = apply_btn.clone();
-        let cancel_btn = cancel_btn.clone();
         let window = window.clone();
         dialog_signal!(window, apply_btn.clone(), connect_clicked, move |_| {
             let loop_mode = match loop_row.selected() {
@@ -158,7 +157,6 @@ pub(in crate::gui) fn build_animate_dialog(
                 let files = files.clone();
                 let status = status.clone();
                 let apply_btn = apply_btn.clone();
-                let cancel_btn = cancel_btn.clone();
                 let window = window.clone();
                 move |policy| {
                     start_animate_run(
@@ -168,7 +166,6 @@ pub(in crate::gui) fn build_animate_dialog(
                         policy,
                         &status,
                         &apply_btn,
-                        &cancel_btn,
                         &window,
                     )
                 }
@@ -238,7 +235,6 @@ fn comparable_path(path: &Path) -> PathBuf {
 }
 
 /// Encode the GIF on a worker thread and reflect the result in the dialog.
-#[allow(clippy::too_many_arguments)]
 fn start_animate_run(
     frames: Vec<PathBuf>,
     output: PathBuf,
@@ -246,12 +242,10 @@ fn start_animate_run(
     policy: OverwritePolicy,
     status: &gtk::Label,
     apply_btn: &gtk::Button,
-    cancel_btn: &gtk::Button,
     window: &adw::ApplicationWindow,
 ) {
     batch_runner::disarm_auto_close(window);
     apply_btn.set_sensitive(false);
-    cancel_btn.set_sensitive(false);
     status.set_text(&gettext("Montando GIF…"));
 
     // Closing the window aborts an in-flight isolated decode; the frames
@@ -279,7 +273,6 @@ fn start_animate_run(
     let status = status.clone();
     let window = window.clone();
     let apply_btn = apply_btn.clone();
-    let cancel_btn = cancel_btn.clone();
     // Released only after the encoder finished: closing the window never
     // exits mid-write and strands `.part` files.
     let hold = window.application().map(|app| app.hold());
@@ -306,19 +299,16 @@ fn start_animate_run(
                     &[("file", &output.display().to_string())],
                 ));
                 apply_btn.set_sensitive(true);
-                cancel_btn.set_sensitive(true);
             }
             Some(Err(e)) => {
                 status.set_text(&format!("{}: {e}", gettext("Falha")));
                 apply_btn.set_sensitive(true);
-                cancel_btn.set_sensitive(true);
             }
             None => {
                 status.set_text(&gettext(
                     "O processamento terminou inesperadamente. Tente novamente.",
                 ));
                 apply_btn.set_sensitive(true);
-                cancel_btn.set_sensitive(true);
             }
         }
     });

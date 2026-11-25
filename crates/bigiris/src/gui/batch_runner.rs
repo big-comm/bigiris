@@ -164,7 +164,7 @@ pub(super) fn format_counts(ok: usize, skip: usize, fail: usize) -> String {
 }
 
 /// Render the final state of a Prisma dialog after a batch finishes.
-/// Re-enables the Apply / Cancel buttons, prints the final summary
+/// Re-enables the Apply button, prints the final summary
 /// (`ok/skip/fail` counts + elapsed time + before/after size delta when
 /// available), and triggers a 2-second auto-close on clean success so
 /// service-menu callers don't need to dismiss the window manually.
@@ -172,7 +172,6 @@ pub(super) fn format_counts(ok: usize, skip: usize, fail: usize) -> String {
 pub(super) fn finish_dialog(
     status: &gtk::Label,
     apply_btn: &gtk::Button,
-    cancel_btn: &gtk::Button,
     window: &adw::ApplicationWindow,
     ok: usize,
     skip: usize,
@@ -210,18 +209,16 @@ pub(super) fn finish_dialog(
     }
     status.set_text(&msg);
     apply_btn.set_sensitive(true);
-    cancel_btn.set_sensitive(true);
     if fail == 0 {
         arm_auto_close(window, 2);
     }
 }
 
 /// The worker pool vanished without its summary: say so and let the user
-/// retry or close instead of leaving both buttons disabled forever.
-fn abort_dialog(status: &gtk::Label, apply_btn: &gtk::Button, cancel_btn: &gtk::Button) {
+/// retry instead of leaving Apply disabled forever.
+fn abort_dialog(status: &gtk::Label, apply_btn: &gtk::Button) {
     status.set_text(&gettext("O processamento terminou inesperadamente. Tente novamente."));
     apply_btn.set_sensitive(true);
-    cancel_btn.set_sensitive(true);
 }
 
 /// Progress message sent from the worker pool to the UI poll.
@@ -419,19 +416,18 @@ where
 /// (`status`, buttons, window) are only touched by the task awaiting the
 /// events on the GTK main loop.
 ///
-/// Cancellation: closing the window flips an atomic flag the workers
-/// check between files and that aborts an in-flight isolated codec run.
-/// An encode already in progress finishes and publishes atomically. The
-/// application is held until every worker has exited, so closing the last
-/// window never kills a worker mid-write and strands `.part` files.
-#[allow(clippy::too_many_arguments)]
+/// Cancellation: closing the window (its Cancel button included) flips an
+/// atomic flag the workers check between files and that aborts an
+/// in-flight isolated codec run. An encode already in progress finishes
+/// and publishes atomically. The application is held until every worker
+/// has exited, so closing the last window never kills a worker mid-write
+/// and strands `.part` files.
 pub(super) fn run_batch_async<W>(
     files: Vec<PathBuf>,
     work: W,
     busy_label: String,
     status: gtk::Label,
     apply_btn: gtk::Button,
-    cancel_btn: gtk::Button,
     window: adw::ApplicationWindow,
 ) where
     W: Fn(&Path) -> bigimage_core::Result<ConvertOutcome> + Send + Sync + 'static,
@@ -474,23 +470,14 @@ pub(super) fn run_batch_async<W>(
                     // Closed mid-run: nothing left to show or to auto-close.
                     if !(cancelled && !window.is_visible()) {
                         finish_dialog(
-                            &status,
-                            &apply_btn,
-                            &cancel_btn,
-                            &window,
-                            ok,
-                            skip,
-                            fail,
-                            first_err,
-                            elapsed,
-                            bytes_in,
-                            bytes_out,
+                            &status, &apply_btn, &window, ok, skip, fail, first_err, elapsed,
+                            bytes_in, bytes_out,
                         );
                     }
                     break;
                 }
                 None => {
-                    abort_dialog(&status, &apply_btn, &cancel_btn);
+                    abort_dialog(&status, &apply_btn);
                     break;
                 }
             }

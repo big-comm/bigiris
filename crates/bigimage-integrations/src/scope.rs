@@ -12,7 +12,7 @@ use thiserror::Error;
 #[non_exhaustive]
 pub enum ScopeError {
     /// Could not resolve the user's home directory (unusual on Linux).
-    #[error("não foi possível localizar $HOME")]
+    #[error("could not locate $HOME")]
     NoHome,
 }
 
@@ -153,7 +153,7 @@ impl ScopePaths {
         self.data.join("applications")
     }
 
-    /// `~/.local/share/icons/hicolor/scalable/apps/` — vetor de apps.
+    /// `~/.local/share/icons/hicolor/scalable/apps/` — scalable app icons.
     pub fn app_icon_dir(&self) -> PathBuf {
         self.data.join("icons/hicolor/scalable/apps")
     }
@@ -319,7 +319,7 @@ mod tests {
 
     #[test]
     fn is_on_path_finds_sh() {
-        assert!(is_on_path("sh"), "sh deveria estar sempre no PATH em um linux");
+        assert!(is_on_path("sh"), "sh should always be on PATH on Linux");
     }
 
     #[test]

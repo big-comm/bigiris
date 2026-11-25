@@ -246,7 +246,7 @@ mod tests {
         std::fs::write(&foreign, "dont touch").unwrap();
         install(&paths).unwrap();
         uninstall(&paths).unwrap();
-        assert!(foreign.exists(), "arquivo de terceiros foi removido");
+        assert!(foreign.exists(), "third-party file was removed");
     }
 
     #[test]

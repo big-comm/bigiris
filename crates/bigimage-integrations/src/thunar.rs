@@ -101,10 +101,10 @@ fn read_existing(path: &Path) -> io::Result<Option<String>> {
         return Err(io::Error::new(
             io::ErrorKind::InvalidData,
             format!(
-                "{} não tem a tag de fechamento </actions> (truncado ou editado à mão?); \
-                 ele não foi alterado, para não perder as suas ações personalizadas. \
-                 Corrija o arquivo ou mova-o (por exemplo para uca.xml.bak) para recomeçar \
-                 e rode o comando de novo",
+                "{} has no closing </actions> tag (truncated or edited by hand?); \
+                 it was left unchanged so your custom actions are not lost. \
+                 Fix the file or move it aside (for example to uca.xml.bak) to start over, \
+                 then run the command again",
                 path.display()
             ),
         ));
@@ -380,8 +380,8 @@ mod tests {
 
         install(&paths).unwrap();
         let body = read(&paths.thunar_uca());
-        assert!(body.contains("user-custom-1700000000"), "foreign action nao preservada");
-        assert!(body.contains("bigiris-convert-png"), "nossa acao nao injetada");
+        assert!(body.contains("user-custom-1700000000"), "foreign action not preserved");
+        assert!(body.contains("bigiris-convert-png"), "our action not inserted");
     }
 
     #[test]
@@ -430,7 +430,7 @@ mod tests {
         let paths = ScopePaths::rooted_at(tmp.path());
         install(&paths).unwrap();
         uninstall(&paths).unwrap();
-        assert!(!paths.thunar_uca().exists(), "uca.xml nao deveria sobreviver");
+        assert!(!paths.thunar_uca().exists(), "uca.xml should have been removed");
     }
 
     #[test]

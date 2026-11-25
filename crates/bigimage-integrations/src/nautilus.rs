@@ -1,21 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-//! Nautilus — integração via `nautilus-python` extension.
+//! Nautilus: a `nautilus-python` extension, the only entry point, at
+//! `~/.local/share/nautilus-python/extensions/bigiris-menu.py`.
 //!
-//! Historicamente instalávamos também um "scripts tree" em
-//! `~/.local/share/nautilus/scripts/BigIris/` como fallback para quem
-//! não tinha `nautilus-python` — mas isso gerava **duas entradas
-//! distintas** no menu de clique-direito ("Scripts ▸ BigIris" e
-//! "Íris ▸"), confundindo o usuário. A partir do BigLinux atual o
-//! `nautilus-python` é dependência básica; dropamos o fallback e
-//! mantemos apenas a extension Python como ponto único de entrada.
-//!
-//! O `uninstall` ainda limpa a árvore antiga caso ela esteja presente
-//! de instalações anteriores — garante que usuários que rodaram
-//! `install-integrations --user` numa versão velha e agora correm a
-//! nova ficam com o menu limpo.
-//!
-//! Caminho único: `~/.local/share/nautilus-python/extensions/bigiris-menu.py`.
-//! Submenu "Íris ▸" aparece top-level no clique-direito.
+//! A scripts tree under `~/.local/share/nautilus/scripts/BigIris/` would
+//! add a second "Scripts ▸ BigIris" entry, so install and uninstall both
+//! remove any such tree they find.
 
 use std::io;
 use std::path::{Path, PathBuf};
@@ -67,18 +56,12 @@ fn render() -> String {
     PYTHON_EXTENSION.replacen(ACTIONS_PLACEHOLDER, &table, 1)
 }
 
-/// Instala a extension Python e limpa resíduos de uma eventual árvore
-/// scripts legada (quem rodou `install-integrations` em versões
-/// anteriores ficou com os dois, gerando menus duplicados).
+/// Install the Python extension and remove any stale scripts tree.
 ///
-/// **Detecção do system-wide:** se o pacote já instalou a extension em
-/// [`SYSTEM_EXTENSION_PATH`] e este install é user-scope (ou seja, o
-/// caminho de destino está sob o `$HOME`), pulamos a cópia user-scope
-/// para evitar o "BigIris ▸" duplicado. Limpa também o nosso bytecode em
-/// `__pycache__` (só `bigiris-menu.*.pyc`; o diretório é compartilhado) e
-/// qualquer `.py` órfão que ficou de uma instalação user antiga
-/// pré-pacote — `nautilus-python` carrega bytecode mesmo sem o `.py`
-/// correspondente, e isso ressuscitava a extensão após `uninstall`.
+/// A user-scope install skips the copy when the package already ships
+/// [`SYSTEM_EXTENSION_PATH`], and removes any user-scope `.py` and our
+/// `__pycache__` bytecode instead: `nautilus-python` loads bytecode even
+/// without its `.py`, which would show "BigIris ▸" twice.
 pub fn install(paths: &ScopePaths) -> io::Result<Vec<PathBuf>> {
     install_with_system_path(paths, Path::new(SYSTEM_EXTENSION_PATH))
 }
@@ -92,8 +75,6 @@ pub(crate) fn install_with_system_path(
 ) -> io::Result<Vec<PathBuf>> {
     let mut written = Vec::new();
 
-    // Garbage collect: scripts tree antiga fica limpa antes de instalar
-    // para não aparecer no menu Scripts → BigIris.
     let stale_root = paths.nautilus_scripts().join(STALE_TREE_ROOT);
     if stale_root.exists() {
         let _ = std::fs::remove_dir_all(&stale_root);
@@ -101,13 +82,11 @@ pub(crate) fn install_with_system_path(
 
     let ext_dir = paths.nautilus_python_extensions();
 
-    // User-scope sobre um system-wide já presente = menu duplicado.
+    // A user-scope copy beside a system-wide one duplicates the menu.
     // DESTDIR may share the same prefix as home; use the explicit scope.
     let is_user_scope = paths.scope == Scope::User;
     if is_user_scope && system_ext.exists() {
-        // Limpa qualquer resíduo user-scope (.py, .pyc/__pycache__) que
-        // possa ressuscitar a duplicação. Ignora erros — a próxima
-        // execução tenta de novo.
+        // Errors are ignored: the next run retries.
         let stale_py = ext_dir.join(PYTHON_EXTENSION_FILENAME);
         if stale_py.exists() {
             let _ = std::fs::remove_file(&stale_py);
@@ -116,7 +95,6 @@ pub(crate) fn install_with_system_path(
         return Ok(written);
     }
 
-    // nautilus-python extension: único ponto de entrada oficial.
     std::fs::create_dir_all(&ext_dir)?;
     let ext_file = ext_dir.join(PYTHON_EXTENSION_FILENAME);
     crate::safe_fs::safe_write(&ext_file, render(), paths.scope)?;
@@ -125,10 +103,8 @@ pub(crate) fn install_with_system_path(
     Ok(written)
 }
 
-/// Remove a extension Python. Também limpa a scripts tree antiga caso
-/// ela tenha sobrevivido de uma instalação anterior, e o `__pycache__`
-/// que `nautilus-python` mantém ao lado do `.py` (caso contrário o
-/// bytecode persiste e a extensão volta a aparecer no menu).
+/// Remove the Python extension, any stale scripts tree, and our bytecode
+/// in the `__pycache__` beside it, which would otherwise keep the menu alive.
 pub fn uninstall(paths: &ScopePaths) -> io::Result<Vec<PathBuf>> {
     let mut removed = Vec::new();
 
@@ -205,11 +181,9 @@ mod tests {
         // and skip the user-scope install.
         let written =
             install_with_system_path(&paths, Path::new("/nonexistent/system-path")).unwrap();
-        // Um único arquivo: a extension Python. Scripts tree não é mais
-        // instalada (antes eram ACTIONS.len() + 1 arquivos).
         assert_eq!(written.len(), 1);
         let ext = paths.nautilus_python_extensions().join(PYTHON_EXTENSION_FILENAME);
-        assert!(ext.exists(), "extensão python não instalada");
+        assert!(ext.exists(), "python extension not installed");
     }
 
     #[test]
@@ -243,14 +217,13 @@ mod tests {
     fn install_cleans_stale_scripts_tree() {
         let tmp = TempDir::new().unwrap();
         let paths = ScopePaths::rooted_at(tmp.path());
-        // Simula um install antigo com scripts tree.
         let stale = paths.nautilus_scripts().join(STALE_TREE_ROOT);
-        std::fs::create_dir_all(stale.join("Converter")).unwrap();
-        std::fs::write(stale.join("Converter").join("PNG"), "#!/bin/sh\necho hi\n").unwrap();
+        std::fs::create_dir_all(stale.join("Convert")).unwrap();
+        std::fs::write(stale.join("Convert").join("PNG"), "#!/bin/sh\necho hi\n").unwrap();
         assert!(stale.exists());
 
         install_with_system_path(&paths, Path::new("/nonexistent/system-path")).unwrap();
-        assert!(!stale.exists(), "scripts tree antiga deveria ter sido limpa");
+        assert!(!stale.exists(), "stale scripts tree should have been removed");
     }
 
     #[test]
@@ -293,7 +266,6 @@ mod tests {
         let tmp = TempDir::new().unwrap();
         let paths = ScopePaths::rooted_at(tmp.path());
         install_with_system_path(&paths, Path::new("/nonexistent/system-path")).unwrap();
-        // Adiciona uma legacy tree pra simular um user com dois installs.
         let stale = paths.nautilus_scripts().join(STALE_TREE_ROOT);
         std::fs::create_dir_all(&stale).unwrap();
         std::fs::write(stale.join("dummy"), b"x").unwrap();

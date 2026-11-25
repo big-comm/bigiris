@@ -1,25 +1,15 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-//! Nautilus — integração via `nautilus-python` extension.
+//! Nautilus: a `nautilus-python` extension, the only entry point, at
+//! `~/.local/share/nautilus-python/extensions/bigiris-menu.py`.
 //!
-//! Historicamente instalávamos também um "scripts tree" em
-//! `~/.local/share/nautilus/scripts/BigIris/` como fallback para quem
-//! não tinha `nautilus-python` — mas isso gerava **duas entradas
-//! distintas** no menu de clique-direito ("Scripts ▸ BigIris" e
-//! "Íris ▸"), confundindo o usuário. A partir do BigLinux atual o
-//! `nautilus-python` é dependência básica; dropamos o fallback e
-//! mantemos apenas a extension Python como ponto único de entrada.
-//!
-//! O `uninstall` ainda limpa a árvore antiga caso ela esteja presente
-//! de instalações anteriores — garante que usuários que rodaram
-//! `install-integrations --user` numa versão velha e agora correm a
-//! nova ficam com o menu limpo.
-//!
-//! Caminho único: `~/.local/share/nautilus-python/extensions/bigiris-menu.py`.
-//! Submenu "Íris ▸" aparece top-level no clique-direito.
+//! A scripts tree under `~/.local/share/nautilus/scripts/BigIris/` would
+//! add a second "Scripts ▸ BigIris" entry, so install and uninstall both
+//! remove any such tree they find.
 
 use std::io;
 use std::path::{Path, PathBuf};
 
+use crate::action::ACTIONS;
 use crate::scope::{Scope, ScopePaths};
 
 const STALE_TREE_ROOT: &str = "BigIris";
@@ -33,21 +23,45 @@ const PYTHON_EXTENSION_FILENAME: &str = "bigiris-menu.py";
 const SYSTEM_EXTENSION_PATH: &str = "/usr/share/nautilus-python/extensions/bigiris-menu.py";
 
 /// The Python extension body, embedded at compile time from
-/// `data/nautilus/bigiris-menu.py` at the repo root.
+/// `data/nautilus/bigiris-menu.py` at the repo root; [`render`] fills its
+/// action table.
 const PYTHON_EXTENSION: &str = include_str!("../../../data/nautilus/bigiris-menu.py");
+const ACTIONS_PLACEHOLDER: &str = "\n_ACTIONS = []\n";
 
-/// Instala a extension Python e limpa resíduos de uma eventual árvore
-/// scripts legada (quem rodou `install-integrations` em versões
-/// anteriores ficou com os dois, gerando menus duplicados).
+/// The extension with `_ACTIONS` built from [`ACTIONS`], so Nautilus
+/// offers the same labels, icons, argv and MIME filters as every other
+/// file manager.
+fn render() -> String {
+    let py = |text: &str| format!("\"{}\"", text.replace('\\', "\\\\").replace('"', "\\\""));
+    let list = |items: &mut dyn Iterator<Item = &str>| {
+        format!("[{}]", items.map(py).collect::<Vec<_>>().join(", "))
+    };
+    let mut table = String::from("\n_ACTIONS = [\n");
+    for action in ACTIONS {
+        let (sub_id, sub_label, sub_icon) = match action.submenu {
+            Some(sub) => (py(sub.id), py(sub.label), py(sub.icon)),
+            None => ("None".to_owned(), "None".to_owned(), "None".to_owned()),
+        };
+        // `bigiris <args> %F`: the extension adds the binary and the paths.
+        let argv = list(&mut action.command.split_whitespace().filter(|arg| *arg != "%F").skip(1));
+        let mimes = list(&mut action.mime_types.iter().copied());
+        table.push_str(&format!(
+            "    ({}, {sub_id}, {sub_label}, {sub_icon}, {}, {argv}, {}, {mimes}),\n",
+            py(action.id),
+            py(action.label),
+            py(action.icon),
+        ));
+    }
+    table.push_str("]\n");
+    PYTHON_EXTENSION.replacen(ACTIONS_PLACEHOLDER, &table, 1)
+}
+
+/// Install the Python extension and remove any stale scripts tree.
 ///
-/// **Detecção do system-wide:** se o pacote já instalou a extension em
-/// [`SYSTEM_EXTENSION_PATH`] e este install é user-scope (ou seja, o
-/// caminho de destino está sob o `$HOME`), pulamos a cópia user-scope
-/// para evitar o "BigIris ▸" duplicado. Limpa também o nosso bytecode em
-/// `__pycache__` (só `bigiris-menu.*.pyc`; o diretório é compartilhado) e
-/// qualquer `.py` órfão que ficou de uma instalação user antiga
-/// pré-pacote — `nautilus-python` carrega bytecode mesmo sem o `.py`
-/// correspondente, e isso ressuscitava a extensão após `uninstall`.
+/// A user-scope install skips the copy when the package already ships
+/// [`SYSTEM_EXTENSION_PATH`], and removes any user-scope `.py` and our
+/// `__pycache__` bytecode instead: `nautilus-python` loads bytecode even
+/// without its `.py`, which would show "BigIris ▸" twice.
 pub fn install(paths: &ScopePaths) -> io::Result<Vec<PathBuf>> {
     install_with_system_path(paths, Path::new(SYSTEM_EXTENSION_PATH))
 }
@@ -61,8 +75,6 @@ pub(crate) fn install_with_system_path(
 ) -> io::Result<Vec<PathBuf>> {
     let mut written = Vec::new();
 
-    // Garbage collect: scripts tree antiga fica limpa antes de instalar
-    // para não aparecer no menu Scripts → BigIris.
     let stale_root = paths.nautilus_scripts().join(STALE_TREE_ROOT);
     if stale_root.exists() {
         let _ = std::fs::remove_dir_all(&stale_root);
@@ -70,13 +82,11 @@ pub(crate) fn install_with_system_path(
 
     let ext_dir = paths.nautilus_python_extensions();
 
-    // User-scope sobre um system-wide já presente = menu duplicado.
+    // A user-scope copy beside a system-wide one duplicates the menu.
     // DESTDIR may share the same prefix as home; use the explicit scope.
     let is_user_scope = paths.scope == Scope::User;
     if is_user_scope && system_ext.exists() {
-        // Limpa qualquer resíduo user-scope (.py, .pyc/__pycache__) que
-        // possa ressuscitar a duplicação. Ignora erros — a próxima
-        // execução tenta de novo.
+        // Errors are ignored: the next run retries.
         let stale_py = ext_dir.join(PYTHON_EXTENSION_FILENAME);
         if stale_py.exists() {
             let _ = std::fs::remove_file(&stale_py);
@@ -85,19 +95,16 @@ pub(crate) fn install_with_system_path(
         return Ok(written);
     }
 
-    // nautilus-python extension: único ponto de entrada oficial.
     std::fs::create_dir_all(&ext_dir)?;
     let ext_file = ext_dir.join(PYTHON_EXTENSION_FILENAME);
-    crate::safe_fs::safe_write(&ext_file, PYTHON_EXTENSION, paths.scope)?;
+    crate::safe_fs::safe_write(&ext_file, render(), paths.scope)?;
     written.push(ext_file);
 
     Ok(written)
 }
 
-/// Remove a extension Python. Também limpa a scripts tree antiga caso
-/// ela tenha sobrevivido de uma instalação anterior, e o `__pycache__`
-/// que `nautilus-python` mantém ao lado do `.py` (caso contrário o
-/// bytecode persiste e a extensão volta a aparecer no menu).
+/// Remove the Python extension, any stale scripts tree, and our bytecode
+/// in the `__pycache__` beside it, which would otherwise keep the menu alive.
 pub fn uninstall(paths: &ScopePaths) -> io::Result<Vec<PathBuf>> {
     let mut removed = Vec::new();
 
@@ -174,11 +181,9 @@ mod tests {
         // and skip the user-scope install.
         let written =
             install_with_system_path(&paths, Path::new("/nonexistent/system-path")).unwrap();
-        // Um único arquivo: a extension Python. Scripts tree não é mais
-        // instalada (antes eram ACTIONS.len() + 1 arquivos).
         assert_eq!(written.len(), 1);
         let ext = paths.nautilus_python_extensions().join(PYTHON_EXTENSION_FILENAME);
-        assert!(ext.exists(), "extensão python não instalada");
+        assert!(ext.exists(), "python extension not installed");
     }
 
     #[test]
@@ -189,7 +194,7 @@ mod tests {
         let paths = ScopePaths::system_with_destdir(tmp.path().join("package"));
         let written = install_with_system_path(&paths, &host).unwrap();
         assert_eq!(written.len(), 1);
-        assert_eq!(std::fs::read_to_string(&written[0]).unwrap(), PYTHON_EXTENSION);
+        assert_eq!(std::fs::read_to_string(&written[0]).unwrap(), render());
         assert_eq!(std::fs::read_to_string(&host).unwrap(), "host stays unchanged");
         assert_eq!(paths.scope, Scope::System);
     }
@@ -212,14 +217,13 @@ mod tests {
     fn install_cleans_stale_scripts_tree() {
         let tmp = TempDir::new().unwrap();
         let paths = ScopePaths::rooted_at(tmp.path());
-        // Simula um install antigo com scripts tree.
         let stale = paths.nautilus_scripts().join(STALE_TREE_ROOT);
-        std::fs::create_dir_all(stale.join("Converter")).unwrap();
-        std::fs::write(stale.join("Converter").join("PNG"), "#!/bin/sh\necho hi\n").unwrap();
+        std::fs::create_dir_all(stale.join("Convert")).unwrap();
+        std::fs::write(stale.join("Convert").join("PNG"), "#!/bin/sh\necho hi\n").unwrap();
         assert!(stale.exists());
 
         install_with_system_path(&paths, Path::new("/nonexistent/system-path")).unwrap();
-        assert!(!stale.exists(), "scripts tree antiga deveria ter sido limpa");
+        assert!(!stale.exists(), "stale scripts tree should have been removed");
     }
 
     #[test]
@@ -236,11 +240,32 @@ mod tests {
     }
 
     #[test]
+    fn extension_table_comes_from_actions() {
+        let body = render();
+        assert!(PYTHON_EXTENSION.contains(ACTIONS_PLACEHOLDER));
+        assert!(!body.contains(ACTIONS_PLACEHOLDER));
+        for action in ACTIONS {
+            assert_eq!(
+                body.matches(&format!("    (\"{}\", ", action.id)).count(),
+                1,
+                "{}",
+                action.id
+            );
+        }
+        assert!(body.contains(
+            "(\"web-letterbox-yt\", \"web\", \"For the web\", \"applications-internet-symbolic\", \
+             \"Letterbox YouTube post (1:1)\", [\"--notify\", \"extent\", \"--aspect\", \"1:1\", \"--bg\", \
+             \"0d0e12\"], \"applications-internet-symbolic\", [\"image/*\"]),"
+        ));
+        assert!(body.contains("(\"view\", None, None, None, \"View in BigIris\", [], "));
+        assert!(!body.chars().any(|c| c.is_control() && c != '\n'));
+    }
+
+    #[test]
     fn uninstall_removes_python_extension_and_legacy_tree() {
         let tmp = TempDir::new().unwrap();
         let paths = ScopePaths::rooted_at(tmp.path());
         install_with_system_path(&paths, Path::new("/nonexistent/system-path")).unwrap();
-        // Adiciona uma legacy tree pra simular um user com dois installs.
         let stale = paths.nautilus_scripts().join(STALE_TREE_ROOT);
         std::fs::create_dir_all(&stale).unwrap();
         std::fs::write(stale.join("dummy"), b"x").unwrap();

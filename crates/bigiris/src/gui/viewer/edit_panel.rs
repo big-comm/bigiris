@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //! Editing side panel.
 //!
-//! The "Editar" header button (or `E`) slides a translucent panel in from
+//! The "Edit" header button (or `E`) slides a translucent panel in from
 //! the right with every edit in one place: rotate, flip, straighten and
 //! crop, tone sliders, resize, the AI tools (background removal, upscale,
 //! denoise) and save.
@@ -34,7 +34,7 @@ const PREVIEW_MAX_PIXELS: u64 = 2_000_000;
 /// value is committed as an edit. Pointer drags commit on release.
 const COMMIT_IDLE_MS: u64 = 150;
 
-/// Encoding goal offered by "Salvar como…".
+/// Encoding goal offered by "Save as…".
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(in crate::gui) enum SaveQuality {
     Max,
@@ -43,12 +43,12 @@ pub(in crate::gui) enum SaveQuality {
 }
 
 const SAVE_QUALITIES: [(SaveQuality, &str); 3] = [
-    (SaveQuality::Max, n_("Máxima qualidade")),
-    (SaveQuality::Balanced, n_("Equilibrado")),
-    (SaveQuality::Smallest, n_("Menor arquivo")),
+    (SaveQuality::Max, n_("Maximum quality")),
+    (SaveQuality::Balanced, n_("Balanced")),
+    (SaveQuality::Smallest, n_("Smallest file")),
 ];
 
-/// Encoder options for "Salvar como…": the smallest file that keeps the
+/// Encoder options for "Save as…": the smallest file that keeps the
 /// chosen visual quality (SSIMULACRA2 target), like the Prisma converter.
 pub(in crate::gui) fn save_as_options(format: Format, quality: SaveQuality) -> EncodeOptions {
     let _ = format;
@@ -126,6 +126,14 @@ struct ToolJob {
     cancel: Arc<AtomicBool>,
 }
 
+impl Drop for ToolJob {
+    /// Whoever drops the job (Cancel, navigation, the window closing) stops
+    /// the network at its next step.
+    fn drop(&mut self) {
+        self.cancel.store(true, Ordering::Release);
+    }
+}
+
 /// Progress a tool worker publishes for the panel.
 #[derive(Clone, Debug)]
 enum ToolProgress {
@@ -141,6 +149,9 @@ enum ToolProgress {
 #[derive(Default)]
 pub(in crate::gui) struct EditPanelState {
     open: bool,
+    /// What the AI tools lack, probed on the weights files when the panel
+    /// opens instead of on every sync.
+    ai: Option<AiTools>,
     /// Hidden while the crop mode owns the picture.
     suspended: bool,
     /// Values on the sliders right now.
@@ -204,10 +215,12 @@ fn slider(title: &str, min: f64, max: f64, step: f64, neutral: f64) -> (gtk::Box
     let value = gtk::Label::builder().xalign(1.0).width_chars(6).build();
     value.add_css_class("numeric");
     value.add_css_class("dim-label");
+    let reset_label = fill(&gettext("Reset {setting}"), &[("setting", title)]);
     let reset = gtk::Button::from_icon_name("edit-undo-symbolic");
     reset.add_css_class("flat");
     reset.add_css_class("circular");
-    reset.set_tooltip_text(Some(&gettext("Restaurar")));
+    reset.set_tooltip_text(Some(&reset_label));
+    reset.update_property(&[gtk::accessible::Property::Label(&reset_label)]);
     reset.set_sensitive(false);
     let head = gtk::Box::new(gtk::Orientation::Horizontal, 6);
     head.append(&name);
@@ -257,9 +270,7 @@ fn ai_note_text() -> Option<String> {
         .collect();
     if !bigimage_ai::upscale::availability().is_ready() {
         notes.push(fill(
-            &gettext(
-                "Aumentar resolução usa Lanczos3. Para IA (Real-ESRGAN): sudo pacman -S {package}",
-            ),
+            &gettext("Upscale uses Lanczos3. For AI (Real-ESRGAN): sudo pacman -S {package}"),
             &[("package", bigimage_ai::upscale::MODEL.package)],
         ));
     }
@@ -272,7 +283,7 @@ fn tool_tooltip(what: String, device: Option<bigimage_ai::Device>) -> String {
         Some(device) => {
             format!(
                 "{what}\n{}",
-                fill(&gettext("Roda em: {device}"), &[("device", &device.to_string())])
+                fill(&gettext("Runs on: {device}"), &[("device", &device.to_string())])
             )
         }
         None => what,
@@ -289,69 +300,68 @@ pub(in crate::gui) fn build() -> EditPanelUi {
         .margin_end(14)
         .build();
 
-    let title = gtk::Label::builder().label(gettext("Editar")).xalign(0.0).hexpand(true).build();
+    let title = gtk::Label::builder().label(gettext("Edit")).xalign(0.0).hexpand(true).build();
     title.add_css_class("title-4");
     let close = gtk::Button::from_icon_name("window-close-symbolic");
     close.add_css_class("flat");
     close.add_css_class("circular");
-    close.set_tooltip_text(Some(&gettext("Fechar (Esc)")));
+    close.set_tooltip_text(Some(&gettext("Close (Esc)")));
+    close.update_property(&[gtk::accessible::Property::Label(&gettext("Close"))]);
     close.set_action_name(Some("win.edit-panel"));
     let head = gtk::Box::new(gtk::Orientation::Horizontal, 6);
     head.append(&title);
     head.append(&close);
 
-    let original = gtk::ToggleButton::with_label(&gettext("Ver original"));
-    original.set_tooltip_text(Some(&gettext("Mostra a imagem sem as edições (segure \\)")));
+    let original = gtk::ToggleButton::with_label(&gettext("View original"));
+    original.set_tooltip_text(Some(&gettext("Shows the image without the edits (hold \\)")));
 
-    // Transformar
-    let transform = section(&gettext("Transformar"));
+    let transform = section(&gettext("Transform"));
     let buttons = gtk::Box::new(gtk::Orientation::Horizontal, 6);
     buttons.set_homogeneous(true);
     for (icon, tooltip, action) in [
-        ("object-rotate-left-symbolic", gettext("Girar à esquerda"), "win.rotate-ccw"),
-        ("object-rotate-right-symbolic", gettext("Girar à direita"), "win.rotate-cw"),
-        ("object-flip-horizontal-symbolic", gettext("Espelhar horizontal"), "win.flip-h"),
-        ("object-flip-vertical-symbolic", gettext("Espelhar vertical"), "win.flip-v"),
+        ("object-rotate-left-symbolic", gettext("Rotate left"), "win.rotate-ccw"),
+        ("object-rotate-right-symbolic", gettext("Rotate right"), "win.rotate-cw"),
+        ("object-flip-horizontal-symbolic", gettext("Flip horizontal"), "win.flip-h"),
+        ("object-flip-vertical-symbolic", gettext("Flip vertical"), "win.flip-v"),
     ] {
         buttons.append(&icon_button(icon, &tooltip, action));
     }
     transform.append(&buttons);
-    let (straighten_row, straighten) = slider(&gettext("Endireitar"), -45.0, 45.0, 0.1, 0.0);
+    let (straighten_row, straighten) = slider(&gettext("Straighten"), -45.0, 45.0, 0.1, 0.0);
     straighten.scale.set_digits(1);
     straighten.scale.set_tooltip_text(Some(&gettext(
-        "Gira a foto e recorta as bordas vazias para alinhar o horizonte",
+        "Rotates the photo and crops the empty edges to level the horizon",
     )));
     transform.append(&straighten_row);
     let crop = gtk::Button::builder()
-        .label(gettext("Recortar"))
-        .tooltip_text(gettext("Recortar na própria imagem (Ctrl+R)"))
+        .label(gettext("Crop"))
+        .tooltip_text(gettext("Crop in place (Ctrl+R)"))
         .action_name("win.crop")
         .build();
     transform.append(&crop);
 
-    // Ajustes
-    let adjust = section(&gettext("Ajustes"));
-    let (brightness_row, brightness) = slider(&gettext("Brilho"), -100.0, 100.0, 1.0, 0.0);
-    let (contrast_row, contrast) = slider(&gettext("Contraste"), -100.0, 100.0, 1.0, 0.0);
-    let (saturation_row, saturation) = slider(&gettext("Saturação"), -100.0, 100.0, 1.0, 0.0);
-    let (gamma_row, gamma) = slider(&gettext("Gama"), 0.1, 3.0, 0.01, 1.0);
+    let adjust = section(&gettext("Adjustments"));
+    let (brightness_row, brightness) = slider(&gettext("Brightness"), -100.0, 100.0, 1.0, 0.0);
+    let (contrast_row, contrast) = slider(&gettext("Contrast"), -100.0, 100.0, 1.0, 0.0);
+    let (saturation_row, saturation) = slider(&gettext("Saturation"), -100.0, 100.0, 1.0, 0.0);
+    let (gamma_row, gamma) = slider(&gettext("Gamma"), 0.1, 3.0, 0.01, 1.0);
     gamma.scale.set_digits(2);
     for row in [&brightness_row, &contrast_row, &saturation_row, &gamma_row] {
         adjust.append(row);
     }
-    let reset_all = gtk::Button::with_label(&gettext("Restaurar ajustes"));
+    let reset_all = gtk::Button::with_label(&gettext("Reset adjustments"));
     adjust.append(&reset_all);
 
-    // Tamanho
-    let size = section(&gettext("Tamanho"));
-    let width = size_spin(&gettext("Largura (px)"));
-    let height = size_spin(&gettext("Altura (px)"));
+    let size = section(&gettext("Size"));
+    let width = size_spin(&gettext("Width (px)"));
+    let height = size_spin(&gettext("Height (px)"));
     let lock = gtk::ToggleButton::builder()
         .icon_name("changes-prevent-symbolic")
         .active(true)
-        .tooltip_text(gettext("Manter proporção"))
+        .tooltip_text(gettext("Keep aspect ratio"))
         .build();
     lock.add_css_class("flat");
+    lock.update_property(&[gtk::accessible::Property::Label(&gettext("Keep aspect ratio"))]);
     let dims = gtk::Box::new(gtk::Orientation::Horizontal, 4);
     dims.append(&width);
     dims.append(&lock);
@@ -360,10 +370,10 @@ pub(in crate::gui) fn build() -> EditPanelUi {
     let percent = gtk::SpinButton::with_range(1.0, 1000.0, 1.0);
     percent.set_numeric(true);
     percent.set_value(100.0);
-    percent.set_tooltip_text(Some(&gettext("Escala (%)")));
-    percent.update_property(&[gtk::accessible::Property::Label(&gettext("Escala (%)"))]);
+    percent.set_tooltip_text(Some(&gettext("Scale (%)")));
+    percent.update_property(&[gtk::accessible::Property::Label(&gettext("Scale (%)"))]);
     let percent_label = gtk::Label::builder().label("%").build();
-    let resize_apply = gtk::Button::with_label(&gettext("Aplicar"));
+    let resize_apply = gtk::Button::with_label(&gettext("Apply"));
     resize_apply.add_css_class("suggested-action");
     resize_apply.set_hexpand(true);
     let scale_row = gtk::Box::new(gtk::Orientation::Horizontal, 4);
@@ -372,20 +382,20 @@ pub(in crate::gui) fn build() -> EditPanelUi {
     scale_row.append(&resize_apply);
     size.append(&scale_row);
 
-    // Ferramentas
-    let tools = section(&gettext("Ferramentas"));
-    let remove_bg = gtk::Button::with_label(&gettext("Remover fundo (IA)"));
+    let tools = section(&gettext("Tools"));
+    let remove_bg = gtk::Button::with_label(&gettext("Remove background (AI)"));
     tools.append(&remove_bg);
-    let denoise = gtk::Button::with_label(&gettext("Remover ruído (IA)"));
+    let denoise = gtk::Button::with_label(&gettext("Remove noise (AI)"));
     tools.append(&denoise);
     let factor_names: Vec<&str> = UPSCALE_FACTORS.iter().map(|(name, _)| *name).collect();
     let factor = gtk::DropDown::builder().model(&translated_strings(&factor_names)).build();
-    factor.set_tooltip_text(Some(&gettext("Fator")));
-    let upscale = gtk::Button::with_label(&gettext("Aumentar resolução"));
+    factor.set_tooltip_text(Some(&gettext("Factor")));
+    let upscale = gtk::Button::with_label(&gettext("Upscale"));
     upscale.set_hexpand(true);
     let upscale_row = gtk::Box::new(gtk::Orientation::Horizontal, 6);
     upscale_row.append(&upscale);
     upscale_row.append(&factor);
+    upscale_row.append(&name_drop_down(&factor, &gettext("Factor")));
     tools.append(&upscale_row);
     let ai_note = gtk::Label::builder().wrap(true).xalign(0.0).visible(false).build();
     ai_note.add_css_class("dim-label");
@@ -393,7 +403,8 @@ pub(in crate::gui) fn build() -> EditPanelUi {
     tools.append(&ai_note);
     let tool_progress = gtk::ProgressBar::builder().show_text(true).hexpand(true).build();
     let tool_cancel = gtk::Button::from_icon_name("process-stop-symbolic");
-    tool_cancel.set_tooltip_text(Some(&gettext("Cancelar")));
+    tool_cancel.set_tooltip_text(Some(&gettext("Cancel")));
+    tool_cancel.update_property(&[gtk::accessible::Property::Label(&gettext("Cancel"))]);
     tool_cancel.add_css_class("flat");
     let tool_box = gtk::Box::new(gtk::Orientation::Horizontal, 6);
     tool_box.set_visible(false);
@@ -404,15 +415,14 @@ pub(in crate::gui) fn build() -> EditPanelUi {
     tool_status.add_css_class("caption");
     tools.append(&tool_status);
 
-    // Salvar
-    let save = section(&gettext("Salvar"));
+    let save = section(&gettext("Save"));
     let save_button = gtk::Button::builder()
-        .label(gettext("Salvar"))
-        .tooltip_text(gettext("Salvar alterações (Ctrl+S)"))
+        .label(gettext("Save"))
+        .tooltip_text(gettext("Save changes (Ctrl+S)"))
         .action_name("win.save-edits")
         .build();
     save_button.add_css_class("suggested-action");
-    let save_as = gtk::Button::with_label(&gettext("Salvar como…"));
+    let save_as = gtk::Button::with_label(&gettext("Save as…"));
     let save_buttons = gtk::Box::new(gtk::Orientation::Horizontal, 6);
     save_buttons.set_homogeneous(true);
     save_buttons.append(&save_button);
@@ -421,8 +431,9 @@ pub(in crate::gui) fn build() -> EditPanelUi {
     let quality_names: Vec<&str> = SAVE_QUALITIES.iter().map(|(_, name)| *name).collect();
     let quality = gtk::DropDown::builder().model(&translated_strings(&quality_names)).build();
     quality.set_selected(1);
-    quality.set_tooltip_text(Some(&gettext("Qualidade ao salvar como")));
+    quality.set_tooltip_text(Some(&gettext("Quality for Save as")));
     save.append(&quality);
+    save.append(&name_drop_down(&quality, &gettext("Quality for Save as")));
 
     content.append(&head);
     content.append(&original);
@@ -673,32 +684,42 @@ pub(in crate::gui) fn connect(state: &Rc<RefCell<ViewerState>>, window: &adw::Ap
         });
         scale.add_controller(pointer);
     }
-    let resets: Vec<(gtk::Button, Option<usize>)> = {
+    // A reset turns itself insensitive, which drops keyboard focus: hand it
+    // to the slider it reset (the first one for "Reset adjustments").
+    let resets: Vec<(gtk::Button, Option<usize>, gtk::Scale)> = {
         let s = state.borrow();
-        let mut resets: Vec<_> = s
-            .edit_ui
-            .sliders
+        let sliders = &s.edit_ui.sliders;
+        let mut resets: Vec<_> = sliders
             .iter()
             .enumerate()
-            .map(|(i, slider)| (slider.reset.clone(), Some(i)))
+            .map(|(i, slider)| (slider.reset.clone(), Some(i), slider.scale.clone()))
             .collect();
-        resets.push((s.edit_ui.reset_all.clone(), None));
+        resets.push((s.edit_ui.reset_all.clone(), None, sliders[0].scale.clone()));
         resets
     };
-    for (button, index) in resets {
+    for (button, index, scale) in resets {
         let weak = Rc::downgrade(state);
-        button.connect_clicked(move |_| {
-            if let Some(state) = weak.upgrade() {
-                reset_adjust(&state, index);
+        button.connect_clicked(move |button| {
+            let Some(state) = weak.upgrade() else { return };
+            let had_focus = button.has_focus();
+            reset_adjust(&state, index);
+            if had_focus && !button.is_sensitive() {
+                scale.grab_focus();
             }
         });
     }
     {
         let weak = Rc::downgrade(state);
-        let reset = state.borrow().edit_ui.straighten.reset.clone();
-        reset.connect_clicked(move |_| {
-            if let Some(state) = weak.upgrade() {
-                reset_straighten(&state);
+        let (reset, scale) = {
+            let s = state.borrow();
+            (s.edit_ui.straighten.reset.clone(), s.edit_ui.straighten.scale.clone())
+        };
+        reset.connect_clicked(move |button| {
+            let Some(state) = weak.upgrade() else { return };
+            let had_focus = button.has_focus();
+            reset_straighten(&state);
+            if had_focus && !button.is_sensitive() {
+                scale.grab_focus();
             }
         });
     }
@@ -842,6 +863,10 @@ fn set_open(state: &Rc<RefCell<ViewerState>>, open: bool) {
             return;
         }
         s.edit.open = open;
+        // A weights package may have been installed since the last look.
+        if open {
+            s.edit.ai = None;
+        }
     }
     if !open {
         flush_commit(state);
@@ -922,12 +947,13 @@ fn apply_reserved_space(state: &Rc<RefCell<ViewerState>>) {
         s.stack.clone(),
         s.osd_revealer.clone(),
         s.loading_spinner.clone(),
+        s.heavy_render.clone(),
         s.strip_revealer.clone(),
         s.histogram_area.clone(),
         s.edit_ui.grid.clone(),
     );
     drop(s);
-    let (stack, osd, spinner, strip, histogram, grid) = widgets;
+    let (stack, osd, spinner, heavy, strip, histogram, grid) = widgets;
     if stack.margin_end() == reserve {
         return;
     }
@@ -935,6 +961,7 @@ fn apply_reserved_space(state: &Rc<RefCell<ViewerState>>) {
     grid.set_margin_end(reserve);
     osd.set_margin_end(reserve);
     spinner.set_margin_end(reserve);
+    heavy.set_margin_end(reserve);
     strip.set_margin_end(12 + reserve);
     histogram.set_margin_end(12 + reserve);
 }
@@ -952,7 +979,15 @@ pub(in crate::gui) fn sync_sensitivity(state: &Rc<RefCell<ViewerState>>) {
     let usable = !s.saving && !s.files.is_empty() && s.texture.is_some() && !s.edit.busy();
     let saving = s.saving;
     let ui = handles(&s);
+    let cached = s.edit.ai.clone();
     drop(s);
+    let ai = cached.unwrap_or_else(|| {
+        let ai = AiTools::probe();
+        if let Ok(mut s) = state.try_borrow_mut() {
+            s.edit.ai = Some(ai.clone());
+        }
+        ai
+    });
     for scale in &ui.scales {
         scale.set_sensitive(usable);
     }
@@ -962,36 +997,53 @@ pub(in crate::gui) fn sync_sensitivity(state: &Rc<RefCell<ViewerState>>) {
     ui.save_as.set_sensitive(usable);
     ui.original.set_sensitive(usable);
     ui.upscale.set_sensitive(usable);
-    sync_ai_tools(&ui, usable);
+    sync_ai_tools(&ui, usable, ai);
     ui.content.set_sensitive(!saving);
 }
 
-/// Sensitivity, tooltips and the install note of the AI tools. The
-/// packages may be installed while the viewer runs: checked every time.
-fn sync_ai_tools(ui: &Handles, usable: bool) {
-    let remove_bg = model_unavailable(&bigimage_ai::background::MODEL);
-    let denoise = model_unavailable(&bigimage_ai::denoise::MODEL);
+/// Availability of the AI tools' weights.
+#[derive(Clone)]
+struct AiTools {
+    remove_bg: Option<String>,
+    denoise: Option<String>,
+    upscale_ready: bool,
+    note: Option<String>,
+}
+
+impl AiTools {
+    fn probe() -> Self {
+        Self {
+            remove_bg: model_unavailable(&bigimage_ai::background::MODEL),
+            denoise: model_unavailable(&bigimage_ai::denoise::MODEL),
+            upscale_ready: bigimage_ai::upscale::availability().is_ready(),
+            note: ai_note_text(),
+        }
+    }
+}
+
+/// Sensitivity, tooltips and the install note of the AI tools.
+fn sync_ai_tools(ui: &Handles, usable: bool, ai: AiTools) {
+    let AiTools { remove_bg, denoise, upscale_ready, note } = ai;
     ui.remove_bg.set_sensitive(usable && remove_bg.is_none());
     ui.denoise.set_sensitive(usable && denoise.is_none());
     ui.remove_bg.set_tooltip_text(Some(&remove_bg.unwrap_or_else(|| {
         tool_tooltip(
-            gettext("Recorta o objeto principal com BiRefNet-lite, no seu computador"),
+            gettext("Cuts out the main subject with BiRefNet-lite, on your computer"),
             bigimage_ai::background::device(),
         )
     })));
     ui.denoise.set_tooltip_text(Some(&denoise.unwrap_or_else(|| {
         tool_tooltip(
-            gettext("Limpa ruído e artefatos de compressão com SCUNet, no seu computador"),
+            gettext("Cleans up noise and compression artifacts with SCUNet, on your computer"),
             bigimage_ai::denoise::device(),
         )
     })));
-    let upscale = if bigimage_ai::upscale::availability().is_ready() {
-        tool_tooltip(gettext("Real-ESRGAN (IA), no seu computador"), bigimage_ai::upscale::device())
+    let upscale = if upscale_ready {
+        tool_tooltip(gettext("Real-ESRGAN (AI), on your computer"), bigimage_ai::upscale::device())
     } else {
-        gettext("Lanczos3 (sem IA)")
+        gettext("Lanczos3 (no AI)")
     };
     ui.upscale.set_tooltip_text(Some(&upscale));
-    let note = ai_note_text();
     ui.ai_note.set_visible(note.is_some());
     ui.ai_note.set_text(note.as_deref().unwrap_or(""));
 }
@@ -1468,6 +1520,18 @@ fn apply_resize(state: &Rc<RefCell<ViewerState>>) {
     if (w, h) == natural || w == 0 || h == 0 {
         return;
     }
+    // Refused here, where the size is chosen: the pipeline would keep the
+    // image as is and leave an edit that does nothing.
+    if !bigimage_core::within_limits(w, h, 4) {
+        let message = fill(
+            &gettext("{width}×{height} exceeds the processing limit"),
+            &[("width", &w.to_string()), ("height", &h.to_string())],
+        );
+        let osd = state.borrow().osd_label.clone();
+        osd.set_text(&message);
+        pulse_osd(state);
+        return;
+    }
     apply_edit(state, EditOp::Resize { w, h });
 }
 
@@ -1504,7 +1568,7 @@ pub(in crate::gui) fn run_tool(state: &Rc<RefCell<ViewerState>>, op: EditOp) {
     };
     ui.tool_status.set_visible(false);
     ui.tool_progress.set_fraction(0.0);
-    ui.tool_progress.set_text(Some(&gettext("Preparando…")));
+    ui.tool_progress.set_text(Some(&gettext("Preparing…")));
     ui.tool_box.set_visible(true);
     sync_edit_actions(state);
 
@@ -1526,7 +1590,7 @@ pub(in crate::gui) fn run_tool(state: &Rc<RefCell<ViewerState>>, op: EditOp) {
             }
             let _close = CloseOnDrop(wake.clone());
             let publish = |progress: ToolProgress| {
-                *shared.lock().unwrap_or_else(|p| p.into_inner()) = progress;
+                *shared.lock().unwrap_or_else(std::sync::PoisonError::into_inner) = progress;
                 wake.notify();
             };
             let result = crate::codec::with_cancel(cancel.clone(), || {
@@ -1545,7 +1609,7 @@ pub(in crate::gui) fn run_tool(state: &Rc<RefCell<ViewerState>>, op: EditOp) {
                 if !cancel.load(Ordering::Acquire) {
                     let mut key = edits::effective_ops(&ops);
                     key.push(op);
-                    cache.lock().unwrap_or_else(|p| p.into_inner()).insert(
+                    cache.lock().unwrap_or_else(std::sync::PoisonError::into_inner).insert(
                         &path,
                         modified,
                         key,
@@ -1560,7 +1624,7 @@ pub(in crate::gui) fn run_tool(state: &Rc<RefCell<ViewerState>>, op: EditOp) {
 
     let weak = Rc::downgrade(state);
     glib::MainContext::default().spawn_local(async move {
-        let snapshot = || shared.lock().unwrap_or_else(|p| p.into_inner()).clone();
+        let snapshot = || shared.lock().unwrap_or_else(std::sync::PoisonError::into_inner).clone();
         while wake.wait().await {
             if !cancel.load(Ordering::Acquire) {
                 show_tool_progress(&ui.tool_progress, &snapshot(), op);
@@ -1578,7 +1642,7 @@ pub(in crate::gui) fn run_tool(state: &Rc<RefCell<ViewerState>>, op: EditOp) {
         sync_sensitivity(&state);
         let result = match snapshot() {
             ToolProgress::Done(result) => result,
-            _ => Err(gettext("O processamento terminou inesperadamente. Tente novamente.")),
+            _ => Err(gettext("Processing ended unexpectedly. Please try again.")),
         };
         match result {
             Ok(()) => {
@@ -1591,7 +1655,7 @@ pub(in crate::gui) fn run_tool(state: &Rc<RefCell<ViewerState>>, op: EditOp) {
                 }
             }
             Err(error) => {
-                tracing::warn!(%error, ?op, "ferramenta do painel falhou");
+                tracing::warn!(%error, ?op, "panel tool failed");
                 ui.tool_status.set_text(&error);
                 ui.tool_status.set_visible(true);
             }
@@ -1604,7 +1668,7 @@ fn show_tool_progress(bar: &gtk::ProgressBar, progress: &ToolProgress, op: EditO
         ToolProgress::Preparing | ToolProgress::Done(_) => bar.pulse(),
         ToolProgress::Loading => {
             bar.pulse();
-            bar.set_text(Some(&gettext("Carregando o modelo…")));
+            bar.set_text(Some(&gettext("Loading the model…")));
         }
         ToolProgress::Running(share) => {
             // Single-step models report 0 until they finish.
@@ -1614,12 +1678,21 @@ fn show_tool_progress(bar: &gtk::ProgressBar, progress: &ToolProgress, op: EditO
                 bar.pulse();
             }
             bar.set_text(Some(&match op {
-                EditOp::RemoveBackground => gettext("Removendo o fundo…"),
-                EditOp::Denoise => gettext("Removendo ruído…"),
-                _ => gettext("Aumentando…"),
+                EditOp::RemoveBackground => gettext("Removing background…"),
+                EditOp::Denoise => gettext("Removing noise…"),
+                _ => gettext("Upscaling…"),
             }));
         }
     }
+}
+
+/// Drop the working copies and the original made from the file's previous
+/// bytes, after a save replaced them.
+pub(in crate::gui) fn forget_file_pixels(s: &mut ViewerState) {
+    s.edit.base = None;
+    s.edit.base_job = None;
+    s.edit.original = None;
+    s.edit.original_job = None;
 }
 
 /// Give the panel back at once; a result that still arrives is dropped.
@@ -1629,7 +1702,7 @@ pub(in crate::gui) fn cancel_tool(state: &Rc<RefCell<ViewerState>>) {
     job.cancel.store(true, Ordering::Release);
     let ui = handles(&state.borrow());
     ui.tool_box.set_visible(false);
-    ui.tool_status.set_text(&gettext("Cancelado"));
+    ui.tool_status.set_text(&gettext("Canceled"));
     ui.tool_status.set_visible(true);
     sync_edit_actions(state);
 }
@@ -1644,11 +1717,11 @@ fn choose_save_as(state: &Rc<RefCell<ViewerState>>) {
         }
         (s.window(), s.files[s.idx].clone())
     };
-    let stem = path.file_stem().map_or_else(|| "imagem".into(), |s| s.to_string_lossy());
+    let stem = path.file_stem().map_or_else(|| "image".into(), |s| s.to_string_lossy());
     let extension = save_format(&path).map_or("png", |format| format.extension());
-    let name = fill(&gettext("{name}-editada"), &[("name", &stem)]);
+    let name = fill(&gettext("{name}-edited"), &[("name", &stem)]);
     let dialog = gtk::FileDialog::builder()
-        .title(gettext("Salvar como"))
+        .title(gettext("Save as"))
         .modal(true)
         .initial_name(format!("{name}.{extension}"))
         .build();
@@ -1679,7 +1752,7 @@ pub(in crate::gui) fn save_copy(state: &Rc<RefCell<ViewerState>>, target: PathBu
         _ => a == b,
     };
     if same(&source, &target) {
-        state.borrow().osd_label.set_text(&gettext("Para alterar o próprio arquivo, use Salvar."));
+        state.borrow().osd_label.set_text(&gettext("To change the file itself, use Save."));
         pulse_osd_for(state, OSD_NOTICE_MS);
         return;
     }
@@ -1688,11 +1761,12 @@ pub(in crate::gui) fn save_copy(state: &Rc<RefCell<ViewerState>>, target: PathBu
         return;
     };
     let options = save_as_options(format, quality);
-    {
+    let spinner = {
         let mut s = state.borrow_mut();
         s.saving = true;
-        s.loading_spinner.set_visible(true);
-    }
+        s.loading_spinner.clone()
+    };
+    spinner.set_visible(true);
     sync_edit_actions(state);
     let worker_target = target.clone();
     let job =
@@ -1702,11 +1776,12 @@ pub(in crate::gui) fn save_copy(state: &Rc<RefCell<ViewerState>>, target: PathBu
         let result =
             job.await.unwrap_or_else(|_| Err(SaveFailure::Other("save worker panicked".into())));
         let Some(state) = weak.upgrade() else { return };
-        {
+        let spinner = {
             let mut s = state.borrow_mut();
             s.saving = false;
-            s.loading_spinner.set_visible(false);
-        }
+            s.loading_spinner.clone()
+        };
+        spinner.set_visible(false);
         sync_edit_actions(&state);
         match result {
             Ok(dropped) => {
@@ -1716,12 +1791,12 @@ pub(in crate::gui) fn save_copy(state: &Rc<RefCell<ViewerState>>, target: PathBu
                     |n| n.to_string_lossy().into_owned(),
                 );
                 let notice = metadata_loss_notice(&dropped)
-                    .unwrap_or_else(|| fill(&gettext("Cópia salva: {name}"), &[("name", &name)]));
+                    .unwrap_or_else(|| fill(&gettext("Copy saved: {name}"), &[("name", &name)]));
                 state.borrow().osd_label.set_text(&notice);
                 pulse_osd_for(&state, OSD_NOTICE_MS);
             }
             Err(failure) => {
-                tracing::error!(?target, ?failure, "salvar como: falha");
+                tracing::error!(?target, ?failure, "save as failed");
                 present_copy_failure(&state, &failure);
             }
         }
@@ -1755,14 +1830,13 @@ pub(in crate::gui) fn write_copy(
 fn present_copy_failure(state: &Rc<RefCell<ViewerState>>, failure: &SaveFailure) {
     let window = state.borrow().window();
     let body = match failure {
-        SaveFailure::NoEncoder => gettext(
-            "O BigIris não sabe gravar este formato. Use, por exemplo, .png, .jpg ou .webp.",
-        ),
+        SaveFailure::NoEncoder => {
+            gettext("BigIris cannot write this format. Use, for example, .png, .jpg or .webp.")
+        }
         other => other.message(),
     };
-    let alert =
-        adw::AlertDialog::builder().heading(gettext("Não foi possível salvar")).body(body).build();
-    alert.add_response("close", &gettext("Fechar"));
+    let alert = adw::AlertDialog::builder().heading(gettext("Could not save")).body(body).build();
+    alert.add_response("close", &gettext("Close"));
     alert.present(Some(&window));
 }
 
@@ -1840,6 +1914,10 @@ impl EditPanelState {
 impl EditPanelUi {
     pub(in crate::gui) fn scale(&self, index: usize) -> gtk::Scale {
         self.sliders[index].scale.clone()
+    }
+
+    pub(in crate::gui) fn reset(&self, index: usize) -> gtk::Button {
+        self.sliders[index].reset.clone()
     }
 
     pub(in crate::gui) fn straighten_scale(&self) -> gtk::Scale {

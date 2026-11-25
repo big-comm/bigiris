@@ -19,9 +19,8 @@ fn opaque(image: &RgbaImage) -> bool {
 pub(crate) fn write_gif(paletted: &Paletted) -> ImageResult<Vec<u8>> {
     let gif_error = |e: gif::EncodingError| encode_error(image::ImageFormat::Gif, e.to_string());
     let (w, h) = (paletted.width, paletted.height);
-    let too_big = || {
-        encode_error(image::ImageFormat::Gif, format!("dimensões {w}×{h} grandes demais para GIF"))
-    };
+    let too_big =
+        || encode_error(image::ImageFormat::Gif, format!("dimensions {w}×{h} too large for GIF"));
     let width = u16::try_from(w).map_err(|_| too_big())?;
     let height = u16::try_from(h).map_err(|_| too_big())?;
     let transparent = paletted.palette.iter().position(|c| c[3] < 128);

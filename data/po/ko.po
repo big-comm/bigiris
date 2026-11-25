@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: bigiris 0.1.0\n"
 "Report-Msgid-Bugs-To: https://github.com/big-comm/bigiris/issues\n"
-"POT-Creation-Date: 2026-11-16 21:59-0300\n"
+"POT-Creation-Date: 2026-11-25 18:42-0300\n"
 "PO-Revision-Date: 2026-10-14 01:36-0300\n"
 "Last-Translator: BigCommunity Team\n"
 "Language-Team: BigCommunity Team\n"
@@ -16,1136 +16,1172 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
 
-#: crates/bigiris/src/gui.rs:710
+#: crates/bigiris/src/codec.rs:121
+msgid "the BigIris executable was removed; restart BigIris"
+msgstr "BigIris 실행 파일이 제거되었습니다. BigIris를 다시 시작하세요"
+
+#: crates/bigiris/src/codec.rs:331 crates/bigiris/src/codec.rs:425
+msgid "operation canceled"
+msgstr "작업이 취소되었습니다"
+
+#: crates/bigiris/src/codec.rs:338
+msgid "the codec exceeded its time limit"
+msgstr "코덱이 시간 제한을 초과했습니다"
+
+#: crates/bigiris/src/codec.rs:394
+msgid "BigIris was updated; restart it"
+msgstr "BigIris가 업데이트되었습니다. 다시 시작하세요"
+
+#: crates/bigiris/src/codec.rs:433
+msgid "not a regular file, or larger than 1 GiB"
+msgstr "입력이 일반 파일이 아니거나 1 GiB를 초과합니다"
+
+#: crates/bigiris/src/codec.rs:519
+msgid "sandbox unavailable: install bubblewrap and util-linux; {error}"
+msgstr ""
+"샌드박스를 사용할 수 없습니다: bubblewrap과 util-linux를 설치하세요; {error}"
+
+#: crates/bigiris/src/codec.rs:531
+msgid "BigIris was updated while it was open; restart it"
+msgstr "실행 중에 BigIris가 업데이트되었습니다. 다시 시작하세요"
+
+#: crates/bigiris/src/codec.rs:538
+msgid "the isolated codec rejected the image ({status}){hint}: {details}"
+msgstr "격리된 코덱이 이미지를 거부했습니다 ({status}){hint}: {details}"
+
+#: crates/bigiris/src/gui.rs:735
 msgid "BigIris"
 msgstr "BigIris"
 
-#: crates/bigiris/src/gui.rs:745 crates/bigiris/src/gui/previews.rs:240
-msgid "Não foi possível abrir a imagem"
+#: crates/bigiris/src/gui.rs:769 crates/bigiris/src/gui/previews.rs:267
+msgid "Could not open the image"
 msgstr "이미지를 열 수 없음"
 
-#: crates/bigiris/src/gui.rs:998 crates/bigiris/src/gui.rs:3593
-#: crates/bigiris/src/gui/viewer/crop.rs:600
-msgid "Aguarde o salvamento terminar"
-msgstr "저장이 끝날 때까지 기다리기"
+#: crates/bigiris/src/gui.rs:887 crates/bigiris/src/gui.rs:2736
+#: crates/bigiris/src/gui.rs:4015 crates/bigiris/src/gui/dialogs/animate.rs:165
+#: crates/bigiris/src/gui/dialogs/batch.rs:99
+#: crates/bigiris/src/gui/dialogs/batch.rs:205
+#: crates/bigiris/src/gui/dialogs/batch.rs:299
+#: crates/bigiris/src/gui/viewer/crop.rs:393
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:406
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:407
+#: crates/bigiris/src/gui/dialogs/mod.rs:273
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:196
+#: crates/bigiris/src/gui/dialogs/resize.rs:374
+#: crates/bigiris/src/gui/previews.rs:230
+msgid "Cancel"
+msgstr "취소"
 
-#: crates/bigiris/src/gui.rs:1009
-msgid "Descartar alterações?"
-msgstr "변경 사항을 버리시겠습니까?"
+#: crates/bigiris/src/gui.rs:899
+msgid "Recomputing the edit…"
+msgstr "편집 내용을 다시 계산하는 중…"
 
-#: crates/bigiris/src/gui.rs:1010
-msgid "A imagem tem edições que ainda não foram salvas."
-msgstr "이미지에 저장되지 않은 변경 사항이 있습니다."
+#: crates/bigiris/src/gui.rs:1047 crates/bigiris/src/gui.rs:3752
+#: crates/bigiris/src/gui/viewer/crop.rs:623
+msgid "Wait for saving to finish"
+msgstr "저장이 끝날 때까지 기다려 주세요"
 
-#: crates/bigiris/src/gui.rs:1012
-msgid "Continuar editando"
+#: crates/bigiris/src/gui.rs:1061
+msgid "Discard changes?"
+msgstr "변경 사항을 버릴까요?"
+
+#: crates/bigiris/src/gui.rs:1062
+msgid "The image has unsaved changes."
+msgstr "이미지에 아직 저장하지 않은 편집 내용이 있습니다."
+
+#: crates/bigiris/src/gui.rs:1064
+msgid "Continue editing"
 msgstr "편집 계속하기"
 
-#: crates/bigiris/src/gui.rs:1013
-msgid "Descartar"
-msgstr "변경 사항 버리기"
+#: crates/bigiris/src/gui.rs:1065
+msgid "Discard"
+msgstr "버리기"
 
-#: crates/bigiris/src/gui.rs:1083
-msgid "Imagem anterior"
+#: crates/bigiris/src/gui.rs:1132
+msgid "Previous image"
 msgstr "이전 이미지"
 
-#: crates/bigiris/src/gui.rs:1084
-msgid "Próxima imagem"
+#: crates/bigiris/src/gui.rs:1133
+msgid "Next image"
 msgstr "다음 이미지"
 
-#: crates/bigiris/src/gui.rs:1100
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:292
-msgid "Editar"
+#: crates/bigiris/src/gui.rs:1149
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:303
+msgid "Edit"
 msgstr "편집"
 
-#: crates/bigiris/src/gui.rs:1103
-msgid "Editar (E)"
+#: crates/bigiris/src/gui.rs:1152
+msgid "Edit (E)"
 msgstr "편집 (E)"
 
-#: crates/bigiris/src/gui.rs:1110
-msgid "Propriedades da imagem (Ctrl+I)"
+#: crates/bigiris/src/gui.rs:1159
+msgid "Image properties (Ctrl+I)"
 msgstr "이미지 속성 (Ctrl+I)"
 
-#: crates/bigiris/src/gui.rs:1116
-msgid "Tela cheia (F11)"
+#: crates/bigiris/src/gui.rs:1165
+msgid "Fullscreen (F11)"
 msgstr "전체 화면 (F11)"
 
-#: crates/bigiris/src/gui.rs:1125
-msgid "Afastar"
+#: crates/bigiris/src/gui.rs:1174
+msgid "Zoom out"
 msgstr "축소"
 
-#: crates/bigiris/src/gui.rs:1129 crates/bigiris/src/gui.rs:3952
-msgid "Ajustar à janela"
+#: crates/bigiris/src/gui.rs:1178 crates/bigiris/src/gui.rs:4111
+msgid "Fit to window"
 msgstr "창에 맞추기"
 
-#: crates/bigiris/src/gui.rs:1130 crates/bigiris/src/gui.rs:3953
-msgid "Tamanho real (100%)"
+#: crates/bigiris/src/gui.rs:1179 crates/bigiris/src/gui.rs:4112
+msgid "Actual size (100%)"
 msgstr "실제 크기 (100%)"
 
-#: crates/bigiris/src/gui.rs:1139 crates/bigiris/src/gui.rs:3949
+#: crates/bigiris/src/gui.rs:1188 crates/bigiris/src/gui.rs:4108
 msgid "Zoom"
-msgstr "크기 조정"
+msgstr "확대/축소"
 
-#: crates/bigiris/src/gui.rs:1143
-msgid "Aproximar"
+#: crates/bigiris/src/gui.rs:1192
+msgid "Zoom in"
 msgstr "확대"
 
-#: crates/bigiris/src/gui.rs:2189
-msgid "Slideshow: pausado"
+#: crates/bigiris/src/gui.rs:2268
+msgid "Slideshow: paused"
 msgstr "슬라이드쇼: 일시 정지됨"
 
-#: crates/bigiris/src/gui.rs:2217
-msgid "Slideshow: a cada {interval} s"
+#: crates/bigiris/src/gui.rs:2295
+msgid "Slideshow: every {interval} s"
 msgstr "슬라이드쇼: {interval}초마다"
 
-#: crates/bigiris/src/gui.rs:2239
-msgid "Histograma ligado"
+#: crates/bigiris/src/gui.rs:2313
+msgid "Histogram on"
 msgstr "히스토그램 켜짐"
 
-#: crates/bigiris/src/gui.rs:2241
-msgid "Histograma desligado"
+#: crates/bigiris/src/gui.rs:2315
+msgid "Histogram off"
 msgstr "히스토그램 꺼짐"
 
-#: crates/bigiris/src/gui.rs:2417 crates/bigiris/src/gui/dialogs/batch.rs:340
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:1632
-msgid "Cancelado"
+#: crates/bigiris/src/gui.rs:2428 crates/bigiris/src/gui.rs:2539
+#: crates/bigiris/src/gui/dialogs/batch.rs:291
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:1705
+msgid "Canceled"
 msgstr "취소됨"
 
-#: crates/bigiris/src/gui.rs:2418
-msgid "Falha na IA: {error}"
-msgstr "AI 오류: {error}"
+#: crates/bigiris/src/gui.rs:2540
+msgid "AI failed: {error}"
+msgstr "AI 처리 실패: {error}"
 
-#: crates/bigiris/src/gui.rs:2424
+#: crates/bigiris/src/gui.rs:2546
 msgid ""
-"Esta build não inclui IA. Recompile com `cargo build --features ai` (requer "
-"glslc, do pacote shaderc)."
+"This build does not include AI. Rebuild with `cargo build --features ai` "
+"(requires glslc, from the shaderc package)."
 msgstr ""
 "이 빌드에는 AI가 포함되어 있지 않습니다. `cargo build --features ai`로 다시 "
 "빌드하세요(shaderc 패키지의 glslc 필요)."
 
-#: crates/bigiris/src/gui.rs:2430
-msgid "{model} não está instalado. Instale com: sudo pacman -S {package}"
+#: crates/bigiris/src/gui.rs:2552
+msgid "{model} is not installed. Install it with: sudo pacman -S {package}"
 msgstr ""
-"{model}이(가) 설치되어 있지 않습니다. 설치 명령: sudo pacman -S {package}"
+"{model}이(가) 설치되어 있지 않습니다. 다음 명령으로 설치하세요: sudo pacman "
+"-S {package}"
 
-#: crates/bigiris/src/gui.rs:2444
-msgid "Não foi possível ler {path}: {error}"
+#: crates/bigiris/src/gui.rs:2566
+msgid "Could not read {path}: {error}"
 msgstr "{path}을(를) 읽을 수 없습니다: {error}"
 
-#: crates/bigiris/src/gui.rs:2602
+#: crates/bigiris/src/gui.rs:2725
 msgid ""
-"O arquivo será sobrescrito. JPEG é recodificado a cada gravação; isso pode "
-"reduzir a qualidade."
+"The file will be overwritten. JPEG is re-encoded every time it is saved; "
+"this may reduce quality."
 msgstr ""
-"파일이 덮어씁니다. JPEG는 저장할 때마다 다시 인코딩되므로 품질이 저하될 수 있"
+"파일을 덮어씁니다. JPEG는 저장할 때마다 다시 인코딩되므로 품질이 떨어질 수 있"
 "습니다."
 
-#: crates/bigiris/src/gui.rs:2604
-msgid "O arquivo será sobrescrito."
-msgstr "파일이 덮어씁니다."
+#: crates/bigiris/src/gui.rs:2727
+msgid "The file will be overwritten."
+msgstr "파일을 덮어씁니다."
 
-#: crates/bigiris/src/gui.rs:2610
+#: crates/bigiris/src/gui.rs:2733
 msgid ""
-"Este formato não guarda todos os metadados da foto (data, câmera, perfil de "
-"cor); o que ele não suportar será removido ou convertido."
+"This format does not keep all of the photo's metadata (date, camera, color "
+"profile); anything it does not support will be removed or converted."
 msgstr ""
 "이 형식은 사진의 메타데이터(날짜, 카메라, 색 프로필)를 모두 보존하지 않습니"
 "다. 지원되지 않는 항목은 제거되거나 변환됩니다."
 
-#: crates/bigiris/src/gui.rs:2613
-msgid "Salvar alterações?"
-msgstr "변경 사항을 저장하시겠습니까?"
+#: crates/bigiris/src/gui.rs:2735
+msgid "Save changes?"
+msgstr "변경 사항을 저장할까요?"
 
-#: crates/bigiris/src/gui.rs:2614 crates/bigiris/src/gui.rs:3857
-#: crates/bigiris/src/gui/dialogs/animate.rs:187
-#: crates/bigiris/src/gui/dialogs/batch.rs:122
-#: crates/bigiris/src/gui/dialogs/batch.rs:255
-#: crates/bigiris/src/gui/dialogs/batch.rs:348
-#: crates/bigiris/src/gui/viewer/crop.rs:373
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:396
-#: crates/bigiris/src/gui/dialogs/mod.rs:251
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:219
-#: crates/bigiris/src/gui/previews.rs:202
-msgid "Cancelar"
-msgstr "취소"
-
-#: crates/bigiris/src/gui.rs:2615
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:408
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:410
-msgid "Salvar"
+#: crates/bigiris/src/gui.rs:2737
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:418
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:420
+msgid "Save"
 msgstr "저장"
 
-#: crates/bigiris/src/gui.rs:2664
-msgid "Salvo"
-msgstr "파일이 저장되었습니다."
+#: crates/bigiris/src/gui.rs:2798
+msgid "Saved"
+msgstr "저장됨"
 
-#: crates/bigiris/src/gui.rs:2743
+#: crates/bigiris/src/gui.rs:2880
 msgid ""
-"Este arquivo é animado, tem várias páginas ou não pôde ser verificado. Girar "
-"ou espelhar e salvar descartaria os outros quadros, então ele não foi "
-"alterado."
+"This file is animated, has multiple pages or could not be checked. Rotating "
+"or flipping and saving would discard the other frames, so it was not changed."
 msgstr ""
 "이 파일은 애니메이션이거나 여러 페이지로 되어 있거나 확인할 수 없습니다. 회"
 "전 또는 뒤집기 후 저장하면 다른 프레임이 사라지므로 변경하지 않았습니다."
 
-#: crates/bigiris/src/gui.rs:2744
+#: crates/bigiris/src/gui.rs:2881
 msgid ""
-"O BigIris não sabe gravar este formato. As alterações não podem ser salvas "
-"no próprio arquivo."
+"BigIris cannot write this format. The changes cannot be saved to the file "
+"itself."
 msgstr ""
 "BigIris는 이 형식으로 쓸 수 없습니다. 변경 사항을 원본 파일에 저장할 수 없습"
 "니다."
 
-#: crates/bigiris/src/gui.rs:2745
-msgid "Sem permissão para alterar este arquivo ou a pasta dele."
+#: crates/bigiris/src/gui.rs:2882
+msgid "No permission to modify this file or its folder."
 msgstr "이 파일이나 해당 폴더를 수정할 권한이 없습니다."
 
-#: crates/bigiris/src/gui.rs:2747
-msgid "O arquivo não foi alterado. Detalhes: {detail}"
+#: crates/bigiris/src/gui.rs:2884
+msgid "The file was not changed. Details: {detail}"
 msgstr "파일이 변경되지 않았습니다. 세부 정보: {detail}"
 
-#: crates/bigiris/src/gui.rs:2759
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:1764
-msgid "Não foi possível salvar"
+#: crates/bigiris/src/gui.rs:2896
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:1838
+msgid "Could not save"
 msgstr "저장할 수 없음"
 
-#: crates/bigiris/src/gui.rs:2762
-msgid "Manter alterações"
+#: crates/bigiris/src/gui.rs:2899
+msgid "Keep changes"
 msgstr "변경 사항 유지"
 
-#: crates/bigiris/src/gui.rs:2763
-msgid "Descartar alterações"
+#: crates/bigiris/src/gui.rs:2900
+msgid "Discard changes"
 msgstr "변경 사항 버리기"
 
-#: crates/bigiris/src/gui.rs:2852
-msgid "o formato não guarda EXIF"
-msgstr "형식이 EXIF를 저장하지 않음"
+#: crates/bigiris/src/gui.rs:2986
+msgid "the format does not store EXIF"
+msgstr "이 형식은 EXIF를 저장하지 않음"
 
-#: crates/bigiris/src/gui.rs:2853
-msgid "EXIF grande demais para JPEG"
-msgstr "EXIF가 JPEG에 비해 너무 큼"
+#: crates/bigiris/src/gui.rs:2987
+msgid "EXIF too large for JPEG"
+msgstr "EXIF가 너무 커서 JPEG에 넣을 수 없음"
 
-#: crates/bigiris/src/gui.rs:2854
-msgid "EXIF inválido"
+#: crates/bigiris/src/gui.rs:2988
+msgid "invalid EXIF"
 msgstr "잘못된 EXIF"
 
-#: crates/bigiris/src/gui.rs:2857
-msgid "perfil de cor convertido para sRGB"
+#: crates/bigiris/src/gui.rs:2991
+msgid "color profile converted to sRGB"
 msgstr "색 프로필을 sRGB로 변환함"
 
-#: crates/bigiris/src/gui.rs:2858
-msgid "perfil de cor inválido ignorado"
+#: crates/bigiris/src/gui.rs:2992
+msgid "invalid color profile ignored"
 msgstr "잘못된 색 프로필 무시함"
 
-#: crates/bigiris/src/gui.rs:2859
-msgid "metadados não suportados"
+#: crates/bigiris/src/gui.rs:2993
+msgid "unsupported metadata"
 msgstr "지원되지 않는 메타데이터"
 
-#: crates/bigiris/src/gui.rs:2869
-msgid "Salvo. Alguns metadados não puderam ser mantidos: {list}"
+#: crates/bigiris/src/gui.rs:3003
+msgid "Saved. Some metadata could not be kept: {list}"
 msgstr "저장했습니다. 일부 메타데이터를 유지할 수 없었습니다: {list}"
 
-#: crates/bigiris/src/gui.rs:3132
-msgid "Salve ou desfaça as alterações antes de navegar"
-msgstr "탐색하기 전에 변경 내용 저장 또는 실행 취소"
+#: crates/bigiris/src/gui.rs:3106
+msgid "This image's color profile is corrupted; colors may be inaccurate"
+msgstr ""
+"이 이미지의 색상 프로필이 손상되었습니다. 색상이 정확하지 않을 수 있습니다"
 
-#: crates/bigiris/src/gui.rs:3215 crates/bigiris/src/gui.rs:4107
-#: crates/bigiris/src/gui.rs:5157 crates/bigiris/src/gui.rs:5292
-msgid "Abrir imagens…"
+#: crates/bigiris/src/gui.rs:3302
+msgid "Save or undo changes before navigating"
+msgstr "다른 이미지로 이동하기 전에 변경 사항을 저장하거나 실행 취소하세요"
+
+#: crates/bigiris/src/gui.rs:3393 crates/bigiris/src/gui.rs:4270
+#: crates/bigiris/src/gui.rs:5325 crates/bigiris/src/gui.rs:5459
+msgid "Open images…"
 msgstr "이미지 열기…"
 
-#: crates/bigiris/src/gui.rs:3216 crates/bigiris/src/gui.rs:3988
-msgid "Colar arquivos de imagem"
+#: crates/bigiris/src/gui.rs:3394 crates/bigiris/src/gui.rs:4152
+msgid "Paste image files"
 msgstr "이미지 파일 붙여넣기"
 
-#: crates/bigiris/src/gui.rs:3218 crates/bigiris/src/gui.rs:3987
-msgid "Copiar imagem"
-msgstr "그림 복사"
+#: crates/bigiris/src/gui.rs:3396 crates/bigiris/src/gui.rs:4151
+msgid "Copy image"
+msgstr "이미지 복사"
 
-#: crates/bigiris/src/gui.rs:3219
-msgid "Imprimir…"
+#: crates/bigiris/src/gui.rs:3397
+msgid "Print…"
 msgstr "인쇄…"
 
-#: crates/bigiris/src/gui.rs:3221 crates/bigiris/src/gui.rs:4119
-#: crates/bigiris/src/gui.rs:5157
-msgid "Processar uma pasta…"
-msgstr "이 폴더 처리…"
+#: crates/bigiris/src/gui.rs:3399 crates/bigiris/src/gui.rs:4282
+#: crates/bigiris/src/gui.rs:5325
+msgid "Process a folder…"
+msgstr "폴더 처리…"
 
-#: crates/bigiris/src/gui.rs:3227
-msgid "Editar imagem"
-msgstr "그림 편집"
+#: crates/bigiris/src/gui.rs:3405
+msgid "Edit image"
+msgstr "이미지 편집"
 
-#: crates/bigiris/src/gui.rs:3228 crates/bigiris/src/gui.rs:3971
-msgid "Desfazer"
-msgstr "입력 취소"
+#: crates/bigiris/src/gui.rs:3406 crates/bigiris/src/gui.rs:4130
+msgid "Undo"
+msgstr "실행 취소"
 
-#: crates/bigiris/src/gui.rs:3229 crates/bigiris/src/gui.rs:3972
-msgid "Refazer"
+#: crates/bigiris/src/gui.rs:3407 crates/bigiris/src/gui.rs:4131
+msgid "Redo"
 msgstr "다시 실행"
 
-#: crates/bigiris/src/gui.rs:3232 crates/bigiris/src/gui.rs:3978
-msgid "Salvar alterações"
+#: crates/bigiris/src/gui.rs:3410 crates/bigiris/src/gui.rs:4142
+msgid "Save changes"
 msgstr "변경 사항 저장"
 
-#: crates/bigiris/src/gui.rs:3233 crates/bigiris/src/gui.rs:3991
-msgid "Mover para a lixeira"
+#: crates/bigiris/src/gui.rs:3411 crates/bigiris/src/gui.rs:4155
+msgid "Move to trash"
 msgstr "휴지통으로 이동"
 
-#: crates/bigiris/src/gui.rs:3237
-msgid "Atalhos do teclado"
+#: crates/bigiris/src/gui.rs:3415 crates/bigiris/src/gui.rs:4198
+msgid "Keyboard shortcuts"
 msgstr "키보드 바로 가기 키"
 
-#: crates/bigiris/src/gui.rs:3238
-msgid "Sobre o BigIris"
-msgstr "BigIris에 대하여"
+#: crates/bigiris/src/gui.rs:3416
+msgid "About BigIris"
+msgstr "BigIris 정보"
 
-#: crates/bigiris/src/gui.rs:3243
-msgid "Menu principal"
-msgstr "메인 메뉴"
+#: crates/bigiris/src/gui.rs:3421
+msgid "Main menu"
+msgstr "주 메뉴"
 
-#: crates/bigiris/src/gui.rs:3595
-msgid "Salve ou desfaça as alterações antes de usar esta ferramenta"
+#: crates/bigiris/src/gui.rs:3754
+msgid "Save or undo your changes before using this tool"
 msgstr "이 도구를 사용하기 전에 변경 사항을 저장하거나 실행 취소하세요"
 
-#: crates/bigiris/src/gui.rs:3611 crates/bigiris/src/gui.rs:4165
-#: crates/bigiris/src/gui/dialogs/batch.rs:390
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:121
-msgid "Imagens"
+#: crates/bigiris/src/gui.rs:3768 crates/bigiris/src/gui.rs:4325
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:105
+msgid "Images"
 msgstr "이미지"
 
-#: crates/bigiris/src/gui.rs:3617 crates/bigiris/src/gui.rs:3986
-msgid "Abrir imagens"
+#: crates/bigiris/src/gui.rs:3774 crates/bigiris/src/gui.rs:4150
+msgid "Open images"
 msgstr "이미지 열기"
 
-#: crates/bigiris/src/gui.rs:3669 crates/bigiris/src/gui.rs:3709
-msgid "Não foi possível preparar a página"
+#: crates/bigiris/src/gui.rs:3814
+msgid "Wait for the image to finish loading"
+msgstr "이미지 불러오기가 끝날 때까지 기다리세요"
+
+#: crates/bigiris/src/gui.rs:3837 crates/bigiris/src/gui.rs:3877
+msgid "Could not prepare the page"
 msgstr "페이지를 준비할 수 없습니다"
 
-#: crates/bigiris/src/gui.rs:3691
-msgid "O preparo da impressão falhou"
+#: crates/bigiris/src/gui.rs:3859
+msgid "Print preparation failed"
 msgstr "인쇄 준비에 실패했습니다"
 
-#: crates/bigiris/src/gui.rs:3748
-msgid "Não foi possível imprimir"
+#: crates/bigiris/src/gui.rs:3916
+msgid "Could not print"
 msgstr "인쇄할 수 없음"
 
-#: crates/bigiris/src/gui.rs:3751 crates/bigiris/src/gui.rs:3883
-#: crates/bigiris/src/gui/dialogs/animate.rs:53
-#: crates/bigiris/src/gui/dialogs/batch.rs:346
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:1765
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:102
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:339
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:381
-#: crates/bigiris/src/gui/transfers.rs:99
-msgid "Fechar"
+#: crates/bigiris/src/gui.rs:3917 crates/bigiris/src/gui.rs:4041
+#: crates/bigiris/src/gui/dialogs/batch.rs:297
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:309
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:1839
+#: crates/bigiris/src/gui/dialogs/mod.rs:258
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:315
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:361
+#: crates/bigiris/src/gui/transfers.rs:95
+msgid "Close"
 msgstr "닫기"
 
-#: crates/bigiris/src/gui.rs:3849
-msgid "Mover para a lixeira?"
-msgstr "휴지통으로 이동하시겠습니까?"
+#: crates/bigiris/src/gui.rs:4009
+msgid "Move to trash?"
+msgstr "휴지통으로 이동할까요?"
 
-#: crates/bigiris/src/gui.rs:3853
-msgid ""
-"O arquivo será movido para a lixeira do sistema. Você pode restaurá-lo "
-"depois."
+#: crates/bigiris/src/gui.rs:4012
+msgid "The file will be moved to the trash. You can restore it later."
 msgstr "파일이 휴지통으로 이동됩니다. 나중에 복원할 수 있습니다."
 
-#: crates/bigiris/src/gui.rs:3858
-msgid "Mover"
+#: crates/bigiris/src/gui.rs:4016
+msgid "Move"
 msgstr "이동"
 
-#: crates/bigiris/src/gui.rs:3880
-msgid "Não foi possível mover para a lixeira"
+#: crates/bigiris/src/gui.rs:4038
+msgid "Could not move to trash"
 msgstr "휴지통으로 이동할 수 없습니다"
 
-#: crates/bigiris/src/gui.rs:3941
-msgid "Navegação"
+#: crates/bigiris/src/gui.rs:4100
+msgid "Navigation"
 msgstr "탐색"
 
-#: crates/bigiris/src/gui.rs:3943
-msgid "Anterior / próximo"
+#: crates/bigiris/src/gui.rs:4102
+msgid "Previous / next"
 msgstr "이전 / 다음"
 
-#: crates/bigiris/src/gui.rs:3944
-msgid "Primeiro / último"
-msgstr "첫번째 / 마지막"
+#: crates/bigiris/src/gui.rs:4103
+msgid "First / last"
+msgstr "처음 / 마지막"
 
-#: crates/bigiris/src/gui.rs:3945
-msgid "Slideshow (auto-avanço)"
-msgstr "슬라이드쇼"
+#: crates/bigiris/src/gui.rs:4104
+msgid "Slideshow (auto-advance)"
+msgstr "슬라이드쇼 (자동 넘김)"
 
-#: crates/bigiris/src/gui.rs:3951
-msgid "Aproximar / afastar"
+#: crates/bigiris/src/gui.rs:4110
+msgid "Zoom in / out"
 msgstr "확대/축소"
 
-#: crates/bigiris/src/gui.rs:3954
-msgid "Zoom contínuo"
-msgstr "연속 확대/ 축소"
+#: crates/bigiris/src/gui.rs:4113
+msgid "Continuous zoom"
+msgstr "연속 확대/축소"
 
-#: crates/bigiris/src/gui.rs:3958
-msgid "Janela"
-msgstr "창(W)"
+#: crates/bigiris/src/gui.rs:4117
+msgid "Window"
+msgstr "창"
 
-#: crates/bigiris/src/gui.rs:3960
-msgid "Tela cheia"
+#: crates/bigiris/src/gui.rs:4119
+msgid "Fullscreen"
 msgstr "전체 화면"
 
-#: crates/bigiris/src/gui.rs:3961
-msgid "Modo teatro"
+#: crates/bigiris/src/gui.rs:4120
+msgid "Theater mode"
 msgstr "극장 모드"
 
-#: crates/bigiris/src/gui.rs:3962
-msgid "Fita de miniaturas"
-msgstr "미리 보기 그림"
+#: crates/bigiris/src/gui.rs:4121
+msgid "Thumbnail strip"
+msgstr "미리 보기 그림 막대"
 
-#: crates/bigiris/src/gui.rs:3963
-msgid "Histograma RGB"
+#: crates/bigiris/src/gui.rs:4122
+msgid "RGB histogram"
 msgstr "RGB 히스토그램"
 
-#: crates/bigiris/src/gui.rs:3964
-msgid "Fixar barras visíveis"
-msgstr "컨트롤 보이게 유지하기"
+#: crates/bigiris/src/gui.rs:4123
+msgid "Keep controls visible"
+msgstr "컨트롤 항상 표시"
 
-#: crates/bigiris/src/gui.rs:3965
-msgid "Sair da tela cheia ou fechar"
+#: crates/bigiris/src/gui.rs:4124
+msgid "Leave fullscreen or close"
 msgstr "전체 화면 종료 또는 닫기"
 
-#: crates/bigiris/src/gui.rs:3969
-msgid "Edição"
-msgstr "편집 중"
+#: crates/bigiris/src/gui.rs:4128
+msgid "Editing"
+msgstr "편집"
 
-#: crates/bigiris/src/gui.rs:3973
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:312
-msgid "Girar à direita"
-msgstr "우측으로 회전"
+#: crates/bigiris/src/gui.rs:4132
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:323
+msgid "Rotate right"
+msgstr "오른쪽으로 회전"
 
-#: crates/bigiris/src/gui.rs:3974
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:311
-msgid "Girar à esquerda"
-msgstr "좌측으로 회전"
+#: crates/bigiris/src/gui.rs:4133
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:322
+msgid "Rotate left"
+msgstr "왼쪽으로 회전"
 
-#: crates/bigiris/src/gui.rs:3975
-msgid "Recortar…"
+#: crates/bigiris/src/gui.rs:4134
+msgid "Crop…"
 msgstr "자르기…"
 
-#: crates/bigiris/src/gui.rs:3976
-msgid "Remover fundo (IA)…"
-msgstr "배경 제거( AI)…"
+#: crates/bigiris/src/gui.rs:4135
+msgid "Crop: move the selection"
+msgstr "자르기: 선택 영역 이동"
 
-#: crates/bigiris/src/gui.rs:3977
-#: crates/bigimage-integrations/src/action.rs:517
-#: data/nautilus/bigiris-menu.py:239
-msgid "Aumentar resolução…"
-msgstr "해상도 높이기…"
+#: crates/bigiris/src/gui.rs:4138
+msgid "Crop: resize the selection"
+msgstr "자르기: 선택 영역 크기 조정"
 
-#: crates/bigiris/src/gui.rs:3979
-msgid "Painel de edição"
-msgstr "편집 패널"
-
-#: crates/bigiris/src/gui.rs:3980
-msgid "Ver original (segure)"
-msgstr "원본 보기 (누르고 있기)"
-
-#: crates/bigiris/src/gui.rs:3984
-#: crates/bigiris/src/gui/dialogs/properties.rs:120
-msgid "Arquivo"
-msgstr "파일"
-
-#: crates/bigiris/src/gui.rs:3989
-msgid "Imprimir"
-msgstr "인쇄"
-
-#: crates/bigiris/src/gui.rs:3990
-#: crates/bigiris/src/gui/dialogs/properties.rs:38
-#: crates/bigiris/src/gui/dialogs/properties.rs:80
-msgid "Propriedades"
-msgstr "속성"
-
-#: crates/bigiris/src/gui.rs:3995
-msgid "Ajuda"
-msgstr "도움말"
-
-#: crates/bigiris/src/gui.rs:3996
-msgid "Este diálogo"
-msgstr "이 대화상자"
-
-#: crates/bigiris/src/gui.rs:3996
-msgid "Sobre"
-msgstr "정보"
-
-#: crates/bigiris/src/gui.rs:4006
-msgid "Roda do mouse"
-msgstr "마우스 휠"
-
-#: crates/bigiris/src/gui.rs:4034
-msgid "Atalhos de teclado"
-msgstr "키보드 바로 가기 키"
-
-#: crates/bigiris/src/gui.rs:4060
-msgid ""
-"Visualizador e conversor de imagens para Linux. Rápido, acessível por "
-"teclado e integrado ao gerenciador de arquivos."
-msgstr ""
-"리눅스용 이미지 뷰어 및 변환기. 빠르고, 키보드로 접근 가능하며 파일 관리자와 "
-"통합됩니다."
-
-#: crates/bigiris/src/gui.rs:4093
-msgid "Abra suas imagens"
-msgstr "이미지 열기"
-
-#: crates/bigiris/src/gui.rs:4098
-msgid "Arraste imagens para cá ou cole arquivos com Ctrl+V."
-msgstr "여기에 이미지를 드롭하거나 Ctrl + V로 파일을 붙여 넣습니다. (Ctrl+V)"
+#: crates/bigiris/src/gui.rs:4140
+msgid "Remove background (AI)…"
+msgstr "배경 제거 (AI)…"
 
 #: crates/bigiris/src/gui.rs:4141
-msgid "Selecionar pasta com imagens"
+#: crates/bigimage-integrations/src/action.rs:514
+msgid "Upscale…"
+msgstr "해상도 높이기…"
+
+#: crates/bigiris/src/gui.rs:4143
+msgid "Editing panel"
+msgstr "편집 패널"
+
+#: crates/bigiris/src/gui.rs:4144
+msgid "View original (hold)"
+msgstr "원본 보기 (누르고 있기)"
+
+#: crates/bigiris/src/gui.rs:4148
+#: crates/bigiris/src/gui/dialogs/properties.rs:115
+msgid "File"
+msgstr "파일"
+
+#: crates/bigiris/src/gui.rs:4153
+msgid "Print"
+msgstr "인쇄"
+
+#: crates/bigiris/src/gui.rs:4154
+#: crates/bigiris/src/gui/dialogs/properties.rs:37
+#: crates/bigiris/src/gui/dialogs/properties.rs:79
+msgid "Properties"
+msgstr "속성"
+
+#: crates/bigiris/src/gui.rs:4159
+msgid "Help"
+msgstr "도움말"
+
+#: crates/bigiris/src/gui.rs:4160
+msgid "This dialog"
+msgstr "이 대화상자"
+
+#: crates/bigiris/src/gui.rs:4160
+msgid "About"
+msgstr "정보"
+
+#: crates/bigiris/src/gui.rs:4170
+msgid "Mouse wheel"
+msgstr "마우스 휠"
+
+#: crates/bigiris/src/gui.rs:4224
+msgid ""
+"Image viewer and converter for Linux. Fast, keyboard accessible and "
+"integrated with your file manager."
+msgstr ""
+"Linux용 이미지 뷰어 및 변환기. 빠르고, 키보드만으로 조작할 수 있으며, 파일 관"
+"리자와 통합됩니다."
+
+#: crates/bigiris/src/gui.rs:4257
+msgid "Open your images"
+msgstr "이미지를 열어 보세요"
+
+#: crates/bigiris/src/gui.rs:4261
+msgid "Drop images here or paste files with Ctrl+V."
+msgstr "여기에 이미지를 끌어다 놓거나 Ctrl+V로 파일을 붙여 넣으세요."
+
+#: crates/bigiris/src/gui.rs:4304
+msgid "Select a folder with images"
 msgstr "이미지가 있는 폴더 선택"
 
-#: crates/bigiris/src/gui.rs:4162
-msgid "Selecionar imagens"
+#: crates/bigiris/src/gui.rs:4353
+msgid "Select images"
 msgstr "이미지 선택"
 
-#: crates/bigiris/src/gui.rs:4209
-msgid "{current} de {total}"
+#: crates/bigiris/src/gui.rs:4379
+msgid "{current} of {total}"
 msgstr "{current} / {total}"
 
 #: crates/bigiris/src/gui/batch_runner.rs:82
-msgid "≈ mesmo tamanho"
+msgid "≈ same size"
 msgstr "≈ 같은 크기"
 
 #: crates/bigiris/src/gui/batch_runner.rs:160
-msgid "{written} gravado(s), {skipped} ignorado(s), {failed} falha(s)"
-msgstr "기록: {written}, 건너뜀: {skipped}, 실패: {failed}"
+msgid "written: {written}, skipped: {skipped}, failed: {failed}"
+msgstr "기록 {written}개, 건너뜀 {skipped}개, 실패 {failed}개"
 
-#: crates/bigiris/src/gui/batch_runner.rs:190
-msgid "Concluído em {time} · {counts}"
-msgstr "{time}에 완료 · {counts}"
+#: crates/bigiris/src/gui/batch_runner.rs:189
+msgid "Finished in {time} · {counts}"
+msgstr "{time} 만에 완료 · {counts}"
 
-#: crates/bigiris/src/gui/batch_runner.rs:199
+#: crates/bigiris/src/gui/batch_runner.rs:198
 msgid ""
-"{before} → {after} ({delta}) · média por arquivo {average_before} → "
+"{before} → {after} ({delta}) · average per file {average_before} → "
 "{average_after}"
 msgstr ""
 "{before} → {after} ({delta}) · 파일당 평균 {average_before} → {average_after}"
 
-#: crates/bigiris/src/gui/batch_runner.rs:222
-#: crates/bigiris/src/gui/dialogs/animate.rs:315
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:1581
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:336
-msgid "O processamento terminou inesperadamente. Tente novamente."
+#: crates/bigiris/src/gui/batch_runner.rs:220
+#: crates/bigiris/src/gui/dialogs/animate.rs:290
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:1645
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:313
+msgid "Processing ended unexpectedly. Please try again."
 msgstr "처리가 예기치 않게 종료되었습니다. 다시 시도하세요."
 
-#: crates/bigiris/src/gui/batch_runner.rs:311
-msgid "falha inesperada no worker"
-msgstr "worker에서 예기치 않은 오류"
+#: crates/bigiris/src/gui/batch_runner.rs:319 crates/bigiris/src/main.rs:1693
+msgid "a worker ended unexpectedly"
+msgstr "작업 프로세스가 예기치 않게 종료되었습니다"
 
-#: crates/bigiris/src/gui/batch_runner.rs:359
-msgid "um worker terminou inesperadamente"
-msgstr "worker가 예기치 않게 종료되었습니다"
+#: crates/bigiris/src/gui/batch_runner.rs:399
+msgid "unexpected worker failure"
+msgstr "작업 프로세스에서 예기치 않은 오류 발생"
 
 #: crates/bigiris/src/gui/dialogs/adjust.rs:20
-msgid "Ajustar cores — Prisma"
+msgid "Adjust colors — Prisma"
 msgstr "색상 조정 — Prisma"
 
-#: crates/bigiris/src/gui/dialogs/adjust.rs:35
+#: crates/bigiris/src/gui/dialogs/adjust.rs:34
 #: crates/bigimage-integrations/src/action.rs:91
-#: data/nautilus/bigiris-menu.py:153
-msgid "Ajustar cores"
+msgid "Adjust colors"
 msgstr "색상 조정"
 
-#: crates/bigiris/src/gui/dialogs/adjust.rs:38
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:334
-msgid "Brilho"
+#: crates/bigiris/src/gui/dialogs/adjust.rs:37
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:344
+msgid "Brightness"
 msgstr "밝기"
 
-#: crates/bigiris/src/gui/dialogs/adjust.rs:39
-msgid "-100 escuro · 0 neutro · +100 claro"
-msgstr "-100 어두운색 · 0 중립색 · +101 밝은색"
+#: crates/bigiris/src/gui/dialogs/adjust.rs:38
+msgid "-100 dark · 0 neutral · +100 light"
+msgstr "-100 어둡게 · 0 중립 · +100 밝게"
 
-#: crates/bigiris/src/gui/dialogs/adjust.rs:43
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:335
-msgid "Contraste"
+#: crates/bigiris/src/gui/dialogs/adjust.rs:42
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:345
+msgid "Contrast"
 msgstr "대비"
 
-#: crates/bigiris/src/gui/dialogs/adjust.rs:44
-msgid "-100 plano · 0 neutro · +100 agressivo"
-msgstr "-100 평평 · 0 중립 · +101 강력"
+#: crates/bigiris/src/gui/dialogs/adjust.rs:43
+msgid "-100 flat · 0 neutral · +100 strong"
+msgstr "-100 밋밋하게 · 0 중립 · +100 강하게"
 
-#: crates/bigiris/src/gui/dialogs/adjust.rs:48
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:336
-msgid "Saturação"
+#: crates/bigiris/src/gui/dialogs/adjust.rs:47
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:346
+msgid "Saturation"
 msgstr "채도"
 
-#: crates/bigiris/src/gui/dialogs/adjust.rs:49
-msgid "-100 cinza · 0 neutro · +100 vibrante"
-msgstr "-100 회색 · 0 중립 · +101 생생"
+#: crates/bigiris/src/gui/dialogs/adjust.rs:48
+msgid "-100 gray · 0 neutral · +100 vivid"
+msgstr "-100 회색 · 0 중립 · +100 선명하게"
 
-#: crates/bigiris/src/gui/dialogs/adjust.rs:53
+#: crates/bigiris/src/gui/dialogs/adjust.rs:52
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:347
 msgid "Gamma"
 msgstr "감마"
 
-#: crates/bigiris/src/gui/dialogs/adjust.rs:55
-msgid "Abaixo de 1 clareia os meios-tons · 1 mantém · acima de 1 escurece"
-msgstr ""
-"아래 1은 중간 톤을 밝게 하고, 1는 그것들을 보존하며, 위 1이 그것을 어둡게 합"
-"니다."
+#: crates/bigiris/src/gui/dialogs/adjust.rs:54
+msgid "Below 1 lightens midtones · 1 preserves them · above 1 darkens them"
+msgstr "1 미만은 중간 톤을 밝게 · 1은 유지 · 1 초과는 어둡게"
 
-#: crates/bigiris/src/gui/dialogs/adjust.rs:64
-#: crates/bigiris/src/gui/dialogs/batch.rs:375
+#: crates/bigiris/src/gui/dialogs/adjust.rs:63
+#: crates/bigiris/src/gui/dialogs/batch.rs:322
 #: crates/bigiris/src/gui/dialogs/convert.rs:39
-#: crates/bigiris/src/gui/dialogs/crop.rs:344
-#: crates/bigiris/src/gui/dialogs/extent.rs:92
+#: crates/bigiris/src/gui/dialogs/crop.rs:337
+#: crates/bigiris/src/gui/dialogs/extent.rs:85
 #: crates/bigiris/src/gui/dialogs/flip.rs:37
-#: crates/bigiris/src/gui/dialogs/resize.rs:128
+#: crates/bigiris/src/gui/dialogs/resize.rs:124
 #: crates/bigiris/src/gui/dialogs/rotate.rs:42
-#: crates/bigiris/src/gui/dialogs/upscale.rs:82
-msgid "Arquivos selecionados"
+#: crates/bigiris/src/gui/dialogs/upscale.rs:81
+msgid "Selected files"
 msgstr "선택한 파일"
 
-#: crates/bigiris/src/gui/dialogs/adjust.rs:69
-msgid "Tom"
+#: crates/bigiris/src/gui/dialogs/adjust.rs:68
+msgid "Tone"
 msgstr "톤"
 
-#: crates/bigiris/src/gui/dialogs/adjust.rs:74
-msgid "Cor"
+#: crates/bigiris/src/gui/dialogs/adjust.rs:73
+msgid "Color"
 msgstr "색상"
 
-#: crates/bigiris/src/gui/dialogs/adjust.rs:77
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:138
-msgid "Saída"
+#: crates/bigiris/src/gui/dialogs/adjust.rs:76
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:119
+msgid "Output"
 msgstr "출력"
 
-#: crates/bigiris/src/gui/dialogs/adjust.rs:83
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:366
-msgid "Aplicar"
-msgstr "적용(A)"
+#: crates/bigiris/src/gui/dialogs/adjust.rs:82
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:376
+msgid "Apply"
+msgstr "적용"
 
-#: crates/bigiris/src/gui/dialogs/adjust.rs:190
-msgid "Ajustando…"
+#: crates/bigiris/src/gui/dialogs/adjust.rs:177
+msgid "Adjusting…"
 msgstr "조정 중…"
 
-#: crates/bigiris/src/gui/dialogs/adjust.rs:196
-msgid "Ajustando"
+#: crates/bigiris/src/gui/dialogs/adjust.rs:183
+msgid "Adjusting"
 msgstr "조정 중"
 
 #: crates/bigiris/src/gui/dialogs/animate.rs:29
-msgid "Criar GIF animado — Prisma"
+msgid "Create animated GIF — Prisma"
 msgstr "애니메이션 GIF 만들기 — Prisma"
 
-#: crates/bigiris/src/gui/dialogs/animate.rs:33
-msgid "Criar GIF animado"
+#: crates/bigiris/src/gui/dialogs/animate.rs:34
+msgid "Create animated GIF"
 msgstr "애니메이션 GIF 만들기"
 
-#: crates/bigiris/src/gui/dialogs/animate.rs:47
-msgid "Selecione pelo menos 2 imagens"
+#: crates/bigiris/src/gui/dialogs/animate.rs:43
+msgid "Select at least 2 images"
 msgstr "최소 2개의 이미지 선택"
 
-#: crates/bigiris/src/gui/dialogs/animate.rs:48
-msgid "Informe vários arquivos de uma vez para montar a animação."
-msgstr "애니메이션을 만들려면 여러 파일을 선택합니다."
+#: crates/bigiris/src/gui/dialogs/animate.rs:44
+msgid "Select multiple files to build the animation."
+msgstr "애니메이션을 만들려면 여러 파일을 한 번에 지정하세요."
 
-#: crates/bigiris/src/gui/dialogs/animate.rs:66
-msgid "Atraso por quadro (ms)"
+#: crates/bigiris/src/gui/dialogs/animate.rs:51
+msgid "Frame delay (ms)"
 msgstr "프레임 지연 (ms)"
 
-#: crates/bigiris/src/gui/dialogs/animate.rs:67
+#: crates/bigiris/src/gui/dialogs/animate.rs:52
 msgid "100 ≈ 10 fps · 40 ≈ 25 fps · 1000 = 1 s"
-msgstr "100 ≈ 15 fps · 40 = 25 fPS · 1,000=1초"
+msgstr "100 ≈ 10 fps · 40 ≈ 25 fps · 1000 = 1초"
 
-#: crates/bigiris/src/gui/dialogs/animate.rs:72
+#: crates/bigiris/src/gui/dialogs/animate.rs:57
 msgid "Loop"
-msgstr "애니메이션 반복"
+msgstr "반복"
 
-#: crates/bigiris/src/gui/dialogs/animate.rs:74
-msgid "Infinito (padrão)"
+#: crates/bigiris/src/gui/dialogs/animate.rs:59
+msgid "Infinite (default)"
 msgstr "무한 (기본값)"
 
-#: crates/bigiris/src/gui/dialogs/animate.rs:75
-msgid "Uma vez"
+#: crates/bigiris/src/gui/dialogs/animate.rs:60
+msgid "Once"
 msgstr "한 번"
 
-#: crates/bigiris/src/gui/dialogs/animate.rs:76
-msgid "2 vezes"
-msgstr "두 번"
+#: crates/bigiris/src/gui/dialogs/animate.rs:61
+msgid "2 times"
+msgstr "2번"
 
-#: crates/bigiris/src/gui/dialogs/animate.rs:77
-msgid "5 vezes"
+#: crates/bigiris/src/gui/dialogs/animate.rs:62
+msgid "5 times"
 msgstr "5번"
 
-#: crates/bigiris/src/gui/dialogs/animate.rs:78
-msgid "10 vezes"
+#: crates/bigiris/src/gui/dialogs/animate.rs:63
+msgid "10 times"
 msgstr "10번"
 
-#: crates/bigiris/src/gui/dialogs/animate.rs:83
-msgid "Velocidade do encoder"
+#: crates/bigiris/src/gui/dialogs/animate.rs:68
+msgid "Encoder speed"
 msgstr "인코더 속도"
 
-#: crates/bigiris/src/gui/dialogs/animate.rs:84
-msgid "maior = mais rápido, paleta um pouco pior · padrão 10"
-msgstr "higher = 더 빠르고, 팔레트 품질이 약간 낮음 · 기본값 10"
+#: crates/bigiris/src/gui/dialogs/animate.rs:70
+msgid "higher = faster, slightly lower palette quality · default 10"
+msgstr "높을수록 빠르지만 팔레트 품질이 약간 떨어짐 · 기본값 10"
 
-#: crates/bigiris/src/gui/dialogs/animate.rs:94
-msgid "Arquivo de saída (.gif)"
+#: crates/bigiris/src/gui/dialogs/animate.rs:79 crates/bigiris/src/main.rs:610
+msgid "Output file (.gif)"
 msgstr "출력 파일 (.gif)"
 
-#: crates/bigiris/src/gui/dialogs/animate.rs:98
-msgid "Quadros"
+#: crates/bigiris/src/gui/dialogs/animate.rs:82
+msgid "Frames"
 msgstr "프레임"
 
-#: crates/bigiris/src/gui/dialogs/animate.rs:111
-msgid "Criar GIF"
+#: crates/bigiris/src/gui/dialogs/animate.rs:95
+msgid "Create GIF"
 msgstr "GIF 만들기"
 
-#: crates/bigiris/src/gui/dialogs/animate.rs:184
-msgid "Substituir arquivo existente?"
-msgstr "기존 파일을 바꾸시겠습니까?"
+#: crates/bigiris/src/gui/dialogs/animate.rs:162
+msgid "Replace existing file?"
+msgstr "기존 파일을 바꿀까요?"
 
-#: crates/bigiris/src/gui/dialogs/animate.rs:188
-msgid "Substituir"
+#: crates/bigiris/src/gui/dialogs/animate.rs:166
+msgid "Replace"
 msgstr "바꾸기"
 
-#: crates/bigiris/src/gui/dialogs/animate.rs:206
-msgid "Informe o arquivo de saída."
+#: crates/bigiris/src/gui/dialogs/animate.rs:184
+msgid "Specify the output file."
 msgstr "출력 파일을 지정하세요."
 
-#: crates/bigiris/src/gui/dialogs/animate.rs:215
-msgid "O arquivo de saída não pode ser uma pasta."
+#: crates/bigiris/src/gui/dialogs/animate.rs:193
+msgid "The output file cannot be a folder."
 msgstr "출력 파일은 폴더일 수 없습니다."
 
-#: crates/bigiris/src/gui/dialogs/animate.rs:219
-msgid "O arquivo de saída não pode ser um dos quadros."
+#: crates/bigiris/src/gui/dialogs/animate.rs:197
+msgid "The output file cannot be one of the frames."
 msgstr "출력 파일은 프레임 중 하나일 수 없습니다."
 
-#: crates/bigiris/src/gui/dialogs/animate.rs:255
-msgid "Montando GIF…"
+#: crates/bigiris/src/gui/dialogs/animate.rs:230
+msgid "Building GIF…"
 msgstr "GIF를 만드는 중…"
 
-#: crates/bigiris/src/gui/dialogs/animate.rs:297
-#: crates/bigiris/src/gui/dialogs/batch.rs:102
-msgid "Pronto"
-msgstr "준비 완료"
+#: crates/bigiris/src/gui/dialogs/animate.rs:272
+msgid "Done: {file}"
+msgstr "완료: {file}"
 
-#: crates/bigiris/src/gui/dialogs/animate.rs:302
-msgid "O arquivo {file} passou a existir e foi mantido; nada foi gravado."
+#: crates/bigiris/src/gui/dialogs/animate.rs:279
+msgid ""
+"The file {file} appeared in the meantime and was kept; nothing was written."
 msgstr ""
 "그 사이에 {file} 파일이 생겨 보존했습니다. 아무것도 기록하지 않았습니다."
 
-#: crates/bigiris/src/gui/dialogs/animate.rs:309
-msgid "Falha"
+#: crates/bigiris/src/gui/dialogs/animate.rs:285
+msgid "Failed"
 msgstr "실패"
 
 #: crates/bigiris/src/gui/dialogs/batch.rs:35
-msgid "Prisma — Lote"
-msgstr "Prisma — 프리즘 - 일괄처리"
+msgid "Prisma — Batch"
+msgstr "Prisma — 일괄 처리"
 
 #: crates/bigiris/src/gui/dialogs/batch.rs:39
-msgid "Conversão em lote"
+msgid "Batch conversion"
 msgstr "일괄 변환"
 
-#: crates/bigiris/src/gui/dialogs/batch.rs:46
-msgid "Arquivos"
+#: crates/bigiris/src/gui/dialogs/batch.rs:44
+msgid "Files"
 msgstr "파일"
 
-#: crates/bigiris/src/gui/dialogs/batch.rs:50
-#: crates/bigiris/src/gui/dialogs/batch.rs:388
-msgid "Adicionar arquivos"
+#: crates/bigiris/src/gui/dialogs/batch.rs:48
+#: crates/bigiris/src/gui/dialogs/batch.rs:331
+msgid "Add files"
 msgstr "파일 추가"
 
-#: crates/bigiris/src/gui/dialogs/batch.rs:56
-msgid "Adicionar pasta (imagens)"
+#: crates/bigiris/src/gui/dialogs/batch.rs:54
+msgid "Add folder (images)"
 msgstr "폴더 추가 (이미지)"
 
-#: crates/bigiris/src/gui/dialogs/batch.rs:66
-#: crates/bigiris/src/gui/dialogs/convert.rs:45
-msgid "Conversão"
+#: crates/bigiris/src/gui/dialogs/batch.rs:63
+#: crates/bigiris/src/gui/dialogs/convert.rs:44
+msgid "Conversion"
 msgstr "변환"
 
-#: crates/bigiris/src/gui/dialogs/batch.rs:77
-#: crates/bigiris/src/gui/dialogs/convert.rs:52
-msgid "Destino"
-msgstr "대상"
+#: crates/bigiris/src/gui/dialogs/batch.rs:73
+#: crates/bigiris/src/gui/dialogs/convert.rs:50
+msgid "Destination"
+msgstr "저장 위치"
 
-#: crates/bigiris/src/gui/dialogs/batch.rs:84
-#: crates/bigiris/src/gui/dialogs/convert.rs:60
-msgid "Pasta de saída"
-msgstr "출력 폴더"
+#: crates/bigiris/src/gui/dialogs/batch.rs:79
+msgid "Ready"
+msgstr "준비 완료"
 
 #: crates/bigiris/src/gui/dialogs/batch.rs:85
+msgid "Ready. Click Process to start."
+msgstr "대기 중입니다. 시작하려면 처리를 누르세요."
+
+#: crates/bigiris/src/gui/dialogs/batch.rs:96
+msgid "Process"
+msgstr "처리"
+
+#: crates/bigiris/src/gui/dialogs/batch.rs:195
+msgid "Add at least one image to process."
+msgstr "처리할 이미지를 하나 이상 추가하세요."
+
 #: crates/bigiris/src/gui/dialogs/batch.rs:207
-#: crates/bigiris/src/gui/dialogs/convert.rs:61
-#: crates/bigiris/src/gui/dialogs/convert.rs:148
-msgid "Mesma pasta do arquivo de origem"
-msgstr "원본 파일과 같은 폴더"
-
-#: crates/bigiris/src/gui/dialogs/batch.rs:93
-#: crates/bigiris/src/gui/dialogs/convert.rs:69
-msgid "Usar a mesma pasta do arquivo de origem"
-msgstr "원본 파일 폴더 사용"
-
-#: crates/bigiris/src/gui/dialogs/batch.rs:108
-msgid "Aguardando. Clique em Processar para iniciar."
-msgstr "시작하려면 프로세스를 클릭합니다."
-
-#: crates/bigiris/src/gui/dialogs/batch.rs:119
-msgid "Processar"
-msgstr "프로세스 이미지"
-
-#: crates/bigiris/src/gui/dialogs/batch.rs:245
-msgid "Adicione ao menos uma imagem para processar."
-msgstr "처리할 이미지를 적어도 하나 추가합니다."
-
-#: crates/bigiris/src/gui/dialogs/batch.rs:257
-msgid "Iniciando…"
+msgid "Starting…"
 msgstr "시작 중…"
 
-#: crates/bigiris/src/gui/dialogs/batch.rs:258
-msgid "Processando…"
+#: crates/bigiris/src/gui/dialogs/batch.rs:208
+msgid "Processing…"
 msgstr "처리 중…"
 
-#: crates/bigiris/src/gui/dialogs/batch.rs:302
+#: crates/bigiris/src/gui/dialogs/batch.rs:253
 msgid ""
-"Cancelado após {done}/{total} em {timing}. {ok} gravado(s), {skip} "
-"ignorado(s), {fail} falha(s)."
+"Canceled after {done}/{total} in {timing}. Written: {ok}, skipped: {skip}, "
+"failed: {fail}."
 msgstr ""
-"{done}/{total} 처리 후 {timing}에 취소됨. 기록: {ok}, 건너뜀: {skip}, 실패: "
-"{fail}."
+"{done}/{total} 처리 후 취소됨({timing} 소요). 기록 {ok}개, 건너뜀 {skip}개, "
+"실패 {fail}개."
 
-#: crates/bigiris/src/gui/dialogs/batch.rs:304
-msgid ""
-"Concluído em {timing}. {ok} gravado(s), {skip} ignorado(s), {fail} falha(s)."
-msgstr "{timing}에 완료. 기록: {ok}, 건너뜀: {skip}, 실패: {fail}."
+#: crates/bigiris/src/gui/dialogs/batch.rs:255
+msgid "Finished in {timing}. Written: {ok}, skipped: {skip}, failed: {fail}."
+msgstr "{timing} 만에 완료. 기록 {ok}개, 건너뜀 {skip}개, 실패 {fail}개."
 
-#: crates/bigiris/src/gui/dialogs/batch.rs:324
+#: crates/bigiris/src/gui/dialogs/batch.rs:275
 msgid ""
-"{before} → {after} ({delta}) · média por arquivo {avg_before} → {avg_after}"
+"{before} → {after} ({delta}) · average per file {avg_before} → {avg_after}"
 msgstr "{before} → {after} ({delta}) · 파일당 평균 {avg_before} → {avg_after}"
 
-#: crates/bigiris/src/gui/dialogs/batch.rs:342
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:356
-msgid "Concluído"
+#: crates/bigiris/src/gui/dialogs/batch.rs:293
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:332
+msgid "Done"
 msgstr "완료"
 
-#: crates/bigiris/src/gui/dialogs/batch.rs:432
-msgid "Adicionar pasta com imagens"
-msgstr "이미지 폴더 추가"
+#: crates/bigiris/src/gui/dialogs/batch.rs:354
+msgid "Add image folder"
+msgstr "이미지가 있는 폴더 추가"
 
-#: crates/bigiris/src/gui/dialogs/compare.rs:31
-msgid "Comparar imagens — Íris"
-msgstr "이미지 비교 — 아이리스"
+#: crates/bigiris/src/gui/dialogs/compare.rs:25
+msgid "Compare images — Íris"
+msgstr "이미지 비교 — Íris"
 
-#: crates/bigiris/src/gui/dialogs/compare.rs:43
-msgid "Comparar imagens"
+#: crates/bigiris/src/gui/dialogs/compare.rs:37
+msgid "Compare images"
 msgstr "이미지 비교"
 
-#: crates/bigiris/src/gui/dialogs/compare.rs:45
-msgid "Antes: {before}  ·  Depois: {after}"
+#: crates/bigiris/src/gui/dialogs/compare.rs:39
+msgid "Before: {before}  ·  After: {after}"
 msgstr "전: {before}  ·  후: {after}"
 
-#: crates/bigiris/src/gui/dialogs/compare.rs:69
-msgid "Arraste o divisor para comparar · Esc fecha"
-msgstr "비교하려면 분할기를 드래그하십시오."
+#: crates/bigiris/src/gui/dialogs/compare.rs:62
+msgid "Drag the divider to compare · Esc to close"
+msgstr "구분선을 끌어 비교 · Esc로 닫기"
 
-#: crates/bigiris/src/gui/dialogs/compare.rs:157
-msgid "Não foi possível abrir esta imagem"
+#: crates/bigiris/src/gui/dialogs/compare.rs:146
+msgid "Could not open this image"
 msgstr "이 이미지를 열 수 없습니다"
 
 #: crates/bigiris/src/gui/dialogs/convert.rs:20
-msgid "Converter imagens — Prisma"
+msgid "Convert images — Prisma"
 msgstr "이미지 변환 — Prisma"
 
 #: crates/bigiris/src/gui/dialogs/convert.rs:32
-#: crates/bigiris/src/gui/dialogs/convert.rs:79
+#: crates/bigiris/src/gui/dialogs/convert.rs:58
 #: crates/bigimage-integrations/src/action.rs:75
-#: data/nautilus/bigiris-menu.py:100
-msgid "Converter"
-msgstr "이미지 변환"
+msgid "Convert"
+msgstr "변환"
+
+#: crates/bigiris/src/gui/dialogs/convert.rs:64
+msgid ""
+"This image has transparency — JPEG drops the alpha channel. Consider PNG or "
+"WebP."
+msgstr ""
+"이 이미지에는 투명도가 있습니다. JPEG로 저장하면 알파 채널이 사라집니다. PNG"
+"나 WebP를 고려하세요."
 
 #: crates/bigiris/src/gui/dialogs/convert.rs:85
 msgid ""
-"Esta imagem tem transparência — JPEG perde o canal alfa. Considere PNG ou "
-"WebP."
-msgstr ""
-"이 이미지는 투명도가 있습니다. JPEG에서는 알파 채널이 없습니다. PNG 또는 WebP"
-"를 고려하십시오."
-
-#: crates/bigiris/src/gui/dialogs/convert.rs:106
-msgid ""
-"Esta imagem contém GPS (localização) no EXIF. Atenção ao compartilhar "
-"publicamente — nosso pipeline remove o EXIF automaticamente no re-encode."
+"This image contains GPS (location) data in its EXIF. Be careful when sharing "
+"it publicly — our pipeline strips EXIF automatically when re-encoding."
 msgstr ""
 "이 이미지의 EXIF에 GPS(위치) 정보가 있습니다. 공개적으로 공유할 때 주의하세"
 "요 — 다시 인코딩할 때 EXIF는 자동으로 제거됩니다."
 
-#: crates/bigiris/src/gui/dialogs/convert.rs:195
-msgid "Convertendo…"
+#: crates/bigiris/src/gui/dialogs/convert.rs:141
+msgid "Converting…"
 msgstr "변환 중…"
 
-#: crates/bigiris/src/gui/dialogs/convert.rs:201
-msgid "Convertendo"
+#: crates/bigiris/src/gui/dialogs/convert.rs:147
+msgid "Converting"
 msgstr "변환 중"
 
 #: crates/bigiris/src/gui/dialogs/crop.rs:284
-#: crates/bigiris/src/gui/viewer/crop.rs:658
+#: crates/bigiris/src/gui/viewer/crop.rs:681
 msgid ""
-"Arraste nos cantos para redimensionar · dentro do recorte para mover · fora "
-"dele para uma nova seleção."
+"Drag the corners to resize · inside the crop to move · outside it for a new "
+"selection."
 msgstr ""
 "모서리를 끌어 크기 조정 · 자르기 영역 안을 끌어 이동 · 바깥을 끌어 새로 선택."
 
 #: crates/bigiris/src/gui/dialogs/crop.rs:309
-msgid "Recortar — Prisma"
-msgstr "자르기 - 프리즘 (Prisma)"
+msgid "Crop — Prisma"
+msgstr "자르기 — Prisma"
 
 #: crates/bigiris/src/gui/dialogs/crop.rs:321
-#: crates/bigiris/src/gui/dialogs/crop.rs:389
-#: crates/bigiris/src/gui/viewer/crop.rs:375
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:326
-msgid "Recortar"
-msgstr "이미지 자르기"
-
-#: crates/bigiris/src/gui/dialogs/crop.rs:348
-#: crates/bigiris/src/gui/dialogs/extent.rs:96
-#: crates/bigiris/src/gui/dialogs/upscale.rs:86
-msgid "Tamanho original"
-msgstr "원래 크기"
-
-#: crates/bigiris/src/gui/dialogs/crop.rs:349
-#: crates/bigiris/src/gui/dialogs/extent.rs:97
-#: crates/bigiris/src/gui/dialogs/upscale.rs:90
-msgid "Primeiro arquivo"
-msgstr "첫 번째 파일"
-
-#: crates/bigiris/src/gui/dialogs/crop.rs:355
-msgid "X (px)"
-msgstr "X (픽셀)"
-
-#: crates/bigiris/src/gui/dialogs/crop.rs:359
-msgid "Y (px)"
-msgstr "Y (픽셀)"
-
-#: crates/bigiris/src/gui/dialogs/crop.rs:363
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:347
-msgid "Largura (px)"
-msgstr "너비 (px)"
-
-#: crates/bigiris/src/gui/dialogs/crop.rs:367
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:348
-msgid "Altura (px)"
-msgstr "높이 (px)"
-
-#: crates/bigiris/src/gui/dialogs/crop.rs:388
-msgid "Centro 50%"
-msgstr "가운데 50%"
-
-#: crates/bigiris/src/gui/dialogs/crop.rs:449
-msgid "Recortando…"
-msgstr "자르는 중…"
-
-#: crates/bigiris/src/gui/dialogs/crop.rs:455
-msgid "Recortando"
+#: crates/bigiris/src/gui/dialogs/crop.rs:382
+#: crates/bigiris/src/gui/viewer/crop.rs:394
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:337
+msgid "Crop"
 msgstr "자르기"
 
-#: crates/bigiris/src/gui/viewer/crop.rs:361
-msgid "Livre"
+#: crates/bigiris/src/gui/dialogs/crop.rs:341
+#: crates/bigiris/src/gui/dialogs/extent.rs:89
+#: crates/bigiris/src/gui/dialogs/upscale.rs:85
+msgid "Original size"
+msgstr "원래 크기"
+
+#: crates/bigiris/src/gui/dialogs/crop.rs:342
+#: crates/bigiris/src/gui/dialogs/extent.rs:90
+#: crates/bigiris/src/gui/dialogs/upscale.rs:89
+msgid "First file"
+msgstr "첫 번째 파일"
+
+#: crates/bigiris/src/gui/dialogs/crop.rs:348
+msgid "X (px)"
+msgstr "X (px)"
+
+#: crates/bigiris/src/gui/dialogs/crop.rs:352
+msgid "Y (px)"
+msgstr "Y (px)"
+
+#: crates/bigiris/src/gui/dialogs/crop.rs:356
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:356
+msgid "Width (px)"
+msgstr "너비 (px)"
+
+#: crates/bigiris/src/gui/dialogs/crop.rs:360
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:357
+msgid "Height (px)"
+msgstr "높이 (px)"
+
+#: crates/bigiris/src/gui/dialogs/crop.rs:381
+msgid "Centered 50%"
+msgstr "가운데 50%"
+
+#: crates/bigiris/src/gui/dialogs/crop.rs:437
+msgid "Cropping…"
+msgstr "자르는 중…"
+
+#: crates/bigiris/src/gui/dialogs/crop.rs:443
+msgid "Cropping"
+msgstr "자르는 중"
+
+#: crates/bigiris/src/gui/viewer/crop.rs:381
+msgid "Free"
 msgstr "자유"
 
-#: crates/bigiris/src/gui/viewer/crop.rs:362
+#: crates/bigiris/src/gui/viewer/crop.rs:382
 msgid "Original"
 msgstr "원본"
 
-#: crates/bigiris/src/gui/viewer/crop.rs:368
-msgid "Proporção"
+#: crates/bigiris/src/gui/viewer/crop.rs:388
+#: crates/bigiris/src/gui/viewer/crop.rs:405
+#: crates/bigiris/src/gui/dialogs/properties.rs:200
+msgid "Aspect ratio"
 msgstr "종횡비"
 
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:46
-#: crates/bigiris/src/gui/dialogs/mod.rs:81
-msgid "Máxima qualidade"
+#: crates/bigiris/src/gui/dialogs/mod.rs:56
+msgid "Maximum quality"
 msgstr "최고 품질"
 
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:47
-#: crates/bigiris/src/gui/dialogs/mod.rs:82
-msgid "Equilibrado"
+#: crates/bigiris/src/gui/dialogs/mod.rs:57
+msgid "Balanced"
 msgstr "균형"
 
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:48
-#: crates/bigiris/src/gui/dialogs/mod.rs:83
-msgid "Menor arquivo"
-msgstr "가장 작은 파일"
+#: crates/bigiris/src/gui/dialogs/mod.rs:58
+msgid "Smallest file"
+msgstr "최소 파일 크기"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:210
-msgid "Restaurar"
-msgstr "초기화"
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:218
+msgid "Reset {setting}"
+msgstr "{setting} 초기화"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:261
-msgid ""
-"Aumentar resolução usa Lanczos3. Para IA (Real-ESRGAN): sudo pacman -S "
-"{package}"
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:273
+msgid "Upscale uses Lanczos3. For AI (Real-ESRGAN): sudo pacman -S {package}"
 msgstr ""
-"해상도 높이기는 Lanczos3를 사용합니다. AI(Real-ESRGAN)를 쓰려면: sudo pacman "
-"-S {package}"
+"해상도 높이기에는 Lanczos3를 사용합니다. AI(Real-ESRGAN)를 쓰려면: sudo "
+"pacman -S {package}"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:275
-#: crates/bigiris/src/gui/dialogs/upscale.rs:246
-msgid "Roda em: {device}"
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:286
+#: crates/bigiris/src/gui/dialogs/upscale.rs:244
+msgid "Runs on: {device}"
 msgstr "실행 장치: {device}"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:297
-msgid "Fechar (Esc)"
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:308
+msgid "Close (Esc)"
 msgstr "닫기 (Esc)"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:303
-msgid "Ver original"
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:315
+msgid "View original"
 msgstr "원본 보기"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:304
-msgid "Mostra a imagem sem as edições (segure \\)"
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:316
+msgid "Shows the image without the edits (hold \\)"
 msgstr "편집하지 않은 이미지를 표시합니다 (\\ 누르고 있기)"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:307
-msgid "Transformar"
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:318
+msgid "Transform"
 msgstr "변형"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:313
-msgid "Espelhar horizontal"
-msgstr "수평으로 뒤집기"
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:324
+msgid "Flip horizontal"
+msgstr "좌우 뒤집기"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:314
-msgid "Espelhar vertical"
-msgstr "세로로 뒤집기"
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:325
+msgid "Flip vertical"
+msgstr "상하 뒤집기"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:319
-msgid "Endireitar"
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:330
+msgid "Straighten"
 msgstr "수평 맞추기"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:322
-msgid "Gira a foto e recorta as bordas vazias para alinhar o horizonte"
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:333
+msgid "Rotates the photo and crops the empty edges to level the horizon"
 msgstr "사진을 회전하고 빈 가장자리를 잘라 수평선을 맞춥니다"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:327
-msgid "Recortar na própria imagem (Ctrl+R)"
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:338
+msgid "Crop in place (Ctrl+R)"
 msgstr "이미지에서 바로 자르기 (Ctrl+R)"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:333
-msgid "Ajustes"
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:343
+msgid "Adjustments"
 msgstr "조정"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:337
-msgid "Gama"
-msgstr "감마"
-
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:342
-msgid "Restaurar ajustes"
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:352
+msgid "Reset adjustments"
 msgstr "조정 초기화"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:346
-#: crates/bigiris/src/gui/dialogs/properties.rs:163
-#: crates/bigiris/src/gui/dialogs/properties.rs:170
-msgid "Tamanho"
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:355
+#: crates/bigiris/src/gui/dialogs/properties.rs:158
+#: crates/bigiris/src/gui/dialogs/properties.rs:165
+msgid "Size"
 msgstr "크기"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:352
-msgid "Manter proporção"
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:361
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:364
+msgid "Keep aspect ratio"
 msgstr "종횡비 유지"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:363
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:364
-#: crates/bigiris/src/gui/dialogs/resize.rs:48
-msgid "Escala (%)"
-msgstr "크기 조정 (%)"
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:373
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:374
+#: crates/bigiris/src/gui/dialogs/resize.rs:47
+msgid "Scale (%)"
+msgstr "배율 (%)"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:376
-msgid "Ferramentas"
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:385
+msgid "Tools"
 msgstr "도구"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:377
-msgid "Remover fundo (IA)"
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:386
+msgid "Remove background (AI)"
 msgstr "배경 제거 (AI)"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:379
-msgid "Remover ruído (IA)"
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:388
+msgid "Remove noise (AI)"
 msgstr "노이즈 제거 (AI)"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:383
-#: crates/bigiris/src/gui/dialogs/upscale.rs:97
-msgid "Fator"
-msgstr "계수"
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:392
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:398
+#: crates/bigiris/src/gui/dialogs/upscale.rs:96
+msgid "Factor"
+msgstr "배율"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:384
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:393
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:520
 #: crates/bigiris/src/gui/dialogs/upscale.rs:40
-msgid "Aumentar resolução"
+#: crates/bigiris/src/gui/dialogs/upscale.rs:141
+msgid "Upscale"
 msgstr "해상도 높이기"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:411
-msgid "Salvar alterações (Ctrl+S)"
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:421
+msgid "Save changes (Ctrl+S)"
 msgstr "변경 사항 저장 (Ctrl+S)"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:415
-msgid "Salvar como…"
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:425
+msgid "Save as…"
 msgstr "다른 이름으로 저장…"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:424
-msgid "Qualidade ao salvar como"
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:434
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:436
+msgid "Quality for Save as"
 msgstr "다른 이름으로 저장 시 품질"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:978
-msgid "Recorta o objeto principal com BiRefNet-lite, no seu computador"
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:1031
+msgid "Cuts out the main subject with BiRefNet-lite, on your computer"
 msgstr "BiRefNet-lite로 주요 피사체를 잘라냅니다(내 컴퓨터에서 실행)"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:984
-msgid "Limpa ruído e artefatos de compressão com SCUNet, no seu computador"
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:1037
+msgid "Cleans up noise and compression artifacts with SCUNet, on your computer"
 msgstr "SCUNet으로 노이즈와 압축 아티팩트를 제거합니다(내 컴퓨터에서 실행)"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:989
-msgid "Real-ESRGAN (IA), no seu computador"
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:1042
+msgid "Real-ESRGAN (AI), on your computer"
 msgstr "Real-ESRGAN (AI), 내 컴퓨터에서 실행"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:991
-msgid "Lanczos3 (sem IA)"
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:1044
+msgid "Lanczos3 (no AI)"
 msgstr "Lanczos3 (AI 없음)"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:1507
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:224
-msgid "Preparando…"
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:1527
+msgid "{width}×{height} exceeds the processing limit"
+msgstr "{width}×{height} 크기가 처리 한도를 넘습니다"
+
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:1571
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:201
+msgid "Preparing…"
 msgstr "준비 중…"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:1607
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:396
-msgid "Carregando o modelo…"
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:1671
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:376
+msgid "Loading the model…"
 msgstr "모델 불러오는 중…"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:1617
-msgid "Removendo o fundo…"
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:1681
+msgid "Removing background…"
 msgstr "배경 제거 중…"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:1618
-msgid "Removendo ruído…"
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:1682
+msgid "Removing noise…"
 msgstr "노이즈 제거 중…"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:1619
-#: crates/bigiris/src/gui/dialogs/upscale.rs:197
-msgid "Aumentando…"
-msgstr "크기 조정 중…"
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:1683
+#: crates/bigiris/src/gui/dialogs/upscale.rs:191
+msgid "Upscaling…"
+msgstr "해상도 높이는 중…"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:1649
-msgid "{name}-editada"
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:1722
+msgid "{name}-edited"
 msgstr "{name}-편집됨"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:1651
-msgid "Salvar como"
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:1724
+msgid "Save as"
 msgstr "다른 이름으로 저장"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:1682
-msgid "Para alterar o próprio arquivo, use Salvar."
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:1755
+msgid "To change the file itself, use Save."
 msgstr "파일 자체를 변경하려면 저장을 사용하세요."
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:1719
-msgid "Cópia salva: {name}"
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:1794
+msgid "Copy saved: {name}"
 msgstr "사본 저장됨: {name}"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:1759
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:1834
 msgid ""
-"O BigIris não sabe gravar este formato. Use, por exemplo, .png, .jpg "
-"ou .webp."
+"BigIris cannot write this format. Use, for example, .png, .jpg or .webp."
 msgstr ""
 "BigIris는 이 형식으로 쓸 수 없습니다. 예를 들어 .png, .jpg 또는 .webp를 사용"
 "하세요."
@@ -1156,467 +1192,467 @@ msgstr "YouTube 커뮤니티 (1:1)"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:13
 msgid "Instagram feed (4:5)"
-msgstr "인스타그램 피드 (4:5) (Instagram)"
+msgstr "Instagram 피드 (4:5)"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:14
 msgid "Stories / Shorts (9:16)"
-msgstr "스토리 / 단편 (9:16)"
+msgstr "Stories / Shorts (9:16)"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:15
 msgid "Widescreen (16:9)"
 msgstr "와이드스크린 (16:9)"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:16
-msgid "Personalizado…"
+msgid "Custom…"
 msgstr "사용자 정의…"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:22
-msgid "Preto suave (#0d0e12)"
+msgid "Soft black (#0d0e12)"
 msgstr "소프트 블랙 (#0d0e12)"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:23
-msgid "Preto puro (#000000)"
-msgstr "순수한 검정 (#000,001)"
+msgid "Pure black (#000000)"
+msgstr "순검정 (#000000)"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:24
-msgid "Branco (#ffffff)"
-msgstr "흰색 (# ffffff)"
+msgid "White (#ffffff)"
+msgstr "흰색 (#ffffff)"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:25
-msgid "Transparente"
+msgid "Transparent"
 msgstr "투명"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:26
-msgid "Personalizada (hex)"
+msgid "Custom (hex)"
 msgstr "사용자 정의 (16진수)"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:33
-msgid "Centro"
+msgid "Center"
 msgstr "가운데"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:33
-msgid "Topo"
-msgstr "상단 가장자리"
+msgid "Top"
+msgstr "위"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:33
-msgid "Base"
-msgstr "아래쪽 가장자리"
+msgid "Bottom"
+msgstr "아래"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:49
 msgid "Letterbox — Prisma"
-msgstr "편지함 - 프리즘 (Prisma)"
+msgstr "레터박스 — Prisma"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:62
 msgid "Letterbox"
-msgstr "Letterbox"
+msgstr "레터박스"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:63
-msgid "Prisma · sem corte"
+msgid "Prisma · no cropping"
 msgstr "Prisma · 자르기 없음"
 
-#: crates/bigiris/src/gui/dialogs/extent.rs:85
+#: crates/bigiris/src/gui/dialogs/extent.rs:78
 msgid ""
-"Estende a tela em volta da imagem para encaixá-la num formato fixo (post de "
-"YouTube, feed do Instagram, Stories…) sem cortar nenhum pixel. A imagem "
-"original é centralizada e o resto é preenchido com a cor escolhida."
+"Extends the canvas around the image to fit a fixed format (YouTube posts, "
+"Instagram feeds, Stories…) without cropping any pixels. The original image "
+"is centered and the remaining area is filled with the selected color."
 msgstr ""
-"픽셀을 자르지 않고 고정된 포맷(YouTube 게시물, Instagram 피드, 스토리 등)에 "
-"맞게 이미지 주위의 캔버스를 확장합니다. 원본 이미지만 가운데에 있고 나머지 영"
-"역은 선택한 색상으로 채워집니다."
+"픽셀을 하나도 자르지 않고 이미지 주위의 캔버스를 넓혀 고정된 형식(YouTube 게"
+"시물, Instagram 피드, Stories…)에 맞춥니다. 원본 이미지는 가운데에 놓이고 나"
+"머지는 선택한 색으로 채워집니다."
+
+#: crates/bigiris/src/gui/dialogs/extent.rs:97
+msgid "Target aspect ratio"
+msgstr "목표 종횡비"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:104
-msgid "Proporção alvo"
-msgstr "대상 화면 비율"
-
-#: crates/bigiris/src/gui/dialogs/extent.rs:111
-msgid "Razão W"
+msgid "Width ratio"
 msgstr "너비 비율"
 
-#: crates/bigiris/src/gui/dialogs/extent.rs:114
-msgid "Razão H"
+#: crates/bigiris/src/gui/dialogs/extent.rs:107
+msgid "Height ratio"
 msgstr "높이 비율"
 
-#: crates/bigiris/src/gui/dialogs/extent.rs:124
-msgid "Cor de fundo"
-msgstr "배경 색"
+#: crates/bigiris/src/gui/dialogs/extent.rs:117
+msgid "Background color"
+msgstr "배경색"
 
-#: crates/bigiris/src/gui/dialogs/extent.rs:130
+#: crates/bigiris/src/gui/dialogs/extent.rs:123
 msgid "Hex (#RRGGBB)"
-msgstr "16진수 (# RRGGBB)"
+msgstr "16진수 (#RRGGBB)"
 
-#: crates/bigiris/src/gui/dialogs/extent.rs:138
-msgid "Posição da imagem"
+#: crates/bigiris/src/gui/dialogs/extent.rs:131
+msgid "Image position"
 msgstr "이미지 위치"
 
-#: crates/bigiris/src/gui/dialogs/extent.rs:144
-#: crates/bigiris/src/gui/dialogs/upscale.rs:103
-msgid "Destino previsto"
-msgstr "예상 대상"
+#: crates/bigiris/src/gui/dialogs/extent.rs:137
+#: crates/bigiris/src/gui/dialogs/upscale.rs:102
+msgid "Predicted destination"
+msgstr "예상 저장 위치"
 
-#: crates/bigiris/src/gui/dialogs/extent.rs:171
-msgid "Estender"
+#: crates/bigiris/src/gui/dialogs/extent.rs:164
+msgid "Extend"
 msgstr "확장"
 
-#: crates/bigiris/src/gui/dialogs/extent.rs:240
+#: crates/bigiris/src/gui/dialogs/extent.rs:230
 msgid "—"
 msgstr "—"
 
-#: crates/bigiris/src/gui/dialogs/extent.rs:326
-msgid "Estendendo…"
+#: crates/bigiris/src/gui/dialogs/extent.rs:314
+msgid "Extending…"
 msgstr "확장 중…"
 
-#: crates/bigiris/src/gui/dialogs/extent.rs:332
-msgid "Estendendo"
+#: crates/bigiris/src/gui/dialogs/extent.rs:320
+msgid "Extending"
 msgstr "확장 중"
 
 #: crates/bigiris/src/gui/dialogs/flip.rs:20
-msgid "Espelhar imagens — Prisma"
+msgid "Flip images — Prisma"
 msgstr "이미지 뒤집기 — Prisma"
 
 #: crates/bigiris/src/gui/dialogs/flip.rs:24
 #: crates/bigiris/src/gui/dialogs/flip.rs:47
 #: crates/bigimage-integrations/src/action.rs:87
-#: data/nautilus/bigiris-menu.py:142
-msgid "Espelhar"
-msgstr "그림 뒤집기"
+msgid "Flip"
+msgstr "뒤집기"
 
 #: crates/bigiris/src/gui/dialogs/flip.rs:26
-msgid "Horizontal (esquerda ↔ direita)"
+msgid "Horizontal (left ↔ right)"
 msgstr "수평 (왼쪽 ↔ 오른쪽)"
 
 #: crates/bigiris/src/gui/dialogs/flip.rs:26
-msgid "Vertical (cima ↔ baixo)"
-msgstr "수직 (상단 ↔ 하단)"
+msgid "Vertical (top ↔ bottom)"
+msgstr "수직 (위 ↔ 아래)"
 
 #: crates/bigiris/src/gui/dialogs/flip.rs:29
-msgid "Eixo"
-msgstr "축"
+msgid "Axis"
+msgstr "방향"
 
-#: crates/bigiris/src/gui/dialogs/flip.rs:87
-msgid "Espelhando…"
+#: crates/bigiris/src/gui/dialogs/flip.rs:75
+msgid "Flipping…"
 msgstr "뒤집는 중…"
 
-#: crates/bigiris/src/gui/dialogs/flip.rs:93
-msgid "Espelhando"
-msgstr "뒤집기"
+#: crates/bigiris/src/gui/dialogs/flip.rs:81
+msgid "Flipping"
+msgstr "뒤집는 중"
 
-#: crates/bigiris/src/gui/dialogs/mod.rs:64
+#: crates/bigiris/src/gui/dialogs/mod.rs:39
 #: crates/bigimage-integrations/src/action.rs:151
-#: data/nautilus/bigiris-menu.py:104
 msgid "PNG"
 msgstr "PNG"
 
-#: crates/bigiris/src/gui/dialogs/mod.rs:65
+#: crates/bigiris/src/gui/dialogs/mod.rs:40
 msgid "JPG (JPEG)"
 msgstr "JPG (JPEG)"
 
-#: crates/bigiris/src/gui/dialogs/mod.rs:66
+#: crates/bigiris/src/gui/dialogs/mod.rs:41
 #: crates/bigimage-integrations/src/action.rs:167
-#: data/nautilus/bigiris-menu.py:106
 msgid "WebP"
 msgstr "WebP"
 
-#: crates/bigiris/src/gui/dialogs/mod.rs:67
+#: crates/bigiris/src/gui/dialogs/mod.rs:42
 #: crates/bigimage-integrations/src/action.rs:175
-#: data/nautilus/bigiris-menu.py:107
 msgid "AVIF"
 msgstr "AVIF"
 
-#: crates/bigiris/src/gui/dialogs/mod.rs:68
+#: crates/bigiris/src/gui/dialogs/mod.rs:43
 #: crates/bigimage-integrations/src/action.rs:183
-#: data/nautilus/bigiris-menu.py:108
 msgid "TIFF"
 msgstr "TIFF"
 
-#: crates/bigiris/src/gui/dialogs/mod.rs:69
+#: crates/bigiris/src/gui/dialogs/mod.rs:44
 msgid "BMP"
 msgstr "BMP"
 
-#: crates/bigiris/src/gui/dialogs/mod.rs:70
+#: crates/bigiris/src/gui/dialogs/mod.rs:45
 msgid "GIF"
 msgstr "GIF"
 
-#: crates/bigiris/src/gui/dialogs/mod.rs:71
-msgid "ICO (até 256 × 256)"
-msgstr "ICO (최대 256 × 240)"
+#: crates/bigiris/src/gui/dialogs/mod.rs:46
+msgid "ICO (up to 256 × 256)"
+msgstr "ICO (최대 256 × 256)"
 
-#: crates/bigiris/src/gui/dialogs/mod.rs:72
+#: crates/bigiris/src/gui/dialogs/mod.rs:47
 msgid "PNM (Netpbm)"
 msgstr "PNM (Netpbm)"
 
-#: crates/bigiris/src/gui/dialogs/mod.rs:73
+#: crates/bigiris/src/gui/dialogs/mod.rs:48
 msgid "TGA"
 msgstr "TGA"
 
-#: crates/bigiris/src/gui/dialogs/mod.rs:74
+#: crates/bigiris/src/gui/dialogs/mod.rs:49
 msgid "QOI"
 msgstr "QOI"
 
-#: crates/bigiris/src/gui/dialogs/mod.rs:75
+#: crates/bigiris/src/gui/dialogs/mod.rs:50
 msgid "HDR"
 msgstr "HDR"
 
-#: crates/bigiris/src/gui/dialogs/mod.rs:76
+#: crates/bigiris/src/gui/dialogs/mod.rs:51
 msgid "OpenEXR"
 msgstr "OpenEXR"
 
-#: crates/bigiris/src/gui/dialogs/mod.rs:102
-msgid "Qualidade"
+#: crates/bigiris/src/gui/dialogs/mod.rs:77
+msgid "Quality"
 msgstr "품질"
 
-#: crates/bigiris/src/gui/dialogs/mod.rs:103
-msgid "O menor arquivo que mantém essa qualidade visual"
+#: crates/bigiris/src/gui/dialogs/mod.rs:78
+msgid "The smallest file that keeps this visual quality"
 msgstr "이 시각적 품질을 유지하는 가장 작은 파일"
 
-#: crates/bigiris/src/gui/dialogs/mod.rs:109
-msgid "Qualidade fixa"
+#: crates/bigiris/src/gui/dialogs/mod.rs:84
+msgid "Fixed quality"
 msgstr "고정 품질"
 
-#: crates/bigiris/src/gui/dialogs/mod.rs:110
-msgid "Usa o valor abaixo sem busca automática (JPEG, WebP e AVIF)"
+#: crates/bigiris/src/gui/dialogs/mod.rs:86
+msgid "Uses the value below without automatic search (JPEG, WebP and AVIF)"
 msgstr "자동 탐색 없이 아래 값을 사용합니다 (JPEG, WebP 및 AVIF)"
 
-#: crates/bigiris/src/gui/dialogs/mod.rs:114
-msgid "Qualidade (JPEG/WebP/AVIF)"
+#: crates/bigiris/src/gui/dialogs/mod.rs:91
+msgid "Quality (JPEG/WebP/AVIF)"
 msgstr "품질 (JPEG/WebP/AVIF)"
 
-#: crates/bigiris/src/gui/dialogs/mod.rs:115
-msgid "1 menor qualidade · 85 equilíbrio · 100 maior qualidade"
+#: crates/bigiris/src/gui/dialogs/mod.rs:92
+msgid "1 lower quality · 85 balanced · 100 higher quality"
 msgstr "1 저품질 · 85 균형 · 100 고품질"
 
-#: crates/bigiris/src/gui/dialogs/mod.rs:119
-msgid "Otimizar tamanho"
+#: crates/bigiris/src/gui/dialogs/mod.rs:96
+msgid "Optimize size"
 msgstr "크기 최적화"
 
-#: crates/bigiris/src/gui/dialogs/mod.rs:120
-msgid "PNG com compressão máxima; AVIF mais lento; arquivo menor"
-msgstr "PNG 최대 압축, AVIF 더 느림, 더 작은 파일"
+#: crates/bigiris/src/gui/dialogs/mod.rs:97
+msgid "PNG with maximum compression; AVIF slower; smaller file"
+msgstr "PNG 최대 압축, AVIF 더 느림, 파일 더 작음"
 
-#: crates/bigiris/src/gui/dialogs/mod.rs:124
-msgid "Avançado"
+#: crates/bigiris/src/gui/dialogs/mod.rs:101
+msgid "Advanced"
 msgstr "고급"
 
-#: crates/bigiris/src/gui/dialogs/mod.rs:125
-msgid "Otimização do encoder"
+#: crates/bigiris/src/gui/dialogs/mod.rs:102
+msgid "Encoder optimization"
 msgstr "인코더 최적화"
 
-#: crates/bigiris/src/gui/dialogs/mod.rs:167
-msgid "Pular se já existir"
-msgstr "기존 파일 건너뛰기"
+#: crates/bigiris/src/gui/dialogs/mod.rs:144
+msgid "Skip existing files"
+msgstr "이미 있으면 건너뛰기"
 
-#: crates/bigiris/src/gui/dialogs/mod.rs:168
-msgid "Sobrescrever o arquivo"
+#: crates/bigiris/src/gui/dialogs/mod.rs:145
+msgid "Overwrite the file"
 msgstr "파일 덮어쓰기"
 
-#: crates/bigiris/src/gui/dialogs/mod.rs:169
-msgid "Incrementar (_1, _2, …)"
-msgstr "접미사 추가 (_1, _2, …)"
+#: crates/bigiris/src/gui/dialogs/mod.rs:146
+msgid "Add a suffix (_1, _2, …)"
+msgstr "번호 붙이기 (_1, _2, …)"
 
-#: crates/bigiris/src/gui/dialogs/mod.rs:190
-#: crates/bigiris/src/gui/dialogs/mod.rs:205
-msgid "Formato de destino"
+#: crates/bigiris/src/gui/dialogs/mod.rs:167
+#: crates/bigiris/src/gui/dialogs/mod.rs:182
+msgid "Target format"
 msgstr "대상 형식"
 
-#: crates/bigiris/src/gui/dialogs/mod.rs:201
-msgid "Manter o formato original"
+#: crates/bigiris/src/gui/dialogs/mod.rs:178
+msgid "Keep the original format"
 msgstr "원래 형식 유지"
 
-#: crates/bigiris/src/gui/dialogs/mod.rs:223
-msgid "Se o arquivo de saída existir"
-msgstr "출력 파일이 존재하는 경우"
+#: crates/bigiris/src/gui/dialogs/mod.rs:200
+msgid "If the output file exists"
+msgstr "출력 파일이 이미 있는 경우"
 
-#: crates/bigiris/src/gui/dialogs/mod.rs:283
-msgid "{first} e mais {count}"
+#: crates/bigiris/src/gui/dialogs/mod.rs:305
+msgid "{first} and {count} more"
 msgstr "{first} 외 {count}개"
 
-#: crates/bigiris/src/gui/dialogs/mod.rs:298
-msgid "Escolher pasta de saída"
+#: crates/bigiris/src/gui/dialogs/mod.rs:319
+msgid "Output folder"
+msgstr "출력 폴더"
+
+#: crates/bigiris/src/gui/dialogs/mod.rs:320
+#: crates/bigiris/src/gui/dialogs/mod.rs:349
+msgid "Same folder as the source file"
+msgstr "원본 파일과 같은 폴더"
+
+#: crates/bigiris/src/gui/dialogs/mod.rs:328
+msgid "Use the source file folder"
+msgstr "원본 파일의 폴더 사용"
+
+#: crates/bigiris/src/gui/dialogs/mod.rs:365
+msgid "Choose output folder"
 msgstr "출력 폴더 선택"
 
 #: crates/bigiris/src/gui/dialogs/properties.rs:60
-msgid "Não foi possível ler as informações do arquivo"
+msgid "Could not read the file information"
 msgstr "파일 정보를 읽을 수 없습니다"
 
-#: crates/bigiris/src/gui/dialogs/properties.rs:90
-msgid "Privacidade"
+#: crates/bigiris/src/gui/dialogs/properties.rs:88
+msgid "Privacy"
 msgstr "개인정보 보호"
 
-#: crates/bigiris/src/gui/dialogs/properties.rs:94
-msgid "Coordenadas GPS presentes"
+#: crates/bigiris/src/gui/dialogs/properties.rs:92
+msgid "GPS coordinates present"
 msgstr "GPS 좌표 있음"
 
-#: crates/bigiris/src/gui/dialogs/properties.rs:96
-msgid "Identificação de câmera/software presente"
+#: crates/bigiris/src/gui/dialogs/properties.rs:94
+msgid "Camera/software identification present"
 msgstr "카메라/소프트웨어 식별 정보 있음"
 
-#: crates/bigiris/src/gui/dialogs/properties.rs:98
-msgid "Remova antes de publicar se for sensível."
+#: crates/bigiris/src/gui/dialogs/properties.rs:96
+msgid "Remove it before publishing if it is sensitive."
 msgstr "민감한 정보라면 게시하기 전에 제거하세요."
 
-#: crates/bigiris/src/gui/dialogs/properties.rs:126
-msgid "Nome"
+#: crates/bigiris/src/gui/dialogs/properties.rs:121
+msgid "Name"
 msgstr "이름"
 
-#: crates/bigiris/src/gui/dialogs/properties.rs:131
-msgid "Pasta"
+#: crates/bigiris/src/gui/dialogs/properties.rs:126
+msgid "Folder"
 msgstr "폴더"
 
-#: crates/bigiris/src/gui/dialogs/properties.rs:149
-#: crates/bigiris/src/gui/dialogs/properties.rs:156
-#: crates/bigiris/src/gui/dialogs/properties.rs:157
-msgid "Formato"
+#: crates/bigiris/src/gui/dialogs/properties.rs:144
+#: crates/bigiris/src/gui/dialogs/properties.rs:151
+#: crates/bigiris/src/gui/dialogs/properties.rs:152
+msgid "Format"
 msgstr "형식"
 
-#: crates/bigiris/src/gui/dialogs/properties.rs:151
-msgid "{format} (extensão: {extension})"
+#: crates/bigiris/src/gui/dialogs/properties.rs:146
+msgid "{format} (extension: {extension})"
 msgstr "{format} (확장자: {extension})"
 
-#: crates/bigiris/src/gui/dialogs/properties.rs:165
-msgid "Modificado"
+#: crates/bigiris/src/gui/dialogs/properties.rs:160
+msgid "Modified"
 msgstr "수정한 날짜"
 
-#: crates/bigiris/src/gui/dialogs/properties.rs:171
-msgid "(indisponível: {error})"
+#: crates/bigiris/src/gui/dialogs/properties.rs:166
+msgid "(unavailable: {error})"
 msgstr "(사용할 수 없음: {error})"
 
-#: crates/bigiris/src/gui/dialogs/properties.rs:180
-msgid "Imagem"
+#: crates/bigiris/src/gui/dialogs/properties.rs:175
+msgid "Image"
 msgstr "이미지"
 
-#: crates/bigiris/src/gui/dialogs/properties.rs:197
-#: crates/bigiris/src/gui/dialogs/properties.rs:214
-msgid "Dimensões"
+#: crates/bigiris/src/gui/dialogs/properties.rs:192
+#: crates/bigiris/src/gui/dialogs/properties.rs:209
+msgid "Dimensions"
 msgstr "치수"
 
-#: crates/bigiris/src/gui/dialogs/properties.rs:201
+#: crates/bigiris/src/gui/dialogs/properties.rs:196
 msgid "Megapixels"
 msgstr "메가픽셀"
 
-#: crates/bigiris/src/gui/dialogs/properties.rs:205
-msgid "Razão de aspecto"
-msgstr "종횡비"
-
-#: crates/bigiris/src/gui/dialogs/properties.rs:208
-msgid "Modo de cor"
+#: crates/bigiris/src/gui/dialogs/properties.rs:203
+msgid "Color mode"
 msgstr "색상 모드"
 
-#: crates/bigiris/src/gui/dialogs/properties.rs:209
-msgid "Bits por canal"
+#: crates/bigiris/src/gui/dialogs/properties.rs:204
+msgid "Bits per channel"
 msgstr "채널당 비트"
 
-#: crates/bigiris/src/gui/dialogs/properties.rs:215
-msgid "(falha: não foi possível identificar o formato pelo conteúdo)"
+#: crates/bigiris/src/gui/dialogs/properties.rs:210
+msgid "(failed: could not identify the format from the content)"
 msgstr "(실패: 내용으로 형식을 식별할 수 없습니다)"
 
-#: crates/bigiris/src/gui/dialogs/properties.rs:225
-msgid "Orientação EXIF"
+#: crates/bigiris/src/gui/dialogs/properties.rs:220
+msgid "EXIF orientation"
 msgstr "EXIF 방향"
 
-#: crates/bigiris/src/gui/dialogs/properties.rs:227
-msgid "{orientation} · use Girar ▸ Automático pra corrigir"
-msgstr "{orientation} · 회전 ▸ 자동으로 바로잡으세요"
+#: crates/bigiris/src/gui/dialogs/properties.rs:222
+msgid "{orientation} · use Rotate ▸ Automatic to fix it"
+msgstr "{orientation} · 회전 ▸ 자동으로 바로잡을 수 있습니다"
 
-#: crates/bigiris/src/gui/dialogs/properties.rs:242
-msgid "Tons de cinza"
+#: crates/bigiris/src/gui/dialogs/properties.rs:237
+msgid "Grayscale"
 msgstr "회색조"
 
-#: crates/bigiris/src/gui/dialogs/properties.rs:243
-msgid "Tons de cinza + alfa"
+#: crates/bigiris/src/gui/dialogs/properties.rs:238
+msgid "Grayscale + alpha"
 msgstr "회색조 + 알파"
 
-#: crates/bigiris/src/gui/dialogs/properties.rs:280
-msgid "Campos presentes: {count}"
+#: crates/bigiris/src/gui/dialogs/properties.rs:275
+msgid "Fields present: {count}"
 msgstr "있는 필드: {count}"
 
 #: crates/bigiris/src/gui/dialogs/remove_bg.rs:24
-msgid "Não foi possível ler a imagem: {error}"
+msgid "Could not read the image: {error}"
 msgstr "이미지를 읽을 수 없습니다: {error}"
 
 #: crates/bigiris/src/gui/dialogs/remove_bg.rs:39
-msgid "Não foi possível gravar o resultado: {error}"
+msgid "Could not write the result: {error}"
 msgstr "결과를 쓸 수 없습니다: {error}"
 
 #: crates/bigiris/src/gui/dialogs/remove_bg.rs:73
-msgid "Remover fundo — Prisma"
+msgid "Remove background — Prisma"
 msgstr "배경 제거 — Prisma"
 
 #: crates/bigiris/src/gui/dialogs/remove_bg.rs:78
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:164
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:525
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:550
-msgid "Remover fundo"
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:145
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:507
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:532
+msgid "Remove background"
 msgstr "배경 제거"
 
 #: crates/bigiris/src/gui/dialogs/remove_bg.rs:79
 msgid "Prisma · BiRefNet-lite"
 msgstr "Prisma · BiRefNet-lite"
 
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:96
-#: crates/bigiris/src/gui/previews.rs:223
-msgid "Nenhuma imagem selecionada"
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:91
+#: crates/bigiris/src/gui/previews.rs:250
+msgid "No image selected"
 msgstr "선택한 이미지가 없습니다"
 
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:97
-msgid "Informe um ou mais arquivos ao abrir o diálogo."
-msgstr "대화상자를 열 때 하나 이상의 파일을 선택합니다."
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:92
+msgid "Select one or more files when opening the dialog."
+msgstr "대화상자를 열 때 파일을 하나 이상 지정하세요."
 
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:127
-msgid "Modelo"
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:111
+msgid "Model"
 msgstr "모델"
 
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:140
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:121
 msgid ""
-"«origem»_nobg.png · PNG com alfa, sem sobrescrever (_1, _2… se já existir)"
+"“source”_nobg.png · PNG with alpha, never overwrites (_1, _2… if it already "
+"exists)"
 msgstr "‘원본’_nobg.png · 알파 포함 PNG, 덮어쓰지 않음 (이미 있으면 _1, _2…)"
 
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:147
-msgid "Remover fundo com IA local"
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:128
+msgid "Remove background with local AI"
 msgstr "로컬 AI로 배경 제거"
 
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:148
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:129
 msgid ""
-"O modelo roda inteiramente no seu computador. Nenhuma imagem sai do disco — "
-"sem upload, sem conta, sem API externa."
+"The model runs entirely on your computer. No image leaves your disk — no "
+"upload, no account, no external API."
 msgstr ""
-"모델은 전적으로 컴퓨터에서 실행됩니다. 어떤 이미지도 디스크를 떠나지 않습니"
-"다 — 업로드, 계정, 외부 API 없음."
+"모델은 전부 이 컴퓨터에서 실행됩니다. 어떤 이미지도 디스크 밖으로 나가지 않습"
+"니다 — 업로드, 계정, 외부 API가 필요 없습니다."
 
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:262
-msgid "Falha ao carregar o modelo: {error}"
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:239
+msgid "Failed to load the model: {error}"
 msgstr "모델을 불러오지 못했습니다: {error}"
 
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:331
 #: crates/bigiris/src/gui/dialogs/remove_bg.rs:355
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:375
-msgid "Imagens gravadas"
+msgid "Saved images"
 msgstr "저장된 이미지"
 
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:376
-msgid "Falhas"
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:356
+msgid "Failures"
 msgstr "실패"
 
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:378
-msgid "Com erros"
-msgstr "오류가 있는 경우"
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:358
+msgid "With errors"
+msgstr "오류 있음"
 
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:402
-msgid "Processando {current}/{total} — {file}"
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:382
+msgid "Processing {current}/{total} — {file}"
 msgstr "처리 중 {current}/{total} — {file}"
 
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:417
-msgid "BiRefNet-lite (MIT) · roda offline em {device}"
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:397
+msgid "BiRefNet-lite (MIT) · runs offline on {device}"
 msgstr "BiRefNet-lite (MIT) · {device}에서 오프라인으로 실행"
 
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:420
-msgid "BiRefNet-lite (MIT) · roda offline no seu computador"
-msgstr "BiRefNet-lite (MIT) · 컴퓨터에서 오프라인으로 실행"
-
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:538
-#: crates/bigiris/src/gui/dialogs/upscale.rs:142
-msgid "Aumentar"
-msgstr "이미지 크기 조정"
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:400
+msgid "BiRefNet-lite (MIT) · runs offline on your computer"
+msgstr "BiRefNet-lite (MIT) · 내 컴퓨터에서 오프라인으로 실행"
 
 #: crates/bigiris/src/gui/dialogs/resize.rs:8
-msgid "Lanczos3 (padrão)"
+msgid "Lanczos3 (default)"
 msgstr "Lanczos3 (기본값)"
 
 #: crates/bigiris/src/gui/dialogs/resize.rs:9
@@ -1629,421 +1665,1017 @@ msgstr "CatmullRom"
 
 #: crates/bigiris/src/gui/dialogs/resize.rs:11
 msgid "Bilinear"
-msgstr "Bilinear"
+msgstr "쌍선형 (Bilinear)"
 
 #: crates/bigiris/src/gui/dialogs/resize.rs:12
-msgid "Nearest (sem anti-aliasing)"
-msgstr "가장 가까운 (안티엘리어싱 없음)"
+msgid "Nearest (no anti-aliasing)"
+msgstr "최근접 이웃 (안티앨리어싱 없음)"
 
 #: crates/bigiris/src/gui/dialogs/resize.rs:29
-msgid "Redimensionar imagens — Prisma"
+msgid "Resize images — Prisma"
 msgstr "이미지 크기 조정 — Prisma"
 
 #: crates/bigiris/src/gui/dialogs/resize.rs:41
-#: crates/bigiris/src/gui/dialogs/resize.rs:144
-#: crates/bigiris/src/gui/dialogs/resize.rs:372
+#: crates/bigiris/src/gui/dialogs/resize.rs:139
+#: crates/bigiris/src/gui/dialogs/resize.rs:353
 #: crates/bigimage-integrations/src/action.rs:79
-#: data/nautilus/bigiris-menu.py:115
-msgid "Redimensionar"
-msgstr "그림 크기 조정"
-
-#: crates/bigiris/src/gui/dialogs/resize.rs:47
-#: crates/bigiris/src/gui/dialogs/resize.rs:61
-msgid "Aresta máxima"
-msgstr "최대 가장자리"
-
-#: crates/bigiris/src/gui/dialogs/resize.rs:49
-msgid "Dimensão exata (WxH)"
-msgstr "정확한 크기 (WxH)"
-
-#: crates/bigiris/src/gui/dialogs/resize.rs:50
-msgid "Encaixar em (WxH)"
-msgstr "내부 맞춤 (WxH)"
-
-#: crates/bigiris/src/gui/dialogs/resize.rs:54
-msgid "Modo"
-msgstr "모드"
-
-#: crates/bigiris/src/gui/dialogs/resize.rs:62
-msgid "pixels (lado maior)"
-msgstr "픽셀 (가장 긴 가장자리)"
-
-#: crates/bigiris/src/gui/dialogs/resize.rs:66
-msgid "Porcentagem"
-msgstr "백분율"
-
-#: crates/bigiris/src/gui/dialogs/resize.rs:67
-msgid "100 = tamanho original"
-msgstr "100 = 원래 크기"
-
-#: crates/bigiris/src/gui/dialogs/resize.rs:71
-msgid "Largura"
-msgstr "너비"
-
-#: crates/bigiris/src/gui/dialogs/resize.rs:74
-msgid "Altura"
-msgstr "높이"
-
-#: crates/bigiris/src/gui/dialogs/resize.rs:78
-msgid "Largura máxima"
-msgstr "최대 너비"
-
-#: crates/bigiris/src/gui/dialogs/resize.rs:81
-msgid "Altura máxima"
-msgstr "최대 높이"
-
-#: crates/bigiris/src/gui/dialogs/resize.rs:120
-msgid "Kernel de interpolação"
-msgstr "보간 커널"
-
-#: crates/bigiris/src/gui/dialogs/resize.rs:134
-msgid "Modo de redimensionamento"
-msgstr "크기 조정 모드"
-
-#: crates/bigiris/src/gui/dialogs/resize.rs:137
-msgid "Opções"
-msgstr "옵션"
-
-#: crates/bigiris/src/gui/dialogs/resize.rs:292
-msgid "Redimensionando…"
-msgstr "크기 조정…"
-
-#: crates/bigiris/src/gui/dialogs/resize.rs:298
-msgid "Redimensionando"
+msgid "Resize"
 msgstr "크기 조정"
 
+#: crates/bigiris/src/gui/dialogs/resize.rs:47
+#: crates/bigiris/src/gui/dialogs/resize.rs:57
+msgid "Max edge"
+msgstr "최대 변 길이"
+
+#: crates/bigiris/src/gui/dialogs/resize.rs:47
+msgid "Exact size (WxH)"
+msgstr "정확한 크기 (WxH)"
+
+#: crates/bigiris/src/gui/dialogs/resize.rs:47
+msgid "Fit within (WxH)"
+msgstr "범위 안에 맞추기 (WxH)"
+
+#: crates/bigiris/src/gui/dialogs/resize.rs:50
+msgid "Mode"
+msgstr "모드"
+
+#: crates/bigiris/src/gui/dialogs/resize.rs:58
+msgid "pixels (longest edge)"
+msgstr "픽셀 (긴 변)"
+
+#: crates/bigiris/src/gui/dialogs/resize.rs:62
+msgid "Percent"
+msgstr "백분율"
+
+#: crates/bigiris/src/gui/dialogs/resize.rs:63
+msgid "100 = original size"
+msgstr "100 = 원래 크기"
+
+#: crates/bigiris/src/gui/dialogs/resize.rs:67
+msgid "Width"
+msgstr "너비"
+
+#: crates/bigiris/src/gui/dialogs/resize.rs:70
+msgid "Height"
+msgstr "높이"
+
+#: crates/bigiris/src/gui/dialogs/resize.rs:74
+msgid "Max width"
+msgstr "최대 너비"
+
+#: crates/bigiris/src/gui/dialogs/resize.rs:77
+msgid "Max height"
+msgstr "최대 높이"
+
+#: crates/bigiris/src/gui/dialogs/resize.rs:116
+msgid "Interpolation kernel"
+msgstr "보간 커널"
+
+#: crates/bigiris/src/gui/dialogs/resize.rs:129
+msgid "Resize mode"
+msgstr "크기 조정 모드"
+
+#: crates/bigiris/src/gui/dialogs/resize.rs:132
+msgid "Options"
+msgstr "옵션"
+
+#: crates/bigiris/src/gui/dialogs/resize.rs:274
+msgid "Resizing…"
+msgstr "크기 조정 중…"
+
+#: crates/bigiris/src/gui/dialogs/resize.rs:280
+msgid "Resizing"
+msgstr "크기 조정 중"
+
 #: crates/bigiris/src/gui/dialogs/rotate.rs:25
-msgid "Girar imagens — Prisma"
+msgid "Rotate images — Prisma"
 msgstr "이미지 회전 — Prisma"
 
 #: crates/bigiris/src/gui/dialogs/rotate.rs:29
 #: crates/bigiris/src/gui/dialogs/rotate.rs:52
 #: crates/bigimage-integrations/src/action.rs:83
-#: data/nautilus/bigiris-menu.py:129
-msgid "Girar"
+msgid "Rotate"
 msgstr "회전"
 
 #: crates/bigiris/src/gui/dialogs/rotate.rs:31
-msgid "90° (horário)"
+msgid "90° (clockwise)"
 msgstr "90° (시계 방향)"
 
 #: crates/bigiris/src/gui/dialogs/rotate.rs:31
-#: crates/bigimage-integrations/src/action.rs:260
-#: data/nautilus/bigiris-menu.py:134
+#: crates/bigimage-integrations/src/action.rs:259
 msgid "180°"
 msgstr "180°"
 
 #: crates/bigiris/src/gui/dialogs/rotate.rs:31
-msgid "270° (anti-horário)"
+msgid "270° (counterclockwise)"
 msgstr "270° (반시계 방향)"
 
 #: crates/bigiris/src/gui/dialogs/rotate.rs:34
-msgid "Rotação"
-msgstr "회전"
+msgid "Rotation"
+msgstr "회전 각도"
 
-#: crates/bigiris/src/gui/dialogs/rotate.rs:93
-msgid "Girando…"
+#: crates/bigiris/src/gui/dialogs/rotate.rs:81
+msgid "Rotating…"
 msgstr "회전 중…"
 
-#: crates/bigiris/src/gui/dialogs/rotate.rs:99
-msgid "Girando"
-msgstr "회전"
+#: crates/bigiris/src/gui/dialogs/rotate.rs:87
+msgid "Rotating"
+msgstr "회전 중"
 
 #: crates/bigiris/src/gui/dialogs/upscale.rs:26
-msgid "Aumentar resolução — Prisma"
-msgstr "업스케일 — 프리즈마 (Prisma)"
+msgid "Upscale — Prisma"
+msgstr "해상도 높이기 — Prisma"
 
-#: crates/bigiris/src/gui/dialogs/upscale.rs:65
-msgid "Usar IA (Real-ESRGAN)"
+#: crates/bigiris/src/gui/dialogs/upscale.rs:58
+msgid "Use AI (Real-ESRGAN)"
 msgstr "AI 사용 (Real-ESRGAN)"
 
-#: crates/bigiris/src/gui/dialogs/upscale.rs:112
-msgid "× {factor} (tamanho indisponível)"
+#: crates/bigiris/src/gui/dialogs/upscale.rs:111
+msgid "× {factor} (size unavailable)"
 msgstr "× {factor} (크기를 알 수 없음)"
 
-#: crates/bigiris/src/gui/dialogs/upscale.rs:231
-msgid "Aumentando"
-msgstr "업스케일링"
+#: crates/bigiris/src/gui/dialogs/upscale.rs:230
+msgid "Upscaling"
+msgstr "해상도 높이는 중"
 
-#: crates/bigiris/src/gui/dialogs/upscale.rs:247
-msgid "Detalhes mais nítidos que Lanczos3; roda no seu computador"
+#: crates/bigiris/src/gui/dialogs/upscale.rs:245
+msgid "Sharper details than Lanczos3; runs on your computer"
 msgstr "Lanczos3보다 선명한 디테일, 내 컴퓨터에서 실행"
 
 #: crates/bigiris/src/gui/previews.rs:32
-msgid "Pré-visualização"
+msgid "Preview"
 msgstr "미리 보기"
 
 #: crates/bigiris/src/gui/previews.rs:38
 msgid "Original: {width}×{height} px"
 msgstr "원본: {width}×{height} px"
 
-#: crates/bigiris/src/gui/previews.rs:201
-msgid "Preparando pré-visualização…"
+#: crates/bigiris/src/gui/previews.rs:229
+msgid "Preparing preview…"
 msgstr "미리 보기 준비 중…"
 
-#: crates/bigiris/src/gui/previews.rs:249
-msgid "A preparação foi interrompida"
+#: crates/bigiris/src/gui/previews.rs:275
+msgid "Preparation was interrupted"
 msgstr "준비가 중단되었습니다"
 
 #: crates/bigiris/src/gui/transfers.rs:86
-msgid "A seleção é muito grande. Abra menos arquivos por vez."
-msgstr "선택 영역이 너무 큽니다. 한 번에 더 적은 파일을 여십시오."
+msgid "The selection is too large. Open fewer files at a time."
+msgstr "선택한 파일이 너무 많습니다. 한 번에 여는 파일 수를 줄이세요."
 
 #: crates/bigiris/src/gui/transfers.rs:88
-msgid "Arraste ou copie arquivos locais de imagem."
-msgstr "로컬 이미지 파일을 드롭하거나 복사합니다."
+msgid "Drop or copy local image files."
+msgstr "로컬 이미지 파일을 끌어다 놓거나 복사하세요."
 
 #: crates/bigiris/src/gui/transfers.rs:89
-msgid "A transferência demorou demais. Tente novamente."
-msgstr "전송 시간이 초과되었습니다. 다시 시도하십시오."
+msgid "The transfer timed out. Try again."
+msgstr "전송 시간이 초과되었습니다. 다시 시도하세요."
+
+#: crates/bigiris/src/gui/transfers.rs:90
+msgid "Could not start the viewer. Try again."
+msgstr "뷰어를 시작할 수 없습니다. 다시 시도하세요."
 
 #: crates/bigiris/src/gui/transfers.rs:91
-msgid "Não foi possível iniciar o visualizador. Tente novamente."
-msgstr "뷰어를 시작할 수 없습니다. 다시 시도하십시오."
+msgid "Copy image files in your file manager and try again."
+msgstr "파일 관리자에서 이미지 파일을 복사한 다음 다시 시도하세요."
 
-#: crates/bigiris/src/gui/transfers.rs:93
-msgid "Copie arquivos de imagem no gerenciador e tente novamente."
-msgstr "파일 관리자에 이미지 파일을 복사하고 다시 시도하십시오."
-
-#: crates/bigiris/src/gui/transfers.rs:96
-msgid "Não foi possível abrir os arquivos"
+#: crates/bigiris/src/gui/transfers.rs:94
+msgid "Could not open the files"
 msgstr "파일을 열 수 없음"
 
+#: crates/bigiris/src/main.rs:44
+msgid "Fast image viewer and converter for Linux"
+msgstr "Linux용 빠른 이미지 뷰어 및 변환기"
+
+#: crates/bigiris/src/main.rs:46
+msgid ""
+"Exit codes:\n"
+"  0  success (includes files skipped because they already exist)\n"
+"  1  invalid usage or fatal error before processing (nothing was written)\n"
+"  2  partial failure: one or more files could not be processed"
+msgstr ""
+"종료 코드:\n"
+"  0  성공 (이미 있어서 건너뛴 파일 포함)\n"
+"  1  잘못된 사용법 또는 처리 전 치명적 오류 (아무것도 기록하지 않음)\n"
+"  2  부분 실패: 하나 이상의 파일을 처리할 수 없음"
+
+#: crates/bigiris/src/main.rs:52
+msgid "Open only one specific modal dialog (used by service menus)"
+msgstr "특정 모달 대화 상자만 열기 (서비스 메뉴에서 사용)"
+
+#: crates/bigiris/src/main.rs:56
+msgid "Run a smoke test and exit (used in CI and after installation)"
+msgstr "스모크 테스트를 실행하고 종료 (CI 및 설치 후 확인에 사용)"
+
+#: crates/bigiris/src/main.rs:62
+msgid ""
+"Report failures in a desktop notification (used by context menus, which do "
+"not show the terminal)"
+msgstr ""
+"실패를 데스크톱 알림으로 알리기 (터미널을 표시하지 않는 컨텍스트 메뉴에서 사"
+"용)"
+
+#: crates/bigiris/src/main.rs:68
+msgid "Files to open in the viewer (when there is no subcommand)"
+msgstr "뷰어에서 열 파일 (하위 명령이 없을 때)"
+
+#: crates/bigiris/src/main.rs:98
+msgid "Does not overwrite the existing file (default)"
+msgstr "기존 파일을 덮어쓰지 않음 (기본값)"
+
+#: crates/bigiris/src/main.rs:100
+msgid "Overwrites the existing file"
+msgstr "기존 파일을 덮어씀"
+
+#: crates/bigiris/src/main.rs:102
+msgid "Generates an incremented name (foo_1.png, foo_2.png, ...)"
+msgstr "번호를 붙인 이름 생성 (foo_1.png, foo_2.png, ...)"
+
+#: crates/bigiris/src/main.rs:144
+msgid ""
+"Maximum edge length in pixels (keeps the aspect ratio; no-op if the image is "
+"already smaller)"
+msgstr "최대 변 길이(픽셀) (종횡비 유지, 이미지가 이미 더 작으면 변경 없음)"
+
+#: crates/bigiris/src/main.rs:147
+msgid "Percentage scale (e.g. 50 for half; 200 for double)"
+msgstr "백분율 배율 (예: 50은 절반, 200은 두 배)"
+
+#: crates/bigiris/src/main.rs:149
+msgid "Exact WxH size (ignores the aspect ratio)"
+msgstr "정확한 크기 WxH (종횡비 무시)"
+
+#: crates/bigiris/src/main.rs:154
+msgid "Fits inside the WxH box, keeping the aspect ratio"
+msgstr "종횡비를 유지하며 WxH 범위 안에 맞춤"
+
+#: crates/bigiris/src/main.rs:184
+msgid "expected the WxH format (e.g. 1920x1080), got: {value}"
+msgstr "WxH 형식이어야 합니다 (예: 1920x1080), 받은 값: {value}"
+
+#: crates/bigiris/src/main.rs:189 crates/bigiris/src/main.rs:255
+msgid "invalid width: {error}"
+msgstr "잘못된 너비: {error}"
+
+#: crates/bigiris/src/main.rs:191 crates/bigiris/src/main.rs:257
+msgid "invalid height: {error}"
+msgstr "잘못된 높이: {error}"
+
+#: crates/bigiris/src/main.rs:247
+msgid "expected WxH+X+Y, got: {value}"
+msgstr "WxH+X+Y 형식이어야 합니다, 받은 값: {value}"
+
+#: crates/bigiris/src/main.rs:250
+msgid "missing the Y offset in {value}"
+msgstr "{value}에 Y 오프셋이 없습니다"
+
+#: crates/bigiris/src/main.rs:253
+msgid "missing width/height in {value}"
+msgstr "{value}에 너비/높이가 없습니다"
+
+#: crates/bigiris/src/main.rs:258
+msgid "invalid X offset: {error}"
+msgstr "잘못된 X 오프셋: {error}"
+
+#: crates/bigiris/src/main.rs:259
+msgid "invalid Y offset: {error}"
+msgstr "잘못된 Y 오프셋: {error}"
+
+#: crates/bigiris/src/main.rs:279
+msgid "expected W:H (e.g. 1:1, 9:16), got: {value}"
+msgstr "W:H 형식이어야 합니다 (예: 1:1, 9:16), 받은 값: {value}"
+
+#: crates/bigiris/src/main.rs:282
+msgid "invalid W ratio: {error}"
+msgstr "잘못된 비율 W: {error}"
+
+#: crates/bigiris/src/main.rs:284
+msgid "invalid H ratio: {error}"
+msgstr "잘못된 비율 H: {error}"
+
+#: crates/bigiris/src/main.rs:287
+msgid "a ratio with a zero component makes no sense: {value}"
+msgstr "0이 포함된 비율은 의미가 없습니다: {value}"
+
+#: crates/bigiris/src/main.rs:330
+msgid "Exact canvas size in pixels (WxH)"
+msgstr "캔버스의 정확한 크기(픽셀, WxH)"
+
+#: crates/bigiris/src/main.rs:335
+msgid ""
+"Target ratio (W:H). The canvas is extended as little as needed to fit the "
+"image in that ratio"
+msgstr ""
+"목표 비율 (W:H). 이미지가 이 비율에 맞도록 캔버스를 필요한 만큼만 확장합니다"
+
+#: crates/bigiris/src/main.rs:358
+msgid ""
+"Visual quality to aim for: maximum, balanced or smallest (also max, small). "
+"Each format looks for the smallest file that keeps this quality (SSIMULACRA2 "
+"85 / 80 / 70)"
+msgstr ""
+"목표 시각 품질: maximum, balanced 또는 smallest (max, small도 가능). 각 형식"
+"에서 이 품질을 유지하는 가장 작은 파일을 찾습니다 (SSIMULACRA2 85 / 80 / 70)"
+
+#: crates/bigiris/src/main.rs:364
+msgid ""
+"Fixed quality 1..100 for JPEG/WebP/AVIF, without searching (ignores --"
+"target). In WebP, 100 writes losslessly"
+msgstr ""
+"JPEG/WebP/AVIF용 고정 품질 1..100, 탐색 없음 (--target 무시). WebP에서는 100"
+"이면 무손실로 저장"
+
+#: crates/bigiris/src/main.rs:367
+msgid "Accepted for compatibility: JPEG is always progressive"
+msgstr "호환성을 위해 허용됨: JPEG는 항상 프로그레시브입니다"
+
+#: crates/bigiris/src/main.rs:369
+msgid "Slower compression and smaller files, with no extra loss: PNG and AVIF"
+msgstr "더 느리지만 더 작게 압축, 추가 손실 없음: PNG 및 AVIF"
+
+#: crates/bigiris/src/main.rs:382
+msgid "Convert files (headless)"
+msgstr "파일 변환 (헤드리스)"
+
+#: crates/bigiris/src/main.rs:386
+msgid ""
+"Target format: png, jpg, webp, avif, tiff, bmp, gif, ico, pnm/ppm/pgm/pbm, "
+"tga, qoi, hdr, exr"
+msgstr ""
+"대상 형식: png, jpg, webp, avif, tiff, bmp, gif, ico, pnm/ppm/pgm/pbm, tga, "
+"qoi, hdr, exr"
+
+#: crates/bigiris/src/main.rs:395 crates/bigiris/src/main.rs:420
+#: crates/bigiris/src/main.rs:447
+msgid "What to do when the output file already exists"
+msgstr "출력 파일이 이미 있을 때의 정책"
+
+#: crates/bigiris/src/main.rs:398
+msgid "Input files"
+msgstr "입력 파일"
+
+#: crates/bigiris/src/main.rs:401
+msgid ""
+"Resize files (headless). Exactly one mode among --max-edge / --percent / --"
+"exact / --fit is required"
+msgstr ""
+"파일 크기 조정 (헤드리스). --max-edge / --percent / --exact / --fit 중 정확"
+"히 하나를 지정해야 합니다"
+
+#: crates/bigiris/src/main.rs:409
+msgid "Interpolation kernel (default: lanczos3)"
+msgstr "보간 커널 (기본값: lanczos3)"
+
+#: crates/bigiris/src/main.rs:412 crates/bigiris/src/main.rs:441
+msgid "Target format (optional; keeps the original format if omitted)"
+msgstr "대상 형식 (선택 사항, 생략하면 원래 형식 유지)"
+
+#: crates/bigiris/src/main.rs:426
+msgid ""
+"Rotate files (headless). Right-angle rotations through a re-encode pipeline; "
+"`--auto` reads the EXIF Orientation tag and applies the right rotation"
+msgstr ""
+"파일 회전 (헤드리스). 90도 단위 회전은 재인코딩 파이프라인으로 처리합니다. "
+"`--auto`는 EXIF Orientation 태그를 읽어 올바른 회전을 적용합니다"
+
+#: crates/bigiris/src/main.rs:432
+msgid "Rotation in degrees: 90 | 180 | 270"
+msgstr "회전 각도: 90 | 180 | 270"
+
+#: crates/bigiris/src/main.rs:438
+msgid "Auto-orient from EXIF (Orientation tag)"
+msgstr "EXIF(Orientation 태그)에 따라 방향 자동 보정"
+
+#: crates/bigiris/src/main.rs:453
+msgid "Mirror files horizontally or vertically (headless)"
+msgstr "파일을 가로 또는 세로로 뒤집기 (헤드리스)"
+
+#: crates/bigiris/src/main.rs:455
+msgid "Axis: horizontal | vertical"
+msgstr "방향: horizontal | vertical"
+
+#: crates/bigiris/src/main.rs:457 crates/bigiris/src/main.rs:471
+#: crates/bigiris/src/main.rs:495 crates/bigiris/src/main.rs:531
+msgid "Target format (optional)"
+msgstr "대상 형식 (선택 사항)"
+
+#: crates/bigiris/src/main.rs:464
+msgid ""
+"Crop a rectangle from images (headless). Use --rect WxH+X+Y, ImageMagick "
+"style"
+msgstr ""
+"이미지에서 사각형 영역 자르기 (헤드리스). ImageMagick 방식의 --rect WxH+X+Y"
+"를 사용하세요"
+
+#: crates/bigiris/src/main.rs:468
+msgid "Crop geometry in the WxH+X+Y format (e.g. 800x600+100+50)"
+msgstr "자르기 영역 (WxH+X+Y 형식, 예: 800x600+100+50)"
+
+#: crates/bigiris/src/main.rs:478
+msgid ""
+"Extend the canvas around the image (letterbox). Exactly one mode among --"
+"size and --aspect is required. The canvas is filled with --bg and the "
+"original image is placed by --gravity"
+msgstr ""
+"이미지 주위의 캔버스 확장 (레터박스). --size와 --aspect 중 정확히 하나를 지정"
+"해야 합니다. 캔버스는 --bg로 채워지고 원본 이미지는 --gravity에 따라 배치됩니"
+"다"
+
+#: crates/bigiris/src/main.rs:485
+msgid "Background color in hexadecimal (#RRGGBB or #RRGGBBAA)"
+msgstr "16진수 배경색 (#RRGGBB 또는 #RRGGBBAA)"
+
+#: crates/bigiris/src/main.rs:492
+msgid "Position of the original image on the extended canvas"
+msgstr "확장된 캔버스에서 원본 이미지의 위치"
+
+#: crates/bigiris/src/main.rs:502
+msgid "Adjust color/tone (brightness, contrast, saturation, gamma)"
+msgstr "색상/톤 조정 (밝기, 대비, 채도, 감마)"
+
+#: crates/bigiris/src/main.rs:508
+msgid "Brightness -100..100 (0 = no change)"
+msgstr "밝기 -100..100 (0 = 변경 없음)"
+
+#: crates/bigiris/src/main.rs:515
+msgid "Contrast -100..100 (0 = no change)"
+msgstr "대비 -100..100 (0 = 변경 없음)"
+
+#: crates/bigiris/src/main.rs:522
+msgid "Saturation -100..100 (-100 = gray, 0 = no change)"
+msgstr "채도 -100..100 (-100 = 회색, 0 = 변경 없음)"
+
+#: crates/bigiris/src/main.rs:528
+msgid "Gamma 0.1..10.0 (< 1 brightens midtones, > 1 darkens)"
+msgstr "감마 0.1..10.0 (< 1이면 중간톤을 밝게, > 1이면 어둡게)"
+
+#: crates/bigiris/src/main.rs:538
+msgid ""
+"Remove the background with local AI (BiRefNet-lite, birefnet-native "
+"package). Writes `<name>_nobg.png` (PNG with alpha) next to each image"
+msgstr ""
+"로컬 AI로 배경 제거 (BiRefNet-lite, birefnet-native 패키지). 각 이미지 옆에 "
+"`<이름>_nobg.png`(알파 포함 PNG)를 저장합니다"
+
+#: crates/bigiris/src/main.rs:544
+msgid "Segmentation model"
+msgstr "분할 모델"
+
+#: crates/bigiris/src/main.rs:551
+msgid "What to do when `<name>_nobg.png` already exists"
+msgstr "`<이름>_nobg.png`이(가) 이미 있을 때의 정책"
+
+#: crates/bigiris/src/main.rs:557
+msgid ""
+"Increase resolution by 2, 3 or 4. With the realesrgan-native package it uses "
+"AI (Real-ESRGAN); without it, Lanczos3. Writes `<name>_<pct>pct.<ext>`"
+msgstr ""
+"해상도를 2, 3 또는 4배로 높입니다. realesrgan-native 패키지가 있으면 AI(Real-"
+"ESRGAN)를, 없으면 Lanczos3를 사용합니다. `<이름>_<pct>pct.<ext>`로 저장합니다"
+
+#: crates/bigiris/src/main.rs:559
+msgid "Integer factor (2, 3 or 4)"
+msgstr "정수 배율 (2, 3 또는 4)"
+
+#: crates/bigiris/src/main.rs:565
+msgid ""
+"Engine: auto (Real-ESRGAN if installed, otherwise Lanczos3), realesrgan "
+"(fails if missing) or lanczos"
+msgstr ""
+"엔진: auto (설치되어 있으면 Real-ESRGAN, 아니면 Lanczos3), realesrgan (없으"
+"면 실패) 또는 lanczos"
+
+#: crates/bigiris/src/main.rs:572 crates/bigiris/src/main.rs:584
+#: crates/bigiris/src/main.rs:602 crates/bigiris/src/main.rs:634
+msgid "Overwrite policy for the output file"
+msgstr "출력 파일 덮어쓰기 정책"
+
+#: crates/bigiris/src/main.rs:578
+msgid ""
+"Remove noise and compression artifacts with local AI (SCUNet, scunet-native "
+"package). Writes `<name>_denoised.<ext>`"
+msgstr ""
+"로컬 AI로 노이즈와 압축 아티팩트 제거 (SCUNet, scunet-native 패키지). `<이름"
+">_denoised.<ext>`로 저장합니다"
+
+#: crates/bigiris/src/main.rs:590
+msgid ""
+"Erase objects: fills the area marked in the mask with local AI (LaMa, lama-"
+"native package). Writes `<name>_inpaint.<ext>`"
+msgstr ""
+"개체 지우기: 마스크에 표시된 영역을 로컬 AI로 채웁니다 (LaMa, lama-native 패"
+"키지). `<이름>_inpaint.<ext>`로 저장합니다"
+
+#: crates/bigiris/src/main.rs:595
+msgid ""
+"Mask the same size as the image: white = fill, black = keep (transparent "
+"areas are kept)"
+msgstr ""
+"이미지와 같은 크기의 마스크: 흰색 = 채우기, 검은색 = 유지 (투명한 영역은 유지"
+"됨)"
+
+#: crates/bigiris/src/main.rs:608
+msgid "Create an animated GIF from a sequence of images (headless)"
+msgstr "이미지 시퀀스로 애니메이션 GIF 만들기 (헤드리스)"
+
+#: crates/bigiris/src/main.rs:615
+msgid "Delay between frames in milliseconds (100 ≈ 10 fps)"
+msgstr "프레임 간 지연 시간(밀리초) (100 ≈ 10 fps)"
+
+#: crates/bigiris/src/main.rs:621
+msgid "Number of repetitions: 0 = infinite (default), 1+ = fixed"
+msgstr "반복 횟수: 0 = 무한 (기본값), 1 이상 = 고정 횟수"
+
+#: crates/bigiris/src/main.rs:627
+msgid "Encoder speed 1..30 (higher = faster, worse palette)"
+msgstr "인코더 속도 1..30 (클수록 빠르지만 팔레트 품질 저하)"
+
+#: crates/bigiris/src/main.rs:637
+msgid "Frames in order (at least 1)"
+msgstr "순서대로 나열한 프레임 (최소 1개)"
+
+#: crates/bigiris/src/main.rs:640
+msgid "Process files or folders in parallel from a TOML profile"
+msgstr "TOML 프로필에 따라 파일 또는 폴더를 병렬 처리"
+
+#: crates/bigiris/src/main.rs:642
+msgid "Profile file (.toml)"
+msgstr ".toml 프로필 파일"
+
+#: crates/bigiris/src/main.rs:647
+msgid "Install file manager integrations"
+msgstr "파일 관리자 통합 설치"
+
+#: crates/bigiris/src/main.rs:649
+msgid "Install in ~/.local/share (default)"
+msgstr "~/.local/share에 설치 (기본값)"
+
+#: crates/bigiris/src/main.rs:653
+msgid "Install in /usr/share (requires root; usually done by the package)"
+msgstr "/usr/share에 설치 (root 권한 필요, 보통 패키지가 수행)"
+
+#: crates/bigiris/src/main.rs:661
+msgid ""
+"DESTDIR prefix for packaging (e.g. $pkgdir in the PKGBUILD). Only makes "
+"sense together with --system"
+msgstr ""
+"패키징용 DESTDIR 접두사 (예: PKGBUILD의 $pkgdir). --system과 함께 사용할 때"
+"만 의미가 있습니다"
+
+#: crates/bigiris/src/main.rs:665
+msgid "Remove previously installed integrations"
+msgstr "이전에 설치한 통합 제거"
+
+#: crates/bigiris/src/main.rs:667
+msgid ""
+"Convert documents (ODT, DOCX, TXT, MD, RTF, XLSX, PPTX, etc.) to PDF with "
+"headless LibreOffice. The output is written next to the source file"
+msgstr ""
+"헤드리스 LibreOffice로 문서(ODT, DOCX, TXT, MD, RTF, XLSX, PPTX 등)를 PDF로 "
+"변환합니다. 출력은 원본 파일 옆에 저장됩니다"
+
+#: crates/bigiris/src/main.rs:673
+msgid "What to do when `<name>.pdf` already exists"
+msgstr "`<이름>.pdf`이(가) 이미 있을 때의 정책"
+
+#: crates/bigiris/src/main.rs:680
+msgid "Maximum time per document, in seconds"
+msgstr "문서당 최대 시간(초)"
+
+#: crates/bigiris/src/main.rs:693
+msgid "BiRefNet-lite (the only model available)"
+msgstr "BiRefNet-lite (사용 가능한 유일한 모델)"
+
+#: crates/bigiris/src/main.rs:701
+msgid ""
+"Real-ESRGAN when the realesrgan-native package is installed, otherwise "
+"Lanczos3"
+msgstr ""
+"realesrgan-native 패키지가 설치되어 있으면 Real-ESRGAN, 아니면 Lanczos3"
+
+#: crates/bigiris/src/main.rs:706
+msgid "Real-ESRGAN AI (requires realesrgan-native)"
+msgstr "Real-ESRGAN AI (realesrgan-native 필요)"
+
+#: crates/bigiris/src/main.rs:709
+msgid "Lanczos3 resampling (no AI)"
+msgstr "Lanczos3 리샘플링 (AI 없음)"
+
+#: crates/bigiris/src/main.rs:765
+msgid "rotate: use --degrees 90|180|270 or --auto"
+msgstr "rotate: --degrees 90|180|270 또는 --auto를 사용하세요"
+
+#: crates/bigiris/src/main.rs:837
+msgid "BigIris: the operation failed"
+msgstr "BigIris: 작업 실패"
+
+#: crates/bigiris/src/main.rs:850
+msgid "Some files were not processed; see the details in the terminal."
+msgstr "일부 파일을 처리하지 못했습니다. 자세한 내용은 터미널을 확인하세요."
+
+#: crates/bigiris/src/main.rs:925
+msgid "invalid quality target: {value}; use maximum, balanced or smallest"
+msgstr ""
+"잘못된 품질 목표: {value}. maximum, balanced 또는 smallest를 사용하세요"
+
+#: crates/bigiris/src/main.rs:938 crates/bigiris/src/main.rs:1032
+msgid "invalid target format: {error}"
+msgstr "잘못된 대상 형식: {error}"
+
+#: crates/bigiris/src/main.rs:948
+msgid "the original was already smaller; copied without recompression"
+msgstr "원본이 이미 더 작아서 재압축 없이 복사했습니다"
+
+#: crates/bigiris/src/main.rs:1006
+msgid "invalid --bg: {error}"
+msgstr "잘못된 --bg: {error}"
+
+#: crates/bigiris/src/main.rs:1138
+msgid "several inputs would write the same output file:"
+msgstr "여러 입력의 출력 파일이 겹칩니다:"
+
+#: crates/bigiris/src/main.rs:1146
+msgid "Rename the inputs, process them separately or use the increment policy."
+msgstr "입력 이름을 바꾸거나, 따로 처리하거나, increment 정책을 사용하세요."
+
+#: crates/bigiris/src/main.rs:1198
+msgid "replaced the output of another input: {path}"
+msgstr "다른 입력의 출력을 대체했습니다: {path}"
+
+#: crates/bigiris/src/main.rs:1233
+msgid "the color profile is corrupted; colors were treated as sRGB"
+msgstr "색상 프로필이 손상되었습니다. 색상을 sRGB로 처리했습니다"
+
+#: crates/bigiris/src/main.rs:1238
+msgid "already exists: {path}"
+msgstr "이미 있습니다: {path}"
+
+#: crates/bigiris/src/main.rs:1244
+msgid "{operation}: {written} written, {skipped} skipped, {failed} failed"
+msgstr "{operation}: 기록 {written}개, 건너뜀 {skipped}개, 실패 {failed}개"
+
+#: crates/bigiris/src/main.rs:1338
+msgid ""
+"{model} is not installed ({path} does not exist). Install it with: {command}"
+msgstr ""
+"{model}이(가) 설치되어 있지 않습니다 ({path} 없음). 다음 명령으로 설치하세"
+"요: {command}"
+
+#: crates/bigiris/src/main.rs:1348
+msgid "could not read the {model} weights at {path}: {error}"
+msgstr "{path}에서 {model} 가중치를 읽을 수 없습니다: {error}"
+
+#: crates/bigiris/src/main.rs:1381
+msgid "invalid factor: {factor}. Use 2, 3 or 4."
+msgstr "잘못된 배율: {factor}. 2, 3 또는 4를 사용하세요."
+
+#: crates/bigiris/src/main.rs:1397
+msgid "Real-ESRGAN unavailable; using Lanczos3. To use AI: {command}"
+msgstr ""
+"Real-ESRGAN을 사용할 수 없어 Lanczos3를 사용합니다. AI를 사용하려면: "
+"{command}"
+
+#: crates/bigiris/src/main.rs:1456
+msgid "mask {path}: {error}"
+msgstr "마스크 {path}: {error}"
+
+#: crates/bigiris/src/main.rs:1467
+msgid "marks no area (paint the areas to erase white)"
+msgstr "표시된 영역이 없습니다 (지울 부분을 흰색으로 칠하세요)"
+
+#: crates/bigiris/src/main.rs:1501
+msgid "{count} frame(s)"
+msgstr "프레임 {count}개"
+
+#: crates/bigiris/src/main.rs:1540
+msgid "could not read {path}: {error}"
+msgstr "{path}을(를) 읽을 수 없습니다: {error}"
+
+#: crates/bigiris/src/main.rs:1571
+msgid "invalid TOML profile: {error}"
+msgstr "잘못된 TOML 프로필: {error}"
+
+#: crates/bigiris/src/main.rs:1574
+msgid "quality must be between 1 and 100"
+msgstr "quality는 1에서 100 사이여야 합니다"
+
+#: crates/bigiris/src/main.rs:1577
+msgid "invalid profile format: {error}"
+msgstr "잘못된 프로필 형식: {error}"
+
+#: crates/bigiris/src/main.rs:1589
+msgid "invalid overwrite: {value}; use skip, replace or increment"
+msgstr "잘못된 overwrite: {value}. skip, replace 또는 increment를 사용하세요"
+
+#: crates/bigiris/src/main.rs:1597
+msgid "could not create {path}: {error}"
+msgstr "{path}을(를) 만들 수 없습니다: {error}"
+
+#: crates/bigiris/src/main.rs:1606
+msgid "no images found for the batch"
+msgstr "일괄 처리할 이미지를 찾을 수 없습니다"
+
+#: crates/bigiris/src/main.rs:1715
+msgid ""
+"LibreOffice (`soffice`) not found in PATH. Install `libreoffice-fresh` "
+"(recommended) or `libreoffice-still` (e.g. `sudo pacman -S libreoffice-"
+"fresh`)."
+msgstr ""
+"PATH에서 LibreOffice(`soffice`)를 찾을 수 없습니다. `libreoffice-fresh`(권"
+"장) 또는 `libreoffice-still`을 설치하세요 (예: `sudo pacman -S libreoffice-"
+"fresh`)."
+
+#: crates/bigiris/src/main.rs:1767
+msgid "not a regular file"
+msgstr "일반 파일이 아닙니다"
+
+#: crates/bigiris/src/main.rs:1770
+msgid "invalid file name"
+msgstr "잘못된 파일 이름"
+
+#: crates/bigiris/src/main.rs:1791
+msgid "could not run soffice: {error}"
+msgstr "soffice 실행 실패: {error}"
+
+#: crates/bigiris/src/main.rs:1802
+msgid "soffice exceeded the {seconds} s limit"
+msgstr "soffice가 제한 시간 {seconds}초를 초과했습니다"
+
+#: crates/bigiris/src/main.rs:1815
+msgid "soffice did not produce the PDF ({status})"
+msgstr "soffice가 PDF를 생성하지 않았습니다 ({status})"
+
+#: crates/bigiris/src/main.rs:1858
+msgid "too many files with the same name: {path}"
+msgstr "같은 이름의 파일이 너무 많습니다: {path}"
+
+#: crates/bigiris/src/main.rs:1900
+msgid "installation failed: {error}"
+msgstr "설치 실패: {error}"
+
+#: crates/bigiris/src/main.rs:1906
+msgid "installed"
+msgstr "설치됨"
+
+#: crates/bigiris/src/main.rs:1907
+msgid "installed in total: {files} file(s) in {managers} file manager(s)"
+msgstr "총 설치: 파일 관리자 {managers}개에 파일 {files}개"
+
+#: crates/bigiris/src/main.rs:1923
+msgid "removal failed: {error}"
+msgstr "제거 실패: {error}"
+
+#: crates/bigiris/src/main.rs:1926
+msgid "removed"
+msgstr "제거됨"
+
+#: crates/bigiris/src/main.rs:1927
+msgid "removed in total: {files} file(s) in {managers} file manager(s)"
+msgstr "총 제거: 파일 관리자 {managers}개에서 파일 {files}개"
+
+#: crates/bigiris/src/main.rs:1950
+msgid "FAILED"
+msgstr "실패"
+
+#: crates/bigiris/src/main.rs:1955
+msgid "provided by the package"
+msgstr "패키지에서 제공"
+
+#: crates/bigiris/src/main.rs:1958
+msgid "unchanged"
+msgstr "변경 없음"
+
+#: crates/bigiris/src/main.rs:1960
+msgid "skipped"
+msgstr "건너뜀"
+
+#: crates/bigiris/src/main.rs:1965
+msgid "detected"
+msgstr "감지됨"
+
+#: crates/bigiris/src/main.rs:1965
+msgid "not in PATH"
+msgstr "PATH에 없음"
+
+#: crates/bigiris/src/main.rs:1967
+msgid "{count} file(s)"
+msgstr "파일 {count}개"
+
+#: crates/bigiris/src/main.rs:1992
+msgid ""
+"warning: this build lacks the `gui` feature. Dialog '{dialog}' ignored "
+"(rebuild with --features gui)."
+msgstr ""
+"경고: 현재 빌드에 `gui` 기능이 없습니다. '{dialog}' 대화 상자를 무시했습니다 "
+"(--features gui로 다시 빌드하세요)."
+
+#: crates/bigiris/src/main.rs:1999
+msgid ""
+"warning: this build lacks the `gui` feature. Viewer unavailable (rebuild "
+"with --features gui)."
+msgstr ""
+"경고: 현재 빌드에 `gui` 기능이 없습니다. 뷰어를 사용할 수 없습니다 (--"
+"features gui로 다시 빌드하세요)."
+
+#: crates/bigiris/src/main.rs:2004
+msgid ""
+"warning: this build lacks the `gui` feature. Viewer unavailable; files "
+"received:"
+msgstr ""
+"경고: 현재 빌드에 `gui` 기능이 없습니다. 뷰어를 사용할 수 없습니다. 받은 파"
+"일:"
+
 #: crates/bigimage-integrations/src/action.rs:97
-#: data/nautilus/bigiris-menu.py:167
-msgid "Para web"
-msgstr "웹을 위해"
+msgid "For the web"
+msgstr "웹용"
 
 #: crates/bigimage-integrations/src/action.rs:101
-#: data/nautilus/bigiris-menu.py:213
-msgid "Metadados"
+msgid "Metadata"
 msgstr "메타데이터"
 
 #: crates/bigimage-integrations/src/action.rs:105
-#: data/nautilus/bigiris-menu.py:223
-msgid "Utilidades"
-msgstr "도구"
+msgid "Utilities"
+msgstr "유틸리티"
 
 #: crates/bigimage-integrations/src/action.rs:111
-#: data/nautilus/bigiris-menu.py:234
-msgid "IA"
+msgid "AI"
 msgstr "AI"
 
 #: crates/bigimage-integrations/src/action.rs:116
-#: data/nautilus/bigiris-menu.py:244
 msgid "PDF"
 msgstr "PDF"
 
 #: crates/bigimage-integrations/src/action.rs:134
-#: data/nautilus/bigiris-menu.py:255
-msgid "Visualizar em BigIris"
+msgid "View in BigIris"
 msgstr "BigIris에서 보기"
 
 #: crates/bigimage-integrations/src/action.rs:142
-msgid "Processar esta pasta…"
+msgid "Process this folder…"
 msgstr "이 폴더 처리…"
 
 #: crates/bigimage-integrations/src/action.rs:159
-#: data/nautilus/bigiris-menu.py:105
 msgid "JPG"
 msgstr "JPG"
 
-#: crates/bigimage-integrations/src/action.rs:194
-#: crates/bigimage-integrations/src/action.rs:243
-#: crates/bigimage-integrations/src/action.rs:284
-#: crates/bigimage-integrations/src/action.rs:309
-#: crates/bigimage-integrations/src/action.rs:358
-#: data/nautilus/bigiris-menu.py:110 data/nautilus/bigiris-menu.py:124
-#: data/nautilus/bigiris-menu.py:137 data/nautilus/bigiris-menu.py:148
-#: data/nautilus/bigiris-menu.py:162
-msgid "Mais opções…"
-msgstr "더 많은 옵션…"
+#: crates/bigimage-integrations/src/action.rs:193
+#: crates/bigimage-integrations/src/action.rs:242
+#: crates/bigimage-integrations/src/action.rs:283
+#: crates/bigimage-integrations/src/action.rs:308
+#: crates/bigimage-integrations/src/action.rs:357
+msgid "More options…"
+msgstr "추가 옵션…"
 
-#: crates/bigimage-integrations/src/action.rs:203
-#: data/nautilus/bigiris-menu.py:119
+#: crates/bigimage-integrations/src/action.rs:202
 msgid "25%"
 msgstr "25%"
 
-#: crates/bigimage-integrations/src/action.rs:211
-#: data/nautilus/bigiris-menu.py:120
+#: crates/bigimage-integrations/src/action.rs:210
 msgid "50%"
 msgstr "50%"
 
-#: crates/bigimage-integrations/src/action.rs:219
-#: data/nautilus/bigiris-menu.py:121
+#: crates/bigimage-integrations/src/action.rs:218
 msgid "200%"
 msgstr "200%"
 
-#: crates/bigimage-integrations/src/action.rs:227
-#: data/nautilus/bigiris-menu.py:122
+#: crates/bigimage-integrations/src/action.rs:226
 msgid "HD (1920 px)"
-msgstr "HD (1920 픽셀)"
+msgstr "HD (1920 px)"
 
-#: crates/bigimage-integrations/src/action.rs:235
-#: data/nautilus/bigiris-menu.py:123
+#: crates/bigimage-integrations/src/action.rs:234
 msgid "4K (3840 px)"
-msgstr "4K (3840 픽셀)"
+msgstr "4K (3840 px)"
 
-#: crates/bigimage-integrations/src/action.rs:252
-#: data/nautilus/bigiris-menu.py:133
+#: crates/bigimage-integrations/src/action.rs:251
 msgid "90°"
 msgstr "90°"
 
-#: crates/bigimage-integrations/src/action.rs:268
-#: data/nautilus/bigiris-menu.py:135
+#: crates/bigimage-integrations/src/action.rs:267
 msgid "270°"
 msgstr "270°"
 
-#: crates/bigimage-integrations/src/action.rs:276
-#: data/nautilus/bigiris-menu.py:136
-msgid "Automático (EXIF)"
+#: crates/bigimage-integrations/src/action.rs:275
+msgid "Automatic (EXIF)"
 msgstr "자동 (EXIF)"
 
-#: crates/bigimage-integrations/src/action.rs:293
-#: data/nautilus/bigiris-menu.py:146
+#: crates/bigimage-integrations/src/action.rs:292
 msgid "Horizontal"
 msgstr "가로"
 
-#: crates/bigimage-integrations/src/action.rs:301
-#: data/nautilus/bigiris-menu.py:147
+#: crates/bigimage-integrations/src/action.rs:300
 msgid "Vertical"
 msgstr "세로"
 
-#: crates/bigimage-integrations/src/action.rs:318
-#: data/nautilus/bigiris-menu.py:157
-msgid "+ Brilho (+10)"
+#: crates/bigimage-integrations/src/action.rs:317
+msgid "+ Brightness (+10)"
 msgstr "+ 밝기 (+10)"
 
-#: crates/bigimage-integrations/src/action.rs:326
-#: data/nautilus/bigiris-menu.py:158
-msgid "− Brilho (-10)"
+#: crates/bigimage-integrations/src/action.rs:325
+msgid "− Brightness (-10)"
 msgstr "− 밝기 (-10)"
 
-#: crates/bigimage-integrations/src/action.rs:334
-#: data/nautilus/bigiris-menu.py:159
-msgid "+ Contraste (+20)"
+#: crates/bigimage-integrations/src/action.rs:333
+msgid "+ Contrast (+20)"
 msgstr "+ 대비 (+20)"
 
-#: crates/bigimage-integrations/src/action.rs:342
-#: data/nautilus/bigiris-menu.py:160
-msgid "Preto e branco"
-msgstr "검정색과 흰색"
+#: crates/bigimage-integrations/src/action.rs:341
+msgid "Black and white"
+msgstr "흑백"
 
-#: crates/bigimage-integrations/src/action.rs:350
-#: data/nautilus/bigiris-menu.py:161
-msgid "Cores vivas (+40)"
+#: crates/bigimage-integrations/src/action.rs:349
+msgid "Vivid colors (+40)"
 msgstr "생생한 색상 (+40)"
 
-#: crates/bigimage-integrations/src/action.rs:370
-#: data/nautilus/bigiris-menu.py:171
+#: crates/bigimage-integrations/src/action.rs:367
 msgid "WhatsApp (1280 px · JPG q85)"
 msgstr "WhatsApp (1280 px · JPG q85)"
 
-#: crates/bigimage-integrations/src/action.rs:378
-#: data/nautilus/bigiris-menu.py:175
+#: crates/bigimage-integrations/src/action.rs:375
 msgid "Instagram (1080 px · JPG q90)"
 msgstr "Instagram (1080 px · JPG q90)"
 
-#: crates/bigimage-integrations/src/action.rs:386
-#: data/nautilus/bigiris-menu.py:179
+#: crates/bigimage-integrations/src/action.rs:383
 msgid "Facebook (2048 px · JPG q85)"
 msgstr "Facebook (2048 px · JPG q85)"
 
-#: crates/bigimage-integrations/src/action.rs:394
-#: data/nautilus/bigiris-menu.py:183
+#: crates/bigimage-integrations/src/action.rs:391
 msgid "Twitter · X (1200 px · JPG q85)"
 msgstr "Twitter · X (1200 px · JPG q85)"
 
-#: crates/bigimage-integrations/src/action.rs:402
-#: data/nautilus/bigiris-menu.py:187
+#: crates/bigimage-integrations/src/action.rs:399
 msgid "Telegram (2560 px · JPG q85)"
 msgstr "Telegram (2560 px · JPG q85)"
 
-#: crates/bigimage-integrations/src/action.rs:410
-#: data/nautilus/bigiris-menu.py:191
+#: crates/bigimage-integrations/src/action.rs:407
 msgid "Discord (2048 px · JPG q80)"
 msgstr "Discord (2048 px · JPG q80)"
 
-#: crates/bigimage-integrations/src/action.rs:418
-#: data/nautilus/bigiris-menu.py:195
-msgid "Otimizar PNG (compressão máxima)"
-msgstr "PNG 최적화( 최대 압축)"
+#: crates/bigimage-integrations/src/action.rs:415
+msgid "Optimize PNG (maximum compression)"
+msgstr "PNG 최적화 (최대 압축)"
 
-#: crates/bigimage-integrations/src/action.rs:430
-#: data/nautilus/bigiris-menu.py:199
+#: crates/bigimage-integrations/src/action.rs:427
 msgid "Letterbox YouTube post (1:1)"
-msgstr "레터박스 YouTube 게시물 (1:1)"
+msgstr "레터박스: YouTube 게시물 (1:1)"
 
-#: crates/bigimage-integrations/src/action.rs:438
-#: data/nautilus/bigiris-menu.py:202
+#: crates/bigimage-integrations/src/action.rs:435
 msgid "Letterbox Instagram feed (4:5)"
-msgstr "레터박스 인스타그램 피드 (4:5) (Instagram)"
+msgstr "레터박스: Instagram 피드 (4:5)"
 
-#: crates/bigimage-integrations/src/action.rs:446
-#: data/nautilus/bigiris-menu.py:205
+#: crates/bigimage-integrations/src/action.rs:443
 msgid "Letterbox Stories / Shorts (9:16)"
-msgstr "레터박스 이야기 / 단편 (9:16)"
+msgstr "레터박스: Stories / Shorts (9:16)"
 
-#: crates/bigimage-integrations/src/action.rs:454
-#: data/nautilus/bigiris-menu.py:208
-msgid "Letterbox personalizado…"
-msgstr "사용자 정의 편지함…"
+#: crates/bigimage-integrations/src/action.rs:451
+msgid "Custom letterbox…"
+msgstr "사용자 정의 레터박스…"
 
-#: crates/bigimage-integrations/src/action.rs:463
-#: data/nautilus/bigiris-menu.py:217
-msgid "Ver metadados…"
+#: crates/bigimage-integrations/src/action.rs:460
+msgid "View metadata…"
 msgstr "메타데이터 보기…"
 
-#: crates/bigimage-integrations/src/action.rs:471
-#: data/nautilus/bigiris-menu.py:218
-msgid "Remover tudo (re-encode limpo)"
-msgstr "모든 메타데이터 제거( 깨끗한 재인코딩)"
+#: crates/bigimage-integrations/src/action.rs:468
+msgid "Remove all metadata (clean re-encode)"
+msgstr "모든 메타데이터 제거 (깨끗하게 다시 인코딩)"
 
-#: crates/bigimage-integrations/src/action.rs:482
-#: data/nautilus/bigiris-menu.py:227
-msgid "Converter em lote (Prisma)…"
-msgstr "일괄 변환 (Prisma) …"
+#: crates/bigimage-integrations/src/action.rs:479
+msgid "Batch convert (Prisma)…"
+msgstr "일괄 변환 (Prisma)…"
 
-#: crates/bigimage-integrations/src/action.rs:490
-#: data/nautilus/bigiris-menu.py:228
-msgid "Criar GIF animado…"
+#: crates/bigimage-integrations/src/action.rs:487
+msgid "Create animated GIF…"
 msgstr "애니메이션 GIF 만들기…"
 
-#: crates/bigimage-integrations/src/action.rs:498
-#: data/nautilus/bigiris-menu.py:229
-msgid "Comparar 2 imagens…"
-msgstr "2개의 이미지를 비교하기…"
+#: crates/bigimage-integrations/src/action.rs:495
+msgid "Compare 2 images…"
+msgstr "이미지 2개 비교…"
 
-#: crates/bigimage-integrations/src/action.rs:507
-#: data/nautilus/bigiris-menu.py:238
-msgid "Remover fundo (BiRefNet)"
-msgstr "배경 제거( BiRefNet)"
+#: crates/bigimage-integrations/src/action.rs:504
+msgid "Remove background (BiRefNet)"
+msgstr "배경 제거 (BiRefNet)"
 
-#: crates/bigimage-integrations/src/action.rs:528
-#: data/nautilus/bigiris-menu.py:248
-msgid "Converter para PDF (LibreOffice)"
+#: crates/bigimage-integrations/src/action.rs:525
+msgid "Convert to PDF (LibreOffice)"
 msgstr "PDF로 변환 (LibreOffice)"
 
-#: data/nautilus/bigiris-menu.py:295
-msgid "Operações BigIris"
-msgstr "BigIris 동작"
+#: data/nautilus/bigiris-menu.py:115
+msgid "BigIris actions"
+msgstr "BigIris 작업"
 
-#: data/nautilus/bigiris-menu.py:374
-msgid "BigIris: Processar esta pasta…"
+#: data/nautilus/bigiris-menu.py:140
+msgid "BigIris: Process this folder…"
 msgstr "BigIris: 이 폴더 처리…"
 
-#: data/nautilus/bigiris-menu.py:375
-msgid "Converter imagens da pasta com o Prisma"
-msgstr "Prisma로 폴더 이미지 변환"
+#: data/nautilus/bigiris-menu.py:141
+msgid "Convert folder images with Prisma"
+msgstr "Prisma로 폴더의 이미지 변환"
 
 #: scripts/translations.py:20
-msgid "Visualizador de imagens"
+msgid "Image viewer"
 msgstr "이미지 뷰어"
 
 #: scripts/translations.py:21
-msgid "Visualize e converta imagens com integração ao gerenciador de arquivos"
-msgstr "파일 관리자 통합으로 이미지 보기 및 변환"
+msgid "View and convert images with file manager integration"
+msgstr "파일 관리자와 통합하여 이미지 보기 및 변환"
 
 #: scripts/translations.py:24
-msgid "Visualizador e conversor de imagens moderno"
+msgid "Modern image viewer and converter"
 msgstr "현대적인 이미지 뷰어와 변환기"

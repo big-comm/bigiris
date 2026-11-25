@@ -33,7 +33,7 @@ pub(crate) fn check_dimensions(w: u32, h: u32, bytes_per_pixel: u8) -> Result<()
         || pixels.saturating_mul(u64::from(bytes_per_pixel)) > MAX_BUFFER_BYTES
     {
         return Err(BigImageError::InvalidInput(format!(
-            "dimensões {w}×{h} excedem os limites de processamento"
+            "dimensions {w}×{h} exceed the processing limits"
         )));
     }
     Ok(())
@@ -179,7 +179,12 @@ pub(crate) fn decode_local_with(
     image = avif_transform.apply(image);
     if normalize {
         if let Some(icc) = icc {
-            crate::color::normalize_srgb(&mut image, &icc)?;
+            // A broken profile must not make the photo unreadable: its pixels
+            // are shown as sRGB and the caller is told (take_ignored_profile).
+            if let Err(error) = crate::color::normalize_srgb(&mut image, &icc) {
+                tracing::warn!(%error, "malformed ICC profile ignored; pixels treated as sRGB");
+                crate::color::note_ignored_profile();
+            }
         }
         return Ok((image, format, crate::metadata::SourceMetadata::default()));
     }
@@ -194,7 +199,7 @@ pub(crate) fn decode_with_source_format(input: &Path) -> Result<(DynamicImage, F
         .map_err(|source| BigImageError::Decode { path: input.to_path_buf(), source })?;
     let format = format.ok_or_else(|| {
         BigImageError::UnsupportedFormat(format!(
-            "entrada sem formato reconhecido: {}",
+            "input has no recognized format: {}",
             input.display()
         ))
     })?;
@@ -326,9 +331,8 @@ pub(crate) fn resolve_output(
     resolve_output_to(input, None, suffix, target, policy)
 }
 
-/// Like [`resolve_output`] but takes an explicit `output_dir`. If `None`,
-/// grava ao lado do arquivo original (comportamento histórico). Caso
-/// contrário usa o diretório fornecido mantendo o stem da fonte.
+/// Like [`resolve_output`] but takes an explicit `output_dir`: `None` writes
+/// next to the source file, a directory keeps the source's stem.
 pub(crate) fn resolve_output_to(
     input: &Path,
     output_dir: Option<&Path>,
@@ -370,6 +374,10 @@ fn replaced_file(output: &Path, policy: OverwritePolicy) -> Option<std::fs::Meta
 /// kernel applies the umask and any default ACL at creation. No `chmod` is
 /// needed for new outputs, which keeps writes working on FUSE/gvfs/SMB
 /// mounts that refuse `chmod`.
+/// Name prefix of the hidden file an output is written to before it is
+/// published; one left behind means a crash mid-write.
+pub const TEMP_FILE_PREFIX: &str = ".bigiris-";
+
 pub(crate) fn output_temp(
     output: &Path,
     policy: OverwritePolicy,
@@ -380,7 +388,7 @@ pub(crate) fn output_temp(
     let mode =
         replaced_file(output, policy).map_or(0o666, |meta| meta.permissions().mode() & 0o777);
     tempfile::Builder::new()
-        .prefix(".bigiris-")
+        .prefix(TEMP_FILE_PREFIX)
         .suffix(".part")
         .permissions(std::fs::Permissions::from_mode(mode))
         .tempfile_in(parent)
@@ -392,7 +400,7 @@ pub(crate) fn output_temp(
 fn sync_parent(output: &Path) {
     let parent = output.parent().filter(|p| !p.as_os_str().is_empty()).unwrap_or(Path::new("."));
     if let Err(error) = std::fs::File::open(parent).and_then(|dir| dir.sync_all()) {
-        tracing::warn!(?parent, %error, "fsync do diretório de saída falhou");
+        tracing::warn!(?parent, %error, "fsync of the output directory failed");
     }
 }
 
@@ -416,7 +424,7 @@ pub(crate) fn publish_temp(
             if let Err(error) =
                 temp.as_file().set_permissions(std::fs::Permissions::from_mode(wanted))
             {
-                tracing::warn!(?output, %error, "permissões do arquivo substituído não copiadas");
+                tracing::warn!(?output, %error, "permissions of the replaced file not copied");
             }
         }
     }
@@ -452,7 +460,7 @@ pub(crate) fn publish_temp(
             Err(e) => return Err(BigImageError::Io(e.error)),
         }
     }
-    Err(BigImageError::Other(format!("muitos arquivos com o mesmo nome: {}", output.display())))
+    Err(BigImageError::Other(format!("too many files with the same name: {}", output.display())))
 }
 
 /// Metadata written by the encoder in addition to the pixels.
@@ -463,13 +471,6 @@ pub(crate) struct Extras {
     /// ICC profile describing the pixels; `None` means sRGB, for which the
     /// generated canonical profile is embedded where supported.
     pub(crate) icc: Option<Vec<u8>>,
-}
-
-impl Extras {
-    /// Nothing to embed besides the pixels.
-    pub(crate) fn is_empty(&self) -> bool {
-        self.exif.is_none() && self.icc.is_none()
-    }
 }
 
 /// Encode into a unique sibling and publish only after encode, flush and sync.
@@ -510,11 +511,7 @@ pub(crate) fn encode_keeping_smaller(
     original: Option<&Path>,
 ) -> Result<(crate::ConvertOutcome, bool)> {
     use std::io::{Seek, Write};
-    let destination_bpp = match target {
-        Format::OpenExr => 16,
-        Format::Hdr => 12,
-        _ => img.color().bytes_per_pixel().max(4),
-    };
+    let destination_bpp = crate::convert::prepared_bytes_per_pixel(img.color(), target);
     check_dimensions(img.width(), img.height(), destination_bpp)?;
     let prepared = crate::convert::prepare_for_target(img, target);
     let mut temp = output_temp(&output, policy)?;
@@ -537,7 +534,7 @@ pub(crate) fn encode_keeping_smaller(
                 ?original,
                 written,
                 original_len = bytes.len(),
-                "mantido o original menor"
+                "kept the smaller original"
             );
         }
     }

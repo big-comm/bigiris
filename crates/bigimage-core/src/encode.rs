@@ -42,14 +42,14 @@ impl QualityTarget {
         }
     }
 
-    /// Parse the CLI/profile spelling: Portuguese `maxima`/`máxima`,
-    /// `equilibrado`, `menor`, or the English aliases `max`/`maximum`,
-    /// `balanced`, `small`/`smallest`. Case-insensitive.
+    /// Parse the CLI/profile spelling `maximum`, `balanced` or `smallest`
+    /// (also `max`, `small`), case-insensitive. The Portuguese spellings stay
+    /// accepted because installed file-manager menus and saved batch profiles use them.
     pub fn parse(value: &str) -> Option<Self> {
         match value.trim().to_lowercase().as_str() {
-            "maxima" | "máxima" | "max" | "maximum" => Some(QualityTarget::Maximum),
-            "equilibrado" | "balanced" => Some(QualityTarget::Balanced),
-            "menor" | "small" | "smallest" => Some(QualityTarget::Smallest),
+            "maximum" | "max" | "maxima" | "máxima" => Some(QualityTarget::Maximum),
+            "balanced" | "equilibrado" => Some(QualityTarget::Balanced),
+            "smallest" | "small" | "menor" => Some(QualityTarget::Smallest),
             _ => None,
         }
     }

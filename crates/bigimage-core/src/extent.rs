@@ -46,20 +46,20 @@ impl ExtentSize {
     pub fn resolve(self, src_w: u32, src_h: u32) -> Result<(u32, u32)> {
         if src_w == 0 || src_h == 0 {
             return Err(BigImageError::InvalidInput(format!(
-                "extent: imagem origem com dimensão zero ({src_w}x{src_h})"
+                "extent: source image with a zero dimension ({src_w}x{src_h})"
             )));
         }
         match self {
             ExtentSize::Exact { width, height } => {
                 if width == 0 || height == 0 {
                     return Err(BigImageError::InvalidInput(format!(
-                        "extent: tamanho destino com dimensão zero ({width}x{height})"
+                        "extent: target size with a zero dimension ({width}x{height})"
                     )));
                 }
                 if width < src_w || height < src_h {
                     return Err(BigImageError::InvalidInput(format!(
-                        "extent: destino ({width}x{height}) menor que origem ({src_w}x{src_h}); \
-                         a operação só estende a tela, use `crop` para recortar"
+                        "extent: target ({width}x{height}) smaller than the source ({src_w}x{src_h}); \
+                         this only extends the canvas, use `crop` to cut"
                     )));
                 }
                 Ok((width, height))
@@ -67,7 +67,7 @@ impl ExtentSize {
             ExtentSize::Aspect { w, h } => {
                 if w == 0 || h == 0 {
                     return Err(BigImageError::InvalidInput(format!(
-                        "extent: razão com componente zero ({w}:{h})"
+                        "extent: ratio with a zero term ({w}:{h})"
                     )));
                 }
                 // Compare src_w/src_h against w/h via cross product to stay
@@ -82,7 +82,7 @@ impl ExtentSize {
                     let new_h_u64 = lhs / u64::from(w);
                     let new_h = u32::try_from(new_h_u64).map_err(|_| {
                         BigImageError::InvalidInput(format!(
-                            "extent: altura calculada excede u32 ({new_h_u64})"
+                            "extent: computed height exceeds u32 ({new_h_u64})"
                         ))
                     })?;
                     Ok((src_w, new_h.max(src_h)))
@@ -90,7 +90,7 @@ impl ExtentSize {
                     let new_w_u64 = rhs / u64::from(h);
                     let new_w = u32::try_from(new_w_u64).map_err(|_| {
                         BigImageError::InvalidInput(format!(
-                            "extent: largura calculada excede u32 ({new_w_u64})"
+                            "extent: computed width exceeds u32 ({new_w_u64})"
                         ))
                     })?;
                     Ok((new_w.max(src_w), src_h))
@@ -196,10 +196,10 @@ pub fn parse_hex_color(s: &str) -> std::result::Result<[u8; 4], String> {
                 u8::from_str_radix(pair, 16).map_err(|_| ())
             })
             .collect::<std::result::Result<Vec<u8>, ()>>()
-            .map_err(|_| format!("cor hex inválida: {s:?}; use dígitos 0-9 a-f"))?,
+            .map_err(|_| format!("invalid hex color: {s:?}; use digits 0-9 a-f"))?,
         _ => {
             return Err(format!(
-                "cor hex inválida: {s:?}; use #RRGGBB ou #RRGGBBAA (6 ou 8 dígitos)"
+                "invalid hex color: {s:?}; use #RRGGBB or #RRGGBBAA (6 or 8 digits)"
             ));
         }
     };

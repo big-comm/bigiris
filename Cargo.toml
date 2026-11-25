@@ -13,8 +13,7 @@ edition = "2021"
 rust-version = "1.95"
 license = "GPL-3.0-or-later"
 authors = ["Leonardo Athayde <leoathayde@gmail.com>"]
-repository = "https://github.com/xathay/bigiris"
-homepage = "https://github.com/xathay/bigiris"
+repository = "https://github.com/big-comm/bigiris"
 
 [workspace.dependencies]
 clap = { version = "4", features = ["derive"] }

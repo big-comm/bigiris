@@ -180,6 +180,31 @@ fn avif_without_decodable_picture_terminates() {
     assert!(dimensions_err && decode_err);
 }
 
+/// A broken embedded profile must not make a photo unreadable: the pixels
+/// are shown as sRGB and the caller can tell the user.
+#[test]
+fn malformed_icc_opens_as_srgb() {
+    use image::ImageEncoder;
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("broken-profile.png");
+    let pixels = image::RgbImage::from_pixel(4, 3, image::Rgb([10, 128, 250]));
+    let mut bytes = Vec::new();
+    let mut encoder = image::codecs::png::PngEncoder::new(&mut bytes);
+    encoder.set_icc_profile(b"not an ICC profile".to_vec()).unwrap();
+    encoder.write_image(pixels.as_raw(), 4, 3, image::ExtendedColorType::Rgb8).unwrap();
+    std::fs::write(&path, bytes).unwrap();
+    bigimage_core::color::take_ignored_profile();
+
+    let opened = open_image(&path).expect("a malformed profile must not block opening");
+    assert_eq!(opened.to_rgb8().get_pixel(0, 0).0, [10, 128, 250]);
+    assert!(bigimage_core::color::take_ignored_profile());
+
+    let plain = dir.path().join("plain.png");
+    pixels.save(&plain).unwrap();
+    open_image(&plain).unwrap();
+    assert!(!bigimage_core::color::take_ignored_profile());
+}
+
 /// Fuzzer-found 1 KiB OpenEXR whose header made the decoder ask for 15 GB.
 #[test]
 fn exr_huge_header_refused() {

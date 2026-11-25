@@ -129,7 +129,7 @@ fn reference_for(image: &DynamicImage, format: Format) -> RgbaImage {
 
 fn bench(name: &str, image: &DynamicImage, dir: &Path) -> Result<(), Error> {
     println!("\n## {name} ({}×{})", image.width(), image.height());
-    println!("| formato | modo | bytes | SSIMULACRA2 | tempo (s) |");
+    println!("| format | mode | bytes | SSIMULACRA2 | time (s) |");
     println!("|---|---|---:|---:|---:|");
     let formats = [Format::Jpeg, Format::WebP, Format::Avif, Format::Png, Format::Gif];
     for format in formats {
@@ -141,16 +141,16 @@ fn bench(name: &str, image: &DynamicImage, dir: &Path) -> Result<(), Error> {
             let (bytes, took) = bytes;
             let decoded = image::load_from_memory(&bytes)?.into_rgba8();
             println!(
-                "| {format:?} | antigo | {} | {:.2} | {:.2} |",
+                "| {format:?} | previous | {} | {:.2} | {:.2} |",
                 bytes.len(),
                 score(&reference, &decoded)?,
                 took.as_secs_f64()
             );
         }
         for (label, target) in [
-            ("máxima", QualityTarget::Maximum),
-            ("equilibrado", QualityTarget::Balanced),
-            ("menor", QualityTarget::Smallest),
+            ("maximum", QualityTarget::Maximum),
+            ("balanced", QualityTarget::Balanced),
+            ("smallest", QualityTarget::Smallest),
         ] {
             let path = dir.join(format!("{name}-{label}.{}", format.extension()));
             let opts = EncodeOptions { target, ..EncodeOptions::default() };

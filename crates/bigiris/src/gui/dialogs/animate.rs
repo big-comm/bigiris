@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-//! Criar GIF animado: build an animated GIF from the selected frames.
+//! Animated GIF: build an animated GIF from the selected frames.
 
 use super::*;
 use bigimage_core::{make_gif_with_policy, ConvertOutcome};
@@ -9,7 +9,7 @@ use std::sync::Arc;
 // ---------------------------------------------------------------------------
 // Animate dialog — pick a delay, a loop mode, an output path and build an
 // animated GIF from the selected frames. Minimal shape: every parameter
-// has a sensible default so the user can just hit "Criar GIF" and get
+// has a sensible default so the user can just hit "Create GIF" and get
 // something playable.
 // ---------------------------------------------------------------------------
 
@@ -26,44 +26,29 @@ pub(in crate::gui) fn build_animate_dialog(
         .application(app)
         .default_width(520)
         .default_height(520)
-        .title(gettext("Criar GIF animado — Prisma"))
+        .title(gettext("Create animated GIF — Prisma"))
         .build();
 
     let header = adw::HeaderBar::new();
-    header.set_title_widget(Some(&adw::WindowTitle::new(&gettext("Criar GIF animado"), "Prisma")));
+    header
+        .set_title_widget(Some(&adw::WindowTitle::new(&gettext("Create animated GIF"), "Prisma")));
 
-    let content = gtk::Box::builder()
-        .orientation(gtk::Orientation::Vertical)
-        .spacing(16)
-        .margin_top(16)
-        .margin_bottom(16)
-        .margin_start(16)
-        .margin_end(16)
-        .build();
+    let content = padded_box(gtk::Orientation::Vertical, 16);
 
     if files.len() < 2 {
-        let status = adw::StatusPage::builder()
-            .icon_name("dialog-warning-symbolic")
-            .title(gettext("Selecione pelo menos 2 imagens"))
-            .description(gettext("Informe vários arquivos de uma vez para montar a animação."))
-            .vexpand(true)
-            .build();
-        content.append(&status);
-
-        let close = gtk::Button::with_label(&gettext("Fechar"));
-        close_on_click(&window, &close);
-        content.append(&close);
-
-        let tv = adw::ToolbarView::new();
-        tv.add_top_bar(&header);
-        tv.set_content(Some(&content));
-        window.set_content(Some(&tv));
+        show_selection_problem(
+            &window,
+            &header,
+            &content,
+            &gettext("Select at least 2 images"),
+            &gettext("Select multiple files to build the animation."),
+        );
         return window;
     }
 
     // Parametric rows.
     let delay_spin = adw::SpinRow::with_range(10.0, 5000.0, 10.0);
-    delay_spin.set_title(&gettext("Atraso por quadro (ms)"));
+    delay_spin.set_title(&gettext("Frame delay (ms)"));
     delay_spin.set_subtitle(&gettext("100 ≈ 10 fps · 40 ≈ 25 fps · 1000 = 1 s"));
     delay_spin.set_value(100.0);
 
@@ -71,17 +56,18 @@ pub(in crate::gui) fn build_animate_dialog(
         .use_markup(false)
         .title(gettext("Loop"))
         .model(&translated_strings(&[
-            n_("Infinito (padrão)"),
-            n_("Uma vez"),
-            n_("2 vezes"),
-            n_("5 vezes"),
-            n_("10 vezes"),
+            n_("Infinite (default)"),
+            n_("Once"),
+            n_("2 times"),
+            n_("5 times"),
+            n_("10 times"),
         ]))
         .build();
 
     let speed_spin = adw::SpinRow::with_range(1.0, 30.0, 1.0);
-    speed_spin.set_title(&gettext("Velocidade do encoder"));
-    speed_spin.set_subtitle(&gettext("maior = mais rápido, paleta um pouco pior · padrão 10"));
+    speed_spin.set_title(&gettext("Encoder speed"));
+    speed_spin
+        .set_subtitle(&gettext("higher = faster, slightly lower palette quality · default 10"));
     speed_spin.set_value(10.0);
 
     // Default output: next to the first frame, named "animated.gif".
@@ -89,13 +75,11 @@ pub(in crate::gui) fn build_animate_dialog(
         .parent()
         .map(|p| p.join("animated.gif"))
         .unwrap_or_else(|| PathBuf::from("animated.gif"));
-    let output_row = adw::EntryRow::builder()
-        .use_markup(false)
-        .title(gettext("Arquivo de saída (.gif)"))
-        .build();
+    let output_row =
+        adw::EntryRow::builder().use_markup(false).title(gettext("Output file (.gif)")).build();
     output_row.set_text(&default_output.to_string_lossy());
 
-    let files_row = selection_row(&gettext("Quadros"), &files);
+    let files_row = selection_row(&gettext("Frames"), &files);
 
     let group = adw::PreferencesGroup::new();
     group.add(&files_row);
@@ -108,13 +92,10 @@ pub(in crate::gui) fn build_animate_dialog(
     let status = status_label();
     content.append(&status);
 
-    let (cancel_btn, apply_btn, actions_box) = action_buttons(&gettext("Criar GIF"));
+    let (cancel_btn, apply_btn, actions_box) = action_buttons(&gettext("Create GIF"));
     content.append(&actions_box);
 
-    let tv = adw::ToolbarView::new();
-    tv.add_top_bar(&header);
-    tv.set_content(Some(&content));
-    window.set_content(Some(&tv));
+    set_dialog_content(&window, &header, &content);
 
     close_on_click(&window, &cancel_btn);
 
@@ -126,7 +107,6 @@ pub(in crate::gui) fn build_animate_dialog(
         let output_row = output_row.clone();
         let status = status.clone();
         let apply_btn = apply_btn.clone();
-        let cancel_btn = cancel_btn.clone();
         let window = window.clone();
         dialog_signal!(window, apply_btn.clone(), connect_clicked, move |_| {
             let loop_mode = match loop_row.selected() {
@@ -158,7 +138,6 @@ pub(in crate::gui) fn build_animate_dialog(
                 let files = files.clone();
                 let status = status.clone();
                 let apply_btn = apply_btn.clone();
-                let cancel_btn = cancel_btn.clone();
                 let window = window.clone();
                 move |policy| {
                     start_animate_run(
@@ -168,7 +147,6 @@ pub(in crate::gui) fn build_animate_dialog(
                         policy,
                         &status,
                         &apply_btn,
-                        &cancel_btn,
                         &window,
                     )
                 }
@@ -181,11 +159,11 @@ pub(in crate::gui) fn build_animate_dialog(
             }
             // Only replace an existing file the user explicitly agreed to lose.
             let alert = adw::AlertDialog::builder()
-                .heading(gettext("Substituir arquivo existente?"))
+                .heading(gettext("Replace existing file?"))
                 .body(shown)
                 .build();
-            alert.add_response("cancel", &gettext("Cancelar"));
-            alert.add_response("replace", &gettext("Substituir"));
+            alert.add_response("cancel", &gettext("Cancel"));
+            alert.add_response("replace", &gettext("Replace"));
             alert.set_response_appearance("replace", adw::ResponseAppearance::Destructive);
             alert.set_default_response(Some("cancel"));
             alert.set_close_response("cancel");
@@ -203,7 +181,7 @@ pub(in crate::gui) fn build_animate_dialog(
 fn gif_output_path(text: &str, frames: &[PathBuf]) -> Result<PathBuf, String> {
     let text = text.trim();
     if text.is_empty() {
-        return Err(gettext("Informe o arquivo de saída."));
+        return Err(gettext("Specify the output file."));
     }
     let mut output = PathBuf::from(text);
     if !output.extension().is_some_and(|ext| ext.eq_ignore_ascii_case("gif")) {
@@ -212,11 +190,11 @@ fn gif_output_path(text: &str, frames: &[PathBuf]) -> Result<PathBuf, String> {
         output = PathBuf::from(name);
     }
     if output.is_dir() {
-        return Err(gettext("O arquivo de saída não pode ser uma pasta."));
+        return Err(gettext("The output file cannot be a folder."));
     }
     let target = comparable_path(&output);
     if frames.iter().any(|frame| comparable_path(frame) == target) {
-        return Err(gettext("O arquivo de saída não pode ser um dos quadros."));
+        return Err(gettext("The output file cannot be one of the frames."));
     }
     Ok(output)
 }
@@ -238,7 +216,6 @@ fn comparable_path(path: &Path) -> PathBuf {
 }
 
 /// Encode the GIF on a worker thread and reflect the result in the dialog.
-#[allow(clippy::too_many_arguments)]
 fn start_animate_run(
     frames: Vec<PathBuf>,
     output: PathBuf,
@@ -246,13 +223,11 @@ fn start_animate_run(
     policy: OverwritePolicy,
     status: &gtk::Label,
     apply_btn: &gtk::Button,
-    cancel_btn: &gtk::Button,
     window: &adw::ApplicationWindow,
 ) {
     batch_runner::disarm_auto_close(window);
     apply_btn.set_sensitive(false);
-    cancel_btn.set_sensitive(false);
-    status.set_text(&gettext("Montando GIF…"));
+    status.set_text(&gettext("Building GIF…"));
 
     // Closing the window aborts an in-flight isolated decode; the frames
     // already decoded are dropped and nothing is published.
@@ -279,7 +254,6 @@ fn start_animate_run(
     let status = status.clone();
     let window = window.clone();
     let apply_btn = apply_btn.clone();
-    let cancel_btn = cancel_btn.clone();
     // Released only after the encoder finished: closing the window never
     // exits mid-write and strands `.part` files.
     let hold = window.application().map(|app| app.hold());
@@ -294,28 +268,28 @@ fn start_animate_run(
         }
         match result {
             Some(Ok(ConvertOutcome::Written { output })) => {
-                status.set_text(&format!("{}: {}", gettext("Pronto"), output.display()));
+                status.set_text(&fill(
+                    &gettext("Done: {file}"),
+                    &[("file", &output.display().to_string())],
+                ));
                 batch_runner::arm_auto_close(&window, 2);
             }
             Some(Ok(ConvertOutcome::Skipped { output })) => {
                 status.set_text(&fill(
-                    &gettext("O arquivo {file} passou a existir e foi mantido; nada foi gravado."),
+                    &gettext("The file {file} appeared in the meantime and was kept; nothing was written."),
                     &[("file", &output.display().to_string())],
                 ));
                 apply_btn.set_sensitive(true);
-                cancel_btn.set_sensitive(true);
             }
             Some(Err(e)) => {
-                status.set_text(&format!("{}: {e}", gettext("Falha")));
+                status.set_text(&format!("{}: {e}", gettext("Failed")));
                 apply_btn.set_sensitive(true);
-                cancel_btn.set_sensitive(true);
             }
             None => {
                 status.set_text(&gettext(
-                    "O processamento terminou inesperadamente. Tente novamente.",
+                    "Processing ended unexpectedly. Please try again.",
                 ));
                 apply_btn.set_sensitive(true);
-                cancel_btn.set_sensitive(true);
             }
         }
     });
@@ -364,7 +338,7 @@ mod gif_output_tests {
         let dir = tempfile::tempdir().unwrap();
         let frames = frames(dir.path());
         assert!(gif_output_path("   ", &frames).is_err());
-        let folder = dir.path().join("pasta.gif");
+        let folder = dir.path().join("folder.gif");
         std::fs::create_dir(&folder).unwrap();
         assert!(gif_output_path(&folder.to_string_lossy(), &frames).is_err());
     }

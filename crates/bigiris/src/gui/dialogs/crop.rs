@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-//! Recortar: rectangular crop with an interactive preview.
+//! Crop: rectangular crop with an interactive preview.
 
 use super::*;
 
-/// Default crop: a centred 50% rectangle — a safe non-empty starting
-/// point for the UI that's unlikely to match the full image.
+/// Default crop: a centered 50% rectangle, a non-empty starting point
+/// that is unlikely to match the full image.
 pub(in crate::gui) fn default_crop(img_w: u32, img_h: u32) -> CropRect {
     let w = (img_w / 2).max(1);
     let h = (img_h / 2).max(1);
@@ -281,7 +281,7 @@ fn build_crop_preview_column(
     column.append(&overlay);
 
     let hint = gtk::Label::builder()
-        .label(gettext("Arraste nos cantos para redimensionar · dentro do recorte para mover · fora dele para uma nova seleção."))
+        .label(gettext("Drag the corners to resize · inside the crop to move · outside it for a new selection."))
         .wrap(true)
         .xalign(0.5)
         .margin_top(6)
@@ -306,7 +306,7 @@ pub(in crate::gui) fn build_crop_dialog(
         .application(app)
         .default_width(900)
         .default_height(560)
-        .title(gettext("Recortar — Prisma"))
+        .title(gettext("Crop — Prisma"))
         .build();
     prepare_dialog(&window, files, fill_crop_dialog);
     window
@@ -318,16 +318,9 @@ fn fill_crop_dialog(
     preview_session: Option<Rc<PreviewSession>>,
 ) -> adw::ApplicationWindow {
     let header = adw::HeaderBar::new();
-    header.set_title_widget(Some(&adw::WindowTitle::new(&gettext("Recortar"), "Prisma")));
+    header.set_title_widget(Some(&adw::WindowTitle::new(&gettext("Crop"), "Prisma")));
 
-    let content_h = gtk::Box::builder()
-        .orientation(gtk::Orientation::Horizontal)
-        .spacing(16)
-        .margin_top(16)
-        .margin_bottom(16)
-        .margin_start(16)
-        .margin_end(16)
-        .build();
+    let content_h = padded_box(gtk::Orientation::Horizontal, 16);
 
     // Preview is keyed off the first file — multi-file dialogs share the
     // rect and per-file validation catches out-of-bounds at apply time.
@@ -341,12 +334,12 @@ fn fill_crop_dialog(
         .width_request(360)
         .build();
 
-    let files_row = selection_row(&gettext("Arquivos selecionados"), &files);
+    let files_row = selection_row(&gettext("Selected files"), &files);
 
     let natural_row = adw::ActionRow::builder()
         .use_markup(false)
-        .title(gettext("Tamanho original"))
-        .subtitle(format!("{} × {} px ({})", natural.0, natural.1, gettext("Primeiro arquivo")))
+        .title(gettext("Original size"))
+        .subtitle(format!("{} × {} px ({})", natural.0, natural.1, gettext("First file")))
         .build();
 
     // Ranges clamp to the first file's natural dims. For multi-file sets
@@ -360,11 +353,11 @@ fn fill_crop_dialog(
     y_spin.set_value(initial.y as f64);
 
     let w_spin = adw::SpinRow::with_range(1.0, natural.0 as f64, 1.0);
-    w_spin.set_title(&gettext("Largura (px)"));
+    w_spin.set_title(&gettext("Width (px)"));
     w_spin.set_value(initial.width as f64);
 
     let h_spin = adw::SpinRow::with_range(1.0, natural.1 as f64, 1.0);
-    h_spin.set_title(&gettext("Altura (px)"));
+    h_spin.set_title(&gettext("Height (px)"));
     h_spin.set_value(initial.height as f64);
 
     let target_row = target_format_row();
@@ -385,8 +378,8 @@ fn fill_crop_dialog(
     let status = status_label();
     form_col.append(&status);
 
-    let reset_btn = gtk::Button::with_label(&gettext("Centro 50%"));
-    let (cancel_btn, apply_btn, actions) = action_buttons(&gettext("Recortar"));
+    let reset_btn = gtk::Button::with_label(&gettext("Centered 50%"));
+    let (cancel_btn, apply_btn, actions) = action_buttons(&gettext("Crop"));
     actions.prepend(&reset_btn);
     form_col.append(&actions);
 
@@ -400,12 +393,9 @@ fn fill_crop_dialog(
         content_h.append(&column);
     }
 
-    let toolbar_view = adw::ToolbarView::new();
-    toolbar_view.add_top_bar(&header);
-    toolbar_view.set_content(Some(&content_h));
-    window.set_content(Some(&toolbar_view));
+    set_dialog_content(&window, &header, &content_h);
 
-    // Reset button → re-centre to 50% of the first image.
+    // Reset button → re-center to 50% of the first image.
     {
         let x_spin = x_spin.clone();
         let y_spin = y_spin.clone();
@@ -432,7 +422,6 @@ fn fill_crop_dialog(
         let overwrite_row = overwrite_row.clone();
         let status = status.clone();
         let apply_btn = apply_btn.clone();
-        let cancel_btn = cancel_btn.clone();
         let window = window.clone();
         dialog_signal!(window, apply_btn.clone(), connect_clicked, move |_| {
             let rect = CropRect::new(
@@ -445,17 +434,15 @@ fn fill_crop_dialog(
             let policy = selected_overwrite(&overwrite_row);
 
             apply_btn.set_sensitive(false);
-            cancel_btn.set_sensitive(false);
-            status.set_text(&gettext("Recortando…"));
+            status.set_text(&gettext("Cropping…"));
 
             let work_files: Vec<PathBuf> = (*files).clone();
             run_batch_async(
                 work_files,
                 move |f| crop_file(f, rect, target, policy),
-                gettext("Recortando"),
+                gettext("Cropping"),
                 status.clone(),
                 apply_btn.clone(),
-                cancel_btn.clone(),
                 window.clone(),
             );
         });

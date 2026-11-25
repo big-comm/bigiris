@@ -102,7 +102,7 @@ fn check_weights(path: &Path) -> Availability {
         Ok(meta) if meta.is_file() && meta.len() > 0 => Availability::Ready,
         Ok(_) => Availability::Unreadable {
             path: path.to_path_buf(),
-            error: "não é um arquivo de pesos".into(),
+            error: "not a weights file".into(),
         },
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
             Availability::Missing { path: path.to_path_buf() }
@@ -163,13 +163,13 @@ pub fn cancel_on(flag: &AtomicBool) -> impl FnMut(Stage) -> ControlFlow<()> + '_
 pub enum AiError {
     /// Built without the `native` feature: no engine to run.
     #[error(
-        "esta build não inclui os motores de IA. Recompile com `cargo build --features ai` \
-         (requer `glslc`, do pacote shaderc)."
+        "this build does not include the AI engines. Rebuild with `cargo build --features ai` \
+         (needs `glslc`, from the shaderc package)."
     )]
     Disabled,
     /// The weights package is not installed.
     #[error(
-        "{model} não está instalado ({path} não existe). Instale com: sudo pacman -S {package}"
+        "{model} is not installed ({path} does not exist). Install it with: sudo pacman -S {package}"
     )]
     Missing {
         /// Model name.
@@ -180,7 +180,7 @@ pub enum AiError {
         path: PathBuf,
     },
     /// The weights file exists but cannot be read.
-    #[error("não foi possível ler os pesos de {model} em {path}: {error}")]
+    #[error("could not read the {model} weights at {path}: {error}")]
     Unreadable {
         /// Model name.
         model: &'static str,
@@ -190,19 +190,19 @@ pub enum AiError {
         error: String,
     },
     /// The progress callback asked to stop.
-    #[error("cancelado")]
+    #[error("canceled")]
     Cancelled,
     /// The GPU failed; the run is retried on the CPU before this escapes.
     #[error("GPU: {0}")]
     Gpu(String),
     /// Engine error (weights, worker threads).
-    #[error("inferência: {0}")]
+    #[error("inference: {0}")]
     Inference(String),
     /// Bad input or pre/post-processing error.
-    #[error("processamento: {0}")]
+    #[error("processing: {0}")]
     Processing(String),
     /// Not enough memory to start; nothing was allocated.
-    #[error("memória para IA: {0}")]
+    #[error("memory for AI: {0}")]
     Memory(String),
 }
 
@@ -288,8 +288,9 @@ struct Loaded<M> {
     path: PathBuf,
 }
 
-/// Lazily loaded, reused model of one kind. Runs of the same model wait
-/// for each other; the engines use every thread they were given anyway.
+/// Lazily loaded, reused model of one kind. Runs of every model wait for
+/// each other (see `RUN`); the engines use every thread they were given
+/// anyway.
 pub(crate) struct Slot<M> {
     #[cfg(feature = "native")]
     loaded: std::sync::Mutex<Option<Loaded<M>>>,
@@ -310,6 +311,12 @@ pub(crate) struct Budget {
     /// Everything one run allocates (network and image buffers).
     pub run: u64,
 }
+
+/// Held by [`Slot::run`] across admission, load and work, so runs of
+/// different models never pass the same free memory at once. Lock order:
+/// `RUN`, then a slot's `loaded`, then its `device`.
+#[cfg(feature = "native")]
+static RUN: std::sync::Mutex<()> = std::sync::Mutex::new(());
 
 fn lock<T>(mutex: &std::sync::Mutex<T>) -> std::sync::MutexGuard<'_, T> {
     mutex.lock().unwrap_or_else(std::sync::PoisonError::into_inner)
@@ -357,6 +364,7 @@ impl<M: NativeModel> Slot<M> {
         mut work: impl FnMut(&mut M, Progress<'_>) -> Result<R, AiError>,
     ) -> Result<R, AiError> {
         let path = info.ready_path()?;
+        let _running = lock(&RUN);
         let mut loaded = lock(&self.loaded);
         if loaded.as_ref().is_some_and(|l| l.path != path) {
             *loaded = None;
@@ -371,9 +379,10 @@ impl<M: NativeModel> Slot<M> {
         let model = &mut loaded.as_mut().expect("loaded above").model;
         match work(model, progress) {
             Err(AiError::Gpu(error)) => {
-                tracing::warn!(model = info.name, %error, "GPU falhou; repetindo na CPU");
+                tracing::warn!(model = info.name, %error, "GPU failed; retrying on the CPU");
                 self.cpu_only.store(true, Ordering::Relaxed);
                 *loaded = None;
+                crate::memory::admit(info.name, budget.load + budget.run)?;
                 check(progress(Stage::Loading))?;
                 let mut cpu = Loaded { model: self.load(info, &path, true)?, path };
                 let result = work(&mut cpu.model, progress);
@@ -401,7 +410,7 @@ impl<M: NativeModel> Slot<M> {
             %device,
             path = %path.display(),
             ms = started.elapsed().as_millis() as u64,
-            "modelo carregado"
+            "model loaded"
         );
         *lock(&self.device) = Some(device);
         Ok(model)
@@ -444,7 +453,7 @@ pub(crate) fn assemble(
     width: u32,
     height: u32,
 ) -> Result<DynamicImage, AiError> {
-    let wrong = || AiError::Processing("tamanho de saída inesperado".into());
+    let wrong = || AiError::Processing("unexpected output size".into());
     match alpha {
         None => image::RgbImage::from_raw(width, height, rgb)
             .map(DynamicImage::ImageRgb8)
@@ -507,20 +516,20 @@ mod tests {
     #[test]
     fn missing_model_error_names_the_package_to_install() {
         let info = ModelInfo {
-            name: "Teste",
-            package: "teste-native",
-            weights: "/nonexistent/bigiris/teste.weights",
+            name: "Test",
+            package: "test-native",
+            weights: "/nonexistent/bigiris/test.weights",
             env: "BIGIRIS_TEST_ENGINE_UNSET_WEIGHTS",
             license: "MIT",
         };
-        assert_eq!(info.install_command(), "sudo pacman -S teste-native");
+        assert_eq!(info.install_command(), "sudo pacman -S test-native");
         if !crate::engines_compiled() {
             assert!(matches!(info.ready_path(), Err(AiError::Disabled)));
             return;
         }
         let error = info.ready_path().unwrap_err();
-        assert!(matches!(error, AiError::Missing { package: "teste-native", .. }));
-        assert!(error.to_string().contains("sudo pacman -S teste-native"), "{error}");
+        assert!(matches!(error, AiError::Missing { package: "test-native", .. }));
+        assert!(error.to_string().contains("sudo pacman -S test-native"), "{error}");
     }
 
     #[test]

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-//! Ajustar cores: brightness, contrast, saturation and gamma.
+//! Adjust colors: brightness, contrast, saturation and gamma.
 
 use super::*;
 
@@ -17,7 +17,7 @@ pub(in crate::gui) fn build_adjust_dialog(
         .application(app)
         .default_width(880)
         .default_height(640)
-        .title(gettext("Ajustar cores — Prisma"))
+        .title(gettext("Adjust colors — Prisma"))
         .build();
     prepare_dialog(&window, files, fill_adjust_dialog);
     window
@@ -28,31 +28,30 @@ fn fill_adjust_dialog(
     files: Rc<Vec<PathBuf>>,
     preview_session: Option<Rc<PreviewSession>>,
 ) -> adw::ApplicationWindow {
-    // Preview session — loaded from the first file. Multi-select still works
-    // (Aplicar opera em todos), mas o preview mostra o primeiro.
+    // Apply processes every selected file; the preview shows only the first.
 
     let header = adw::HeaderBar::new();
-    header.set_title_widget(Some(&adw::WindowTitle::new(&gettext("Ajustar cores"), "Prisma")));
+    header.set_title_widget(Some(&adw::WindowTitle::new(&gettext("Adjust colors"), "Prisma")));
 
     let brightness = adw::SpinRow::with_range(-100.0, 100.0, 1.0);
-    brightness.set_title(&gettext("Brilho"));
-    brightness.set_subtitle(&gettext("-100 escuro · 0 neutro · +100 claro"));
+    brightness.set_title(&gettext("Brightness"));
+    brightness.set_subtitle(&gettext("-100 dark · 0 neutral · +100 light"));
     brightness.set_value(0.0);
 
     let contrast = adw::SpinRow::with_range(-100.0, 100.0, 1.0);
-    contrast.set_title(&gettext("Contraste"));
-    contrast.set_subtitle(&gettext("-100 plano · 0 neutro · +100 agressivo"));
+    contrast.set_title(&gettext("Contrast"));
+    contrast.set_subtitle(&gettext("-100 flat · 0 neutral · +100 strong"));
     contrast.set_value(0.0);
 
     let saturation = adw::SpinRow::with_range(-100.0, 100.0, 1.0);
-    saturation.set_title(&gettext("Saturação"));
-    saturation.set_subtitle(&gettext("-100 cinza · 0 neutro · +100 vibrante"));
+    saturation.set_title(&gettext("Saturation"));
+    saturation.set_subtitle(&gettext("-100 gray · 0 neutral · +100 vivid"));
     saturation.set_value(0.0);
 
     let gamma = adw::SpinRow::with_range(0.1, 10.0, 0.05);
     gamma.set_title(&gettext("Gamma"));
     gamma.set_subtitle(&gettext(
-        "Abaixo de 1 clareia os meios-tons · 1 mantém · acima de 1 escurece",
+        "Below 1 lightens midtones · 1 preserves them · above 1 darkens them",
     ));
     gamma.set_digits(2);
     gamma.set_value(1.0);
@@ -61,35 +60,28 @@ fn fill_adjust_dialog(
 
     let overwrite_row = overwrite_row();
 
-    let files_row = selection_row(&gettext("Arquivos selecionados"), &files);
+    let files_row = selection_row(&gettext("Selected files"), &files);
 
     let group_files = adw::PreferencesGroup::new();
     group_files.add(&files_row);
 
-    let group_tone = adw::PreferencesGroup::builder().title(gettext("Tom")).build();
+    let group_tone = adw::PreferencesGroup::builder().title(gettext("Tone")).build();
     group_tone.add(&brightness);
     group_tone.add(&contrast);
     group_tone.add(&gamma);
 
-    let group_color = adw::PreferencesGroup::builder().title(gettext("Cor")).build();
+    let group_color = adw::PreferencesGroup::builder().title(gettext("Color")).build();
     group_color.add(&saturation);
 
-    let group_out = adw::PreferencesGroup::builder().title(gettext("Saída")).build();
+    let group_out = adw::PreferencesGroup::builder().title(gettext("Output")).build();
     group_out.add(&target_row);
     group_out.add(&overwrite_row);
 
     let status = status_label();
 
-    let (cancel_btn, apply_btn, actions_box) = action_buttons(&gettext("Aplicar"));
+    let (cancel_btn, apply_btn, actions_box) = action_buttons(&gettext("Apply"));
 
-    let content = gtk::Box::builder()
-        .orientation(gtk::Orientation::Vertical)
-        .spacing(16)
-        .margin_top(16)
-        .margin_bottom(16)
-        .margin_start(16)
-        .margin_end(16)
-        .build();
+    let content = padded_box(gtk::Orientation::Vertical, 16);
     content.append(&group_files);
     content.append(&group_tone);
     content.append(&group_color);
@@ -127,10 +119,7 @@ fn fill_adjust_dialog(
         None
     };
 
-    let toolbar_view = adw::ToolbarView::new();
-    toolbar_view.add_top_bar(&header);
-    toolbar_view.set_content(Some(&main_box));
-    window.set_content(Some(&toolbar_view));
+    set_dialog_content(&window, &header, &main_box);
 
     // Wire live preview on every slider / gamma change.
     if let (Some(picture), Some(session)) = (preview_picture.as_ref(), preview_session.as_ref()) {
@@ -173,7 +162,6 @@ fn fill_adjust_dialog(
         let overwrite_row = overwrite_row.clone();
         let status = status.clone();
         let apply_btn = apply_btn.clone();
-        let cancel_btn = cancel_btn.clone();
         let window = window.clone();
         dialog_signal!(window, apply_btn.clone(), connect_clicked, move |_| {
             let ops = AdjustOps {
@@ -186,17 +174,15 @@ fn fill_adjust_dialog(
             let policy = selected_overwrite(&overwrite_row);
 
             apply_btn.set_sensitive(false);
-            cancel_btn.set_sensitive(false);
-            status.set_text(&gettext("Ajustando…"));
+            status.set_text(&gettext("Adjusting…"));
 
             let work_files: Vec<PathBuf> = (*files).clone();
             run_batch_async(
                 work_files,
                 move |f| adjust_file(f, ops, target, policy),
-                gettext("Ajustando"),
+                gettext("Adjusting"),
                 status.clone(),
                 apply_btn.clone(),
-                cancel_btn.clone(),
                 window.clone(),
             );
         });

@@ -83,7 +83,7 @@ fn encode_rgb_with(
             // from 1. 65519 = 65533 marker bytes − 14 bytes of header.
             let chunks: Vec<&[u8]> = icc.chunks(65_519).collect();
             let total = u8::try_from(chunks.len()).map_err(|_| {
-                std::io::Error::new(std::io::ErrorKind::InvalidInput, "perfil ICC grande demais")
+                std::io::Error::new(std::io::ErrorKind::InvalidInput, "ICC profile too large")
             })?;
             for (index, chunk) in chunks.iter().enumerate() {
                 let mut app2 = Vec::with_capacity(chunk.len() + 14);
@@ -104,7 +104,7 @@ fn encode_rgb_with(
                 .downcast_ref::<String>()
                 .cloned()
                 .or_else(|| panic.downcast_ref::<&str>().map(|s| (*s).to_owned()))
-                .unwrap_or_else(|| "erro interno do mozjpeg".to_owned());
+                .unwrap_or_else(|| "mozjpeg internal error".to_owned());
             Err(encode_error(image::ImageFormat::Jpeg, message))
         }
     }
@@ -123,12 +123,20 @@ pub(crate) fn encode(
     let threshold = opts.target.ssimulacra2();
     let rgba = image::DynamicImage::ImageRgb8(image.clone()).into_rgba8();
     let probe = Probe::new(&rgba)?;
-    // Search without metadata (identical pixels, fewer bytes to copy).
+    // A whole-image probe keeps its bytes as the result, so it carries the
+    // metadata (the scoring decode ignores it) and reads the source pixels;
+    // a downscaled probe is only scored.
+    let whole = probe.is_whole();
     let none = Extras::default();
+    let probe_extras = if whole { extras } else { &none };
     let attempt = |chroma: Chroma, bounds: Bounds| {
         search(&probe, bounds, threshold, |pixels, q| {
             let (pw, ph) = pixels.dimensions();
-            let bytes = encode_rgb(&rgb_of(pixels), pw, ph, q, chroma, &none)?;
+            let bytes = if whole {
+                encode_rgb(image.as_raw(), pw, ph, q, chroma, probe_extras)?
+            } else {
+                encode_rgb(&rgb_of(pixels), pw, ph, q, chroma, probe_extras)?
+            };
             let decoded = decode(&bytes, image::ImageFormat::Jpeg)?;
             Ok((bytes, decoded))
         })
@@ -158,7 +166,7 @@ pub(crate) fn encode(
     }
     let any_passed = found.iter().any(|(_, f)| f.passed);
     if !any_passed {
-        tracing::debug!(threshold, "JPEG não atingiu a meta; usando a maior qualidade");
+        tracing::debug!(threshold, "JPEG missed the target; using the highest quality");
     }
     let mut best: Option<Vec<u8>> = None;
     // Without a pass, the last attempt (4:4:4 at its top quality) is the
@@ -169,8 +177,8 @@ pub(crate) fn encode(
             continue;
         }
         let bytes = match f.bytes {
-            Some(bytes) if extras.is_empty() => bytes,
-            _ => encode_rgb(image.as_raw(), w, h, f.quality, chroma, extras)?,
+            Some(bytes) => bytes,
+            None => encode_rgb(image.as_raw(), w, h, f.quality, chroma, extras)?,
         };
         if best.as_ref().is_none_or(|b| bytes.len() < b.len()) {
             best = Some(bytes);

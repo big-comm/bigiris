@@ -13,7 +13,7 @@ pub struct Submenu {
     /// Filesystem-safe identifier. Used to build file names like
     /// `bigiris-convert-png.desktop`.
     pub id: &'static str,
-    /// User-visible label (pt-BR by default; i18n comes with gettext).
+    /// User-visible label, an English gettext msgid.
     pub label: &'static str,
     /// Symbolic icon name from the standard icon theme.
     pub icon: &'static str,
@@ -47,10 +47,10 @@ pub const TOP_LEVEL_LABEL: &str = "BigIris";
 const IMAGE_MIME: &[&str] = &["image/*"];
 const DIRECTORY_MIME: &[&str] = &["inode/directory"];
 
-/// Mime filter para documentos que o LibreOffice converte em PDF. Escolha
-/// dos formatos segue a matriz que `soffice --convert-to pdf` atende bem
-/// — texto, planilha e apresentação em ODF e em Office. Inclui `text/*`
-/// porque o soffice importa TXT/MD/CSV direto no Writer.
+/// Mime filter for documents LibreOffice converts to PDF: the text,
+/// spreadsheet and presentation formats, ODF and Office, that `soffice
+/// --convert-to pdf` handles well. Plain text types are included because
+/// soffice imports TXT, MD and CSV straight into Writer.
 const DOC_MIME: &[&str] = &[
     "application/vnd.oasis.opendocument.text",
     "application/vnd.oasis.opendocument.spreadsheet",
@@ -72,52 +72,52 @@ const DOC_MIME: &[&str] = &[
 
 /// Submenu: convert to another format.
 pub const SUB_CONVERT: Submenu =
-    Submenu { id: "convert", label: n_("Converter"), icon: "document-save-as-symbolic" };
+    Submenu { id: "convert", label: n_("Convert"), icon: "document-save-as-symbolic" };
 
 /// Submenu: resize to a preset.
 pub const SUB_RESIZE: Submenu =
-    Submenu { id: "resize", label: n_("Redimensionar"), icon: "view-fullscreen-symbolic" };
+    Submenu { id: "resize", label: n_("Resize"), icon: "view-fullscreen-symbolic" };
 
 /// Submenu: cardinal rotation.
 pub const SUB_ROTATE: Submenu =
-    Submenu { id: "rotate", label: n_("Girar"), icon: "object-rotate-right-symbolic" };
+    Submenu { id: "rotate", label: n_("Rotate"), icon: "object-rotate-right-symbolic" };
 
 /// Submenu: mirror horizontally/vertically.
 pub const SUB_FLIP: Submenu =
-    Submenu { id: "flip", label: n_("Espelhar"), icon: "object-flip-horizontal-symbolic" };
+    Submenu { id: "flip", label: n_("Flip"), icon: "object-flip-horizontal-symbolic" };
 
-/// Submenu: tone / colour adjustments.
+/// Submenu: tone and color adjustments.
 pub const SUB_ADJUST: Submenu =
-    Submenu { id: "adjust", label: n_("Ajustar cores"), icon: "image-adjust-symbolic" };
+    Submenu { id: "adjust", label: n_("Adjust colors"), icon: "image-adjust-symbolic" };
 
-/// Submenu: social/web presets (1-clique: resize + quality + progressive).
-/// Label sem `/` para nao colidir com separador de path quando a Nautilus
-/// scripts tree cria a pasta do submenu.
+/// Submenu: one-click social and web presets (resize, quality, progressive).
+/// The label has no `/`, which would collide with the path separator when a
+/// file manager makes a folder for the submenu.
 pub const SUB_WEB: Submenu =
-    Submenu { id: "web", label: n_("Para web"), icon: "applications-internet-symbolic" };
+    Submenu { id: "web", label: n_("For the web"), icon: "applications-internet-symbolic" };
 
-/// Submenu: inspecao / limpeza de metadados (EXIF, IPTC, XMP).
+/// Submenu: inspect or strip metadata (EXIF, IPTC, XMP).
 pub const SUB_METADATA: Submenu =
-    Submenu { id: "metadata", label: n_("Metadados"), icon: "dialog-information-symbolic" };
+    Submenu { id: "metadata", label: n_("Metadata"), icon: "dialog-information-symbolic" };
 
-/// Submenu: utilidades criativas (GIF animado, comparar, composicao).
+/// Submenu: creative utilities (animated GIF, compare, composition).
 pub const SUB_UTILS: Submenu =
-    Submenu { id: "utils", label: n_("Utilidades"), icon: "applications-graphics-symbolic" };
+    Submenu { id: "utils", label: n_("Utilities"), icon: "applications-graphics-symbolic" };
 
-/// Submenu: IA local (background removal, upscale, denoise).
-/// Requer build com feature `ai`; cada ferramenta precisa do seu pacote de
-/// pesos (`birefnet-native`, `realesrgan-native`, ...).
+/// Submenu: local AI (background removal, upscale, denoise).
+/// Needs a build with the `ai` feature; each tool needs its weights package
+/// (`birefnet-native`, `realesrgan-native`, ...).
 pub const SUB_AI: Submenu =
-    Submenu { id: "ai", label: n_("IA"), icon: "applications-science-symbolic" };
+    Submenu { id: "ai", label: n_("AI"), icon: "applications-science-symbolic" };
 
-/// Submenu: converter documento → PDF via LibreOffice. Só aparece quando
-/// a seleção bate em [`DOC_MIME`] — em imagens o usuário usa Convert ▸.
+/// Submenu: convert a document to PDF through LibreOffice. Shown only when
+/// the selection matches [`DOC_MIME`]; images go through Convert ▸.
 pub const SUB_PDF: Submenu =
     Submenu { id: "pdf", label: n_("PDF"), icon: "application-pdf-symbolic" };
 
 /// All actions to install, in a display-friendly order.
 ///
-/// **Order matters** — file managers render the menu in the order this
+/// **Order matters**: file managers render the menu in the order this
 /// const declares the actions. The first entry here is the first row
 /// the user sees in the right-click menu, so `view` (the most-frequent
 /// single-click action: open the image in BigIris) deliberately sits
@@ -125,13 +125,13 @@ pub const SUB_PDF: Submenu =
 ///
 /// `--overwrite skip` means the quick actions never clobber an existing
 /// sibling file; users who want to replace or increment go through the
-/// modal "Personalizar…" path.
+/// modal "More options…" path.
 pub const ACTIONS: &[Action] = &[
-    // Visualizar (top-level, 1-click) — most common entry point.
+    // View (top level, one click): the most common entry point.
     Action {
         id: "view",
         submenu: None,
-        label: n_("Visualizar em BigIris"),
+        label: n_("View in BigIris"),
         command: "bigiris %F",
         icon: "com.biglinux.Iris",
         mime_types: IMAGE_MIME,
@@ -139,7 +139,7 @@ pub const ACTIONS: &[Action] = &[
     Action {
         id: "batch-folder",
         submenu: None,
-        label: n_("Processar esta pasta…"),
+        label: n_("Process this folder…"),
         command: "bigiris --dialog=batch %F",
         icon: "folder-pictures-symbolic",
         mime_types: DIRECTORY_MIME,
@@ -149,7 +149,7 @@ pub const ACTIONS: &[Action] = &[
         id: "convert-png",
         submenu: Some(SUB_CONVERT),
         label: n_("PNG"),
-        command: "bigiris convert --to png --overwrite skip %F",
+        command: "bigiris --notify convert --to png --overwrite skip %F",
         icon: "image-x-generic-symbolic",
         mime_types: IMAGE_MIME,
     },
@@ -157,7 +157,7 @@ pub const ACTIONS: &[Action] = &[
         id: "convert-jpg",
         submenu: Some(SUB_CONVERT),
         label: n_("JPG"),
-        command: "bigiris convert --to jpg --overwrite skip %F",
+        command: "bigiris --notify convert --to jpg --overwrite skip %F",
         icon: "image-x-generic-symbolic",
         mime_types: IMAGE_MIME,
     },
@@ -165,7 +165,7 @@ pub const ACTIONS: &[Action] = &[
         id: "convert-webp",
         submenu: Some(SUB_CONVERT),
         label: n_("WebP"),
-        command: "bigiris convert --to webp --overwrite skip %F",
+        command: "bigiris --notify convert --to webp --overwrite skip %F",
         icon: "image-x-generic-symbolic",
         mime_types: IMAGE_MIME,
     },
@@ -173,7 +173,7 @@ pub const ACTIONS: &[Action] = &[
         id: "convert-avif",
         submenu: Some(SUB_CONVERT),
         label: n_("AVIF"),
-        command: "bigiris convert --to avif --overwrite skip %F",
+        command: "bigiris --notify convert --to avif --overwrite skip %F",
         icon: "image-x-generic-symbolic",
         mime_types: IMAGE_MIME,
     },
@@ -181,27 +181,26 @@ pub const ACTIONS: &[Action] = &[
         id: "convert-tiff",
         submenu: Some(SUB_CONVERT),
         label: n_("TIFF"),
-        command: "bigiris convert --to tiff --overwrite skip %F",
+        command: "bigiris --notify convert --to tiff --overwrite skip %F",
         icon: "image-x-generic-symbolic",
         mime_types: IMAGE_MIME,
     },
-    // Imagem → PDF fica por conta do BigOCRPDF (já aparece no clique-
-    // direito de imagens via sua própria extension). Não duplicamos
-    // aqui pra não poluir o submenu Converter com o mesmo caminho.
+    // Image to PDF belongs to BigOCRPDF, whose own extension already adds
+    // it to the image right-click menu; repeating it here would clutter Convert.
     Action {
         id: "convert-custom",
         submenu: Some(SUB_CONVERT),
-        label: n_("Mais opções…"),
+        label: n_("More options…"),
         command: "bigiris --dialog=convert %F",
         icon: "document-edit-symbolic",
         mime_types: IMAGE_MIME,
     },
-    // Redimensionar ▸
+    // Resize ▸
     Action {
         id: "resize-25pct",
         submenu: Some(SUB_RESIZE),
         label: n_("25%"),
-        command: "bigiris resize --percent 25 %F",
+        command: "bigiris --notify resize --percent 25 %F",
         icon: "view-fullscreen-symbolic",
         mime_types: IMAGE_MIME,
     },
@@ -209,7 +208,7 @@ pub const ACTIONS: &[Action] = &[
         id: "resize-50pct",
         submenu: Some(SUB_RESIZE),
         label: n_("50%"),
-        command: "bigiris resize --percent 50 %F",
+        command: "bigiris --notify resize --percent 50 %F",
         icon: "view-fullscreen-symbolic",
         mime_types: IMAGE_MIME,
     },
@@ -217,7 +216,7 @@ pub const ACTIONS: &[Action] = &[
         id: "resize-200pct",
         submenu: Some(SUB_RESIZE),
         label: n_("200%"),
-        command: "bigiris resize --percent 200 %F",
+        command: "bigiris --notify resize --percent 200 %F",
         icon: "view-fullscreen-symbolic",
         mime_types: IMAGE_MIME,
     },
@@ -225,7 +224,7 @@ pub const ACTIONS: &[Action] = &[
         id: "resize-hd-1920",
         submenu: Some(SUB_RESIZE),
         label: n_("HD (1920 px)"),
-        command: "bigiris resize --fit 1920x1920 %F",
+        command: "bigiris --notify resize --fit 1920x1920 %F",
         icon: "view-fullscreen-symbolic",
         mime_types: IMAGE_MIME,
     },
@@ -233,24 +232,24 @@ pub const ACTIONS: &[Action] = &[
         id: "resize-4k-3840",
         submenu: Some(SUB_RESIZE),
         label: n_("4K (3840 px)"),
-        command: "bigiris resize --fit 3840x3840 %F",
+        command: "bigiris --notify resize --fit 3840x3840 %F",
         icon: "view-fullscreen-symbolic",
         mime_types: IMAGE_MIME,
     },
     Action {
         id: "resize-custom",
         submenu: Some(SUB_RESIZE),
-        label: n_("Mais opções…"),
+        label: n_("More options…"),
         command: "bigiris --dialog=resize %F",
         icon: "document-edit-symbolic",
         mime_types: IMAGE_MIME,
     },
-    // Girar ▸
+    // Rotate ▸
     Action {
         id: "rotate-90",
         submenu: Some(SUB_ROTATE),
         label: n_("90°"),
-        command: "bigiris rotate --degrees 90 %F",
+        command: "bigiris --notify rotate --degrees 90 %F",
         icon: "object-rotate-right-symbolic",
         mime_types: IMAGE_MIME,
     },
@@ -258,7 +257,7 @@ pub const ACTIONS: &[Action] = &[
         id: "rotate-180",
         submenu: Some(SUB_ROTATE),
         label: n_("180°"),
-        command: "bigiris rotate --degrees 180 %F",
+        command: "bigiris --notify rotate --degrees 180 %F",
         icon: "object-rotate-right-symbolic",
         mime_types: IMAGE_MIME,
     },
@@ -266,32 +265,32 @@ pub const ACTIONS: &[Action] = &[
         id: "rotate-270",
         submenu: Some(SUB_ROTATE),
         label: n_("270°"),
-        command: "bigiris rotate --degrees 270 %F",
+        command: "bigiris --notify rotate --degrees 270 %F",
         icon: "object-rotate-left-symbolic",
         mime_types: IMAGE_MIME,
     },
     Action {
         id: "rotate-auto-exif",
         submenu: Some(SUB_ROTATE),
-        label: n_("Automático (EXIF)"),
-        command: "bigiris rotate --auto --overwrite increment %F",
+        label: n_("Automatic (EXIF)"),
+        command: "bigiris --notify rotate --auto --overwrite increment %F",
         icon: "object-rotate-right-symbolic",
         mime_types: IMAGE_MIME,
     },
     Action {
         id: "rotate-custom",
         submenu: Some(SUB_ROTATE),
-        label: n_("Mais opções…"),
+        label: n_("More options…"),
         command: "bigiris --dialog=rotate %F",
         icon: "document-edit-symbolic",
         mime_types: IMAGE_MIME,
     },
-    // Espelhar ▸
+    // Flip ▸
     Action {
         id: "flip-horizontal",
         submenu: Some(SUB_FLIP),
         label: n_("Horizontal"),
-        command: "bigiris flip --axis horizontal %F",
+        command: "bigiris --notify flip --axis horizontal %F",
         icon: "object-flip-horizontal-symbolic",
         mime_types: IMAGE_MIME,
     },
@@ -299,76 +298,74 @@ pub const ACTIONS: &[Action] = &[
         id: "flip-vertical",
         submenu: Some(SUB_FLIP),
         label: n_("Vertical"),
-        command: "bigiris flip --axis vertical %F",
+        command: "bigiris --notify flip --axis vertical %F",
         icon: "object-flip-vertical-symbolic",
         mime_types: IMAGE_MIME,
     },
     Action {
         id: "flip-custom",
         submenu: Some(SUB_FLIP),
-        label: n_("Mais opções…"),
+        label: n_("More options…"),
         command: "bigiris --dialog=flip %F",
         icon: "document-edit-symbolic",
         mime_types: IMAGE_MIME,
     },
-    // Ajustar cores ▸
+    // Adjust colors ▸
     Action {
         id: "adjust-brightness-plus",
         submenu: Some(SUB_ADJUST),
-        label: n_("+ Brilho (+10)"),
-        command: "bigiris adjust --brightness 10 %F",
+        label: n_("+ Brightness (+10)"),
+        command: "bigiris --notify adjust --brightness 10 %F",
         icon: "display-brightness-symbolic",
         mime_types: IMAGE_MIME,
     },
     Action {
         id: "adjust-brightness-minus",
         submenu: Some(SUB_ADJUST),
-        label: n_("− Brilho (-10)"),
-        command: "bigiris adjust --brightness -10 %F",
+        label: n_("− Brightness (-10)"),
+        command: "bigiris --notify adjust --brightness -10 %F",
         icon: "display-brightness-symbolic",
         mime_types: IMAGE_MIME,
     },
     Action {
         id: "adjust-contrast-plus",
         submenu: Some(SUB_ADJUST),
-        label: n_("+ Contraste (+20)"),
-        command: "bigiris adjust --contrast 20 %F",
+        label: n_("+ Contrast (+20)"),
+        command: "bigiris --notify adjust --contrast 20 %F",
         icon: "display-brightness-symbolic",
         mime_types: IMAGE_MIME,
     },
     Action {
         id: "adjust-bw",
         submenu: Some(SUB_ADJUST),
-        label: n_("Preto e branco"),
-        command: "bigiris adjust --saturation -100 %F",
+        label: n_("Black and white"),
+        command: "bigiris --notify adjust --saturation -100 %F",
         icon: "color-pick-symbolic",
         mime_types: IMAGE_MIME,
     },
     Action {
         id: "adjust-vivid",
         submenu: Some(SUB_ADJUST),
-        label: n_("Cores vivas (+40)"),
-        command: "bigiris adjust --saturation 40 %F",
+        label: n_("Vivid colors (+40)"),
+        command: "bigiris --notify adjust --saturation 40 %F",
         icon: "color-pick-symbolic",
         mime_types: IMAGE_MIME,
     },
     Action {
         id: "adjust-custom",
         submenu: Some(SUB_ADJUST),
-        label: n_("Mais opções…"),
+        label: n_("More options…"),
         command: "bigiris --dialog=adjust %F",
         icon: "document-edit-symbolic",
         mime_types: IMAGE_MIME,
     },
-    // Para web / redes ▸ — combos "1 clique" que fazem resize + JPEG com
-    // qualidade otimizada para o canal. Todos usam --fit NxN (preserva
-    // aspecto, faz upscale OU downscale conforme precisar) e JPEG
-    // progressivo com quality preset.
+    // For the web ▸: one-click resize plus a progressive JPEG at the quality
+    // each channel wants. `--fit NxN` keeps the aspect ratio and scales up or down.
     Action {
         id: "web-whatsapp",
         submenu: Some(SUB_WEB),
         label: n_("WhatsApp (1280 px · JPG q85)"),
-        command: "bigiris resize --fit 1280x1280 --to jpg --quality 85 --progressive %F",
+        command: "bigiris --notify resize --fit 1280x1280 --to jpg --quality 85 --progressive %F",
         icon: "applications-internet-symbolic",
         mime_types: IMAGE_MIME,
     },
@@ -376,7 +373,7 @@ pub const ACTIONS: &[Action] = &[
         id: "web-instagram",
         submenu: Some(SUB_WEB),
         label: n_("Instagram (1080 px · JPG q90)"),
-        command: "bigiris resize --fit 1080x1080 --to jpg --quality 90 --progressive %F",
+        command: "bigiris --notify resize --fit 1080x1080 --to jpg --quality 90 --progressive %F",
         icon: "applications-internet-symbolic",
         mime_types: IMAGE_MIME,
     },
@@ -384,7 +381,7 @@ pub const ACTIONS: &[Action] = &[
         id: "web-facebook",
         submenu: Some(SUB_WEB),
         label: n_("Facebook (2048 px · JPG q85)"),
-        command: "bigiris resize --fit 2048x2048 --to jpg --quality 85 --progressive %F",
+        command: "bigiris --notify resize --fit 2048x2048 --to jpg --quality 85 --progressive %F",
         icon: "applications-internet-symbolic",
         mime_types: IMAGE_MIME,
     },
@@ -392,7 +389,7 @@ pub const ACTIONS: &[Action] = &[
         id: "web-twitter",
         submenu: Some(SUB_WEB),
         label: n_("Twitter · X (1200 px · JPG q85)"),
-        command: "bigiris resize --fit 1200x1200 --to jpg --quality 85 --progressive %F",
+        command: "bigiris --notify resize --fit 1200x1200 --to jpg --quality 85 --progressive %F",
         icon: "applications-internet-symbolic",
         mime_types: IMAGE_MIME,
     },
@@ -400,7 +397,7 @@ pub const ACTIONS: &[Action] = &[
         id: "web-telegram",
         submenu: Some(SUB_WEB),
         label: n_("Telegram (2560 px · JPG q85)"),
-        command: "bigiris resize --fit 2560x2560 --to jpg --quality 85 --progressive %F",
+        command: "bigiris --notify resize --fit 2560x2560 --to jpg --quality 85 --progressive %F",
         icon: "applications-internet-symbolic",
         mime_types: IMAGE_MIME,
     },
@@ -408,27 +405,27 @@ pub const ACTIONS: &[Action] = &[
         id: "web-discord",
         submenu: Some(SUB_WEB),
         label: n_("Discord (2048 px · JPG q80)"),
-        command: "bigiris resize --fit 2048x2048 --to jpg --quality 80 --progressive %F",
+        command: "bigiris --notify resize --fit 2048x2048 --to jpg --quality 80 --progressive %F",
         icon: "applications-internet-symbolic",
         mime_types: IMAGE_MIME,
     },
     Action {
         id: "web-optimize-png",
         submenu: Some(SUB_WEB),
-        label: n_("Otimizar PNG (compressão máxima)"),
-        command: "bigiris convert --to png --target maxima --optimize --overwrite replace %F",
+        label: n_("Optimize PNG (maximum compression)"),
+        command:
+            "bigiris --notify convert --to png --target maximum --optimize --overwrite replace %F",
         icon: "applications-internet-symbolic",
         mime_types: IMAGE_MIME,
     },
-    // Letterbox presets — "Para web ▸" também cobre quando a rede social
-    // força razão fixa e cortaria conteúdo importante da imagem. Estende a
-    // tela em volta da imagem em vez de cortar; 0d0e12 (preto suave) é o
-    // default que casa com o tema escuro do YouTube/Instagram.
+    // Letterbox presets extend the canvas instead of cropping when a network
+    // forces a fixed ratio; 0d0e12 (soft black) matches the YouTube and
+    // Instagram dark themes.
     Action {
         id: "web-letterbox-yt",
         submenu: Some(SUB_WEB),
         label: n_("Letterbox YouTube post (1:1)"),
-        command: "bigiris extent --aspect 1:1 --bg 0d0e12 %F",
+        command: "bigiris --notify extent --aspect 1:1 --bg 0d0e12 %F",
         icon: "applications-internet-symbolic",
         mime_types: IMAGE_MIME,
     },
@@ -436,7 +433,7 @@ pub const ACTIONS: &[Action] = &[
         id: "web-letterbox-ig",
         submenu: Some(SUB_WEB),
         label: n_("Letterbox Instagram feed (4:5)"),
-        command: "bigiris extent --aspect 4:5 --bg 0d0e12 %F",
+        command: "bigiris --notify extent --aspect 4:5 --bg 0d0e12 %F",
         icon: "applications-internet-symbolic",
         mime_types: IMAGE_MIME,
     },
@@ -444,23 +441,23 @@ pub const ACTIONS: &[Action] = &[
         id: "web-letterbox-stories",
         submenu: Some(SUB_WEB),
         label: n_("Letterbox Stories / Shorts (9:16)"),
-        command: "bigiris extent --aspect 9:16 --bg 0d0e12 %F",
+        command: "bigiris --notify extent --aspect 9:16 --bg 0d0e12 %F",
         icon: "applications-internet-symbolic",
         mime_types: IMAGE_MIME,
     },
     Action {
         id: "web-letterbox-custom",
         submenu: Some(SUB_WEB),
-        label: n_("Letterbox personalizado…"),
+        label: n_("Custom letterbox…"),
         command: "bigiris --dialog=extent %F",
         icon: "applications-internet-symbolic",
         mime_types: IMAGE_MIME,
     },
-    // Metadados ▸
+    // Metadata ▸
     Action {
         id: "metadata-view",
         submenu: Some(SUB_METADATA),
-        label: n_("Ver metadados…"),
+        label: n_("View metadata…"),
         command: "bigiris --dialog=metadata %F",
         icon: "dialog-information-symbolic",
         mime_types: IMAGE_MIME,
@@ -468,18 +465,18 @@ pub const ACTIONS: &[Action] = &[
     Action {
         id: "metadata-strip-all",
         submenu: Some(SUB_METADATA),
-        label: n_("Remover tudo (re-encode limpo)"),
-        // Nosso pipeline de convert ja re-encoda sem EXIF/IPTC/XMP,
-        // entao "strip tudo" e um convert para o mesmo formato.
+        label: n_("Remove all metadata (clean re-encode)"),
+        // Convert re-encodes without EXIF, IPTC or XMP, so stripping
+        // everything is a convert to the same format.
         command: "bigiris --dialog=convert %F",
         icon: "edit-delete-symbolic",
         mime_types: IMAGE_MIME,
     },
-    // Utilidades ▸
+    // Utilities ▸
     Action {
         id: "utils-batch",
         submenu: Some(SUB_UTILS),
-        label: n_("Converter em lote (Prisma)…"),
+        label: n_("Batch convert (Prisma)…"),
         command: "bigiris --dialog=batch %F",
         icon: "document-save-as-symbolic",
         mime_types: IMAGE_MIME,
@@ -487,7 +484,7 @@ pub const ACTIONS: &[Action] = &[
     Action {
         id: "utils-animate-gif",
         submenu: Some(SUB_UTILS),
-        label: n_("Criar GIF animado…"),
+        label: n_("Create animated GIF…"),
         command: "bigiris --dialog=animate %F",
         icon: "video-x-generic-symbolic",
         mime_types: IMAGE_MIME,
@@ -495,18 +492,18 @@ pub const ACTIONS: &[Action] = &[
     Action {
         id: "utils-compare",
         submenu: Some(SUB_UTILS),
-        label: n_("Comparar 2 imagens…"),
+        label: n_("Compare 2 images…"),
         command: "bigiris --dialog=compare %F",
         icon: "view-dual-symbolic",
         mime_types: IMAGE_MIME,
     },
-    // IA ▸
+    // AI ▸
     Action {
         id: "ai-remove-bg",
         submenu: Some(SUB_AI),
-        label: n_("Remover fundo (BiRefNet)"),
-        // Dispara o diálogo GUI com barra de progresso + compare ao fim.
-        // Headless puro (`bigiris remove-bg`) fica só na CLI.
+        label: n_("Remove background (BiRefNet)"),
+        // Opens the dialog with a progress bar and a comparison at the end;
+        // the headless `bigiris remove-bg` stays CLI only.
         command: "bigiris --dialog=remove-bg %F",
         icon: "applications-science-symbolic",
         mime_types: IMAGE_MIME,
@@ -514,19 +511,19 @@ pub const ACTIONS: &[Action] = &[
     Action {
         id: "ai-upscale",
         submenu: Some(SUB_AI),
-        label: n_("Aumentar resolução…"),
+        label: n_("Upscale…"),
         // Same dialog as the viewer's edit panel: Real-ESRGAN when
         // `realesrgan-native` is installed, Lanczos3 otherwise.
         command: "bigiris --dialog=upscale %F",
         icon: "applications-science-symbolic",
         mime_types: IMAGE_MIME,
     },
-    // PDF ▸ (documentos, não imagens — filter DOC_MIME exclusivo)
+    // PDF ▸ (documents, not images: DOC_MIME only)
     Action {
         id: "pdf-convert",
         submenu: Some(SUB_PDF),
-        label: n_("Converter para PDF (LibreOffice)"),
-        command: "bigiris to-pdf %F",
+        label: n_("Convert to PDF (LibreOffice)"),
+        command: "bigiris --notify to-pdf %F",
         icon: "application-pdf-symbolic",
         mime_types: DOC_MIME,
     },
@@ -555,7 +552,7 @@ mod tests {
     fn action_ids_are_unique() {
         let mut seen = std::collections::HashSet::new();
         for a in ACTIONS {
-            assert!(seen.insert(a.id), "id duplicado: {}", a.id);
+            assert!(seen.insert(a.id), "duplicate id: {}", a.id);
         }
     }
 
@@ -564,7 +561,7 @@ mod tests {
         for a in ACTIONS {
             assert!(
                 a.id.chars().all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-'),
-                "id não é filesystem-safe: {}",
+                "id is not filesystem-safe: {}",
                 a.id
             );
             assert!(!a.id.is_empty());
@@ -574,7 +571,7 @@ mod tests {
     #[test]
     fn every_command_uses_file_placeholder() {
         for a in ACTIONS {
-            assert!(a.command.contains("%F"), "comando sem %F: {} — {}", a.id, a.command);
+            assert!(a.command.contains("%F"), "command without %F: {}: {}", a.id, a.command);
         }
     }
 

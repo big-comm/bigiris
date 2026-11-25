@@ -1,31 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-//! Editing panel behaviour that needs a display. Run each test alone,
+//! Editing panel behavior that needs a display. Run each test alone,
 //! under a nested or virtual compositor:
 //! `GSETTINGS_BACKEND=memory cargo test -p bigiris --features "gui ai"
 //! viewer_edit_panel -- --ignored --test-threads=1`
 use super::super::*;
-
-fn settle(context: &glib::MainContext, millis: u64) {
-    let until = std::time::Instant::now() + Duration::from_millis(millis);
-    while std::time::Instant::now() < until {
-        while context.pending() {
-            context.iteration(false);
-        }
-        std::thread::sleep(Duration::from_millis(5));
-    }
-}
-
-#[track_caller]
-fn wait(context: &glib::MainContext, what: &str, condition: &dyn Fn() -> bool) {
-    let deadline = std::time::Instant::now() + Duration::from_secs(30);
-    while !condition() {
-        while context.pending() {
-            context.iteration(false);
-        }
-        assert!(std::time::Instant::now() < deadline, "timed out: {what}");
-        std::thread::sleep(Duration::from_millis(5));
-    }
-}
+use super::gui_tests::{settle, wait};
 
 fn action_enabled(window: &adw::ApplicationWindow, name: &str) -> bool {
     window.lookup_action(name).unwrap().is_enabled()
@@ -68,16 +47,16 @@ fn action_button(root: &impl IsA<gtk::Widget>, action: &str) -> gtk::Button {
     .unwrap_or_else(|| panic!("no button for {action}"))
 }
 
-fn labelled_button(root: &impl IsA<gtk::Widget>, label: &str) -> gtk::Button {
+fn labeled_button(root: &impl IsA<gtk::Widget>, label: &str) -> gtk::Button {
     find(root, &|w| {
         w.downcast_ref::<gtk::Button>().is_some_and(|b| b.label().as_deref() == Some(label))
     })
     .and_downcast::<gtk::Button>()
-    .unwrap_or_else(|| panic!("no button labelled {label}"))
+    .unwrap_or_else(|| panic!("no button labeled {label}"))
 }
 
 /// A synthetic 640 × 480 landscape: sky gradient, sun, hills, and a flat
-/// grey patch (100, 100, 100) at 20..80 × 400..460 to measure tone edits.
+/// gray patch (100, 100, 100) at 20..80 × 400..460 to measure tone edits.
 pub(super) fn landscape(path: &Path) {
     image::RgbImage::from_fn(640, 480, |x, y| {
         let (fx, fy) = (x as f32, y as f32);
@@ -194,8 +173,8 @@ fn viewer_edit_panel() {
             .is_some_and(|b| b.action_name().as_deref() == Some("win.edit-panel"))
     })
     .and_downcast::<gtk::ToggleButton>()
-    .expect("Editar button");
-    assert_eq!(header_button.tooltip_text().as_deref(), Some("Editar (E)"));
+    .expect("Edit button");
+    assert_eq!(header_button.tooltip_text().as_deref(), Some(gettext("Edit (E)").as_str()));
     header_button.emit_clicked();
     settle(&context, 400);
     assert!(state.borrow().edit.is_shown(), "button did not open the panel");
@@ -237,7 +216,7 @@ fn viewer_edit_panel() {
     wait_frame(&context, &state, (640, 480));
     action_button(&panel, "win.flip-h").emit_clicked();
     wait_frame(&context, &state, (640, 480));
-    // The grey patch moved to the right edge.
+    // The gray patch moved to the right edge.
     assert_eq!(texture_pixel(&state, 639 - 30, 430), [100, 100, 100, 255]);
     action_button(&panel, "win.flip-v").emit_clicked();
     wait(&context, "flip-v", &|| state.borrow().pending_ops.len() == 4);
@@ -254,7 +233,7 @@ fn viewer_edit_panel() {
     wait_frame(&context, &state, (640, 480));
     assert_eq!(texture_pixel(&state, 30, 430), [100, 100, 100, 255]);
 
-    // Recortar enters the inline crop and hides the panel until it ends.
+    // Crop enters the inline crop and hides the panel until it ends.
     action_button(&panel, "win.crop").emit_clicked();
     settle(&context, 300);
     assert!(state.borrow().crop.is_some());
@@ -306,8 +285,8 @@ fn viewer_edit_panel() {
     redo_edit(&state);
     wait_frame(&context, &state, (640, 480));
     assert_eq!(state.borrow().edit_ui.slider_values().contrast, 30);
-    // "Restaurar ajustes" is one more undoable step back to neutral.
-    labelled_button(&panel, "Restaurar ajustes").emit_clicked();
+    // "Reset adjustments" is one more undoable step back to neutral.
+    labeled_button(&panel, &gettext("Reset adjustments")).emit_clicked();
     wait(&context, "reset committed", &|| state.borrow().pending_ops.len() == 3);
     wait_frame(&context, &state, (640, 480));
     assert_eq!(texture_pixel(&state, 30, 430), [100, 100, 100, 255]);
@@ -317,6 +296,21 @@ fn viewer_edit_panel() {
     wait(&context, "adjustments undone", &|| state.borrow().pending_ops.is_empty());
     wait_frame(&context, &state, (640, 480));
     assert_eq!(state.borrow().edit_ui.slider_values(), super::edits::AdjustValues::NEUTRAL);
+    // A reset pressed from the keyboard turns insensitive and hands the
+    // focus to its slider instead of dropping it.
+    brightness.set_value(20.0);
+    wait(&context, "brightness committed", &|| state.borrow().pending_ops.len() == 1);
+    let reset = state.borrow().edit_ui.reset(0);
+    assert!(reset.is_sensitive());
+    assert!(reset.grab_focus(), "reset button not focusable");
+    reset.emit_clicked();
+    assert!(!reset.is_sensitive());
+    assert!(brightness.has_focus(), "focus lost after the reset");
+    wait(&context, "reset committed", &|| state.borrow().pending_ops.len() == 2);
+    undo_edit(&state);
+    undo_edit(&state);
+    wait(&context, "reset undone", &|| state.borrow().pending_ops.is_empty());
+    wait_frame(&context, &state, (640, 480));
 
     // Resize: the lock keeps the proportion; unlocked sides are free.
     let (width, height, lock, percent, apply) = state.borrow().edit_ui.size_controls();
@@ -373,7 +367,7 @@ fn viewer_edit_panel() {
     settle(&context, 50);
     assert_eq!(shown().as_ref(), Some(&edited), "original stayed after releasing \\");
 
-    // Salvar como: a new file with the edits; the original is untouched
+    // Save as: a new file with the edits; the original is untouched
     // and the copy joins the folder list.
     apply_edit(&state, EditOp::Resize { w: 320, h: 240 });
     wait_frame(&context, &state, (320, 240));
@@ -388,7 +382,7 @@ fn viewer_edit_panel() {
     assert_eq!(std::fs::read(&photo).unwrap(), original_bytes, "original changed");
     let saved = image::open(&copy).unwrap().to_rgb8();
     assert_eq!(saved.dimensions(), (320, 240));
-    // Flipped: the grey patch is on the right.
+    // Flipped: the gray patch is on the right.
     assert_eq!(saved.get_pixel(319 - 15, 215).0, [100, 100, 100]);
     {
         let s = state.borrow();
@@ -431,7 +425,7 @@ fn viewer_edit_panel_tools() {
     assert!(state.borrow().edit.is_shown());
     let grid = state.borrow().edit_ui.grid.clone();
 
-    // Endireitar: live preview with an alignment grid, then one edit that
+    // Straighten: live preview with an alignment grid, then one edit that
     // turns and crops to the largest rectangle inside: no empty corners.
     let straighten = state.borrow().edit_ui.straighten_scale();
     // Held like a pointer drag, so the preview stays until the release.
@@ -469,7 +463,7 @@ fn viewer_edit_panel_tools() {
     wait_frame(&context, &state, (640, 480));
     assert_eq!(straighten.value(), 0.0);
 
-    // Aumentar resolução runs inline with progress and becomes an edit.
+    // Upscale runs inline with progress and becomes an edit.
     let (remove_bg, upscale, factor, tool_box, status) = state.borrow().edit_ui.tool_controls();
     factor.set_selected(0);
     let runs = heavy_runs();
@@ -507,7 +501,7 @@ fn viewer_edit_panel_tools() {
     assert!(!tool_box.is_visible() && status.is_visible());
     assert!(action_enabled(&window, "rotate-cw"));
     settle(&context, 800);
-    assert_eq!(state.borrow().pending_ops.len(), 2, "a cancelled tool still applied");
+    assert_eq!(state.borrow().pending_ops.len(), 2, "a canceled tool still applied");
     // The lower sections, scrolled into view.
     let scroller = find(&state.borrow().edit_ui.revealer, &|w| w.is::<gtk::ScrolledWindow>())
         .and_downcast::<gtk::ScrolledWindow>()
@@ -520,7 +514,7 @@ fn viewer_edit_panel_tools() {
     undo_edit(&state);
     wait_frame(&context, &state, (640, 480));
 
-    // Remover fundo / Remover ruído: without their packages the buttons
+    // Remove background / Remove noise: without their packages the buttons
     // are off and the panel says which package to install.
     let (denoise, note) = state.borrow().edit_ui.ai_controls();
     for (button, model, op) in [
@@ -543,6 +537,71 @@ fn viewer_edit_panel_tools() {
         assert!(state.borrow().pending_ops.is_empty());
     }
     // The real models run in `viewer_edit_panel_ai`.
+
+    window.destroy();
+    drop(window);
+    settle(&context, 100);
+    drop(state);
+    wait(&context, "viewer state released", &|| witness.upgrade().is_none());
+}
+
+/// A heavy edit missing from the cache is rendered again with progress,
+/// and Esc or Cancel returns to the history that was on screen.
+#[test]
+#[ignore = "requires a graphical display; run alone with GSETTINGS_BACKEND=memory"]
+fn viewer_heavy_render_cancel() {
+    let context = glib::MainContext::default();
+    let dir = tempfile::tempdir().unwrap();
+    let photo = dir.path().join("a.png");
+    landscape(&photo);
+    let (window, state, witness) =
+        open_viewer("com.biglinux.Iris.HeavyRenderProbe", vec![photo], (1000, 700));
+    // No budget: only the newest entry and the latest heavy result stay.
+    *state.borrow().loader.cache.lock().unwrap() = super::edits::EditCache::with_budget(0);
+    let bar = state.borrow().heavy_render.clone();
+    let up = EditOp::Upscale { factor: 2, ai: false };
+    let runs = heavy_runs();
+    apply_edit(&state, up);
+    assert!(bar.is_visible(), "no progress while the decode thread upscales");
+    wait_frame(&context, &state, (1280, 960));
+    assert!(!bar.is_visible());
+    apply_edit(&state, up);
+    wait_frame(&context, &state, (2560, 1920));
+    assert_eq!(heavy_runs(), runs + 2);
+    undo_edit(&state);
+    assert!(bar.is_visible(), "the evicted first upscale is not announced");
+    {
+        // Holding the cache keeps the decode thread from finishing.
+        let cache = state.borrow().loader.cache.clone();
+        let _held = cache.lock().unwrap();
+        crate::gui::lifecycle_tests::capture_window(&window, "heavy-render-progress");
+        assert!(bar.is_visible());
+        // The texture on screen is the previous edit: copying it is refused.
+        let osd = state.borrow().osd_label.clone();
+        osd.set_text("");
+        copy_current_to_clipboard(&state);
+        assert_eq!(osd.text(), gettext("Wait for the image to finish loading"));
+    }
+    assert_eq!(
+        handle_key(&state, gdk::Key::Escape, gdk::ModifierType::empty()),
+        glib::Propagation::Stop
+    );
+    assert!(!bar.is_visible());
+    assert_eq!(state.borrow().pending_ops, [up, up]);
+    assert!(state.borrow().redo_ops.is_empty());
+    wait_frame(&context, &state, (2560, 1920));
+    assert!(window.is_visible(), "Esc closed the window instead of canceling");
+    // The button does the same.
+    undo_edit(&state);
+    assert!(bar.is_visible());
+    labeled_button(&bar, &gettext("Cancel")).emit_clicked();
+    assert_eq!(state.borrow().pending_ops, [up, up]);
+    wait_frame(&context, &state, (2560, 1920));
+    // Undoing past both upscales needs only the decoded file.
+    undo_edit(&state);
+    undo_edit(&state);
+    assert!(!bar.is_visible(), "undo to the decoded file shown as a heavy render");
+    wait_frame(&context, &state, (640, 480));
 
     window.destroy();
     drop(window);
@@ -645,8 +704,8 @@ fn viewer_edit_panel_ai() {
         redo_edit(&state);
         wait_frame(&context, &state, natural);
         assert_eq!(heavy_runs(), runs, "a heavy tool ran again on flip/undo/redo");
-        // Salvar como recomputes from the file's own pixels (metadata and
-        // colour profile kept): every heavy tool once more, same engines.
+        // Save as recomputes from the file's own pixels (metadata and
+        // color profile kept): every heavy tool once more, same engines.
         let copy = dir.path().join("a-copy.png");
         super::edit_panel::save_copy(&state, copy.clone());
         // Every heavy tool again: minutes for SCUNet on a slow CPU.
@@ -669,7 +728,7 @@ fn viewer_edit_panel_ai() {
             assert!(tool_box.is_visible());
             super::edit_panel::cancel_tool(&state);
             settle(&context, 1500);
-            assert_eq!(state.borrow().pending_ops, before, "a cancelled upscale applied");
+            assert_eq!(state.borrow().pending_ops, before, "a canceled upscale applied");
         }
     }
     window.destroy();

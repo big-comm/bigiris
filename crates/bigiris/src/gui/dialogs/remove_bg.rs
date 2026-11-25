@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-//! Remover fundo: local BiRefNet background removal.
+//! Remove background: local BiRefNet background removal.
 
 use super::*;
 
@@ -21,13 +21,13 @@ fn remove_bg_one_with_session(
 ) -> Result<PathBuf, String> {
     bigimage_core::content::ensure_static(src).map_err(|e| e.to_string())?;
     let img = bigimage_core::open_image(src).map_err(|e| {
-        fill(&gettext("Não foi possível ler a imagem: {error}"), &[("error", &e.to_string())])
+        fill(&gettext("Could not read the image: {error}"), &[("error", &e.to_string())])
     })?;
     let out = session
         .process_with_progress(&img, bigimage_ai::cancel_on(cancel))
         .map_err(|e| ai_error_text(&e))?;
     // Increment, never Replace: the dialog promises not to overwrite, and
-    // `foto.jpg` + `foto.png` in one batch both map to `foto_nobg.png`.
+    // `photo.jpg` + `photo.png` in one batch both map to `photo_nobg.png`.
     let outcome = bigimage_core::save_image(
         out,
         nobg_output_path(src),
@@ -36,7 +36,7 @@ fn remove_bg_one_with_session(
         OverwritePolicy::Increment,
     )
     .map_err(|e| {
-        fill(&gettext("Não foi possível gravar o resultado: {error}"), &[("error", &e.to_string())])
+        fill(&gettext("Could not write the result: {error}"), &[("error", &e.to_string())])
     })?;
     Ok(outcome.path().to_path_buf())
 }
@@ -70,43 +70,27 @@ pub(in crate::gui) fn build_remove_bg_dialog(
         .application(app)
         .default_width(520)
         .default_height(420)
-        .title(gettext("Remover fundo — Prisma"))
+        .title(gettext("Remove background — Prisma"))
         .build();
 
     let header = adw::HeaderBar::new();
     header.set_title_widget(Some(&adw::WindowTitle::new(
-        &gettext("Remover fundo"),
+        &gettext("Remove background"),
         &gettext("Prisma · BiRefNet-lite"),
     )));
     let unavailable = model_unavailable(&bigimage_ai::background::MODEL);
 
-    let content = gtk::Box::builder()
-        .orientation(gtk::Orientation::Vertical)
-        .spacing(12)
-        .margin_top(16)
-        .margin_bottom(16)
-        .margin_start(16)
-        .margin_end(16)
-        .build();
+    let content = padded_box(gtk::Orientation::Vertical, 12);
 
     // Empty input — fail closed with clear message.
     if files.is_empty() {
-        let status = adw::StatusPage::builder()
-            .icon_name("dialog-warning-symbolic")
-            .title(gettext("Nenhuma imagem selecionada"))
-            .description(gettext("Informe um ou mais arquivos ao abrir o diálogo."))
-            .vexpand(true)
-            .build();
-        content.append(&status);
-
-        let close = gtk::Button::with_label(&gettext("Fechar"));
-        close_on_click(&window, &close);
-        content.append(&close);
-
-        let tv = adw::ToolbarView::new();
-        tv.add_top_bar(&header);
-        tv.set_content(Some(&content));
-        window.set_content(Some(&tv));
+        show_selection_problem(
+            &window,
+            &header,
+            &content,
+            &gettext("No image selected"),
+            &gettext("Select one or more files when opening the dialog."),
+        );
         return window;
     }
 
@@ -118,42 +102,39 @@ pub(in crate::gui) fn build_remove_bg_dialog(
         content.append(&banner);
     }
 
-    let files_row = selection_row(&gettext("Imagens"), &files);
+    let files_row = selection_row(&gettext("Images"), &files);
     let files_icon = gtk::Image::from_icon_name("image-x-generic-symbolic");
     files_row.add_prefix(&files_icon);
 
     let model_row = adw::ActionRow::builder()
         .use_markup(false)
-        .title(gettext("Modelo"))
+        .title(gettext("Model"))
         .subtitle(model_subtitle())
         .build();
     let model_icon = gtk::Image::from_icon_name("application-x-executable-symbolic");
     model_row.add_prefix(&model_icon);
 
-    // Subtitle é Pango-markup em adw::ActionRow → angle-brackets ("<orig>")
-    // eram interpretados como tag malformada e a linha ficava vazia.
-    // Usar chevrons Unicode evita o parser sem escaping manual.
     let output_row = adw::ActionRow::builder()
         .use_markup(false)
-        .title(gettext("Saída"))
+        .title(gettext("Output"))
         .subtitle(gettext(
-            "«origem»_nobg.png · PNG com alfa, sem sobrescrever (_1, _2… se já existir)",
+            "“source”_nobg.png · PNG with alpha, never overwrites (_1, _2… if it already exists)",
         ))
         .build();
     let output_icon = gtk::Image::from_icon_name("document-save-symbolic");
     output_row.add_prefix(&output_icon);
 
     let group = adw::PreferencesGroup::builder()
-        .title(gettext("Remover fundo com IA local"))
-        .description(gettext("O modelo roda inteiramente no seu computador. Nenhuma imagem sai do disco — sem upload, sem conta, sem API externa."))
+        .title(gettext("Remove background with local AI"))
+        .description(gettext("The model runs entirely on your computer. No image leaves your disk — no upload, no account, no external API."))
         .build();
     group.add(&files_row);
     group.add(&model_row);
     group.add(&output_row);
     content.append(&group);
 
-    // Progress bar — hidden until the user clicks Remover fundo. Shows
-    // download bytes on first run, then per-file inference progress.
+    // Hidden until Remove background is clicked. Shows download bytes on
+    // the first run, then per-file inference progress.
     let progress_bar =
         gtk::ProgressBar::builder().show_text(true).visible(false).margin_top(6).build();
     content.append(&progress_bar);
@@ -161,19 +142,15 @@ pub(in crate::gui) fn build_remove_bg_dialog(
     let status = status_label();
     content.append(&status);
 
-    let (cancel_btn, apply_btn, actions_box) = action_buttons(&gettext("Remover fundo"));
+    let (cancel_btn, apply_btn, actions_box) = action_buttons(&gettext("Remove background"));
     apply_btn.set_sensitive(unavailable.is_none());
     content.append(&actions_box);
 
-    let tv = adw::ToolbarView::new();
-    tv.add_top_bar(&header);
-    tv.set_content(Some(&content));
-    window.set_content(Some(&tv));
+    set_dialog_content(&window, &header, &content);
 
-    // Cancellation flag — shared between UI, worker thread, and the
-    // close_request handler so fechar a janela (X, Esc, botão Cancelar)
-    // efetivamente encerra a interação: o Compare pós-sucesso NÃO abre,
-    // e o worker para de processar arquivos restantes.
+    // Shared by the UI, the worker and the close handler: closing the window
+    // (X, Esc, Cancel) stops the remaining files and keeps the Compare window
+    // that follows a success from opening.
     let cancelled = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
 
     {
@@ -215,13 +192,13 @@ pub(in crate::gui) fn build_remove_bg_dialog(
             }
             batch_runner::disarm_auto_close(&window);
             apply_btn.set_sensitive(false);
-            // Cancelar continua disponível — vira "abortar e fechar".
-            cancel_btn.set_label(&gettext("Cancelar"));
+            // Cancel stays available: during a run it aborts and closes.
+            cancel_btn.set_label(&gettext("Cancel"));
             progress_bar.remove_css_class("error");
             progress_bar.remove_css_class("success");
             progress_bar.set_visible(true);
             progress_bar.set_fraction(0.0);
-            progress_bar.set_text(Some(&gettext("Preparando…")));
+            progress_bar.set_text(Some(&gettext("Preparing…")));
             status.set_text("");
 
             let shared: std::sync::Arc<std::sync::Mutex<BgUiState>> =
@@ -243,7 +220,7 @@ pub(in crate::gui) fn build_remove_bg_dialog(
                     }
                     let _close = CloseOnDrop(wake.clone());
                     let publish = |state: BgUiState| {
-                        *shared.lock().unwrap_or_else(|p| p.into_inner()) = state;
+                        *shared.lock().unwrap_or_else(std::sync::PoisonError::into_inner) = state;
                         wake.notify();
                     };
                     // Load the model once for the whole batch; every file
@@ -259,7 +236,7 @@ pub(in crate::gui) fn build_remove_bg_dialog(
                             publish(BgUiState::Done {
                                 outputs: pending.iter().map(|(idx, _)| (*idx, None)).collect(),
                                 first_err: Some(fill(
-                                    &gettext("Falha ao carregar o modelo: {error}"),
+                                    &gettext("Failed to load the model: {error}"),
                                     &[("error", &ai_error_text(&e))],
                                 )),
                             });
@@ -304,9 +281,9 @@ pub(in crate::gui) fn build_remove_bg_dialog(
             }
 
             // Awaited on the GTK loop: it wakes only when the worker
-            // publishes progress. Se a janela já foi fechada (cancelled), não
-            // tocamos mais nos widgets, mas seguramos o app até o worker
-            // terminar: sair no meio da gravação deixaria `.part` órfãos.
+            // publishes progress. Once the window is closed it leaves the widgets
+            // alone but holds the app until the worker ends: quitting mid-write
+            // would strand `.part` files.
             let progress_bar = progress_bar.clone();
             let status = status.clone();
             let apply_btn = apply_btn.clone();
@@ -319,7 +296,8 @@ pub(in crate::gui) fn build_remove_bg_dialog(
             let hold = window.application().map(|app| app.hold());
             glib::MainContext::default().spawn_local(async move {
                 let _hold = hold;
-                let snapshot = || shared.lock().unwrap_or_else(|p| p.into_inner()).clone();
+                let snapshot =
+                    || shared.lock().unwrap_or_else(std::sync::PoisonError::into_inner).clone();
                 while wake.wait().await {
                     if !cancelled_ui.load(std::sync::atomic::Ordering::Relaxed) {
                         show_bg_progress(&progress_bar, &snapshot());
@@ -332,11 +310,9 @@ pub(in crate::gui) fn build_remove_bg_dialog(
                 // The worker died (panic) without its summary: let the user
                 // retry or close.
                 let BgUiState::Done { outputs, first_err } = snapshot() else {
-                    status.set_text(&gettext(
-                        "O processamento terminou inesperadamente. Tente novamente.",
-                    ));
+                    status.set_text(&gettext("Processing ended unexpectedly. Please try again."));
                     apply_btn.set_sensitive(true);
-                    cancel_btn.set_label(&gettext("Fechar"));
+                    cancel_btn.set_label(&gettext("Close"));
                     return;
                 };
                 {
@@ -352,33 +328,37 @@ pub(in crate::gui) fn build_remove_bg_dialog(
                 let ok = results.iter().filter(|o| o.is_some()).count();
                 let fail = results.len() - ok;
                 if fail == 0 {
-                    status.set_text(&format!("{}: {ok}", gettext("Imagens gravadas")));
-                    progress_bar.set_text(Some(&gettext("Concluído")));
+                    status.set_text(&format!("{}: {ok}", gettext("Saved images")));
+                    progress_bar.set_text(Some(&gettext("Done")));
                     progress_bar.add_css_class("success");
                     if originals.len() == 1 {
-                        if let (Some(orig), Some(Some(out))) = (originals.first(), results.first())
-                        {
-                            spawn_compare_viewer(orig, out);
+                        let compared = match (originals.first(), results.first()) {
+                            (Some(orig), Some(Some(out))) => {
+                                spawn_compare_viewer(&window, orig, out)
+                            }
+                            _ => true,
+                        };
+                        // A single file closes as Compare opens, so two windows
+                        // never show at once; it stays open to report a Compare
+                        // that failed to start.
+                        if compared {
+                            window.close();
                         }
-                        // Single-file: fecha imediato enquanto o
-                        // Compare abre — evita janela dupla visível.
-                        window.close();
                     } else {
-                        // Lote: segura 2 s pra o usuário conferir o
-                        // sumário antes de sumir.
+                        // A batch stays 2 s so the summary can be read.
                         batch_runner::arm_auto_close(&window, 2);
                     }
                 } else {
                     let detail = first_err.unwrap_or_default();
                     status.set_text(&format!(
                         "{}: {ok} · {}: {fail}\n{detail}",
-                        gettext("Imagens gravadas"),
-                        gettext("Falhas")
+                        gettext("Saved images"),
+                        gettext("Failures")
                     ));
-                    progress_bar.set_text(Some(&gettext("Com erros")));
+                    progress_bar.set_text(Some(&gettext("With errors")));
                     progress_bar.add_css_class("error");
                     apply_btn.set_sensitive(true);
-                    cancel_btn.set_label(&gettext("Fechar"));
+                    cancel_btn.set_label(&gettext("Close"));
                 }
             });
         });
@@ -393,13 +373,13 @@ fn show_bg_progress(progress_bar: &gtk::ProgressBar, state: &BgUiState) {
         BgUiState::Idle | BgUiState::Done { .. } => {}
         BgUiState::Loading => {
             progress_bar.pulse();
-            progress_bar.set_text(Some(&gettext("Carregando o modelo…")));
+            progress_bar.set_text(Some(&gettext("Loading the model…")));
         }
         BgUiState::Processing { idx, total, file } => {
             let frac = (*idx as f64 / (*total).max(1) as f64).clamp(0.0, 1.0);
             progress_bar.set_fraction(frac);
             progress_bar.set_text(Some(&fill(
-                &gettext("Processando {current}/{total} — {file}"),
+                &gettext("Processing {current}/{total} — {file}"),
                 &[
                     ("current", &(idx + 1).to_string()),
                     ("total", &total.to_string()),
@@ -410,14 +390,14 @@ fn show_bg_progress(progress_bar: &gtk::ProgressBar, state: &BgUiState) {
     }
 }
 
-/// Model row subtitle: licence, and where the model runs once loaded.
+/// Model row subtitle: license, and where the model runs once loaded.
 fn model_subtitle() -> String {
     match bigimage_ai::background::device() {
         Some(device) => fill(
-            &gettext("BiRefNet-lite (MIT) · roda offline em {device}"),
+            &gettext("BiRefNet-lite (MIT) · runs offline on {device}"),
             &[("device", &device.to_string())],
         ),
-        None => gettext("BiRefNet-lite (MIT) · roda offline no seu computador"),
+        None => gettext("BiRefNet-lite (MIT) · runs offline on your computer"),
     }
 }
 
@@ -425,15 +405,17 @@ fn model_subtitle() -> String {
 /// coexist (each `adw::Application` instance takes over the main loop).
 /// Called right after a successful single-file remove-bg so the user
 /// sees original vs. result side-by-side.
-fn spawn_compare_viewer(original: &Path, result: &Path) {
-    let flag = std::ffi::OsStr::new("--dialog=compare");
+fn spawn_compare_viewer(window: &adw::ApplicationWindow, original: &Path, result: &Path) -> bool {
     // `--` keeps a file named like `-x.png` from being read as a flag.
-    let _ = super::super::transfers::spawn_bigiris([
-        flag,
-        std::ffi::OsStr::new("--"),
-        original.as_os_str(),
-        result.as_os_str(),
-    ]);
+    super::super::transfers::launch(
+        window,
+        vec![
+            "--dialog=compare".into(),
+            "--".into(),
+            original.as_os_str().to_owned(),
+            result.as_os_str().to_owned(),
+        ],
+    )
 }
 
 #[cfg(test)]
@@ -494,7 +476,7 @@ mod availability_tests {
         app.register(None::<&gio::Cancellable>).unwrap();
         let context = glib::MainContext::default();
         let dir = tempfile::tempdir().unwrap();
-        let source = dir.path().join("foto.png");
+        let source = dir.path().join("photo.png");
         image::RgbImage::from_pixel(320, 240, image::Rgb([90, 140, 200])).save(&source).unwrap();
         let files = Rc::new(vec![source]);
         let bg = &bigimage_ai::background::MODEL;
@@ -522,7 +504,7 @@ mod availability_tests {
             "--features ai"
         };
         assert!(texts(&window).contains(hint), "no install hint: {}", texts(&window));
-        let apply = button(&window, &gettext("Remover fundo"));
+        let apply = button(&window, &gettext("Remove background"));
         assert!(!apply.is_sensitive(), "remove-bg can start without its model");
         window.destroy();
         let window = show("prisma-ai-upscale-missing", build_upscale_dialog);
@@ -535,7 +517,7 @@ mod availability_tests {
             assert!(row.subtitle().unwrap_or_default().contains("realesrgan-native"));
         }
         // Lanczos3 still runs.
-        assert!(button(&window, &gettext("Aumentar")).is_sensitive());
+        assert!(button(&window, &gettext("Upscale")).is_sensitive());
         window.destroy();
 
         // Installed (or pointed at) weights.
@@ -547,7 +529,7 @@ mod availability_tests {
         }
         if installed.0 {
             let window = show("prisma-ai-remove-bg", build_remove_bg_dialog);
-            assert!(button(&window, &gettext("Remover fundo")).is_sensitive());
+            assert!(button(&window, &gettext("Remove background")).is_sensitive());
             assert!(!texts(&window).contains("sudo pacman"));
             window.destroy();
         } else {

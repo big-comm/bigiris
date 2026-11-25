@@ -90,7 +90,7 @@ pub(in crate::gui) struct Fit {
 }
 
 /// Layout of a `ContentFit::ScaleDown` picture in a `(bx, by, bw, bh)` box:
-/// shrink to fit, never enlarge, centred.
+/// shrink to fit, never enlarge, centered.
 pub(in crate::gui) fn scale_down_fit(bounds: (f64, f64, f64, f64), natural: (u32, u32)) -> Fit {
     let (bx, by, bw, bh) = bounds;
     let (iw, ih) = (f64::from(natural.0), f64::from(natural.1));
@@ -228,7 +228,7 @@ pub(in crate::gui) fn drag_to(
                     )
                 }
                 // Side edges: move one side; a fixed ratio keeps the
-                // selection centred on the other axis.
+                // selection centered on the other axis.
                 (hx, 0) => {
                     let fixed = if hx > 0 { l } else { r };
                     let moved = (if hx > 0 { r } else { l } + dx).clamp(0.0, nat.0);
@@ -275,7 +275,27 @@ pub(in crate::gui) fn drag_to(
     }
 }
 
-/// Largest selection with `ratio` (width / height) centred in the image;
+/// The selection after one arrow key: `dirs` is the arrow (-1, 0 or 1 per
+/// axis); `resize` (Shift) moves the bottom-right corner instead of the
+/// whole selection. A step is 1 % of the longer image side.
+pub(in crate::gui) fn nudge(
+    rect: Rect,
+    dirs: (f64, f64),
+    resize: bool,
+    natural: (u32, u32),
+    ratio: Option<f64>,
+) -> Rect {
+    let step = (f64::from(natural.0.max(natural.1)) / 100.0).max(1.0);
+    let delta = (dirs.0 * step, dirs.1 * step);
+    if !resize {
+        return drag_to(Drag::Move { start: rect }, delta, natural, ratio);
+    }
+    // Shrinking stops at one pixel instead of flipping past the anchor.
+    let delta = (delta.0.max(1.0 - rect.w), delta.1.max(1.0 - rect.h));
+    drag_to(Drag::Resize { start: rect, handle: Handle::SE }, delta, natural, ratio)
+}
+
+/// Largest selection with `ratio` (width / height) centered in the image;
 /// the whole image when `ratio` is `None`.
 pub(in crate::gui) fn ratio_rect(natural: (u32, u32), ratio: Option<f64>) -> Rect {
     let full = Rect::full(natural);
@@ -297,7 +317,7 @@ pub(in crate::gui) fn to_pixels(rect: Rect, natural: (u32, u32)) -> (u32, u32, u
 /// Aspect presets: label and width / height (`None` = free; the
 /// "Original" entry is resolved against the image when chosen).
 const PRESETS: [(&str, Option<(f64, f64)>); 9] = [
-    ("Livre", None),
+    ("Free", None),
     ("Original", None),
     ("1:1", Some((1.0, 1.0))),
     ("4:3", Some((4.0, 3.0))),
@@ -358,21 +378,20 @@ pub(in crate::gui) fn build() -> CropUi {
     let labels: Vec<String> = PRESETS
         .iter()
         .map(|(label, _)| match *label {
-            "Livre" => gettext("Livre"),
+            "Free" => gettext("Free"),
             "Original" => gettext("Original"),
             ratio => ratio.to_string(),
         })
         .collect();
     let label_refs: Vec<&str> = labels.iter().map(String::as_str).collect();
     let aspect = gtk::DropDown::from_strings(&label_refs);
-    aspect.set_tooltip_text(Some(&gettext("Proporção")));
+    aspect.set_tooltip_text(Some(&gettext("Aspect ratio")));
     let size_label = gtk::Label::new(None);
     size_label.add_css_class("numeric");
     size_label.set_width_chars(13);
     let cancel =
-        gtk::Button::builder().label(gettext("Cancelar")).action_name("win.crop-cancel").build();
-    let apply =
-        gtk::Button::builder().label(gettext("Recortar")).action_name("win.crop-apply").build();
+        gtk::Button::builder().label(gettext("Cancel")).action_name("win.crop-cancel").build();
+    let apply = gtk::Button::builder().label(gettext("Crop")).action_name("win.crop-apply").build();
     apply.add_css_class("suggested-action");
     let row = gtk::Box::builder()
         .orientation(gtk::Orientation::Horizontal)
@@ -383,6 +402,7 @@ pub(in crate::gui) fn build() -> CropUi {
         .margin_end(8)
         .build();
     row.append(&aspect);
+    row.append(&name_drop_down(&aspect, &gettext("Aspect ratio")));
     row.append(&size_label);
     row.append(&cancel);
     row.append(&apply);
@@ -591,13 +611,16 @@ pub(in crate::gui) fn connect(state: &Rc<RefCell<ViewerState>>, window: &adw::Ap
 
 /// Start cropping the image on screen.
 pub(in crate::gui) fn enter(state: &Rc<RefCell<ViewerState>>) {
+    // A slider gesture still waiting to commit (Straighten) changes the
+    // natural size the selection is drawn against: land it first.
+    super::edit_panel::flush_commit(state);
     let message = {
         let s = state.borrow();
         if s.crop.is_some() || s.files.is_empty() || s.texture.is_none() {
             return;
         }
         if s.saving {
-            Some(gettext("Aguarde o salvamento terminar"))
+            Some(gettext("Wait for saving to finish"))
         } else if !s.current_ready {
             return;
         } else {
@@ -655,7 +678,7 @@ pub(in crate::gui) fn enter(state: &Rc<RefCell<ViewerState>>) {
     bar.set_visible(true);
     bar.set_reveal_child(true);
     osd_label.set_text(&gettext(
-        "Arraste nos cantos para redimensionar · dentro do recorte para mover · fora dele para uma nova seleção.",
+        "Drag the corners to resize · inside the crop to move · outside it for a new selection.",
     ));
     cancel_cursor_hide(state);
     state.borrow().window().set_cursor(None);
@@ -685,6 +708,21 @@ fn leave(state: &Rc<RefCell<ViewerState>>) -> Option<CropSession> {
 
 pub(in crate::gui) fn cancel(state: &Rc<RefCell<ViewerState>>) {
     leave(state);
+}
+
+/// Arrow keys: move the selection, or resize it with Shift.
+pub(in crate::gui) fn nudge_selection(
+    state: &Rc<RefCell<ViewerState>>,
+    dirs: (f64, f64),
+    resize: bool,
+) {
+    let mut s = state.borrow_mut();
+    let Some(session) = s.crop.as_mut() else { return };
+    if session.drag.is_some() {
+        return;
+    }
+    session.rect = nudge(session.rect, dirs, resize, session.natural, session.ratio);
+    refresh(&s);
 }
 
 /// Crop the opened image to the selection (as an undoable edit).
@@ -771,7 +809,7 @@ mod tests {
     }
 
     #[test]
-    fn scale_down_fit_never_enlarges_and_centres() {
+    fn fit_never_enlarges_and_centers() {
         let small = scale_down_fit((0.0, 0.0, 1000.0, 800.0), (400, 300));
         assert_eq!(small, Fit { scale: 1.0, ox: 300.0, oy: 250.0 });
         let big = scale_down_fit((10.0, 20.0, 400.0, 300.0), (800, 300));
@@ -820,7 +858,7 @@ mod tests {
     }
 
     #[test]
-    fn edge_resize_with_ratio_stays_centred() {
+    fn edge_resize_with_ratio_stays_centered() {
         let r = Rect { x: 100.0, y: 100.0, w: 100.0, h: 100.0 };
         let e = drag_to(Drag::Resize { start: r, handle: Handle::E }, (50.0, 0.0), NAT, Some(1.0));
         assert!(close(e, Rect { x: 100.0, y: 75.0, w: 150.0, h: 150.0 }), "{e:?}");
@@ -836,7 +874,7 @@ mod tests {
     }
 
     #[test]
-    fn ratio_rect_is_the_largest_centred_box() {
+    fn ratio_rect_largest_centered_box() {
         assert!(close(ratio_rect(NAT, None), Rect::full(NAT)));
         assert!(close(ratio_rect(NAT, Some(1.0)), Rect { x: 50.0, y: 0.0, w: 300.0, h: 300.0 }));
         let wide = ratio_rect(NAT, Some(16.0 / 9.0));

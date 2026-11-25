@@ -3,8 +3,15 @@
 use std::path::Path;
 use std::process::{Command, Output};
 
+/// The executable in the C locale, so messages are the English source text
+/// whatever locale the test runner has.
+fn bigiris() -> Command {
+    let mut command = Command::new(env!("CARGO_BIN_EXE_bigiris"));
+    command.env("LC_ALL", "C");
+    command
+}
 fn run(dir: &Path, args: &[&str]) -> Output {
-    Command::new(env!("CARGO_BIN_EXE_bigiris")).current_dir(dir).args(args).output().unwrap()
+    bigiris().current_dir(dir).args(args).output().unwrap()
 }
 fn fixture(dir: &Path, name: &str) {
     image::RgbImage::from_pixel(32, 24, image::Rgb([30, 70, 120])).save(dir.join(name)).unwrap();
@@ -23,11 +30,63 @@ fn self_test_and_help_exit_successfully() {
     success(run(dir.path(), &["--self-test"]));
     success(run(dir.path(), &["--help"]));
 }
+/// `LC_ALL` value of an installed Brazilian Portuguese UTF-8 locale, if `locale -a` lists one.
+fn brazilian_locale() -> Option<&'static str> {
+    let listed = Command::new("locale").arg("-a").output().ok()?;
+    String::from_utf8_lossy(&listed.stdout)
+        .lines()
+        .any(|name| name.eq_ignore_ascii_case("pt_BR.utf8") || name == "pt_BR.UTF-8")
+        .then_some("pt_BR.UTF-8")
+}
+#[test]
+fn messages_follow_the_user_locale() {
+    let Some(brazilian) = brazilian_locale() else {
+        // allow-noisy-log: a skipped check says so in the test output.
+        eprintln!("skipped: no pt_BR.UTF-8 locale installed (see `locale -a`)");
+        return;
+    };
+    let dir = tempfile::tempdir().unwrap();
+    let locale_dir = dir.path().join("locale");
+    let catalog = locale_dir.join("pt_BR/LC_MESSAGES/bigiris.mo");
+    std::fs::create_dir_all(catalog.parent().unwrap()).unwrap();
+    let source = concat!(env!("CARGO_MANIFEST_DIR"), "/../../data/po/pt_BR.po");
+    let compiled = Command::new("msgfmt")
+        .arg("-o")
+        .arg(&catalog)
+        .arg(source)
+        .status()
+        .expect("msgfmt from gettext, a build dependency");
+    assert!(compiled.success(), "msgfmt {source}");
+    let in_locale = |lc_all: &str, args: &[&str]| {
+        Command::new(env!("CARGO_BIN_EXE_bigiris"))
+            .current_dir(dir.path())
+            .env("BIGIRIS_LOCALE_DIR", &locale_dir)
+            .env("LC_ALL", lc_all)
+            .env("LANGUAGE", "pt_BR")
+            .args(args)
+            .output()
+            .unwrap()
+    };
+    let bogus_target = ["convert", "--to", "bogus", "missing.png"];
+
+    let help = String::from_utf8_lossy(&in_locale(brazilian, &["--help"]).stdout).into_owned();
+    assert!(help.contains("Visualizador rápido e conversor de imagens para Linux"), "{help}");
+    assert!(help.contains("falha parcial"), "{help}");
+    let failure = in_locale(brazilian, &bogus_target);
+    let error = String::from_utf8_lossy(&failure.stderr);
+    assert!(error.contains("formato de destino inválido"), "{error}");
+
+    let help = String::from_utf8_lossy(&in_locale("C", &["--help"]).stdout).into_owned();
+    assert!(help.contains("Fast image viewer and converter for Linux"), "{help}");
+    let failure = in_locale("C", &bogus_target);
+    let error = String::from_utf8_lossy(&failure.stderr);
+    assert!(error.contains("invalid target format"), "{error}");
+}
 #[test]
 fn conversion_transform_and_animation_commands_produce_readable_outputs() {
     let dir = tempfile::tempdir().unwrap();
-    fixture(dir.path(), "imagem com espaço ç.png");
-    let file = "imagem com espaço ç.png";
+    fixture(dir.path(), "photo with space ç.png");
+    let file = "photo with space ç.png";
     for args in [
         vec!["convert", "--to", "jpeg", file],
         vec!["resize", "--max-edge", "16", file],
@@ -45,11 +104,11 @@ fn conversion_transform_and_animation_commands_produce_readable_outputs() {
         assert!(bigimage_core::open_image(&path).is_ok(), "unreadable output: {}", path.display());
     }
     assert_eq!(
-        image::image_dimensions(dir.path().join("imagem com espaço ç_16.png")).unwrap(),
+        image::image_dimensions(dir.path().join("photo with space ç_16.png")).unwrap(),
         (16, 12)
     );
     assert_eq!(
-        image::image_dimensions(dir.path().join("imagem com espaço ç_rot90.png")).unwrap(),
+        image::image_dimensions(dir.path().join("photo with space ç_rot90.png")).unwrap(),
         (24, 32)
     );
 }
@@ -75,6 +134,37 @@ fn invalid_arguments_return_failure() {
     }
 }
 
+/// File-manager menus pass `--notify`: a failure reaches the desktop through
+/// notify-send, here a stub on PATH that records its arguments.
+#[test]
+fn notify_reports_failures_only_when_asked() {
+    use std::os::unix::fs::PermissionsExt;
+    let dir = tempfile::tempdir().unwrap();
+    let bin = dir.path().join("bin");
+    std::fs::create_dir(&bin).unwrap();
+    let record = dir.path().join("notified");
+    let stub = bin.join("notify-send");
+    std::fs::write(&stub, format!("#!/bin/sh\nprintf '%s\\n' \"$@\" > '{}'\n", record.display()))
+        .unwrap();
+    std::fs::set_permissions(&stub, std::fs::Permissions::from_mode(0o755)).unwrap();
+    let path = format!("{}:{}", bin.display(), std::env::var("PATH").unwrap_or_default());
+    let failing = |notify: bool| {
+        let mut command = bigiris();
+        command.current_dir(dir.path()).env("PATH", &path);
+        if notify {
+            command.arg("--notify");
+        }
+        command.args(["convert", "--to", "bogus", "missing.png"]).output().unwrap()
+    };
+
+    assert!(!failing(false).status.success());
+    assert!(!record.exists(), "notified without --notify");
+    assert!(!failing(true).status.success());
+    let shown = std::fs::read_to_string(&record).expect("no notification with --notify");
+    assert!(shown.contains("BigIris: the operation failed"), "{shown}");
+    assert!(shown.contains("bogus"), "the notification should name the error: {shown}");
+}
+
 /// A readable file that is not a weights file: availability passes, a
 /// load would fail. Commands that must not load the model stay green.
 #[cfg(feature = "ai")]
@@ -94,6 +184,7 @@ fn low_memory_refuses_ai_before_loading_and_preserves_inputs() {
         .args(["--as=536870912", "--core=0", "--"])
         .arg(env!("CARGO_BIN_EXE_bigiris"))
         .args(["remove-bg", "source.png"])
+        .env("LC_ALL", "C")
         .env("BIGIRIS_BIREFNET_WEIGHTS", fake_weights(dir.path()))
         .current_dir(dir.path())
         .output()
@@ -101,7 +192,7 @@ fn low_memory_refuses_ai_before_loading_and_preserves_inputs() {
     assert_eq!(output.status.code(), Some(1));
     let error = String::from_utf8_lossy(&output.stderr);
     // Refused by the budget, not by the (fake) weights.
-    assert!(error.contains("memória para IA") && error.contains("GiB"), "{error}");
+    assert!(error.contains("memory for AI") && error.contains("GiB"), "{error}");
     assert!(!dir.path().join("source_nobg.png").exists());
     assert_eq!(std::fs::read(dir.path().join("source.png")).unwrap(), original);
 }
@@ -184,7 +275,7 @@ fn exit_codes_follow_one_convention() {
     // 0: help, and the documented convention is part of it.
     let help = run(dir.path(), &["--help"]);
     assert_eq!(help.status.code(), Some(0));
-    assert!(String::from_utf8_lossy(&help.stdout).contains("falha parcial"));
+    assert!(String::from_utf8_lossy(&help.stdout).contains("partial failure"));
 }
 
 #[test]
@@ -270,12 +361,8 @@ fn ai_commands_skip_existing_outputs_without_loading_the_model() {
         (vec!["denoise", "source.png"], "BIGIRIS_SCUNET_WEIGHTS"),
     ] {
         // Loading the fake weights would fail the file: a skip must not.
-        let output = Command::new(env!("CARGO_BIN_EXE_bigiris"))
-            .args(&args)
-            .env(var, &fake)
-            .current_dir(dir.path())
-            .output()
-            .unwrap();
+        let output =
+            bigiris().args(&args).env(var, &fake).current_dir(dir.path()).output().unwrap();
         if args[0] == "denoise" && !output.status.success() && !sandbox_available() {
             continue;
         }
@@ -303,12 +390,8 @@ fn ai_commands_name_the_missing_package_before_any_work() {
             "realesrgan-native",
         ),
     ] {
-        let output = Command::new(env!("CARGO_BIN_EXE_bigiris"))
-            .args(&args)
-            .env(var, &absent)
-            .current_dir(dir.path())
-            .output()
-            .unwrap();
+        let output =
+            bigiris().args(&args).env(var, &absent).current_dir(dir.path()).output().unwrap();
         assert_eq!(output.status.code(), Some(1), "{args:?}");
         let error = String::from_utf8_lossy(&output.stderr);
         assert!(error.contains(&format!("sudo pacman -S {package}")), "{args:?}: {error}");
@@ -327,7 +410,7 @@ fn upscale_falls_back_to_lanczos_without_real_esrgan() {
     }
     let dir = tempfile::tempdir().unwrap();
     sized_fixture(dir.path(), "a.png", 16, 12);
-    let output = Command::new(env!("CARGO_BIN_EXE_bigiris"))
+    let output = bigiris()
         .args(["upscale", "--factor", "3", "a.png"])
         .env("BIGIRIS_REALESRGAN_WEIGHTS", dir.path().join("absent.weights"))
         .current_dir(dir.path())
@@ -360,7 +443,7 @@ fn inpaint_refuses_empty_masks_and_reports_size_mismatches() {
         .save(dir.path().join("small.png"))
         .unwrap();
     let inpaint = |mask: &str| {
-        Command::new(env!("CARGO_BIN_EXE_bigiris"))
+        bigiris()
             .args(["inpaint", "--mask", mask, "a.png"])
             .env("BIGIRIS_LAMA_WEIGHTS", &fake)
             .current_dir(dir.path())
@@ -369,10 +452,10 @@ fn inpaint_refuses_empty_masks_and_reports_size_mismatches() {
     };
     let output = inpaint("empty.png");
     assert_eq!(output.status.code(), Some(1));
-    assert!(String::from_utf8_lossy(&output.stderr).contains("nenhuma área"));
+    assert!(String::from_utf8_lossy(&output.stderr).contains("marks no area"));
     let output = inpaint("small.png");
     assert_eq!(output.status.code(), Some(2));
-    assert!(String::from_utf8_lossy(&output.stderr).contains("máscara tem 10×10"));
+    assert!(String::from_utf8_lossy(&output.stderr).contains("the mask is 10×10"));
     assert!(!dir.path().join("a_inpaint.png").exists());
 }
 
@@ -384,6 +467,48 @@ fn weights_ready(model: &bigimage_ai::ModelInfo) -> bool {
         eprintln!("skipping {}: weights absent (set {})", model.name, model.env);
     }
     ready
+}
+
+#[cfg(feature = "ai")]
+#[test]
+fn inpaint_reencodes_jpeg_at_maximum_target() {
+    if !sandbox_available() || !weights_ready(&bigimage_ai::inpaint::MODEL) {
+        return;
+    }
+    let dir = tempfile::tempdir().unwrap();
+    let mut state = 0x2545_f491_4f6c_dd1du64;
+    let photo = image::RgbImage::from_fn(160, 120, |x, y| {
+        state ^= state << 13;
+        state ^= state >> 7;
+        state ^= state << 17;
+        let grain = (state >> 59) as u8;
+        image::Rgb([(x as u8).wrapping_add(grain), (y * 2) as u8, 120 + grain])
+    });
+    let source = dir.path().join("photo.jpg");
+    let options = bigimage_core::EncodeOptions {
+        target: bigimage_core::QualityTarget::Maximum,
+        ..Default::default()
+    };
+    let policy = bigimage_core::OverwritePolicy::Replace;
+    let image = image::DynamicImage::ImageRgb8(photo);
+    bigimage_core::save_image(image, &source, bigimage_core::Format::Jpeg, &options, policy)
+        .unwrap();
+    // Oracle: the same source re-encoded unchanged at the default target.
+    let default = bigimage_core::EncodeOptions::default();
+    bigimage_core::transform_file(&source, "_same", None, &default, policy, Ok).unwrap();
+    let quality =
+        |name: &str| bigimage_core::metadata::estimate_jpeg_quality(dir.path().join(name)).unwrap();
+    let balanced = quality("photo_same.jpg");
+    let mut mask = image::GrayImage::new(160, 120);
+    for y in 50..60 {
+        for x in 70..80 {
+            mask.put_pixel(x, y, image::Luma([255]));
+        }
+    }
+    mask.save(dir.path().join("mask.png")).unwrap();
+    success(run(dir.path(), &["inpaint", "--mask", "mask.png", "photo.jpg"]));
+    let written = quality("photo_inpaint.jpg");
+    assert!(written > balanced, "inpaint wrote quality {written}; balanced {balanced}");
 }
 
 #[cfg(feature = "ai")]
@@ -497,7 +622,7 @@ exit 0
 "#;
 
 fn to_pdf(dir: &Path, bin: &Path, mode: &str, args: &[&str]) -> Output {
-    Command::new(env!("CARGO_BIN_EXE_bigiris"))
+    bigiris()
         .arg("to-pdf")
         .args(args)
         .env("PATH", bin)
@@ -708,4 +833,31 @@ fn quality_target_is_accepted_in_both_languages_and_validated() {
         run(dir.path(), &["batch", "--profile", "bad.toml", "photo.png"]).status.code(),
         Some(1)
     );
+}
+
+/// A malformed embedded colour profile does not fail the conversion: the
+/// pixels are used as sRGB and the run says so on its file's line.
+#[test]
+fn broken_profile_converts_with_note() {
+    if !sandbox_available() {
+        return;
+    }
+    use image::ImageEncoder;
+    let dir = tempfile::tempdir().unwrap();
+    let mut bytes = Vec::new();
+    let mut encoder = image::codecs::png::PngEncoder::new(&mut bytes);
+    encoder.set_icc_profile(b"not an ICC profile".to_vec()).unwrap();
+    let pixels = image::RgbImage::from_pixel(8, 6, image::Rgb([10, 128, 250]));
+    encoder.write_image(pixels.as_raw(), 8, 6, image::ExtendedColorType::Rgb8).unwrap();
+    std::fs::write(dir.path().join("broken.png"), bytes).unwrap();
+
+    let output =
+        run(dir.path(), &["convert", "--to", "png", "--overwrite", "increment", "broken.png"]);
+    let stderr = String::from_utf8_lossy(&output.stderr).into_owned();
+    assert!(output.status.success(), "{stderr}");
+    assert!(stderr.contains("info broken.png: the color profile is corrupted"), "{stderr}");
+    let plain = dir.path().join("plain.png");
+    pixels.save(&plain).unwrap();
+    let output = run(dir.path(), &["convert", "--to", "jpg", "plain.png"]);
+    assert!(!String::from_utf8_lossy(&output.stderr).contains("color profile"));
 }

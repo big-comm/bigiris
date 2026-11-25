@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-//! Lote: batch conversion with progress, cancel and auto-close.
+//! Batch: batch conversion with progress, cancel and auto-close.
 
 use super::*;
 
-/// Prisma Lote — converter em lote. Pega a lista de arquivos recebida via
-/// CLI, expande pastas e aplica a conversão no pool paralelo compartilhado.
+/// Prisma Batch: converts the files given on the command line, with folders
+/// expanded one level, on the shared parallel pool.
 pub fn run_batch_dialog(files: Vec<PathBuf>) -> i32 {
     let files = Rc::new(RefCell::new(expand_batch_inputs(files)));
     run_dialog_app(move |app| build_batch_dialog(app, files.clone()).present())
@@ -32,28 +32,26 @@ pub(in crate::gui) fn build_batch_dialog(
         .application(app)
         .default_width(640)
         .default_height(640)
-        .title(gettext("Prisma — Lote"))
+        .title(gettext("Prisma — Batch"))
         .build();
 
     let header = adw::HeaderBar::new();
-    let title = adw::WindowTitle::new(&gettext("Conversão em lote"), "Prisma");
+    let title = adw::WindowTitle::new(&gettext("Batch conversion"), "Prisma");
     header.set_title_widget(Some(&title));
 
-    // ── Grupo: arquivos ─────────────────────────────────────────────────
-    // Lista mutável (compartilhada via Rc<RefCell>) — suporta adicionar
-    // arquivos e pastas depois do diálogo aberto. `summary_row` é
-    // re-renderizada sempre que mudar a lista, via `refresh_files_row`.
-    let files_group = adw::PreferencesGroup::builder().title(gettext("Arquivos")).build();
+    // Files and folders can be added after the dialog opens; every change
+    // to the list goes through `refresh_files_row`.
+    let files_group = adw::PreferencesGroup::builder().title(gettext("Files")).build();
     let summary_row = adw::ActionRow::builder().use_markup(false).activatable(false).build();
     let add_files_btn = gtk::Button::builder()
         .icon_name("list-add-symbolic")
-        .tooltip_text(gettext("Adicionar arquivos"))
+        .tooltip_text(gettext("Add files"))
         .css_classes(["flat"])
         .valign(gtk::Align::Center)
         .build();
     let add_folder_btn = gtk::Button::builder()
         .icon_name("folder-symbolic")
-        .tooltip_text(gettext("Adicionar pasta (imagens)"))
+        .tooltip_text(gettext("Add folder (images)"))
         .css_classes(["flat"])
         .valign(gtk::Align::Center)
         .build();
@@ -62,8 +60,7 @@ pub(in crate::gui) fn build_batch_dialog(
     files_group.add(&summary_row);
     refresh_files_row(&summary_row, &files.borrow());
 
-    // ── Grupo: conversão ────────────────────────────────────────────────
-    let convert_group = adw::PreferencesGroup::builder().title(gettext("Conversão")).build();
+    let convert_group = adw::PreferencesGroup::builder().title(gettext("Conversion")).build();
 
     let format_row = format_row();
     convert_group.add(&format_row);
@@ -73,39 +70,19 @@ pub(in crate::gui) fn build_batch_dialog(
     convert_group.add(&encode.advanced);
     encode.bind(&window, &format_row);
 
-    // ── Grupo: destino ──────────────────────────────────────────────────
-    let dest_group = adw::PreferencesGroup::builder().title(gettext("Destino")).build();
+    let dest_group = adw::PreferencesGroup::builder().title(gettext("Destination")).build();
     let overwrite_row = overwrite_row();
     dest_group.add(&overwrite_row);
-    // Pasta de saída: None = mesma do original. Clicar abre FolderDialog.
-    let output_dir: Rc<RefCell<Option<PathBuf>>> = Rc::new(RefCell::new(None));
-    let folder_row = adw::ActionRow::builder()
-        .use_markup(false)
-        .title(gettext("Pasta de saída"))
-        .subtitle(gettext("Mesma pasta do arquivo de origem"))
-        .activatable(true)
-        .build();
-    let folder_icon = gtk::Image::from_icon_name("folder-open-symbolic");
-    folder_icon.add_css_class("dim-label");
-    folder_row.add_suffix(&folder_icon);
-    let clear_folder_btn = gtk::Button::builder()
-        .icon_name("edit-clear-symbolic")
-        .tooltip_text(gettext("Usar a mesma pasta do arquivo de origem"))
-        .css_classes(["flat"])
-        .valign(gtk::Align::Center)
-        .visible(false)
-        .build();
-    folder_row.add_suffix(&clear_folder_btn);
+    let (folder_row, output_dir) = output_folder_row(&window);
     dest_group.add(&folder_row);
 
-    // ── Rodapé: barra de progresso + status + botões ────────────────────
-    let progress = gtk::ProgressBar::builder().show_text(true).text(gettext("Pronto")).build();
+    let progress = gtk::ProgressBar::builder().show_text(true).text(gettext("Ready")).build();
     progress.set_margin_start(18);
     progress.set_margin_end(18);
     progress.set_margin_top(8);
 
     let status = gtk::Label::builder()
-        .label(gettext("Aguardando. Clique em Processar para iniciar."))
+        .label(gettext("Ready. Click Process to start."))
         .wrap(true)
         .max_width_chars(64)
         .css_classes(["dim-label"])
@@ -116,10 +93,10 @@ pub(in crate::gui) fn build_batch_dialog(
         .build();
 
     let apply_btn = gtk::Button::builder()
-        .label(gettext("Processar"))
+        .label(gettext("Process"))
         .css_classes(["pill", "suggested-action"])
         .build();
-    let cancel_btn = gtk::Button::builder().label(gettext("Cancelar")).build();
+    let cancel_btn = gtk::Button::builder().label(gettext("Cancel")).build();
     let btn_bar = gtk::Box::new(gtk::Orientation::Horizontal, 8);
     btn_bar.set_halign(gtk::Align::Center);
     btn_bar.set_margin_top(8);
@@ -127,7 +104,6 @@ pub(in crate::gui) fn build_batch_dialog(
     btn_bar.append(&cancel_btn);
     btn_bar.append(&apply_btn);
 
-    // ── Scroll wrapper (para listas longas no futuro) ───────────────────
     let options_col = gtk::Box::new(gtk::Orientation::Vertical, 14);
     options_col.set_margin_start(18);
     options_col.set_margin_end(18);
@@ -148,13 +124,10 @@ pub(in crate::gui) fn build_batch_dialog(
     main_col.append(&status);
     main_col.append(&btn_bar);
 
-    let toolbar_view = adw::ToolbarView::new();
-    toolbar_view.add_top_bar(&header);
-    toolbar_view.set_content(Some(&main_col));
-    window.set_content(Some(&toolbar_view));
+    set_dialog_content(&window, &header, &main_col);
 
-    // Cancel signal shared with the worker thread — flipped by the
-    // Cancel button while a run is in flight, reset on each Apply.
+    // Shared with the worker thread: set by Cancel during a run, reset on
+    // each Process.
     let cancelled = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
     // True while a worker is running. The Cancel button uses this to
     // decide between "cancel the run" and "close the window".
@@ -169,7 +142,6 @@ pub(in crate::gui) fn build_batch_dialog(
         });
     }
 
-    // Handlers dos botões "Adicionar arquivos" e "Adicionar pasta".
     {
         let files = files.clone();
         let summary_row = summary_row.clone();
@@ -184,28 +156,6 @@ pub(in crate::gui) fn build_batch_dialog(
         let window = window.clone();
         dialog_signal!(window, add_folder_btn, connect_clicked, move |_| {
             add_folder_to_batch(&window, &files, &summary_row);
-        });
-    }
-
-    // Pasta de saída: clicar na row abre FolderDialog; o botão vassoura
-    // reseta para None (mesma pasta do original).
-    {
-        let output_dir = output_dir.clone();
-        let folder_row = folder_row.clone();
-        let clear_btn = clear_folder_btn.clone();
-        let window = window.clone();
-        dialog_signal!(window, folder_row.clone(), connect_activated, move |_| {
-            pick_output_folder(&window, &output_dir, &folder_row, &clear_btn);
-        });
-    }
-    {
-        let output_dir = output_dir.clone();
-        let folder_row = folder_row.clone();
-        let clear_btn = clear_folder_btn.clone();
-        dialog_signal!(window, clear_folder_btn, connect_clicked, move |_| {
-            *output_dir.borrow_mut() = None;
-            folder_row.set_subtitle(&gettext("Mesma pasta do arquivo de origem"));
-            clear_btn.set_visible(false);
         });
     }
 
@@ -242,7 +192,7 @@ pub(in crate::gui) fn build_batch_dialog(
             let out_dir_snapshot = output_dir.borrow().clone();
             let files_owned: Vec<PathBuf> = files.borrow().clone();
             if files_owned.is_empty() {
-                status.set_text(&gettext("Adicione ao menos uma imagem para processar."));
+                status.set_text(&gettext("Add at least one image to process."));
                 return;
             }
 
@@ -252,12 +202,12 @@ pub(in crate::gui) fn build_batch_dialog(
             cancelled.store(false, std::sync::atomic::Ordering::Relaxed);
             running.set(true);
             apply_btn.set_sensitive(false);
-            cancel_btn.set_label(&gettext("Cancelar"));
+            cancel_btn.set_label(&gettext("Cancel"));
             progress.set_fraction(0.0);
-            progress.set_text(Some(&gettext("Iniciando…")));
-            status.set_text(&gettext("Processando…"));
+            progress.set_text(Some(&gettext("Starting…")));
+            status.set_text(&gettext("Processing…"));
 
-            let rx = batch_runner::spawn_batch_workers(
+            let events = batch_runner::spawn_batch_workers(
                 files_owned,
                 move |path| convert_file_to(path, out_dir_snapshot.as_deref(), fmt, &opts, policy),
                 cancelled.clone(),
@@ -269,18 +219,19 @@ pub(in crate::gui) fn build_batch_dialog(
             let cancel_btn = cancel_btn.clone();
             let window = window.clone();
             let running = running.clone();
-            // Released with the poll closure, i.e. only after the pool
-            // reported back: closing the last window never kills a worker
-            // mid-write and strands `.part` files.
+            // Released with this task, i.e. only after the pool reported
+            // back: closing the last window never kills a worker mid-write
+            // and strands `.part` files.
             let hold = window.application().map(|app| app.hold());
-            glib::timeout_add_local(std::time::Duration::from_millis(50), move || loop {
-                let _hold = &hold;
-                match rx.try_recv() {
-                    Ok(batch_runner::AsyncBatchEvent::Progress { done, total, file }) => {
+            glib::MainContext::default().spawn_local(async move {
+                let _hold = hold;
+                loop {
+                match events.next().await {
+                    Some(batch_runner::AsyncBatchEvent::Progress { done, total, file }) => {
                         progress.set_fraction(done as f64 / total.max(1) as f64);
                         progress.set_text(Some(&format!("{done}/{total} · {file}")));
                     }
-                    Ok(batch_runner::AsyncBatchEvent::Done {
+                    Some(batch_runner::AsyncBatchEvent::Done {
                         ok,
                         skip,
                         fail,
@@ -295,13 +246,13 @@ pub(in crate::gui) fn build_batch_dialog(
                         running.set(false);
                         // Closed mid-run: nothing left to show or to close.
                         if cancelled && !window.is_visible() {
-                            return glib::ControlFlow::Break;
+                            return;
                         }
                         let timing = batch_runner::format_duration(elapsed);
                         let template = if cancelled {
-                            gettext("Cancelado após {done}/{total} em {timing}. {ok} gravado(s), {skip} ignorado(s), {fail} falha(s).")
+                            gettext("Canceled after {done}/{total} in {timing}. Written: {ok}, skipped: {skip}, failed: {fail}.")
                         } else {
-                            gettext("Concluído em {timing}. {ok} gravado(s), {skip} ignorado(s), {fail} falha(s).")
+                            gettext("Finished in {timing}. Written: {ok}, skipped: {skip}, failed: {fail}.")
                         };
                         let mut msg = fill(
                             &template,
@@ -321,7 +272,7 @@ pub(in crate::gui) fn build_batch_dialog(
                             msg.push('\n');
                             msg.push_str(
                                 &fill(
-                                    &gettext("{before} → {after} ({delta}) · média por arquivo {avg_before} → {avg_after}"),
+                                    &gettext("{before} → {after} ({delta}) · average per file {avg_before} → {avg_after}"),
                                     &[
                                         ("before", &batch_runner::format_size(bytes_in)),
                                         ("after", &batch_runner::format_size(bytes_out)),
@@ -337,29 +288,27 @@ pub(in crate::gui) fn build_batch_dialog(
                             status.set_text(&format!("{msg}\n{err}"));
                         }
                         progress.set_text(Some(&gettext(if cancelled {
-                            n_("Cancelado")
+                            n_("Canceled")
                         } else {
-                            n_("Concluído")
+                            n_("Done")
                         })));
                         apply_btn.set_sensitive(true);
                         let cancel_label = if !cancelled && done == total {
-                            gettext("Fechar")
+                            gettext("Close")
                         } else {
-                            gettext("Cancelar")
+                            gettext("Cancel")
                         };
                         cancel_btn.set_label(&cancel_label);
                         if !cancelled && fail == 0 {
                             batch_runner::arm_auto_close(&window, 3);
                         }
-                        return glib::ControlFlow::Break;
+                        return;
                     }
-                    Err(std::sync::mpsc::TryRecvError::Empty) => {
-                        return glib::ControlFlow::Continue;
-                    }
-                    Err(std::sync::mpsc::TryRecvError::Disconnected) => {
+                    None => {
                         running.set(false);
-                        return glib::ControlFlow::Break;
+                        return;
                     }
+                }
                 }
             });
         });
@@ -368,51 +317,25 @@ pub(in crate::gui) fn build_batch_dialog(
     window
 }
 
-/// Atualiza a ActionRow de resumo do Prisma Lote com a contagem + peso
-/// total da lista atual de arquivos.
 fn refresh_files_row(row: &adw::ActionRow, files: &[PathBuf]) {
     let total: u64 = files.iter().filter_map(|p| std::fs::metadata(p).ok().map(|m| m.len())).sum();
-    row.set_title(&format!("{}: {}", gettext("Arquivos selecionados"), files.len()));
+    row.set_title(&format!("{}: {}", gettext("Selected files"), files.len()));
     row.set_subtitle(&format_size(total));
 }
 
-/// Abre um picker multi-arquivo e anexa os escolhidos à lista do batch,
-/// deduplicando pelas paths canônicas. Formatos filtrados pelos mesmos
-/// MIME types que o dashboard aceita.
 fn add_files_to_batch(
     window: &adw::ApplicationWindow,
     files: &Rc<RefCell<Vec<PathBuf>>>,
     row: &adw::ActionRow,
 ) {
-    let dialog =
-        gtk::FileDialog::builder().title(gettext("Adicionar arquivos")).modal(true).build();
-    let filter = gtk::FileFilter::new();
-    filter.set_name(Some(&gettext("Imagens")));
-    for mime in [
-        "image/jpeg",
-        "image/png",
-        "image/webp",
-        "image/avif",
-        "image/gif",
-        "image/tiff",
-        "image/bmp",
-    ] {
-        filter.add_mime_type(mime);
-    }
-    let filters = gio::ListStore::new::<gtk::FileFilter>();
-    filters.append(&filter);
-    dialog.set_filters(Some(&filters));
+    let dialog = crate::gui::image_file_dialog(&gettext("Add files"));
 
     let parent = window.clone();
     let files = files.clone();
     let row = row.clone();
     dialog.open_multiple(Some(&parent), None::<&gio::Cancellable>, move |result| {
         let Ok(list) = result else { return };
-        let paths: Vec<PathBuf> = (0..list.n_items())
-            .filter_map(|i| list.item(i))
-            .filter_map(|o| o.downcast::<gio::File>().ok())
-            .filter_map(|f| f.path())
-            .collect();
+        let paths = crate::gui::local_paths(&list);
         if paths.is_empty() {
             return;
         }
@@ -421,17 +344,14 @@ fn add_files_to_batch(
     });
 }
 
-/// Abre um picker de pasta e varre (não-recursivo, um nível só) em busca
-/// de arquivos com extensão de imagem conhecida; anexa à lista do batch.
+/// Adds the images directly inside the chosen folder; subfolders are not
+/// searched.
 fn add_folder_to_batch(
     window: &adw::ApplicationWindow,
     files: &Rc<RefCell<Vec<PathBuf>>>,
     row: &adw::ActionRow,
 ) {
-    let dialog = gtk::FileDialog::builder()
-        .title(gettext("Adicionar pasta com imagens"))
-        .modal(true)
-        .build();
+    let dialog = gtk::FileDialog::builder().title(gettext("Add image folder")).modal(true).build();
     let parent = window.clone();
     let files = files.clone();
     let row = row.clone();
@@ -447,8 +367,7 @@ fn add_folder_to_batch(
     });
 }
 
-/// Adiciona novos paths à lista, pulando os que já estavam lá
-/// (comparação por PathBuf canônica).
+/// Paths are compared as given, not canonicalized.
 fn append_unique(files: &Rc<RefCell<Vec<PathBuf>>>, new_paths: Vec<PathBuf>) {
     let mut list = files.borrow_mut();
     for p in new_paths {
@@ -458,7 +377,7 @@ fn append_unique(files: &Rc<RefCell<Vec<PathBuf>>>, new_paths: Vec<PathBuf>) {
     }
 }
 
-/// Extensões que aceitamos numa varredura de pasta. Case-insensitive.
+/// Lowercase extensions a folder scan accepts, compared case-insensitively.
 const IMAGE_EXTENSIONS: &[&str] = &[
     "jpg", "jpeg", "png", "webp", "avif", "gif", "tif", "tiff", "bmp", "ico", "pnm", "ppm", "pgm",
     "pbm", "pam", "tga", "qoi", "hdr", "exr",

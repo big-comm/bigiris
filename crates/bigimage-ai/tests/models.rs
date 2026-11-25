@@ -186,6 +186,37 @@ fn realesrgan_enlarges_by_each_factor_and_keeps_alpha() {
 }
 
 #[test]
+#[ignore = "needs realesrgan-native weights"]
+fn realesrgan_bands_match_whole_reduction() {
+    if !ready(&upscale::MODEL) {
+        return;
+    }
+    // 1000 rows run as three bands; the oracle is Lanczos3 over the 4× run.
+    let (w, h) = (160u32, 1000u32);
+    let mut seed = 0x51_7cc1_b727_220au64;
+    let clean = backdrop(w, h);
+    let textured = RgbImage::from_fn(w, h, |x, y| {
+        let p = clean.get_pixel(x, y);
+        Rgb(p.0.map(|v| (i32::from(v) + noise(&mut seed, 20)).clamp(0, 255) as u8))
+    });
+    let source = DynamicImage::ImageRgb8(textured);
+    let started = Instant::now();
+    let four = upscale::upscale(&source, 4, upscale::Method::RealEsrgan, go).unwrap();
+    let two = upscale::upscale(&source, 2, upscale::Method::RealEsrgan, go).unwrap().into_rgb8();
+    report("realesrgan 160x1000 x4 and x2", started, upscale::device());
+    let reference = bigimage_core::resize::apply_to(
+        &four,
+        bigimage_core::ResizeMode::Exact { width: w * 2, height: h * 2 },
+        bigimage_core::Filter::Lanczos3,
+    )
+    .unwrap()
+    .into_rgb8();
+    let worst =
+        two.as_raw().iter().zip(reference.as_raw()).map(|(&a, &b)| a.abs_diff(b)).max().unwrap();
+    assert!(worst <= 2, "largest difference {worst}");
+}
+
+#[test]
 #[ignore = "needs scunet-native weights"]
 fn scunet_removes_added_noise() {
     if !ready(&denoise::MODEL) {
@@ -243,7 +274,7 @@ fn lama_fills_a_masked_square_from_its_surroundings() {
             mask.put_pixel(x, y, image::Luma([255]));
         }
     }
-    let plan = inpaint::plan(&mask).unwrap().unwrap();
+    let plan = inpaint::plans(&mask).unwrap()[0];
     eprintln!("lama plan {plan:?}");
     let started = Instant::now();
     let out = inpaint::inpaint(&DynamicImage::ImageRgb8(dirty.clone()), &mask, go).unwrap();
@@ -272,10 +303,42 @@ fn lama_fills_a_masked_square_from_its_surroundings() {
             wide.put_pixel(x, y, image::Luma([255]));
         }
     }
-    let plan = inpaint::plan(&wide).unwrap().unwrap();
+    let plan = inpaint::plans(&wide).unwrap()[0];
     assert!(plan.run.0 < plan.crop.width, "{plan:?}");
     let started = Instant::now();
-    let out = inpaint::inpaint(&DynamicImage::ImageRgb8(clean), &wide, go).unwrap();
+    let out = inpaint::inpaint(&DynamicImage::ImageRgb8(clean.clone()), &wide, go).unwrap();
     report("lama 1200x900 scaled", started, inpaint::device());
     assert_eq!((out.width(), out.height()), (w, h));
+
+    // Two distant marks fill as two crops at full resolution, and every
+    // pixel beyond the grown holes keeps its value.
+    let marks = [(60u32, 50u32), (1100u32, 820u32)];
+    let mut dirty = clean;
+    let mut mask = GrayImage::new(w, h);
+    for (mx, my) in marks {
+        for y in my..my + 30 {
+            for x in mx..mx + 30 {
+                dirty.put_pixel(x, y, Rgb([10, 10, 10]));
+                mask.put_pixel(x, y, image::Luma([255]));
+            }
+        }
+    }
+    let plans = inpaint::plans(&mask).unwrap();
+    assert_eq!(plans.len(), 2, "{plans:?}");
+    assert!(plans.iter().all(|p| p.run == (p.crop.width, p.crop.height)), "{plans:?}");
+    let started = Instant::now();
+    let out = inpaint::inpaint(&DynamicImage::ImageRgb8(dirty.clone()), &mask, go).unwrap();
+    report("lama 1200x900 two marks", started, inpaint::device());
+    let out = out.into_rgb8();
+    let ring = 2 * plans.iter().map(|p| p.feather).max().unwrap();
+    for (x, y, pixel) in out.enumerate_pixels() {
+        let near = marks.iter().any(|&(mx, my)| {
+            x + ring >= mx && x < mx + 30 + ring && y + ring >= my && y < my + 30 + ring
+        });
+        if near {
+            assert_ne!(pixel.0, [10, 10, 10], "({x},{y}) not filled");
+        } else {
+            assert_eq!(pixel, dirty.get_pixel(x, y), "({x},{y})");
+        }
+    }
 }

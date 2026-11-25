@@ -80,7 +80,7 @@ impl Metric {
     /// Worst score of `distorted` over the backgrounds (100 = identical).
     pub(crate) fn score(&self, distorted: &RgbaImage) -> ImageResult<f64> {
         if distorted.dimensions() != (self.width, self.height) {
-            return Err(metric_error("dimensões diferentes"));
+            return Err(metric_error("different dimensions"));
         }
         let mut worst = f64::INFINITY;
         if self.alpha {
@@ -150,21 +150,35 @@ impl Probe {
     }
 
     /// Encode every region at `quality`; the worst score and, for a whole-
-    /// image probe, the encoded bytes.
-    fn evaluate<E>(&self, quality: u8, encode: &mut E) -> ImageResult<(f64, Vec<u8>)>
+    /// image probe, the encoded bytes. Tiles are encoded and scored on one
+    /// thread each: the encoders are single-threaded, so a round costs about
+    /// one tile instead of all of them.
+    fn evaluate<E>(&self, quality: u8, encode: &E) -> ImageResult<(f64, Vec<u8>)>
     where
-        E: FnMut(&RgbaImage, u8) -> ImageResult<(Vec<u8>, RgbaImage)>,
+        E: Fn(&RgbaImage, u8) -> ImageResult<(Vec<u8>, RgbaImage)> + Sync,
     {
-        let mut worst = f64::INFINITY;
-        let mut bytes = Vec::new();
-        for region in &self.regions {
+        let run = |region: &Region| -> ImageResult<(f64, Vec<u8>)> {
             let (encoded, decoded) = encode(&region.pixels, quality)?;
-            worst = worst.min(region.metric.score(&decoded)?);
-            if self.whole {
-                bytes = encoded;
-            }
+            Ok((region.metric.score(&decoded)?, encoded))
+        };
+        if let [whole] = self.regions.as_slice() {
+            return run(whole);
         }
-        Ok((worst, bytes))
+        let results: Vec<ImageResult<(f64, Vec<u8>)>> = std::thread::scope(|scope| {
+            let handles: Vec<_> =
+                self.regions.iter().map(|region| scope.spawn(move || run(region))).collect();
+            handles
+                .into_iter()
+                .map(|handle| {
+                    handle.join().unwrap_or_else(|panic| std::panic::resume_unwind(panic))
+                })
+                .collect()
+        });
+        let mut worst = f64::INFINITY;
+        for result in results {
+            worst = worst.min(result?.0);
+        }
+        Ok((worst, Vec::new()))
     }
 
     /// Score already-decoded pixels of the whole image (whole probes only).
@@ -219,10 +233,10 @@ pub(crate) fn search<E>(
     probe: &Probe,
     bounds: Bounds,
     threshold: f64,
-    mut encode: E,
+    encode: E,
 ) -> ImageResult<Found>
 where
-    E: FnMut(&RgbaImage, u8) -> ImageResult<(Vec<u8>, RgbaImage)>,
+    E: Fn(&RgbaImage, u8) -> ImageResult<(Vec<u8>, RgbaImage)> + Sync,
 {
     let Bounds { lo, hi, start } = bounds;
     let started = Instant::now();
@@ -235,12 +249,12 @@ where
     let mut last_passed: Option<bool> = None;
     loop {
         if rounds >= MAX_ROUNDS || (rounds > 0 && started.elapsed() > BUDGET) {
-            tracing::debug!(rounds, "busca de qualidade interrompida pelo limite");
+            tracing::debug!(rounds, "quality search stopped at its limit");
             break;
         }
         rounds += 1;
-        let (score, bytes) = probe.evaluate(q, &mut encode)?;
-        tracing::trace!(quality = q, score, size = bytes.len(), "candidato");
+        let (score, bytes) = probe.evaluate(q, &encode)?;
+        tracing::trace!(quality = q, score, size = bytes.len(), "candidate");
         let passed = score >= threshold;
         same_side = if last_passed == Some(passed) { same_side + 1 } else { 0 };
         last_passed = Some(passed);
@@ -292,7 +306,7 @@ where
         score = found.score,
         rounds = found.rounds,
         elapsed_ms = started.elapsed().as_millis() as u64,
-        "busca de qualidade"
+        "quality search"
     );
     Ok(found)
 }
@@ -313,6 +327,38 @@ mod tests {
             px[0] = px[0].wrapping_add(((i * 7919) % 41) as u8);
         }
         assert!(metric.score(&noisy).unwrap() < 80.0);
+    }
+
+    /// Above the whole-image limit every tile is encoded and scored, on
+    /// parallel threads: a flaw in just one tile decides the round.
+    #[test]
+    fn tiled_probe_scores_every_tile() {
+        let (w, h) = (4096u32, 3000u32);
+        let image = RgbaImage::from_fn(w, h, |x, y| {
+            // Only the bottom-right tile (x 2560.., y 1482..) holds blue 255.
+            let marked = (3000..3100).contains(&x) && (2000..2100).contains(&y);
+            let blue = if marked { 255 } else { ((x + y) % 200) as u8 };
+            image::Rgba([(x % 251) as u8, (y % 241) as u8, blue, 255])
+        });
+        let probe = Probe::new(&image).unwrap();
+        assert!(!probe.is_whole());
+        let calls = std::sync::atomic::AtomicUsize::new(0);
+        let damage_marked = |pixels: &RgbaImage, _q: u8| {
+            calls.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+            let mut out = pixels.clone();
+            if pixels.pixels().any(|px| px[2] == 255) {
+                for (i, px) in out.pixels_mut().enumerate() {
+                    px[0] = px[0].wrapping_add(((i * 7919) % 61) as u8);
+                }
+            }
+            Ok((Vec::new(), out))
+        };
+        let (worst, _) = probe.evaluate(50, &damage_marked).unwrap();
+        assert!(worst < 80.0, "the damaged tile must set the score: {worst}");
+        assert_eq!(calls.into_inner(), 6);
+        let (clean, _) =
+            probe.evaluate(50, &|p: &RgbaImage, _q: u8| Ok((Vec::new(), p.clone()))).unwrap();
+        assert!(clean > 99.0, "{clean}");
     }
 
     #[test]
@@ -344,10 +390,10 @@ mod tests {
             image::Rgba([(x * 5) as u8, (y * 5) as u8, ((x * y) % 256) as u8, 255])
         });
         let probe = Probe::new(&image).unwrap();
-        let mut calls = 0;
+        let calls = std::sync::atomic::AtomicUsize::new(0);
         let bounds = Bounds { lo: 1, hi: 100, start: 50 };
         let found = search(&probe, bounds, 80.0, |pixels, q| {
-            calls += 1;
+            calls.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
             let step = (101 - u32::from(q)) / 4 + 1;
             let mut out = pixels.clone();
             for px in out.pixels_mut() {
@@ -359,6 +405,7 @@ mod tests {
         })
         .unwrap();
         assert!(found.passed);
+        let calls = calls.into_inner();
         assert!(calls <= MAX_ROUNDS as usize, "{calls} rounds");
         assert_eq!(found.bytes.as_deref(), Some(&[found.quality][..]));
         assert!(found.score.unwrap() >= 80.0);

@@ -6,7 +6,7 @@ use moxcms::{ColorProfile, DataColorSpace, Layout, ParsingOptions, TransformOpti
 fn error(message: impl std::fmt::Display) -> ImageError {
     ImageError::IoError(std::io::Error::new(
         std::io::ErrorKind::InvalidData,
-        format!("perfil ICC: {message}"),
+        format!("ICC profile: {message}"),
     ))
 }
 /// Convert ICC-tagged pixels into canonical sRGB, preserving sample
@@ -22,8 +22,10 @@ fn error(message: impl std::fmt::Display) -> ImageError {
 ///   converted to RGB, RGB profile on gray pixels, Lab/XYZ…): the profile is
 ///   ignored with a warning — refusing to open the image would be worse.
 ///
-/// Only a malformed profile fails: relabeling those pixels silently would
-/// hide a corrupt file.
+/// Only a malformed profile fails. Decoding for display then keeps the
+/// pixels as sRGB and records it with [`note_ignored_profile`], so the
+/// viewer and the CLI can say the colours may be off instead of refusing the
+/// photo or relabeling it silently.
 pub fn normalize_srgb(image: &mut DynamicImage, icc: &[u8]) -> ImageResult<()> {
     normalize_srgb_applied(image, icc).map(drop)
 }
@@ -51,7 +53,7 @@ pub(crate) fn normalize_srgb_applied(image: &mut DynamicImage, icc: &[u8]) -> Im
             tracing::warn!(
                 ?space,
                 color = ?image.color(),
-                "perfil ICC incompatível com os pixels decodificados; perfil ignorado"
+                "ICC profile does not match the decoded pixels; profile ignored"
             );
             return Ok(false);
         }
@@ -143,7 +145,7 @@ fn transform_rgb(
             .map_err(error)?
             .transform(buffer.as_mut())
             .map_err(error)?,
-        _ => return Err(error("layout de pixels incompatível com o perfil RGB")),
+        _ => return Err(error("pixel layout does not match the RGB profile")),
     }
     Ok(())
 }
@@ -180,7 +182,7 @@ fn normalize_gray(image: &mut DynamicImage, profile: &ColorProfile) -> ImageResu
             .map_err(error)?
             .transform(buffer.as_mut())
             .map_err(error)?,
-        _ => return Err(error("layout de pixels incompatível com o perfil cinza")),
+        _ => return Err(error("pixel layout does not match the gray profile")),
     }
     Ok(())
 }
@@ -193,9 +195,42 @@ fn same_canonical_profile(a: &[u8], b: &[u8]) -> bool {
         && a[100..] == b[100..]
 }
 
+thread_local! {
+    static IGNORED_PROFILE: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+}
+
+/// Record that a decode on this thread showed the pixels of a malformed ICC
+/// profile as sRGB. The sandboxed codec relays it to the thread that asked.
+pub fn note_ignored_profile() {
+    IGNORED_PROFILE.with(|flag| flag.set(true));
+}
+
+/// Whether a decode on this thread ignored a malformed ICC profile since the
+/// last call; clears the note.
+pub fn take_ignored_profile() -> bool {
+    IGNORED_PROFILE.with(|flag| flag.replace(false))
+}
+
+/// Creation date stamped into the generated profile: 2026-01-01 00:00:00,
+/// as six big-endian u16 (ICC dateTimeNumber).
+const PROFILE_DATE: [u8; 12] = [0x07, 0xEA, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0];
+
 /// A generated sRGB profile contains no source camera, GPS or author fields.
+/// moxcms stamps the current time and an MD5 profile ID over it, which made
+/// two saves of the same pixels differ byte for byte; the date is fixed and
+/// the ID left zero ("not computed", ICC.1 7.2.18).
 pub(crate) fn srgb_profile() -> ImageResult<Vec<u8>> {
-    ColorProfile::new_srgb().encode().map_err(error)
+    static PROFILE: std::sync::OnceLock<Vec<u8>> = std::sync::OnceLock::new();
+    if let Some(profile) = PROFILE.get() {
+        return Ok(profile.clone());
+    }
+    let mut icc = ColorProfile::new_srgb().encode().map_err(error)?;
+    if icc.len() < 128 {
+        return Err(error("generated sRGB profile has no header"));
+    }
+    icc[24..36].copy_from_slice(&PROFILE_DATE);
+    icc[84..100].fill(0);
+    Ok(PROFILE.get_or_init(|| icc).clone())
 }
 
 #[cfg(test)]
@@ -214,6 +249,23 @@ mod tests {
         assert_ne!(&pixel[..3], &[40000, 20000, 10000]);
         assert_eq!(pixel[3], 12345);
     }
+    /// Saves embed this profile: a clock-dependent stamp made identical
+    /// saves differ, so it must not depend on when it was generated.
+    #[test]
+    fn srgb_profile_is_stable() {
+        let icc = srgb_profile().unwrap();
+        assert_eq!(&icc[24..36], &PROFILE_DATE);
+        assert!(icc[84..100].iter().all(|&b| b == 0));
+        assert_eq!(parse(&icc).unwrap().color_space, DataColorSpace::Rgb);
+        let mut image = DynamicImage::ImageRgb8(image::ImageBuffer::from_pixel(
+            1,
+            1,
+            image::Rgb([1, 128, 254]),
+        ));
+        normalize_srgb(&mut image, &icc).unwrap();
+        assert_eq!(image.as_rgb8().unwrap().get_pixel(0, 0).0, [1, 128, 254]);
+    }
+
     #[test]
     fn generated_srgb_preserves_exact_samples_across_creation_dates() {
         let mut icc = srgb_profile().unwrap();

@@ -39,8 +39,7 @@ fn render(action: &Action) -> String {
          Comment=BigIris — {comment}\n{localized_comment}\
          Exec={exec}\n\
          Icon-Name={icon}\n\
-         Selection=any\n\
-         Extensions=any;\n\
+         Selection=notnone\n\
          Mimetypes={mime_line}\n",
         label = label,
         comment = action.label,
@@ -85,6 +84,15 @@ mod tests {
         let text = render(a);
         assert!(text.contains("Name=BigIris ▸ Converter ▸ PNG"));
         assert!(text.contains("Mimetypes=image/*;"));
+    }
+
+    #[test]
+    fn render_filters_by_mime_only() {
+        for action in ACTIONS {
+            let text = render(action);
+            assert!(!text.contains("Extensions="), "{}: Extensions= overrides Mimetypes", action.id);
+            assert!(text.contains("Selection=notnone\n"), "{}", action.id);
+        }
     }
 
     #[test]

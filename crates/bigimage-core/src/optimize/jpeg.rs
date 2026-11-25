@@ -123,12 +123,20 @@ pub(crate) fn encode(
     let threshold = opts.target.ssimulacra2();
     let rgba = image::DynamicImage::ImageRgb8(image.clone()).into_rgba8();
     let probe = Probe::new(&rgba)?;
-    // Search without metadata (identical pixels, fewer bytes to copy).
+    // A whole-image probe keeps its bytes as the result, so it carries the
+    // metadata (the scoring decode ignores it) and reads the source pixels;
+    // a downscaled probe is only scored.
+    let whole = probe.is_whole();
     let none = Extras::default();
+    let probe_extras = if whole { extras } else { &none };
     let attempt = |chroma: Chroma, bounds: Bounds| {
         search(&probe, bounds, threshold, |pixels, q| {
             let (pw, ph) = pixels.dimensions();
-            let bytes = encode_rgb(&rgb_of(pixels), pw, ph, q, chroma, &none)?;
+            let bytes = if whole {
+                encode_rgb(image.as_raw(), pw, ph, q, chroma, probe_extras)?
+            } else {
+                encode_rgb(&rgb_of(pixels), pw, ph, q, chroma, probe_extras)?
+            };
             let decoded = decode(&bytes, image::ImageFormat::Jpeg)?;
             Ok((bytes, decoded))
         })
@@ -169,8 +177,8 @@ pub(crate) fn encode(
             continue;
         }
         let bytes = match f.bytes {
-            Some(bytes) if extras.is_empty() => bytes,
-            _ => encode_rgb(image.as_raw(), w, h, f.quality, chroma, extras)?,
+            Some(bytes) => bytes,
+            None => encode_rgb(image.as_raw(), w, h, f.quality, chroma, extras)?,
         };
         if best.as_ref().is_none_or(|b| bytes.len() < b.len()) {
             best = Some(bytes);

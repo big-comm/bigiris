@@ -469,13 +469,6 @@ pub(crate) struct Extras {
     pub(crate) icc: Option<Vec<u8>>,
 }
 
-impl Extras {
-    /// Nothing to embed besides the pixels.
-    pub(crate) fn is_empty(&self) -> bool {
-        self.exif.is_none() && self.icc.is_none()
-    }
-}
-
 /// Encode into a unique sibling and publish only after encode, flush and sync.
 pub(crate) fn encode_and_cleanup(
     img: DynamicImage,

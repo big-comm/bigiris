@@ -45,7 +45,7 @@ const ACTIONS_PLACEHOLDER: &str = "\n_ACTIONS = []\n";
 fn render() -> String {
     let py = |text: &str| format!("\"{}\"", text.replace('\\', "\\\\").replace('"', "\\\""));
     let list = |items: &mut dyn Iterator<Item = &str>| {
-        format!("[{}]", items.map(|item| py(item)).collect::<Vec<_>>().join(", "))
+        format!("[{}]", items.map(py).collect::<Vec<_>>().join(", "))
     };
     let mut table = String::from("\n_ACTIONS = [\n");
     for action in ACTIONS {
@@ -272,7 +272,12 @@ mod tests {
         assert!(PYTHON_EXTENSION.contains(ACTIONS_PLACEHOLDER));
         assert!(!body.contains(ACTIONS_PLACEHOLDER));
         for action in ACTIONS {
-            assert_eq!(body.matches(&format!("    (\"{}\", ", action.id)).count(), 1, "{}", action.id);
+            assert_eq!(
+                body.matches(&format!("    (\"{}\", ", action.id)).count(),
+                1,
+                "{}",
+                action.id
+            );
         }
         assert!(body.contains(
             "(\"web-letterbox-yt\", \"web\", \"Para web\", \"applications-internet-symbolic\", \

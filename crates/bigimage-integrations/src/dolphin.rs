@@ -131,7 +131,7 @@ mod tests {
     }
 
     #[test]
-    fn install_writes_one_file_per_mime_filter() {
+    fn install_writes_file_per_filter() {
         #[cfg(target_os = "linux")]
         use std::os::unix::fs::PermissionsExt;
 

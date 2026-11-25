@@ -90,7 +90,11 @@ mod tests {
     fn render_filters_by_mime_only() {
         for action in ACTIONS {
             let text = render(action);
-            assert!(!text.contains("Extensions="), "{}: Extensions= overrides Mimetypes", action.id);
+            assert!(
+                !text.contains("Extensions="),
+                "{}: Extensions= overrides Mimetypes",
+                action.id
+            );
             assert!(text.contains("Selection=notnone\n"), "{}", action.id);
         }
     }

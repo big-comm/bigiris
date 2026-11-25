@@ -524,11 +524,11 @@ struct CachedFrame {
 /// hold more than half a gigabyte of RGBA pixels.
 const PREFETCH_MAX_PIXELS: u64 = 40_000_000;
 
-/// Pixel count from the file header, without decoding. `None` for formats
-/// the `image` crate cannot probe (RAW, HEIF…); those are decoded anyway.
+/// Pixel count from the file header, read by the sandboxed codec like every
+/// other byte of an untrusted file. `None` when the header cannot be probed
+/// (RAW, HEIF…); those are decoded anyway.
 fn header_pixels(path: &Path) -> Option<u64> {
-    let (w, h) =
-        image::ImageReader::open(path).ok()?.with_guessed_format().ok()?.into_dimensions().ok()?;
+    let (w, h) = bigimage_core::image_dimensions(path).ok()?;
     Some(u64::from(w) * u64::from(h))
 }
 
@@ -579,7 +579,9 @@ impl ViewerLoader {
                 let modified = file_modified(&request.path);
                 let edited = !request.ops.is_empty();
                 let oversized = request.max_pixels.is_some_and(|max| {
-                    header_pixels(&request.path).is_some_and(|pixels| pixels > max)
+                    crate::codec::with_cancel(worker_stopped.clone(), || {
+                        header_pixels(&request.path).is_some_and(|pixels| pixels > max)
+                    })
                 });
                 let pixels = if oversized {
                     Err("image too large to prefetch".to_string())

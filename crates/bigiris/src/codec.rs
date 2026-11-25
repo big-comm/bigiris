@@ -5,6 +5,7 @@ use bigimage_core::{backend, BigImageError, Format, Metadata, PreviewSession};
 use image::{ColorType, DynamicImage, GenericImageView, ImageBuffer, ImageError, ImageResult};
 use std::cell::RefCell;
 use std::io::{Read, Seek, SeekFrom, Write};
+use std::os::fd::AsRawFd;
 use std::os::unix::fs::OpenOptionsExt;
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
@@ -227,6 +228,28 @@ fn mark_descriptors_cloexec() {
                 libc::fcntl(fd, libc::F_SETFD, flags | libc::FD_CLOEXEC);
             }
         }
+    }
+}
+
+/// Hand `fd` to the child as descriptor 3, the only one above stdio that
+/// survives `exec`. Must be installed after [`close_inherited_descriptors`],
+/// whose hook marks every descriptor (this one included) close-on-exec.
+#[allow(unsafe_code)]
+fn pass_as_fd3(command: &mut Command, fd: std::os::fd::RawFd) -> &mut Command {
+    use std::os::unix::process::CommandExt;
+    // SAFETY: runs in the forked child before `exec` and only issues the
+    // async-signal-safe dup2/fcntl syscalls on integer descriptors; `fd` stays
+    // open in the parent until `spawn` returns. dup2 clears close-on-exec on
+    // the copy; when `fd` already is 3 the flag is cleared directly.
+    unsafe {
+        command.pre_exec(move || {
+            let result = if fd == 3 { libc::fcntl(3, libc::F_SETFD, 0) } else { libc::dup2(fd, 3) };
+            if result < 0 {
+                Err(std::io::Error::last_os_error())
+            } else {
+                Ok(())
+            }
+        })
     }
 }
 
@@ -462,7 +485,7 @@ fn execute(path: &Path, mode: &str, replaced: &mut bool) -> ImageResult<std::fs:
         ])
         .arg(executable)
         .arg("/app/bigiris")
-        .args(["--ro-bind", "/proc/self/fd/0"])
+        .args(["--ro-bind-fd", "3"])
         .arg(&sandbox_input)
         .args([
             "--chdir",
@@ -479,12 +502,17 @@ fn execute(path: &Path, mode: &str, replaced: &mut bool) -> ImageResult<std::fs:
         ])
         .arg(mode)
         .arg(&sandbox_input)
-        .stdin(Stdio::from(input))
+        .stdin(Stdio::null())
         .stdout(Stdio::from(output.try_clone()?))
         .stderr(Stdio::piped());
+    // Not stdin: a descriptor the codec keeps open would let it reopen the
+    // host file writable through /proc/self/fd, past the read-only mount.
+    // bwrap closes descriptor 3 once the bind is made.
+    pass_as_fd3(&mut command, input.as_raw_fd());
     let child = command.spawn().map_err(|error| {
         invalid(format!("sandbox indisponível: instale bubblewrap e util-linux; {error}"))
     })?;
+    drop(input);
     let mut child = ChildGuard(child);
     let diagnostics = child.0.stderr.take().map(drain_diagnostics);
     let status = wait_child(&mut child.0, Instant::now() + budget, true)?;

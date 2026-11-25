@@ -833,7 +833,7 @@ msgstr "Додати теку зображень"
 
 #: crates/bigiris/src/gui/dialogs/compare.rs:31
 msgid "Comparar imagens — Íris"
-msgstr "Порівняти зображення — Iris"
+msgstr "Порівняти зображення — Íris"
 
 #: crates/bigiris/src/gui/dialogs/compare.rs:43
 msgid "Comparar imagens"
@@ -1699,7 +1699,7 @@ msgstr "Максимальна ширина"
 
 #: crates/bigiris/src/gui/dialogs/resize.rs:81
 msgid "Altura máxima"
-msgstr "Макс. висота"
+msgstr "Максимальна висота"
 
 #: crates/bigiris/src/gui/dialogs/resize.rs:120
 msgid "Kernel de interpolação"
@@ -1784,7 +1784,7 @@ msgstr "Попередній перегляд"
 
 #: crates/bigiris/src/gui/previews.rs:38
 msgid "Original: {width}×{height} px"
-msgstr "Оригінал: {width}×{height} px"
+msgstr "Оригінал: {width}×{height} пкс"
 
 #: crates/bigiris/src/gui/previews.rs:201
 msgid "Preparando pré-visualização…"
@@ -1796,7 +1796,7 @@ msgstr "Підготовку перервано"
 
 #: crates/bigiris/src/gui/transfers.rs:86
 msgid "A seleção é muito grande. Abra menos arquivos por vez."
-msgstr "Вибрано забагато. Відкривайте менше файлів за раз."
+msgstr "Вибрано забагато файлів. Відкривайте менше файлів за раз."
 
 #: crates/bigiris/src/gui/transfers.rs:88
 msgid "Arraste ou copie arquivos locais de imagem."

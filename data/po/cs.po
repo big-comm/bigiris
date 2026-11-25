@@ -92,7 +92,7 @@ msgstr "Přiblížit"
 
 #: crates/bigiris/src/gui.rs:2189
 msgid "Slideshow: pausado"
-msgstr "Prezentace obrázků: pozastaveno"
+msgstr "Prezentace: pozastaveno"
 
 #: crates/bigiris/src/gui.rs:2217
 msgid "Slideshow: a cada {interval} s"
@@ -721,7 +721,7 @@ msgstr "Vytváření GIF…"
 #: crates/bigiris/src/gui/dialogs/animate.rs:297
 #: crates/bigiris/src/gui/dialogs/batch.rs:102
 msgid "Pronto"
-msgstr "Připraveno"
+msgstr "Hotovo"
 
 #: crates/bigiris/src/gui/dialogs/animate.rs:302
 msgid "O arquivo {file} passou a existir e foi mantido; nada foi gravado."
@@ -830,7 +830,7 @@ msgstr "Přidat složku obrázků"
 
 #: crates/bigiris/src/gui/dialogs/compare.rs:31
 msgid "Comparar imagens — Íris"
-msgstr "Porovnat obrázky — Iris"
+msgstr "Porovnat obrázky — Íris"
 
 #: crates/bigiris/src/gui/dialogs/compare.rs:43
 msgid "Comparar imagens"

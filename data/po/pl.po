@@ -836,7 +836,7 @@ msgstr "Dodaj folder obrazów"
 
 #: crates/bigiris/src/gui/dialogs/compare.rs:31
 msgid "Comparar imagens — Íris"
-msgstr "Porównaj obrazy — Iris"
+msgstr "Porównaj obrazy — Íris"
 
 #: crates/bigiris/src/gui/dialogs/compare.rs:43
 msgid "Comparar imagens"

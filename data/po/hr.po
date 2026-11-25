@@ -353,7 +353,7 @@ msgstr "Datoteka će biti premještena u smeće. Možete je vratiti kasnije."
 
 #: crates/bigiris/src/gui.rs:3858
 msgid "Mover"
-msgstr "Pomakni"
+msgstr "Premjesti"
 
 #: crates/bigiris/src/gui.rs:3880
 msgid "Não foi possível mover para a lixeira"
@@ -724,7 +724,7 @@ msgstr "Izrada GIF-a…"
 #: crates/bigiris/src/gui/dialogs/animate.rs:297
 #: crates/bigiris/src/gui/dialogs/batch.rs:102
 msgid "Pronto"
-msgstr "Spremno"
+msgstr "Gotovo"
 
 #: crates/bigiris/src/gui/dialogs/animate.rs:302
 msgid "O arquivo {file} passou a existir e foi mantido; nada foi gravado."
@@ -834,7 +834,7 @@ msgstr "Dodaj mapu sa slikama"
 
 #: crates/bigiris/src/gui/dialogs/compare.rs:31
 msgid "Comparar imagens — Íris"
-msgstr "Usporedi slike — Iris"
+msgstr "Usporedi slike — Íris"
 
 #: crates/bigiris/src/gui/dialogs/compare.rs:43
 msgid "Comparar imagens"
@@ -868,8 +868,7 @@ msgid ""
 "Esta imagem tem transparência — JPEG perde o canal alfa. Considere PNG ou "
 "WebP."
 msgstr ""
-"Ova slika ima prozirnost — JPEG ispušta alfa kanal. Razmislite o PNG ili "
-"WebP."
+"Ova slika ima prozirnost — JPEG gubi alfa kanal. Razmislite o PNG ili WebP."
 
 #: crates/bigiris/src/gui/dialogs/convert.rs:106
 msgid ""
@@ -1574,11 +1573,12 @@ msgstr "Model"
 msgid ""
 "«origem»_nobg.png · PNG com alfa, sem sobrescrever (_1, _2… se já existir)"
 msgstr ""
-"„izvor”_nobg.png · PNG s alfom, bez prepisivanja (_1, _2… ako već postoji)"
+"„izvor”_nobg.png · PNG s alfa kanalom, bez prepisivanja (_1, _2… ako već "
+"postoji)"
 
 #: crates/bigiris/src/gui/dialogs/remove_bg.rs:147
 msgid "Remover fundo com IA local"
-msgstr "Ukloni pozadinu lokalnom AI"
+msgstr "Ukloni pozadinu pomoću lokalnog AI-ja"
 
 #: crates/bigiris/src/gui/dialogs/remove_bg.rs:148
 msgid ""

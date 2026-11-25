@@ -282,7 +282,7 @@ msgstr "Vrátiť späť"
 
 #: crates/bigiris/src/gui.rs:3229 crates/bigiris/src/gui.rs:3972
 msgid "Refazer"
-msgstr "Opakovať vrátené"
+msgstr "Znova"
 
 #: crates/bigiris/src/gui.rs:3232 crates/bigiris/src/gui.rs:3978
 msgid "Salvar alterações"
@@ -646,7 +646,7 @@ msgstr "Vyberte viacero súborov na vytvorenie animácie."
 
 #: crates/bigiris/src/gui/dialogs/animate.rs:66
 msgid "Atraso por quadro (ms)"
-msgstr "Oneskorenie snímok (ms)"
+msgstr "Oneskorenie snímky (ms)"
 
 #: crates/bigiris/src/gui/dialogs/animate.rs:67
 msgid "100 ≈ 10 fps · 40 ≈ 25 fps · 1000 = 1 s"
@@ -723,7 +723,7 @@ msgstr "Vytvára sa GIF…"
 #: crates/bigiris/src/gui/dialogs/animate.rs:297
 #: crates/bigiris/src/gui/dialogs/batch.rs:102
 msgid "Pronto"
-msgstr "Pripravené"
+msgstr "Hotovo"
 
 #: crates/bigiris/src/gui/dialogs/animate.rs:302
 msgid "O arquivo {file} passou a existir e foi mantido; nada foi gravado."
@@ -832,7 +832,7 @@ msgstr "Pridať priečinok s obrázkami"
 
 #: crates/bigiris/src/gui/dialogs/compare.rs:31
 msgid "Comparar imagens — Íris"
-msgstr "Porovnať obrázky — Iris"
+msgstr "Porovnať obrázky — Íris"
 
 #: crates/bigiris/src/gui/dialogs/compare.rs:43
 msgid "Comparar imagens"
@@ -844,7 +844,7 @@ msgstr "Pred: {before}  ·  Po: {after}"
 
 #: crates/bigiris/src/gui/dialogs/compare.rs:69
 msgid "Arraste o divisor para comparar · Esc fecha"
-msgstr "Potiahnite oddeľovač pre porovnanie · Esc pre zatvorenie"
+msgstr "Potiahnutím oddeľovača porovnáte · Esc zatvorí"
 
 #: crates/bigiris/src/gui/dialogs/compare.rs:157
 msgid "Não foi possível abrir esta imagem"
@@ -859,15 +859,15 @@ msgstr "Konvertovať obrázky — Prisma"
 #: crates/bigimage-integrations/src/action.rs:75
 #: data/nautilus/bigiris-menu.py:100
 msgid "Converter"
-msgstr "Previesť obrázky"
+msgstr "Konvertovať"
 
 #: crates/bigiris/src/gui/dialogs/convert.rs:85
 msgid ""
 "Esta imagem tem transparência — JPEG perde o canal alfa. Considere PNG ou "
 "WebP."
 msgstr ""
-"Tento obrázok má priehľadnosť — JPEG vynecháva alfa kanál. Zvážte PNG alebo "
-"WebP."
+"Tento obrázok má priehľadnosť — JPEG alfa kanál nepodporuje. Zvážte PNG "
+"alebo WebP."
 
 #: crates/bigiris/src/gui/dialogs/convert.rs:106
 msgid ""
@@ -1430,7 +1430,7 @@ msgstr "Ak výstupný súbor existuje"
 
 #: crates/bigiris/src/gui/dialogs/mod.rs:283
 msgid "{first} e mais {count}"
-msgstr "{first} a ďalšie: {count}"
+msgstr "{first} a {count} ďalších"
 
 #: crates/bigiris/src/gui/dialogs/mod.rs:298
 msgid "Escolher pasta de saída"

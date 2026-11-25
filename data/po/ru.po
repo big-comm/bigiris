@@ -274,7 +274,7 @@ msgstr "Обработать папку…"
 
 #: crates/bigiris/src/gui.rs:3227
 msgid "Editar imagem"
-msgstr "Изменить изображение"
+msgstr "Редактировать изображение"
 
 #: crates/bigiris/src/gui.rs:3228 crates/bigiris/src/gui.rs:3971
 msgid "Desfazer"
@@ -350,7 +350,7 @@ msgstr "Переместить в корзину?"
 msgid ""
 "O arquivo será movido para a lixeira do sistema. Você pode restaurá-lo "
 "depois."
-msgstr "Файл будет перемещен в корзину. Вы можете восстановить его позже."
+msgstr "Файл будет перемещён в корзину. Вы можете восстановить его позже."
 
 #: crates/bigiris/src/gui.rs:3858
 msgid "Mover"
@@ -833,7 +833,7 @@ msgstr "Добавить папку с изображениями"
 
 #: crates/bigiris/src/gui/dialogs/compare.rs:31
 msgid "Comparar imagens — Íris"
-msgstr "Сравнить изображения — Iris"
+msgstr "Сравнить изображения — Íris"
 
 #: crates/bigiris/src/gui/dialogs/compare.rs:43
 msgid "Comparar imagens"
@@ -1794,7 +1794,7 @@ msgstr "Подготовка прервана"
 
 #: crates/bigiris/src/gui/transfers.rs:86
 msgid "A seleção é muito grande. Abra menos arquivos por vez."
-msgstr "Выбрано слишком много. Откройте меньше файлов за раз."
+msgstr "Выбрано слишком много файлов. Откройте меньше файлов за раз."
 
 #: crates/bigiris/src/gui/transfers.rs:88
 msgid "Arraste ou copie arquivos locais de imagem."
@@ -1865,7 +1865,7 @@ msgstr "JPG"
 #: data/nautilus/bigiris-menu.py:137 data/nautilus/bigiris-menu.py:148
 #: data/nautilus/bigiris-menu.py:162
 msgid "Mais opções…"
-msgstr "Больше вариантов…"
+msgstr "Больше параметров…"
 
 #: crates/bigimage-integrations/src/action.rs:203
 #: data/nautilus/bigiris-menu.py:119

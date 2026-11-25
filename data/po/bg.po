@@ -837,7 +837,7 @@ msgstr "Добавяне на папка с изображения"
 
 #: crates/bigiris/src/gui/dialogs/compare.rs:31
 msgid "Comparar imagens — Íris"
-msgstr "Сравнение на изображения — Iris"
+msgstr "Сравнение на изображения — Íris"
 
 #: crates/bigiris/src/gui/dialogs/compare.rs:43
 msgid "Comparar imagens"
@@ -1014,7 +1014,7 @@ msgstr "Трансформиране"
 
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:313
 msgid "Espelhar horizontal"
-msgstr "Обърни хоризонтално"
+msgstr "Хоризонтално преобръщане"
 
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:314
 msgid "Espelhar vertical"
@@ -2050,12 +2050,13 @@ msgstr "Конвертиране на изображенията от папка
 
 #: scripts/translations.py:20
 msgid "Visualizador de imagens"
-msgstr "Преглед на изображения"
+msgstr "Програма за преглед на изображения"
 
 #: scripts/translations.py:21
 msgid "Visualize e converta imagens com integração ao gerenciador de arquivos"
-msgstr "Преглед и конвертиране на изображения с интеграция на файлов мениджър"
+msgstr ""
+"Преглед и конвертиране на изображения с интеграция във файловия мениджър"
 
 #: scripts/translations.py:24
 msgid "Visualizador e conversor de imagens moderno"
-msgstr "Модерна програма за разглеждане и конвертиране на изображения"
+msgstr "Модерна програма за преглед и конвертиране на изображения"

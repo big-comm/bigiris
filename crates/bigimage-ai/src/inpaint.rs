@@ -66,9 +66,6 @@ const RUN_FIXED_BYTES: u64 = 96 * MIB;
 /// Network memory per pixel of the run size (0.54 GB − 0.25 GB over
 /// 786k pixels ≈ 390 B), with margin.
 const RUN_BYTES_PER_PIXEL: u64 = 512;
-/// What loading checks for: the model and a 512² run.
-const PRELOAD: Budget =
-    Budget { load: LOAD_BYTES, run: RUN_FIXED_BYTES + 512 * 512 * RUN_BYTES_PER_PIXEL };
 /// Largest image, as RGBA8 (the core buffer limit).
 const MAX_BYTES: u64 = 512 * MIB;
 
@@ -272,20 +269,6 @@ pub fn inpaint(
     #[cfg(not(feature = "native"))]
     {
         let _ = (budget, &mut progress);
-        Err(AiError::Disabled)
-    }
-}
-
-/// Load the model (when it is not loaded yet) without running it.
-pub fn preload(progress: &mut dyn FnMut(Stage) -> ControlFlow<()>) -> Result<Device, AiError> {
-    #[cfg(feature = "native")]
-    {
-        SLOT.run(&MODEL, PRELOAD, progress, |_, _| Ok(()))?;
-        Ok(device().unwrap_or(Device::Cpu))
-    }
-    #[cfg(not(feature = "native"))]
-    {
-        let _ = progress;
         Err(AiError::Disabled)
     }
 }

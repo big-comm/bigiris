@@ -644,7 +644,7 @@ impl ViewerLoader {
 
     /// Forget cached edit results (navigation, save).
     fn clear_cache(&self) {
-        self.cache.lock().unwrap_or_else(|poisoned| poisoned.into_inner()).clear();
+        self.cache.lock().unwrap_or_else(std::sync::PoisonError::into_inner).clear();
     }
 
     /// Whether rendering `ops` on `path` would run a heavy tool again.
@@ -653,7 +653,7 @@ impl ViewerLoader {
         let modified = file_modified(path);
         self.cache
             .lock()
-            .unwrap_or_else(|poisoned| poisoned.into_inner())
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
             .needs_heavy(path, modified, &effective)
     }
 
@@ -2652,7 +2652,7 @@ fn render_cached(
     fn lock(
         cache: &Mutex<viewer::edits::EditCache>,
     ) -> std::sync::MutexGuard<'_, viewer::edits::EditCache> {
-        cache.lock().unwrap_or_else(|poisoned| poisoned.into_inner())
+        cache.lock().unwrap_or_else(std::sync::PoisonError::into_inner)
     }
     let effective = viewer::edits::effective_ops(ops);
     // Plain viewing keeps no extra copy of the decoded file.

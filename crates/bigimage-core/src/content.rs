@@ -35,61 +35,7 @@ pub fn ensure_static_local(path: &Path) -> Result<()> {
                 image::codecs::webp::WebPDecoder::new(file)?.has_animation()
             }
             Some(image::ImageFormat::Avif) => is_avif_sequence(&mut file)?,
-            Some(image::ImageFormat::Tiff) => {
-                let mut header = [0; 16];
-                file.read_exact(&mut header[..8])?;
-                let little = &header[..2] == b"II";
-                let word = |bytes: [u8; 2]| {
-                    if little {
-                        u16::from_le_bytes(bytes)
-                    } else {
-                        u16::from_be_bytes(bytes)
-                    }
-                };
-                let long = |bytes: [u8; 4]| {
-                    if little {
-                        u32::from_le_bytes(bytes)
-                    } else {
-                        u32::from_be_bytes(bytes)
-                    }
-                };
-                let wide = |bytes: [u8; 8]| {
-                    if little {
-                        u64::from_le_bytes(bytes)
-                    } else {
-                        u64::from_be_bytes(bytes)
-                    }
-                };
-                let (first, big) = if word(header[2..4].try_into().unwrap()) == 43 {
-                    file.read_exact(&mut header[8..16])?;
-                    (wide(header[8..16].try_into().unwrap()), true)
-                } else {
-                    (u64::from(long(header[4..8].try_into().unwrap())), false)
-                };
-                file.seek(SeekFrom::Start(first))?;
-                let mut bytes = [0; 8];
-                let (count, entry, base) = if big {
-                    file.read_exact(&mut bytes)?;
-                    (wide(bytes), 20u64, 8u64)
-                } else {
-                    file.read_exact(&mut bytes[..2])?;
-                    (u64::from(word(bytes[..2].try_into().unwrap())), 12, 2)
-                };
-                let next = count
-                    .checked_mul(entry)
-                    .and_then(|n| first.checked_add(base)?.checked_add(n))
-                    .ok_or_else(|| {
-                        std::io::Error::new(std::io::ErrorKind::InvalidData, "invalid TIFF IFD")
-                    })?;
-                file.seek(SeekFrom::Start(next))?;
-                if big {
-                    file.read_exact(&mut bytes)?;
-                    wide(bytes) != 0
-                } else {
-                    file.read_exact(&mut bytes[..4])?;
-                    long(bytes[..4].try_into().unwrap()) != 0
-                }
-            }
+            Some(image::ImageFormat::Tiff) => has_second_tiff_page(&mut file)?,
             _ => false,
         })
     })();
@@ -97,6 +43,61 @@ pub fn ensure_static_local(path: &Path) -> Result<()> {
         return Err(BigImageError::InvalidInput("imagem animada ou com múltiplas páginas: edição estática interrompida para evitar perda de conteúdo".into()));
     }
     Ok(())
+}
+
+/// A TIFF or BigTIFF whose first IFD links to another holds more than one page.
+fn has_second_tiff_page(file: &mut (impl Read + Seek)) -> std::io::Result<bool> {
+    let mut header = [0; 16];
+    file.read_exact(&mut header[..8])?;
+    let little = &header[..2] == b"II";
+    let word = |bytes: [u8; 2]| {
+        if little {
+            u16::from_le_bytes(bytes)
+        } else {
+            u16::from_be_bytes(bytes)
+        }
+    };
+    let long = |bytes: [u8; 4]| {
+        if little {
+            u32::from_le_bytes(bytes)
+        } else {
+            u32::from_be_bytes(bytes)
+        }
+    };
+    let wide = |bytes: [u8; 8]| {
+        if little {
+            u64::from_le_bytes(bytes)
+        } else {
+            u64::from_be_bytes(bytes)
+        }
+    };
+    let (first, big) = if word(header[2..4].try_into().unwrap()) == 43 {
+        file.read_exact(&mut header[8..16])?;
+        (wide(header[8..16].try_into().unwrap()), true)
+    } else {
+        (u64::from(long(header[4..8].try_into().unwrap())), false)
+    };
+    file.seek(SeekFrom::Start(first))?;
+    let mut bytes = [0; 8];
+    let (count, entry, base) = if big {
+        file.read_exact(&mut bytes)?;
+        (wide(bytes), 20u64, 8u64)
+    } else {
+        file.read_exact(&mut bytes[..2])?;
+        (u64::from(word(bytes[..2].try_into().unwrap())), 12, 2)
+    };
+    let next = count
+        .checked_mul(entry)
+        .and_then(|n| first.checked_add(base)?.checked_add(n))
+        .ok_or_else(|| std::io::Error::new(std::io::ErrorKind::InvalidData, "invalid TIFF IFD"))?;
+    file.seek(SeekFrom::Start(next))?;
+    if big {
+        file.read_exact(&mut bytes)?;
+        Ok(wide(bytes) != 0)
+    } else {
+        file.read_exact(&mut bytes[..4])?;
+        Ok(long(bytes[..4].try_into().unwrap()) != 0)
+    }
 }
 
 /// AVIF image sequences (animated AVIF) carry the `avis` brand in `ftyp`

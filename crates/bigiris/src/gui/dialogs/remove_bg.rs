@@ -243,7 +243,7 @@ pub(in crate::gui) fn build_remove_bg_dialog(
                     }
                     let _close = CloseOnDrop(wake.clone());
                     let publish = |state: BgUiState| {
-                        *shared.lock().unwrap_or_else(|p| p.into_inner()) = state;
+                        *shared.lock().unwrap_or_else(std::sync::PoisonError::into_inner) = state;
                         wake.notify();
                     };
                     // Load the model once for the whole batch; every file
@@ -319,7 +319,8 @@ pub(in crate::gui) fn build_remove_bg_dialog(
             let hold = window.application().map(|app| app.hold());
             glib::MainContext::default().spawn_local(async move {
                 let _hold = hold;
-                let snapshot = || shared.lock().unwrap_or_else(|p| p.into_inner()).clone();
+                let snapshot =
+                    || shared.lock().unwrap_or_else(std::sync::PoisonError::into_inner).clone();
                 while wake.wait().await {
                     if !cancelled_ui.load(std::sync::atomic::Ordering::Relaxed) {
                         show_bg_progress(&progress_bar, &snapshot());

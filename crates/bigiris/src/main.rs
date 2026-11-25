@@ -1570,17 +1570,38 @@ fn default_batch_overwrite() -> String {
     "skip".to_string()
 }
 
+fn unreadable(path: &Path, error: &std::io::Error) -> color_eyre::Report {
+    color_eyre::eyre::eyre!(fill(
+        &gettext("não foi possível ler {path}: {error}"),
+        &[("path", &path.display().to_string()), ("error", &error.to_string())],
+    ))
+}
+
+/// The files named on the command line, and the supported images directly inside named folders.
+fn batch_files(inputs: &[PathBuf]) -> color_eyre::Result<Vec<PathBuf>> {
+    let mut files = Vec::new();
+    for input in inputs {
+        if input.is_dir() {
+            let entries = std::fs::read_dir(input).map_err(|e| unreadable(input, &e))?;
+            files.extend(entries.flatten().map(|entry| entry.path()).filter(|path| {
+                path.is_file()
+                    && path
+                        .extension()
+                        .and_then(|ext| ext.to_str())
+                        .is_some_and(|ext| Format::parse(ext).is_ok())
+            }));
+        } else {
+            files.push(input.clone());
+        }
+    }
+    Ok(files)
+}
+
 fn run_batch(profile: &std::path::Path, inputs: &[PathBuf]) -> color_eyre::Result<()> {
     use std::sync::atomic::{AtomicUsize, Ordering};
     use std::sync::{mpsc, Arc};
 
-    let unreadable = |path: &Path, error: std::io::Error| {
-        color_eyre::eyre::eyre!(fill(
-            &gettext("não foi possível ler {path}: {error}"),
-            &[("path", &path.display().to_string()), ("error", &error.to_string())],
-        ))
-    };
-    let text = std::fs::read_to_string(profile).map_err(|e| unreadable(profile, e))?;
+    let text = std::fs::read_to_string(profile).map_err(|e| unreadable(profile, &e))?;
     let profile: BatchProfile = toml::from_str(&text).map_err(|e| {
         color_eyre::eyre::eyre!(with_error(&gettext("perfil TOML inválido: {error}"), e))
     })?;
@@ -1614,21 +1635,7 @@ fn run_batch(profile: &std::path::Path, inputs: &[PathBuf]) -> color_eyre::Resul
         })?;
     }
 
-    let mut files = Vec::new();
-    for input in inputs {
-        if input.is_dir() {
-            let entries = std::fs::read_dir(input).map_err(|e| unreadable(input, e))?;
-            files.extend(entries.flatten().map(|entry| entry.path()).filter(|path| {
-                path.is_file()
-                    && path
-                        .extension()
-                        .and_then(|ext| ext.to_str())
-                        .is_some_and(|ext| Format::parse(ext).is_ok())
-            }));
-        } else {
-            files.push(input.clone());
-        }
-    }
+    let mut files = batch_files(inputs)?;
     files.sort();
     if files.is_empty() {
         return Err(color_eyre::eyre::eyre!(gettext("nenhuma imagem encontrada para o lote")));

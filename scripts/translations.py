@@ -125,7 +125,7 @@ def generated_assets():
         for lang, entries in catalog.items())
     # The untranslated summary is English, the language of the default description.
     summary = f'  <summary>{html.escape(catalog["en"][APPSTREAM_SUMMARY])}</summary>\n'
-    metainfo = re.sub(r'^  <summary>.*</summary>\n', lambda m: summary+localized_summary, metainfo, flags=re.M)
+    metainfo = re.sub(r'^ {2}<summary>.*</summary>\n', lambda m: summary+localized_summary, metainfo, flags=re.M)
     return {path: rust, ROOT / 'data/com.biglinux.Iris.desktop': desktop,
             ROOT / 'data/com.biglinux.Iris.metainfo.xml': metainfo}
 

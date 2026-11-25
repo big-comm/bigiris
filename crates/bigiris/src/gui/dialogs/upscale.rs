@@ -216,7 +216,8 @@ fn fill_upscale_dialog(
                     if !ai {
                         return resize_file(f, mode, Filter::Lanczos3, target, &opts, policy);
                     }
-                    let _turn = one_at_a_time.lock().unwrap_or_else(|p| p.into_inner());
+                    let _turn =
+                        one_at_a_time.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
                     bigimage_core::transform_file(f, &suffix, target, &opts, policy, |img| {
                         bigimage_ai::upscale::upscale(
                             &img,

@@ -1597,7 +1597,7 @@ pub(in crate::gui) fn run_tool(state: &Rc<RefCell<ViewerState>>, op: EditOp) {
             }
             let _close = CloseOnDrop(wake.clone());
             let publish = |progress: ToolProgress| {
-                *shared.lock().unwrap_or_else(|p| p.into_inner()) = progress;
+                *shared.lock().unwrap_or_else(std::sync::PoisonError::into_inner) = progress;
                 wake.notify();
             };
             let result = crate::codec::with_cancel(cancel.clone(), || {
@@ -1616,7 +1616,7 @@ pub(in crate::gui) fn run_tool(state: &Rc<RefCell<ViewerState>>, op: EditOp) {
                 if !cancel.load(Ordering::Acquire) {
                     let mut key = edits::effective_ops(&ops);
                     key.push(op);
-                    cache.lock().unwrap_or_else(|p| p.into_inner()).insert(
+                    cache.lock().unwrap_or_else(std::sync::PoisonError::into_inner).insert(
                         &path,
                         modified,
                         key,
@@ -1631,7 +1631,7 @@ pub(in crate::gui) fn run_tool(state: &Rc<RefCell<ViewerState>>, op: EditOp) {
 
     let weak = Rc::downgrade(state);
     glib::MainContext::default().spawn_local(async move {
-        let snapshot = || shared.lock().unwrap_or_else(|p| p.into_inner()).clone();
+        let snapshot = || shared.lock().unwrap_or_else(std::sync::PoisonError::into_inner).clone();
         while wake.wait().await {
             if !cancel.load(Ordering::Acquire) {
                 show_tool_progress(&ui.tool_progress, &snapshot(), op);

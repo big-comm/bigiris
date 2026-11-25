@@ -113,6 +113,77 @@ impl Drop for PreviewRenderer {
 thread_local! {
     static PREVIEW_RENDERERS: RefCell<Vec<(glib::WeakRef<gtk::Picture>, Rc<PreviewRenderer>)>> = const { RefCell::new(Vec::new()) };
 }
+/// A render thread for `picture` and the main-loop task that shows its results.
+fn start_renderer(session: &PreviewSession, picture: &gtk::Picture) -> Rc<PreviewRenderer> {
+    let queue = Arc::new((
+        Mutex::new(PreviewRenderQueue { stopped: false, next: None, result: None }),
+        Condvar::new(),
+    ));
+    let rendered = viewer::Wake::default();
+    let renderer = Rc::new(PreviewRenderer {
+        queue: queue.clone(),
+        revision: std::cell::Cell::new(0),
+        rendered: rendered.clone(),
+    });
+    let session = session.clone();
+    let worker_rendered = rendered.clone();
+    std::thread::spawn(move || loop {
+        let (lock, wake) = &*queue;
+        let request = {
+            let mut pending = lock.lock().unwrap();
+            while !pending.stopped && pending.next.is_none() {
+                pending = wake.wait(pending).unwrap();
+            }
+            if pending.stopped {
+                break;
+            }
+            pending.next.take().unwrap()
+        };
+        // A panicking transform must not kill the renderer and freeze
+        // the preview; report it like any other failed render.
+        let image = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            session
+                .apply(&request.1)
+                .map(|img| DynamicImage::ImageRgba8(bigimage_core::into_srgb_rgba8(img)))
+                .map_err(|e| e.to_string())
+        }))
+        .unwrap_or_else(|_| Err("preview renderer panicked".to_string()));
+        let mut pending = lock.lock().unwrap();
+        if !pending.stopped {
+            pending.result = Some((request.0, image));
+            worker_rendered.notify();
+        }
+    });
+    let weak = picture.downgrade();
+    let weak_renderer = Rc::downgrade(&renderer);
+    glib::MainContext::default().spawn_local(async move {
+        while rendered.wait().await {
+            let (Some(picture), Some(renderer)) = (weak.upgrade(), weak_renderer.upgrade()) else {
+                return;
+            };
+            let result = renderer.queue.0.lock().unwrap().result.take();
+            if let Some((revision, result)) = result {
+                if revision == renderer.revision.get() {
+                    match result {
+                        Ok(image) => {
+                            picture.set_paintable(Some(&dynamic_image_to_texture(image)));
+                        }
+                        Err(error) => tracing::warn!(%error, "preview: apply failed"),
+                    }
+                }
+            }
+        }
+    });
+    // The picture going away stops its renderer thread.
+    picture.add_weak_ref_notify_local(|| {
+        PREVIEW_RENDERERS.with(|entries| {
+            if let Ok(mut entries) = entries.try_borrow_mut() {
+                entries.retain(|(w, _)| w.upgrade().is_some());
+            }
+        });
+    });
+    renderer
+}
 pub(super) fn refresh_preview(session: &PreviewSession, picture: &gtk::Picture, op: &PreviewOp) {
     let renderer = PREVIEW_RENDERERS.with(|renderers| {
         let mut renderers = renderers.borrow_mut();
@@ -122,74 +193,7 @@ pub(super) fn refresh_preview(session: &PreviewSession, picture: &gtk::Picture, 
         {
             return renderer.clone();
         }
-        let queue = Arc::new((
-            Mutex::new(PreviewRenderQueue { stopped: false, next: None, result: None }),
-            Condvar::new(),
-        ));
-        let rendered = viewer::Wake::default();
-        let renderer = Rc::new(PreviewRenderer {
-            queue: queue.clone(),
-            revision: std::cell::Cell::new(0),
-            rendered: rendered.clone(),
-        });
-        let session = session.clone();
-        let worker_rendered = rendered.clone();
-        std::thread::spawn(move || loop {
-            let (lock, wake) = &*queue;
-            let request = {
-                let mut pending = lock.lock().unwrap();
-                while !pending.stopped && pending.next.is_none() {
-                    pending = wake.wait(pending).unwrap();
-                }
-                if pending.stopped {
-                    break;
-                }
-                pending.next.take().unwrap()
-            };
-            // A panicking transform must not kill the renderer and freeze
-            // the preview; report it like any other failed render.
-            let image = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                session
-                    .apply(&request.1)
-                    .map(|img| DynamicImage::ImageRgba8(bigimage_core::into_srgb_rgba8(img)))
-                    .map_err(|e| e.to_string())
-            }))
-            .unwrap_or_else(|_| Err("preview renderer panicked".to_string()));
-            let mut pending = lock.lock().unwrap();
-            if !pending.stopped {
-                pending.result = Some((request.0, image));
-                worker_rendered.notify();
-            }
-        });
-        let weak = picture.downgrade();
-        let weak_renderer = Rc::downgrade(&renderer);
-        glib::MainContext::default().spawn_local(async move {
-            while rendered.wait().await {
-                let (Some(picture), Some(renderer)) = (weak.upgrade(), weak_renderer.upgrade())
-                else {
-                    return;
-                };
-                let result = renderer.queue.0.lock().unwrap().result.take();
-                if let Some((revision, result)) = result {
-                    if revision == renderer.revision.get() {
-                        match result {
-                            Ok(image) => {
-                                picture.set_paintable(Some(&dynamic_image_to_texture(image)));
-                            }
-                            Err(error) => tracing::warn!(%error, "preview: apply failed"),
-                        }
-                    }
-                }
-            }
-        });
-        // The picture going away stops its renderer thread.
-        picture.add_weak_ref_notify_local(|| {
-            PREVIEW_RENDERERS.with(|entries| {
-                if let Ok(mut entries) = entries.try_borrow_mut() {
-                    entries.retain(|(w, _)| w.upgrade().is_some());
-                }
-            });
-        });
+        let renderer = start_renderer(session, picture);
         renderers.push((picture.downgrade(), renderer.clone()));
         renderer
     });

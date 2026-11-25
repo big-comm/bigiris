@@ -566,7 +566,7 @@ fn viewer_edit_panel_tools() {
     wait(&context, "viewer state released", &|| witness.upgrade().is_none());
 }
 
-/// A heavy edit the cache no longer holds is rendered again with progress,
+/// A heavy edit missing from the cache is rendered again with progress,
 /// and Esc or Cancel returns to the history that was on screen.
 #[test]
 #[ignore = "requires a graphical display; run alone with GSETTINGS_BACKEND=memory"]

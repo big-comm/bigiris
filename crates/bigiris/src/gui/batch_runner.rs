@@ -409,19 +409,10 @@ where
     events
 }
 
-/// Run a per-file batch across a worker pool and show its progress. The
-/// `work` closure is the per-file CPU op (e.g.
-/// `bigimage_core::convert_file`); it must be `Fn + Send + Sync +
-/// 'static` so multiple threads can invoke it concurrently. Widgets
-/// (`status`, buttons, window) are only touched by the task awaiting the
-/// events on the GTK main loop.
-///
-/// Cancellation: closing the window (its Cancel button included) flips an
-/// atomic flag the workers check between files and that aborts an
-/// in-flight isolated codec run. An encode already in progress finishes
-/// and publishes atomically. The application is held until every worker
-/// has exited, so closing the last window never kills a worker mid-write
-/// and strands `.part` files.
+/// Run `work` on each file across the worker pool and show the progress.
+/// Closing the window, its Cancel button included, cancels the run; the
+/// application is held until every worker exits, so no `.part` file is
+/// stranded.
 pub(super) fn run_batch_async<W>(
     files: Vec<PathBuf>,
     work: W,

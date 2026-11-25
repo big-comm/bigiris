@@ -144,11 +144,10 @@ pub(in crate::gui) fn longest_prefix<'a>(
     )
 }
 
-/// Images after already-computed prefixes of the effective edits of one
-/// file, so heavy operations (background removal, upscale) are not run
-/// again on every later edit, Undo or Redo. Bounded by pixel bytes, least
-/// recently used first, except that the newest entry and the latest heavy
-/// result are always kept: a tool that just ran is never computed twice.
+/// Images after computed prefixes of one file's effective edits, so heavy
+/// tools do not run again on every later edit, Undo or Redo. Bounded by
+/// pixel bytes, except that the newest entry and the latest heavy result
+/// always stay.
 pub(in crate::gui) struct EditCache {
     entries: Vec<CacheEntry>,
     budget: usize,

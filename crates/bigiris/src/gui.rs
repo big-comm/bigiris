@@ -442,7 +442,7 @@ struct ViewerState {
     /// navigation invalidates the branch.
     redo_ops: Vec<EditOp>,
     /// Progress and Cancel shown while the decode thread runs a heavy tool
-    /// again because its result is no longer cached.
+    /// again because the edit cache lacks its result.
     heavy_render: gtk::Box,
     /// Edit history (pending, redo) that was on screen before that render;
     /// Cancel returns to it.

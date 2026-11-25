@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: bigiris 0.1.0\n"
 "Report-Msgid-Bugs-To: https://github.com/big-comm/bigiris/issues\n"
-"POT-Creation-Date: 2026-11-25 18:21-0300\n"
+"POT-Creation-Date: 2026-11-25 18:25-0300\n"
 "PO-Revision-Date: 2026-10-14 01:37-0300\n"
 "Last-Translator: BigCommunity Team\n"
 "Language-Team: BigCommunity Team\n"
@@ -1994,13 +1994,13 @@ msgstr ""
 
 #: crates/bigiris/src/main.rs:364
 msgid ""
-"Visual quality to aim for: maxima, equilibrado or menor (also max, balanced, "
-"small). Each format looks for the smallest file that keeps this quality "
-"(SSIMULACRA2 85 / 80 / 70)"
+"Visual quality to aim for: maximum, balanced or smallest (also max, small). "
+"Each format looks for the smallest file that keeps this quality (SSIMULACRA2 "
+"85 / 80 / 70)"
 msgstr ""
-"Eftersträvad visuell kvalitet: maxima, equilibrado eller menor (även max, "
-"balanced, small). Varje format söker den minsta fil som behåller den "
-"kvaliteten (SSIMULACRA2 85 / 80 / 70)"
+"Eftersträvad visuell kvalitet: maximum, balanced eller smallest (även max, "
+"small). Varje format söker den minsta fil som behåller den kvaliteten "
+"(SSIMULACRA2 85 / 80 / 70)"
 
 #: crates/bigiris/src/main.rs:370
 msgid ""
@@ -2047,11 +2047,10 @@ msgstr "Målformat (valfritt; behåller ursprungligt format om det utelämnas)"
 
 #: crates/bigiris/src/main.rs:405
 msgid ""
-"Visual quality to aim for: maxima, equilibrado or menor (also max, balanced, "
-"small)"
+"Visual quality to aim for: maximum, balanced or smallest (also max, small)"
 msgstr ""
-"Eftersträvad visuell kvalitet: maxima, equilibrado eller menor (även max, "
-"balanced, small)"
+"Eftersträvad visuell kvalitet: maximum, balanced eller smallest (även max, "
+"small)"
 
 #: crates/bigiris/src/main.rs:411
 msgid ""
@@ -2302,8 +2301,9 @@ msgid "Some files were not processed; see the details in the terminal."
 msgstr "Vissa filer bearbetades inte; se detaljerna i terminalen."
 
 #: crates/bigiris/src/main.rs:953
-msgid "invalid quality target: {value}; use maxima, equilibrado or menor"
-msgstr "ogiltigt kvalitetsmål: {value}; använd maxima, equilibrado eller menor"
+msgid "invalid quality target: {value}; use maximum, balanced or smallest"
+msgstr ""
+"ogiltigt kvalitetsmål: {value}; använd maximum, balanced eller smallest"
 
 #: crates/bigiris/src/main.rs:966 crates/bigiris/src/main.rs:1060
 msgid "invalid target format: {error}"
@@ -2405,7 +2405,7 @@ msgstr "kunde inte skapa {path}: {error}"
 msgid "no images found for the batch"
 msgstr "inga bilder hittades för batchen"
 
-#: crates/bigiris/src/main.rs:1746
+#: crates/bigiris/src/main.rs:1743
 msgid ""
 "LibreOffice (`soffice`) not found in PATH. Install `libreoffice-fresh` "
 "(recommended) or `libreoffice-still` (e.g. `sudo pacman -S libreoffice-"
@@ -2415,83 +2415,83 @@ msgstr ""
 "(rekommenderas) eller `libreoffice-still` (t.ex. `sudo pacman -S libreoffice-"
 "fresh`)."
 
-#: crates/bigiris/src/main.rs:1798
+#: crates/bigiris/src/main.rs:1795
 msgid "not a regular file"
 msgstr "inte en vanlig fil"
 
-#: crates/bigiris/src/main.rs:1801
+#: crates/bigiris/src/main.rs:1798
 msgid "invalid file name"
 msgstr "ogiltigt filnamn"
 
-#: crates/bigiris/src/main.rs:1822
+#: crates/bigiris/src/main.rs:1819
 msgid "could not run soffice: {error}"
 msgstr "kunde inte anropa soffice: {error}"
 
-#: crates/bigiris/src/main.rs:1833
+#: crates/bigiris/src/main.rs:1830
 msgid "soffice exceeded the {seconds} s limit"
 msgstr "soffice överskred gränsen på {seconds} s"
 
-#: crates/bigiris/src/main.rs:1846
+#: crates/bigiris/src/main.rs:1843
 msgid "soffice did not produce the PDF ({status})"
 msgstr "soffice skapade ingen PDF ({status})"
 
-#: crates/bigiris/src/main.rs:1889
+#: crates/bigiris/src/main.rs:1886
 msgid "too many files with the same name: {path}"
 msgstr "för många filer med samma namn: {path}"
 
-#: crates/bigiris/src/main.rs:1932
+#: crates/bigiris/src/main.rs:1928
 msgid "installation failed: {error}"
 msgstr "installationen misslyckades: {error}"
 
-#: crates/bigiris/src/main.rs:1938
+#: crates/bigiris/src/main.rs:1934
 msgid "installed"
 msgstr "installerad"
 
-#: crates/bigiris/src/main.rs:1939
+#: crates/bigiris/src/main.rs:1935
 msgid "installed in total: {files} file(s) in {managers} file manager(s)"
 msgstr "totalt installerat: {files} fil(er) i {managers} filhanterare"
 
-#: crates/bigiris/src/main.rs:1955
+#: crates/bigiris/src/main.rs:1951
 msgid "removal failed: {error}"
 msgstr "borttagningen misslyckades: {error}"
 
-#: crates/bigiris/src/main.rs:1958
+#: crates/bigiris/src/main.rs:1954
 msgid "removed"
 msgstr "borttagen"
 
-#: crates/bigiris/src/main.rs:1959
+#: crates/bigiris/src/main.rs:1955
 msgid "removed in total: {files} file(s) in {managers} file manager(s)"
 msgstr "totalt borttaget: {files} fil(er) i {managers} filhanterare"
 
-#: crates/bigiris/src/main.rs:1982
+#: crates/bigiris/src/main.rs:1978
 msgid "FAILED"
 msgstr "MISSLYCKADES"
 
-#: crates/bigiris/src/main.rs:1987
+#: crates/bigiris/src/main.rs:1983
 msgid "provided by the package"
 msgstr "tillhandahålls av paketet"
 
-#: crates/bigiris/src/main.rs:1990
+#: crates/bigiris/src/main.rs:1986
 msgid "unchanged"
 msgstr "oförändrad"
 
-#: crates/bigiris/src/main.rs:1992
+#: crates/bigiris/src/main.rs:1988
 msgid "skipped"
 msgstr "överhoppad"
 
-#: crates/bigiris/src/main.rs:1997
+#: crates/bigiris/src/main.rs:1993
 msgid "detected"
 msgstr "hittad"
 
-#: crates/bigiris/src/main.rs:1997
+#: crates/bigiris/src/main.rs:1993
 msgid "not in PATH"
 msgstr "saknas i PATH"
 
-#: crates/bigiris/src/main.rs:1999
+#: crates/bigiris/src/main.rs:1995
 msgid "{count} file(s)"
 msgstr "{count} fil(er)"
 
-#: crates/bigiris/src/main.rs:2024
+#: crates/bigiris/src/main.rs:2020
 msgid ""
 "warning: this build lacks the `gui` feature. Dialog '{dialog}' ignored "
 "(rebuild with --features gui)."
@@ -2499,7 +2499,7 @@ msgstr ""
 "varning: aktuellt bygge saknar funktionen `gui`. Dialogen '{dialog}' "
 "hoppades över (kompilera om med --features gui)."
 
-#: crates/bigiris/src/main.rs:2031
+#: crates/bigiris/src/main.rs:2027
 msgid ""
 "warning: this build lacks the `gui` feature. Viewer unavailable (rebuild "
 "with --features gui)."
@@ -2507,7 +2507,7 @@ msgstr ""
 "varning: aktuellt bygge saknar funktionen `gui`. Visaren är inte tillgänglig "
 "(kompilera om med --features gui)."
 
-#: crates/bigiris/src/main.rs:2036
+#: crates/bigiris/src/main.rs:2032
 msgid ""
 "warning: this build lacks the `gui` feature. Viewer unavailable; files "
 "received:"

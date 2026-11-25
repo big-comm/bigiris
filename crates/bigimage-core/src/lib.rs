@@ -182,10 +182,7 @@ pub fn open_image_for_resave(
         return decode(path).map(|(image, _, meta)| (image, meta));
     }
     if backend::configured().is_some() {
-        tracing::warn!(
-            ?path,
-            "backend sem decodificação para regravação; metadados não preservados"
-        );
+        tracing::warn!(?path, "backend cannot decode for re-saving; metadata not preserved");
         return open_image(path).map(|image| (image, SourceMetadata::default()));
     }
     pipeline::decode_local_with(path, false).map(|(image, _, meta)| (image, meta))

@@ -165,7 +165,7 @@ impl ResizeModeArgs {
             Self { fit: Some(d), .. } => ResizeMode::Fit { width: d.width, height: d.height },
             // clap enforces required=true + multiple=false on the ArgGroup, so
             // we're guaranteed exactly one of the above is Some.
-            _ => unreachable!("clap ArgGroup garante exatamente um modo selecionado"),
+            _ => unreachable!("the clap ArgGroup requires exactly one mode"),
         }
     }
 }
@@ -342,7 +342,7 @@ impl ExtentSizeArgs {
         match self {
             Self { size: Some(d), .. } => ExtentSize::Exact { width: d.width, height: d.height },
             Self { aspect: Some(a), .. } => ExtentSize::Aspect { w: a.w, h: a.h },
-            _ => unreachable!("clap ArgGroup garante exatamente um modo selecionado"),
+            _ => unreachable!("the clap ArgGroup requires exactly one mode"),
         }
     }
 }
@@ -358,10 +358,10 @@ enum Command {
         to: String,
         #[arg(
             long,
-            value_name = "MODO",
-            default_value = "equilibrado",
+            value_name = "MODE",
+            default_value = "balanced",
             value_parser = parse_target,
-            help = gettext("Visual quality to aim for: maxima, equilibrado or menor (also max, balanced, small). Each format looks for the smallest file that keeps this quality (SSIMULACRA2 85 / 80 / 70)")
+            help = gettext("Visual quality to aim for: maximum, balanced or smallest (also max, small). Each format looks for the smallest file that keeps this quality (SSIMULACRA2 85 / 80 / 70)")
         )]
         target: QualityTarget,
         #[arg(
@@ -399,10 +399,10 @@ enum Command {
         to: Option<String>,
         #[arg(
             long,
-            value_name = "MODO",
-            default_value = "equilibrado",
+            value_name = "MODE",
+            default_value = "balanced",
             value_parser = parse_target,
-            help = gettext("Visual quality to aim for: maxima, equilibrado or menor (also max, balanced, small)")
+            help = gettext("Visual quality to aim for: maximum, balanced or smallest (also max, small)")
         )]
         target: QualityTarget,
         #[arg(
@@ -869,7 +869,7 @@ fn notify_failure(message: &str) {
         .stderr(std::process::Stdio::null())
         .status();
     if let Err(error) = shown {
-        tracing::warn!(%error, "notify-send indisponível; a falha ficou só no stderr");
+        tracing::warn!(%error, "notify-send unavailable; the failure went to stderr only");
     }
 }
 
@@ -946,11 +946,11 @@ fn self_test() -> color_eyre::Result<()> {
     Ok(())
 }
 
-/// `--target`/profile `target`: Portuguese values plus English aliases.
+/// `--target` and the profile `target`.
 fn parse_target(value: &str) -> Result<QualityTarget, String> {
     QualityTarget::parse(value).ok_or_else(|| {
         fill(
-            &gettext("invalid quality target: {value}; use maxima, equilibrado or menor"),
+            &gettext("invalid quality target: {value}; use maximum, balanced or smallest"),
             &[("value", &format!("{value:?}"))],
         )
     })
@@ -1548,7 +1548,7 @@ struct BatchProfile {
     /// Target extension/name accepted by `Format::parse`.
     format: String,
     quality: Option<u8>,
-    /// maxima | equilibrado | menor (or max | balanced | small).
+    /// maximum | balanced | smallest (or max | small).
     target: Option<String>,
     #[serde(default)]
     progressive: bool,
@@ -1711,7 +1711,7 @@ fn run_batch(profile: &std::path::Path, inputs: &[PathBuf]) -> color_eyre::Resul
             }
             Err(error) => {
                 failed += 1;
-                eprintln!("[{}/{}] erro {}: {error}", done + 1, total, input.display());
+                eprintln!("[{}/{}] error {}: {error}", done + 1, total, input.display());
             }
         }
     }
@@ -1728,19 +1728,16 @@ fn run_batch(profile: &std::path::Path, inputs: &[PathBuf]) -> color_eyre::Resul
     Ok(())
 }
 
-/// Converte cada arquivo para PDF via `soffice --headless --convert-to pdf`.
-/// Cobre ODT/DOCX/TXT/MD/RTF/ODS/XLSX/ODP/PPTX e outros formatos que o
-/// LibreOffice aceita — ou seja, todo o conjunto que nosso irmão
-/// BigOCRPDF **não** cobre (ele só faz imagens + PDFs existentes).
-/// Saída vai ao lado de cada arquivo de origem.
+/// Convert each file to PDF with `soffice --headless --convert-to pdf`, next
+/// to its source: the office formats LibreOffice reads, which BigOCRPDF
+/// (images and existing PDFs only) does not cover.
 fn run_to_pdf(
     files: &[PathBuf],
     policy: OverwritePolicy,
     timeout: std::time::Duration,
 ) -> color_eyre::Result<()> {
     tracing::info!(?policy, ?timeout, count = files.len(), "to-pdf");
-    // Verifica soffice uma única vez antes de iterar — falhar cedo se não
-    // estiver instalado evita vomitar o mesmo erro N vezes.
+    // Checked once, so a missing LibreOffice is one error, not one per file.
     let soffice_path = which_soffice().ok_or_else(|| {
         color_eyre::eyre::eyre!(gettext(
             "LibreOffice (`soffice`) not found in PATH. Install `libreoffice-fresh` (recommended) or `libreoffice-still` (e.g. `sudo pacman -S libreoffice-fresh`)."
@@ -1906,8 +1903,7 @@ fn file_url(path: &Path) -> String {
     url
 }
 
-/// Procura o binário `soffice` no PATH. Prefixo canonical do LibreOffice
-/// em todas as distros. Retorna `None` se não existir.
+/// `soffice`, LibreOffice's command name on every distribution, from `PATH`.
 fn which_soffice() -> Option<PathBuf> {
     let path = std::env::var_os("PATH")?;
     for dir in std::env::split_paths(&path) {
@@ -1983,7 +1979,7 @@ fn print_install_report(report: &bigimage_integrations::Report, done: &str, summ
         } else if outcome.packaged {
             // The package ships it system-wide: nothing personal was written
             // and stale copies from earlier user installs were removed.
-            // Without this it read "sem alterações", as if install were a no-op.
+            // Without this it read "unchanged", as if install were a no-op.
             gettext("provided by the package")
         } else if outcome.files.is_empty() {
             if outcome.detected {

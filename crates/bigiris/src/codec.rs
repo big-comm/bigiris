@@ -293,7 +293,7 @@ fn userns_hardening() -> bool {
             .spawn()
         else {
             tracing::warn!(
-                "bwrap indisponível para testar --disable-userns; sandbox sem esse reforço"
+                "bwrap unavailable to test --disable-userns; sandbox runs without that hardening"
             );
             return false;
         };
@@ -305,8 +305,8 @@ fn userns_hardening() -> bool {
         if !supported {
             // Logged once: the answer is cached for the whole process.
             tracing::warn!(
-                "bwrap recusou --disable-userns (bwrap < 0.8 ou política do sistema); \
-                 o codec isolado roda sem esse reforço"
+                "bwrap refused --disable-userns (bwrap < 0.8 or system policy); \
+                 the isolated codec runs without that hardening"
             );
         }
         supported
@@ -566,7 +566,7 @@ fn receive_with(mut output: std::fs::File, trailer: bool) -> ImageResult<(Pixels
     let mut header = [0u8; HEADER];
     output.read_exact(&mut header)?;
     if &header[..8] != MAGIC || header[10] > 1 || header[11] > 1 {
-        return Err(invalid("protocolo de codec inválido"));
+        return Err(invalid("invalid codec protocol"));
     }
     let word = |offset| u32::from_le_bytes(header[offset..offset + 4].try_into().unwrap());
     let (w, h) = (word(12), word(16));
@@ -583,7 +583,7 @@ fn receive_with(mut output: std::fs::File, trailer: bool) -> ImageResult<(Pixels
         8 => ColorType::Rgba16,
         9 => ColorType::Rgb32F,
         10 => ColorType::Rgba32F,
-        _ => return Err(invalid("tipo de pixels inválido")),
+        _ => return Err(invalid("invalid pixel type")),
     };
     if w == 0
         || h == 0
@@ -594,13 +594,13 @@ fn receive_with(mut output: std::fs::File, trailer: bool) -> ImageResult<(Pixels
         || length > MAX_BYTES
         || length != u64::from(w) * u64::from(h) * u64::from(color.bytes_per_pixel())
     {
-        return Err(invalid("dimensões ou tamanho do protocolo inválidos"));
+        return Err(invalid("invalid protocol dimensions or size"));
     }
     let total = output.metadata()?.len();
     let pixels_end = HEADER as u64 + length;
     let (exif_length, icc_length, quality) = if trailer {
         if total < pixels_end + RESAVE_TRAILER as u64 {
-            return Err(invalid("dimensões ou tamanho do protocolo inválidos"));
+            return Err(invalid("invalid protocol dimensions or size"));
         }
         let mut lengths = [0u8; RESAVE_TRAILER];
         output.seek(SeekFrom::Start(pixels_end))?;
@@ -614,7 +614,7 @@ fn receive_with(mut output: std::fs::File, trailer: bool) -> ImageResult<(Pixels
         let quality = match lengths[16] {
             0 => None,
             q @ 1..=100 => Some(q),
-            _ => return Err(invalid("qualidade JPEG inválida")),
+            _ => return Err(invalid("invalid JPEG quality")),
         };
         (exif, icc, quality)
     } else {
@@ -623,12 +623,12 @@ fn receive_with(mut output: std::fs::File, trailer: bool) -> ImageResult<(Pixels
     let expected =
         pixels_end + if trailer { RESAVE_TRAILER as u64 + exif_length + icc_length } else { 0 };
     if total != expected {
-        return Err(invalid("dimensões ou tamanho do protocolo inválidos"));
+        return Err(invalid("invalid protocol dimensions or size"));
     }
     let format = if header[9] == 255 {
         None
     } else {
-        Some(*Format::all().get(header[9] as usize).ok_or_else(|| invalid("formato inválido"))?)
+        Some(*Format::all().get(header[9] as usize).ok_or_else(|| invalid("invalid format"))?)
     };
     let length = length as usize;
     // Decode wide samples straight into their typed buffer through a small
@@ -636,7 +636,7 @@ fn receive_with(mut output: std::fs::File, trailer: bool) -> ImageResult<(Pixels
     macro_rules! buffer {
         ($data:expr, $variant:ident) => {
             DynamicImage::$variant(
-                ImageBuffer::from_raw(w, h, $data).ok_or_else(|| invalid("buffer inválido"))?,
+                ImageBuffer::from_raw(w, h, $data).ok_or_else(|| invalid("invalid buffer"))?,
             )
         };
     }
@@ -668,7 +668,7 @@ fn receive_with(mut output: std::fs::File, trailer: bool) -> ImageResult<(Pixels
         ColorType::Rgba16 => buffer!(shorts!(), ImageRgba16),
         ColorType::Rgb32F => buffer!(floats!(), ImageRgb32F),
         ColorType::Rgba32F => buffer!(floats!(), ImageRgba32F),
-        _ => return Err(invalid("tipo de pixels inválido")),
+        _ => return Err(invalid("invalid pixel type")),
     };
     let mut extras = ResaveExtras { quality, ..ResaveExtras::default() };
     if trailer {
@@ -743,7 +743,7 @@ fn dimensions(path: &Path) -> ImageResult<(u32, u32)> {
 }
 fn read_dimensions(mut output: std::fs::File) -> ImageResult<(u32, u32)> {
     if output.metadata()?.len() != 8 {
-        return Err(invalid("dimensões inválidas"));
+        return Err(invalid("invalid dimensions"));
     }
     let mut bytes = [0; 8];
     output.read_exact(&mut bytes)?;
@@ -752,7 +752,7 @@ fn read_dimensions(mut output: std::fs::File) -> ImageResult<(u32, u32)> {
         u32::from_le_bytes(bytes[4..].try_into().unwrap()),
     );
     if size.0 == 0 || size.1 == 0 || u64::from(size.0) * u64::from(size.1) > 256 * 1024 * 1024 {
-        return Err(invalid("dimensões inválidas"));
+        return Err(invalid("invalid dimensions"));
     }
     Ok(size)
 }
@@ -764,7 +764,7 @@ fn preview(path: &Path) -> bigimage_core::Result<PreviewSession> {
         pixels.natural,
         pixels
             .format
-            .ok_or_else(|| BigImageError::UnsupportedFormat("preview sem formato".into()))?,
+            .ok_or_else(|| BigImageError::UnsupportedFormat("preview without a format".into()))?,
         pixels.image,
         pixels.gps,
     )
@@ -862,7 +862,7 @@ fn send_to(
         ColorType::Rgba16 => 8,
         ColorType::Rgb32F => 9,
         ColorType::Rgba32F => 10,
-        _ => return Err(invalid("tipo de pixels inválido")),
+        _ => return Err(invalid("invalid pixel type")),
     };
     let mut header = Vec::with_capacity(HEADER);
     header.extend(MAGIC);
@@ -1115,7 +1115,7 @@ mod tests {
             return;
         };
         let message = result.unwrap_err().to_string();
-        assert!(message.contains("protocolo") && message.ends_with(&restart_hint()), "{message}");
+        assert!(message.contains("protocol") && message.ends_with(&restart_hint()), "{message}");
         // A worker that already explains the upgrade is not hinted twice.
         let Some(result) = with_worker("exit 86", DEADLINE, || {
             TEST_EXECUTABLE.with(|slot| slot.borrow_mut().as_mut().unwrap().2 = true);
@@ -1209,7 +1209,7 @@ mod tests {
         let mut forged = payload.clone();
         forged[trailer + 16] = 101;
         let error = receive_bytes(&forged, true).unwrap_err().to_string();
-        assert!(error.contains("qualidade"), "{error}");
+        assert!(error.contains("quality"), "{error}");
         // Truncated blob, extra bytes and a missing trailer.
         assert!(receive_bytes(&payload[..payload.len() - 1], true).is_err());
         assert!(receive_bytes(&[payload.as_slice(), &[0]].concat(), true).is_err());

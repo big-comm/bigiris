@@ -75,7 +75,7 @@ impl AdjustOps {
         }
         if !self.saturation.is_finite() || !(-100.0..=100.0).contains(&self.saturation) {
             return Err(BigImageError::InvalidInput(format!(
-                "saturação fora do intervalo [-100, 100]: {}",
+                "saturation outside [-100, 100]: {}",
                 self.saturation
             )));
         }
@@ -322,7 +322,7 @@ mod tests {
         for (a, b) in before.pixels().zip(after.pixels()) {
             for c in 0..3 {
                 if a[c] < 225 {
-                    assert!(b[c] > a[c], "canal {c}: antes {}, depois {}", a[c], b[c]);
+                    assert!(b[c] > a[c], "channel {c}: before {}, after {}", a[c], b[c]);
                 }
             }
         }

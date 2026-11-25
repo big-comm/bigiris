@@ -119,7 +119,7 @@ impl PreviewSession {
             || thumbnail.width() > PREVIEW_MAX_EDGE
             || thumbnail.height() > PREVIEW_MAX_EDGE
         {
-            return Err(crate::BigImageError::InvalidInput("preview inválido".into()));
+            return Err(crate::BigImageError::InvalidInput("invalid preview".into()));
         }
         Ok(Self {
             source_path: input,
@@ -247,7 +247,7 @@ impl PreviewSession {
     }
 
     /// Whether the source file has GPS coordinates in its EXIF. Used by
-    /// the smart-prompt banner ("Esta imagem contém sua localização…")
+    /// the smart-prompt banner ("This image contains your location…")
     /// in the convert / resize dialogs. Cached during background preparation.
     pub fn source_has_gps(&self) -> bool {
         self.has_gps
@@ -356,7 +356,7 @@ mod tests {
         let b = bright.to_rgba8();
         // At least one non-saturated pixel must have grown.
         let bumped = a.pixels().zip(b.pixels()).any(|(pa, pb)| pb[0] > pa[0]);
-        assert!(bumped, "brilho +50 nao alterou nenhum pixel");
+        assert!(bumped, "brightness +50 changed no pixel");
     }
 
     #[test]

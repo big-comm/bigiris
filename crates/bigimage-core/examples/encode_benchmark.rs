@@ -148,9 +148,9 @@ fn bench(name: &str, image: &DynamicImage, dir: &Path) -> Result<(), Error> {
             );
         }
         for (label, target) in [
-            ("máxima", QualityTarget::Maximum),
-            ("equilibrado", QualityTarget::Balanced),
-            ("menor", QualityTarget::Smallest),
+            ("maximum", QualityTarget::Maximum),
+            ("balanced", QualityTarget::Balanced),
+            ("smallest", QualityTarget::Smallest),
         ] {
             let path = dir.join(format!("{name}-{label}.{}", format.extension()));
             let opts = EncodeOptions { target, ..EncodeOptions::default() };

@@ -53,7 +53,7 @@ pub(crate) fn normalize_srgb_applied(image: &mut DynamicImage, icc: &[u8]) -> Im
             tracing::warn!(
                 ?space,
                 color = ?image.color(),
-                "perfil ICC incompatível com os pixels decodificados; perfil ignorado"
+                "ICC profile does not match the decoded pixels; profile ignored"
             );
             return Ok(false);
         }
@@ -145,7 +145,7 @@ fn transform_rgb(
             .map_err(error)?
             .transform(buffer.as_mut())
             .map_err(error)?,
-        _ => return Err(error("layout de pixels incompatível com o perfil RGB")),
+        _ => return Err(error("pixel layout does not match the RGB profile")),
     }
     Ok(())
 }
@@ -182,7 +182,7 @@ fn normalize_gray(image: &mut DynamicImage, profile: &ColorProfile) -> ImageResu
             .map_err(error)?
             .transform(buffer.as_mut())
             .map_err(error)?,
-        _ => return Err(error("layout de pixels incompatível com o perfil cinza")),
+        _ => return Err(error("pixel layout does not match the gray profile")),
     }
     Ok(())
 }
@@ -226,7 +226,7 @@ pub(crate) fn srgb_profile() -> ImageResult<Vec<u8>> {
     }
     let mut icc = ColorProfile::new_srgb().encode().map_err(error)?;
     if icc.len() < 128 {
-        return Err(error("perfil sRGB gerado sem cabeçalho"));
+        return Err(error("generated sRGB profile has no header"));
     }
     icc[24..36].copy_from_slice(&PROFILE_DATE);
     icc[84..100].fill(0);

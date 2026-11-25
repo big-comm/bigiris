@@ -40,9 +40,8 @@ fn cgroup_room(maximum: u64, current: u64, inactive_file: u64) -> u64 {
 fn decide(model: &str, available: u64, need: u64) -> Result<(), AiError> {
     if available < need {
         return Err(AiError::Memory(format!(
-            "{model} precisa de cerca de {:.2} GiB de RAM livre nesta etapa; disponíveis agora: \
-             {:.2} GiB. Feche outros programas ou use uma imagem menor. Swap não conta como RAM \
-             livre.",
+            "{model} needs about {:.2} GiB of free RAM for this step; available now: {:.2} GiB. \
+             Close other programs or use a smaller image. Swap does not count as free RAM.",
             need as f64 / GIB as f64,
             available as f64 / GIB as f64,
         )));
@@ -51,7 +50,7 @@ fn decide(model: &str, available: u64, need: u64) -> Result<(), AiError> {
 }
 
 fn unknown(error: impl std::fmt::Display) -> AiError {
-    AiError::Memory(format!("não foi possível conferir o orçamento de memória: {error}"))
+    AiError::Memory(format!("could not check the memory budget: {error}"))
 }
 
 fn process_value(key: &str) -> Result<u64, AiError> {
@@ -74,7 +73,7 @@ pub(crate) fn available() -> Result<u64, AiError> {
             .components()
             .any(|part| !matches!(part, Component::RootDir | Component::Normal(_)))
         {
-            return Err(unknown("cgroup inválido"));
+            return Err(unknown("invalid cgroup"));
         }
         let base = Path::new("/sys/fs/cgroup");
         let mut directory = base.join(relative.trim_start_matches('/'));

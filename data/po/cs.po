@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: bigiris 0.1.0\n"
 "Report-Msgid-Bugs-To: https://github.com/big-comm/bigiris/issues\n"
-"POT-Creation-Date: 2026-11-25 18:21-0300\n"
+"POT-Creation-Date: 2026-11-25 18:25-0300\n"
 "PO-Revision-Date: 2026-10-14 01:35-0300\n"
 "Last-Translator: BigCommunity Team\n"
 "Language-Team: BigCommunity Team\n"
@@ -1994,13 +1994,13 @@ msgstr ""
 
 #: crates/bigiris/src/main.rs:364
 msgid ""
-"Visual quality to aim for: maxima, equilibrado or menor (also max, balanced, "
-"small). Each format looks for the smallest file that keeps this quality "
-"(SSIMULACRA2 85 / 80 / 70)"
+"Visual quality to aim for: maximum, balanced or smallest (also max, small). "
+"Each format looks for the smallest file that keeps this quality (SSIMULACRA2 "
+"85 / 80 / 70)"
 msgstr ""
-"Cílová vizuální kvalita: maxima, equilibrado nebo menor (také max, balanced, "
-"small). Každý formát hledá nejmenší soubor, který tuto kvalitu zachová "
-"(SSIMULACRA2 85 / 80 / 70)"
+"Cílová vizuální kvalita: maximum, balanced nebo smallest (také max, small). "
+"Každý formát hledá nejmenší soubor, který tuto kvalitu zachová (SSIMULACRA2 "
+"85 / 80 / 70)"
 
 #: crates/bigiris/src/main.rs:370
 msgid ""
@@ -2045,11 +2045,9 @@ msgstr "Cílový formát (volitelný; při vynechání zůstane původní formá
 
 #: crates/bigiris/src/main.rs:405
 msgid ""
-"Visual quality to aim for: maxima, equilibrado or menor (also max, balanced, "
-"small)"
+"Visual quality to aim for: maximum, balanced or smallest (also max, small)"
 msgstr ""
-"Cílová vizuální kvalita: maxima, equilibrado nebo menor (také max, balanced, "
-"small)"
+"Cílová vizuální kvalita: maximum, balanced nebo smallest (také max, small)"
 
 #: crates/bigiris/src/main.rs:411
 msgid ""
@@ -2301,8 +2299,9 @@ msgid "Some files were not processed; see the details in the terminal."
 msgstr "Některé soubory nebyly zpracovány; podrobnosti najdete v terminálu."
 
 #: crates/bigiris/src/main.rs:953
-msgid "invalid quality target: {value}; use maxima, equilibrado or menor"
-msgstr "neplatný cíl kvality: {value}; použijte maxima, equilibrado nebo menor"
+msgid "invalid quality target: {value}; use maximum, balanced or smallest"
+msgstr ""
+"neplatný cíl kvality: {value}; použijte maximum, balanced nebo smallest"
 
 #: crates/bigiris/src/main.rs:966 crates/bigiris/src/main.rs:1060
 msgid "invalid target format: {error}"
@@ -2400,7 +2399,7 @@ msgstr "nelze vytvořit {path}: {error}"
 msgid "no images found for the batch"
 msgstr "pro dávku nebyly nalezeny žádné obrázky"
 
-#: crates/bigiris/src/main.rs:1746
+#: crates/bigiris/src/main.rs:1743
 msgid ""
 "LibreOffice (`soffice`) not found in PATH. Install `libreoffice-fresh` "
 "(recommended) or `libreoffice-still` (e.g. `sudo pacman -S libreoffice-"
@@ -2410,83 +2409,83 @@ msgstr ""
 "fresh` (doporučeno) nebo `libreoffice-still` (např. `sudo pacman -S "
 "libreoffice-fresh`)."
 
-#: crates/bigiris/src/main.rs:1798
+#: crates/bigiris/src/main.rs:1795
 msgid "not a regular file"
 msgstr "není běžný soubor"
 
-#: crates/bigiris/src/main.rs:1801
+#: crates/bigiris/src/main.rs:1798
 msgid "invalid file name"
 msgstr "neplatný název souboru"
 
-#: crates/bigiris/src/main.rs:1822
+#: crates/bigiris/src/main.rs:1819
 msgid "could not run soffice: {error}"
 msgstr "nelze spustit soffice: {error}"
 
-#: crates/bigiris/src/main.rs:1833
+#: crates/bigiris/src/main.rs:1830
 msgid "soffice exceeded the {seconds} s limit"
 msgstr "soffice překročil limit {seconds} s"
 
-#: crates/bigiris/src/main.rs:1846
+#: crates/bigiris/src/main.rs:1843
 msgid "soffice did not produce the PDF ({status})"
 msgstr "soffice nevytvořil PDF ({status})"
 
-#: crates/bigiris/src/main.rs:1889
+#: crates/bigiris/src/main.rs:1886
 msgid "too many files with the same name: {path}"
 msgstr "příliš mnoho souborů se stejným názvem: {path}"
 
-#: crates/bigiris/src/main.rs:1932
+#: crates/bigiris/src/main.rs:1928
 msgid "installation failed: {error}"
 msgstr "instalace selhala: {error}"
 
-#: crates/bigiris/src/main.rs:1938
+#: crates/bigiris/src/main.rs:1934
 msgid "installed"
 msgstr "nainstalováno"
 
-#: crates/bigiris/src/main.rs:1939
+#: crates/bigiris/src/main.rs:1935
 msgid "installed in total: {files} file(s) in {managers} file manager(s)"
 msgstr "celkem nainstalováno: souborů: {files}, správců: {managers}"
 
-#: crates/bigiris/src/main.rs:1955
+#: crates/bigiris/src/main.rs:1951
 msgid "removal failed: {error}"
 msgstr "odebrání selhalo: {error}"
 
-#: crates/bigiris/src/main.rs:1958
+#: crates/bigiris/src/main.rs:1954
 msgid "removed"
 msgstr "odebráno"
 
-#: crates/bigiris/src/main.rs:1959
+#: crates/bigiris/src/main.rs:1955
 msgid "removed in total: {files} file(s) in {managers} file manager(s)"
 msgstr "celkem odebráno: souborů: {files}, správců: {managers}"
 
-#: crates/bigiris/src/main.rs:1982
+#: crates/bigiris/src/main.rs:1978
 msgid "FAILED"
 msgstr "SELHALO"
 
-#: crates/bigiris/src/main.rs:1987
+#: crates/bigiris/src/main.rs:1983
 msgid "provided by the package"
 msgstr "poskytuje balíček"
 
-#: crates/bigiris/src/main.rs:1990
+#: crates/bigiris/src/main.rs:1986
 msgid "unchanged"
 msgstr "beze změn"
 
-#: crates/bigiris/src/main.rs:1992
+#: crates/bigiris/src/main.rs:1988
 msgid "skipped"
 msgstr "přeskočeno"
 
-#: crates/bigiris/src/main.rs:1997
+#: crates/bigiris/src/main.rs:1993
 msgid "detected"
 msgstr "nalezeno"
 
-#: crates/bigiris/src/main.rs:1997
+#: crates/bigiris/src/main.rs:1993
 msgid "not in PATH"
 msgstr "chybí v PATH"
 
-#: crates/bigiris/src/main.rs:1999
+#: crates/bigiris/src/main.rs:1995
 msgid "{count} file(s)"
 msgstr "souborů: {count}"
 
-#: crates/bigiris/src/main.rs:2024
+#: crates/bigiris/src/main.rs:2020
 msgid ""
 "warning: this build lacks the `gui` feature. Dialog '{dialog}' ignored "
 "(rebuild with --features gui)."
@@ -2494,7 +2493,7 @@ msgstr ""
 "upozornění: aktuální sestavení je bez funkce `gui`. Dialog '{dialog}' "
 "ignorován (sestavte znovu s --features gui)."
 
-#: crates/bigiris/src/main.rs:2031
+#: crates/bigiris/src/main.rs:2027
 msgid ""
 "warning: this build lacks the `gui` feature. Viewer unavailable (rebuild "
 "with --features gui)."
@@ -2502,7 +2501,7 @@ msgstr ""
 "upozornění: aktuální sestavení je bez funkce `gui`. Prohlížeč není k "
 "dispozici (sestavte znovu s --features gui)."
 
-#: crates/bigiris/src/main.rs:2036
+#: crates/bigiris/src/main.rs:2032
 msgid ""
 "warning: this build lacks the `gui` feature. Viewer unavailable; files "
 "received:"

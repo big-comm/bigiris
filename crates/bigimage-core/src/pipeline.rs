@@ -33,7 +33,7 @@ pub(crate) fn check_dimensions(w: u32, h: u32, bytes_per_pixel: u8) -> Result<()
         || pixels.saturating_mul(u64::from(bytes_per_pixel)) > MAX_BUFFER_BYTES
     {
         return Err(BigImageError::InvalidInput(format!(
-            "dimensões {w}×{h} excedem os limites de processamento"
+            "dimensions {w}×{h} exceed the processing limits"
         )));
     }
     Ok(())
@@ -199,7 +199,7 @@ pub(crate) fn decode_with_source_format(input: &Path) -> Result<(DynamicImage, F
         .map_err(|source| BigImageError::Decode { path: input.to_path_buf(), source })?;
     let format = format.ok_or_else(|| {
         BigImageError::UnsupportedFormat(format!(
-            "entrada sem formato reconhecido: {}",
+            "input has no recognized format: {}",
             input.display()
         ))
     })?;
@@ -331,9 +331,8 @@ pub(crate) fn resolve_output(
     resolve_output_to(input, None, suffix, target, policy)
 }
 
-/// Like [`resolve_output`] but takes an explicit `output_dir`. If `None`,
-/// grava ao lado do arquivo original (comportamento histórico). Caso
-/// contrário usa o diretório fornecido mantendo o stem da fonte.
+/// Like [`resolve_output`] but takes an explicit `output_dir`: `None` writes
+/// next to the source file, a directory keeps the source's stem.
 pub(crate) fn resolve_output_to(
     input: &Path,
     output_dir: Option<&Path>,
@@ -401,7 +400,7 @@ pub(crate) fn output_temp(
 fn sync_parent(output: &Path) {
     let parent = output.parent().filter(|p| !p.as_os_str().is_empty()).unwrap_or(Path::new("."));
     if let Err(error) = std::fs::File::open(parent).and_then(|dir| dir.sync_all()) {
-        tracing::warn!(?parent, %error, "fsync do diretório de saída falhou");
+        tracing::warn!(?parent, %error, "fsync of the output directory failed");
     }
 }
 
@@ -425,7 +424,7 @@ pub(crate) fn publish_temp(
             if let Err(error) =
                 temp.as_file().set_permissions(std::fs::Permissions::from_mode(wanted))
             {
-                tracing::warn!(?output, %error, "permissões do arquivo substituído não copiadas");
+                tracing::warn!(?output, %error, "permissions of the replaced file not copied");
             }
         }
     }
@@ -461,7 +460,7 @@ pub(crate) fn publish_temp(
             Err(e) => return Err(BigImageError::Io(e.error)),
         }
     }
-    Err(BigImageError::Other(format!("muitos arquivos com o mesmo nome: {}", output.display())))
+    Err(BigImageError::Other(format!("too many files with the same name: {}", output.display())))
 }
 
 /// Metadata written by the encoder in addition to the pixels.
@@ -535,7 +534,7 @@ pub(crate) fn encode_keeping_smaller(
                 ?original,
                 written,
                 original_len = bytes.len(),
-                "mantido o original menor"
+                "kept the smaller original"
             );
         }
     }

@@ -44,8 +44,6 @@ const LOAD_BYTES: u64 = 32 * MIB;
 /// One tile (512² on the CPU, 768² on a GPU) of 64-channel maps, margin
 /// included.
 const TILE_BYTES: u64 = 512 * MIB;
-/// What loading checks for: the model and one tile.
-const PRELOAD: Budget = Budget { load: LOAD_BYTES, run: TILE_BYTES };
 /// Largest 4× intermediate (RGB8), the core pixel limit.
 const MAX_NETWORK_PIXELS: u64 = 256 * 1024 * 1024;
 /// Largest result, as RGBA8 (the core buffer limit).
@@ -162,20 +160,6 @@ pub fn lanczos(input: &DynamicImage, factor: u8) -> Result<DynamicImage, AiError
         bigimage_core::Filter::Lanczos3,
     )
     .map_err(|e| AiError::Processing(e.to_string()))
-}
-
-/// Load the model (when it is not loaded yet) without running it.
-pub fn preload(progress: &mut dyn FnMut(Stage) -> ControlFlow<()>) -> Result<Device, AiError> {
-    #[cfg(feature = "native")]
-    {
-        SLOT.run(&MODEL, PRELOAD, progress, |_, _| Ok(()))?;
-        Ok(device().unwrap_or(Device::Cpu))
-    }
-    #[cfg(not(feature = "native"))]
-    {
-        let _ = progress;
-        Err(AiError::Disabled)
-    }
 }
 
 fn real_esrgan(

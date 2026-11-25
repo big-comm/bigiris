@@ -36,8 +36,6 @@ pub const MODEL: ModelInfo = ModelInfo {
 const LOAD_BYTES: u64 = 64 * MIB;
 /// One 896² tile's maps with its margin, plus margin of our own.
 const TILE_BYTES: u64 = 768 * MIB;
-/// What loading checks for: the model and one tile.
-const PRELOAD: Budget = Budget { load: LOAD_BYTES, run: TILE_BYTES };
 /// Largest image, as RGBA8 (the core buffer limit).
 const MAX_BYTES: u64 = 512 * MIB;
 
@@ -106,20 +104,6 @@ pub fn denoise(
     #[cfg(not(feature = "native"))]
     {
         let _ = (budget, &mut progress);
-        Err(AiError::Disabled)
-    }
-}
-
-/// Load the model (when it is not loaded yet) without running it.
-pub fn preload(progress: &mut dyn FnMut(Stage) -> ControlFlow<()>) -> Result<Device, AiError> {
-    #[cfg(feature = "native")]
-    {
-        SLOT.run(&MODEL, PRELOAD, progress, |_, _| Ok(()))?;
-        Ok(device().unwrap_or(Device::Cpu))
-    }
-    #[cfg(not(feature = "native"))]
-    {
-        let _ = progress;
         Err(AiError::Disabled)
     }
 }

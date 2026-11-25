@@ -11,7 +11,7 @@ import subprocess
 
 ROOT = Path(__file__).resolve().parents[1]
 PO = ROOT / 'data/po'
-LANGUAGES = ('bg', 'cs', 'da', 'de', 'el', 'en', 'es', 'et', 'fi', 'fr', 'he', 'hr', 'hu', 'is', 'it', 'ja', 'ko', 'nl', 'no', 'pl', 'pt', 'pt_BR', 'ro', 'ru', 'sk', 'sv', 'tr', 'uk', 'zh')
+LANGUAGES = ('bg', 'cs', 'da', 'de', 'el', 'en', 'es', 'et', 'fi', 'fr', 'he', 'hr', 'hu', 'is', 'it', 'ja', 'ko', 'nb', 'nl', 'pl', 'pt', 'pt_BR', 'ro', 'ru', 'sk', 'sv', 'tr', 'uk', 'zh')
 
 def n_(text):
     return text

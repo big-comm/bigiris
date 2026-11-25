@@ -73,4 +73,10 @@ mod tests {
         assert_eq!(lookup("en", "Processar esta pasta…"), "Process this folder…");
         assert_ne!(lookup("de", "Processar esta pasta…"), "Processar esta pasta…");
     }
+    #[test]
+    fn norwegian_uses_bokmal_code() {
+        // nb_NO locales look up `nb`; a `no` key is never read.
+        assert_ne!(lookup("nb", "Processar esta pasta…"), "Processar esta pasta…");
+        assert!(!localized("Name", |_| String::new()).contains("Name[no]="));
+    }
 }

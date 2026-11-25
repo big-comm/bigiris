@@ -166,7 +166,10 @@ refatoração estrutural.
 O catálogo usa os mesmos 29 códigos do [Ashy Pass](https://github.com/big-comm/ashypass/tree/main/locale)
 e do [GitRepo](https://github.com/big-comm/gitrepo/tree/main/locale), conferidos em
 14/10/2026. `data/po/LINGUAS` lista: bg, cs, da, de, el, en, es, et, fi, fr,
-he, hr, hu, is, it, ja, ko, nl, no, pl, pt, pt_BR, ro, ru, sk, sv, tr, uk e zh.
+he, hr, hu, is, it, ja, ko, nb, nl, pl, pt, pt_BR, ro, ru, sk, sv, tr, uk e zh.
+O norueguês fica em `nb`, não no `no` daqueles projetos: sistemas noruegueses
+usam `nb_NO`, que o gettext e os arquivos `.desktop` procuram como `nb_NO` e
+depois `nb`, nunca `no`.
 A linguagem-fonte é pt-BR; `pt` usa terminologia de português europeu.
 
 Use `gettext("…")` na interface Rust e `_("…")` na extensão Nautilus. `n_("…")`

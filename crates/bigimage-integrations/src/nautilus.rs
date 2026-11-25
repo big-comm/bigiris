@@ -281,7 +281,7 @@ mod tests {
         }
         assert!(body.contains(
             "(\"web-letterbox-yt\", \"web\", \"Para web\", \"applications-internet-symbolic\", \
-             \"Letterbox YouTube post (1:1)\", [\"extent\", \"--aspect\", \"1:1\", \"--bg\", \
+             \"Letterbox YouTube post (1:1)\", [\"--notify\", \"extent\", \"--aspect\", \"1:1\", \"--bg\", \
              \"0d0e12\"], \"applications-internet-symbolic\", [\"image/*\"]),"
         ));
         assert!(body.contains("(\"view\", None, None, None, \"Visualizar em BigIris\", [], "));

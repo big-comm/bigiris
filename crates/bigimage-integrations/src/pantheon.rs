@@ -73,6 +73,6 @@ mod tests {
         assert!(text.starts_with("[Contractor Entry]\n"));
         assert!(text.contains("Name=BigIris ▸ Espelhar ▸ Horizontal"));
         assert!(text.contains("MimeType=image/*;"));
-        assert!(text.contains("Exec=bigiris flip --axis horizontal"));
+        assert!(text.contains("Exec=bigiris --notify flip --axis horizontal"));
     }
 }

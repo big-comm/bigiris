@@ -75,6 +75,37 @@ fn invalid_arguments_return_failure() {
     }
 }
 
+/// File-manager menus pass `--notify`: a failure reaches the desktop through
+/// notify-send, here a stub on PATH that records its arguments.
+#[test]
+fn notify_reports_failures_only_when_asked() {
+    use std::os::unix::fs::PermissionsExt;
+    let dir = tempfile::tempdir().unwrap();
+    let bin = dir.path().join("bin");
+    std::fs::create_dir(&bin).unwrap();
+    let record = dir.path().join("notified");
+    let stub = bin.join("notify-send");
+    std::fs::write(&stub, format!("#!/bin/sh\nprintf '%s\\n' \"$@\" > '{}'\n", record.display()))
+        .unwrap();
+    std::fs::set_permissions(&stub, std::fs::Permissions::from_mode(0o755)).unwrap();
+    let path = format!("{}:{}", bin.display(), std::env::var("PATH").unwrap_or_default());
+    let failing = |notify: bool| {
+        let mut command = Command::new(env!("CARGO_BIN_EXE_bigiris"));
+        command.current_dir(dir.path()).env("PATH", &path);
+        if notify {
+            command.arg("--notify");
+        }
+        command.args(["convert", "--to", "bogus", "missing.png"]).output().unwrap()
+    };
+
+    assert!(!failing(false).status.success());
+    assert!(!record.exists(), "notified without --notify");
+    assert!(!failing(true).status.success());
+    let shown = std::fs::read_to_string(&record).expect("no notification with --notify");
+    assert!(shown.contains("BigIris: a operação falhou"), "{shown}");
+    assert!(shown.contains("bogus"), "the notification should name the error: {shown}");
+}
+
 /// A readable file that is not a weights file: availability passes, a
 /// load would fail. Commands that must not load the model stay green.
 #[cfg(feature = "ai")]

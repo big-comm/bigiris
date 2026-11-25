@@ -178,7 +178,7 @@ mod tests {
         assert!(text.contains("[Desktop Action bigiris02ConvertPng]"));
         assert!(text.contains("Name=Converter ▸ PNG\n"));
         assert!(text.contains("Name[en]=Convert ▸ PNG\n"));
-        assert!(text.contains("Exec=bigiris convert --to png --overwrite skip %F"));
+        assert!(text.contains("Exec=bigiris --notify convert --to png --overwrite skip %F"));
     }
 
     #[test]

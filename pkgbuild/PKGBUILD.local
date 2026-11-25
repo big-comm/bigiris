@@ -36,6 +36,7 @@ optdepends=(
   'lama-native: erase objects with AI (Big LaMa weights)'
   'vulkan-icd-loader: run the AI tools on a Vulkan GPU (CPU otherwise)'
   'libreoffice-fresh: convert documents to PDF from the file manager'
+  'libnotify: show failures of the file manager quick actions'
 )
 # base-devel's C compiler also builds the vendored mozjpeg, libwebp and
 # libdeflate sources (no nasm or cmake needed).

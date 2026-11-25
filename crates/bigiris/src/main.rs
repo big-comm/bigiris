@@ -56,6 +56,11 @@ struct Cli {
     #[arg(long)]
     self_test: bool,
 
+    /// Avisar falhas numa notificação do desktop (usado pelos menus de
+    /// contexto, que não mostram o terminal)
+    #[arg(long, global = true)]
+    notify: bool,
+
     /// Arquivos a abrir no visualizador (quando sem subcomando)
     #[arg(value_name = "FILE")]
     files: Vec<PathBuf>,
@@ -615,12 +620,13 @@ fn main() -> color_eyre::Result<()> {
     });
 
     codec::configure();
+    NOTIFY.store(cli.notify, std::sync::atomic::Ordering::Relaxed);
 
     if cli.self_test {
         return self_test();
     }
 
-    match cli.command {
+    let result = match cli.command {
         Some(Command::Convert { to, target, quality, progressive, optimize, overwrite, files }) => {
             let opts = EncodeOptions {
                 quality,
@@ -722,7 +728,39 @@ fn main() -> color_eyre::Result<()> {
             run_to_pdf(&files, overwrite.into(), std::time::Duration::from_secs(timeout))
         }
         None => dispatch_gui(cli.dialog, &cli.files),
+    };
+    if let Err(error) = &result {
+        notify_failure(&error.to_string());
     }
+    result
+}
+
+/// Set by `--notify`: a file-manager menu started this run.
+static NOTIFY: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+/// Show a failure on the desktop when the run came from a file-manager menu,
+/// where nobody reads stderr. The details stay on stderr as always.
+fn notify_failure(message: &str) {
+    if !NOTIFY.load(std::sync::atomic::Ordering::Relaxed) {
+        return;
+    }
+    let shown = codec::close_inherited_descriptors(&mut std::process::Command::new("notify-send"))
+        .args(["--app-name=BigIris", "--icon=com.biglinux.Iris", "--"])
+        .arg("BigIris: a operação falhou")
+        .arg(message)
+        .stdin(std::process::Stdio::null())
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .status();
+    if let Err(error) = shown {
+        tracing::warn!(%error, "notify-send indisponível; a falha ficou só no stderr");
+    }
+}
+
+/// End a run in which some files failed (exit status 2).
+fn exit_partial() -> ! {
+    notify_failure("Alguns arquivos não foram processados; veja os detalhes no terminal.");
+    std::process::exit(EXIT_PARTIAL)
 }
 
 /// Bind the `bigiris` textdomain to `/usr/share/locale` (the system path
@@ -1036,7 +1074,7 @@ where
     eprintln!("{op_name}: {written} gravado(s), {skipped} ignorado(s), {failed} falha(s)");
 
     if failed > 0 {
-        std::process::exit(EXIT_PARTIAL);
+        exit_partial();
     }
     Ok(())
 }
@@ -1088,7 +1126,7 @@ fn run_remove_bg(
     }
     eprintln!("remove-bg: {ok} gravado(s), {skipped} ignorado(s), {fail} falha(s)");
     if fail > 0 {
-        std::process::exit(EXIT_PARTIAL);
+        exit_partial();
     }
     Ok(())
 }
@@ -1281,7 +1319,7 @@ fn run_animate(
         // Frames were read but could not be turned into the animation.
         Err(e) => {
             eprintln!("err animate: {}", codec::sanitize_text(&e.to_string()));
-            std::process::exit(EXIT_PARTIAL);
+            exit_partial();
         }
     }
 }
@@ -1447,7 +1485,7 @@ fn run_batch(profile: &std::path::Path, inputs: &[PathBuf]) -> color_eyre::Resul
     }
     println!("batch: {ok} gravado(s), {skipped} ignorado(s), {failed} falha(s)");
     if failed > 0 {
-        std::process::exit(EXIT_PARTIAL);
+        exit_partial();
     }
     Ok(())
 }
@@ -1497,7 +1535,7 @@ fn run_to_pdf(
     }
     eprintln!("to-pdf: {ok} gravado(s), {skipped} ignorado(s), {fail} falha(s)");
     if fail > 0 {
-        std::process::exit(EXIT_PARTIAL);
+        exit_partial();
     }
     Ok(())
 }
@@ -1653,7 +1691,7 @@ fn run_install(user: bool, system: bool, destdir: Option<PathBuf>) -> color_eyre
     if report.is_success() {
         Ok(())
     } else {
-        std::process::exit(EXIT_PARTIAL);
+        exit_partial();
     }
 }
 
@@ -1669,7 +1707,7 @@ fn run_uninstall() -> color_eyre::Result<()> {
     if report.is_success() {
         Ok(())
     } else {
-        std::process::exit(EXIT_PARTIAL);
+        exit_partial();
     }
 }
 

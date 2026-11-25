@@ -73,7 +73,7 @@ mod tests {
         let text = render(a);
         assert!(text.contains("Type=Action"));
         assert!(text.contains("[X-Action-Profile bigiris-rotate-90]"));
-        assert!(text.contains("Exec=bigiris rotate --degrees 90"));
+        assert!(text.contains("Exec=bigiris --notify rotate --degrees 90"));
         assert!(text.contains("MimeTypes=image/*;"));
     }
 }

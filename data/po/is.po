@@ -26,7 +26,7 @@ msgstr "Gat ekki opnað mynd"
 #: crates/bigiris/src/gui.rs:998 crates/bigiris/src/gui.rs:3593
 #: crates/bigiris/src/gui/viewer/crop.rs:600
 msgid "Aguarde o salvamento terminar"
-msgstr "Bíða eftir að vista ljúki"
+msgstr "Bíddu eftir að vistun ljúki"
 
 #: crates/bigiris/src/gui.rs:1009
 msgid "Descartar alterações?"
@@ -42,7 +42,7 @@ msgstr "Halda áfram að breyta"
 
 #: crates/bigiris/src/gui.rs:1013
 msgid "Descartar"
-msgstr "Henta breytingum"
+msgstr "Henda"
 
 #: crates/bigiris/src/gui.rs:1083
 msgid "Imagem anterior"
@@ -71,7 +71,7 @@ msgstr "Fylla skjáinn (F11)"
 
 #: crates/bigiris/src/gui.rs:1125
 msgid "Afastar"
-msgstr "Fjarlægja"
+msgstr "Renna frá"
 
 #: crates/bigiris/src/gui.rs:1129 crates/bigiris/src/gui.rs:3952
 msgid "Ajustar à janela"
@@ -87,7 +87,7 @@ msgstr "Aðdráttur"
 
 #: crates/bigiris/src/gui.rs:1143
 msgid "Aproximar"
-msgstr "Aðdráttur"
+msgstr "Renna að"
 
 #: crates/bigiris/src/gui.rs:2189
 msgid "Slideshow: pausado"
@@ -112,14 +112,14 @@ msgstr "Hætt við"
 
 #: crates/bigiris/src/gui.rs:2418
 msgid "Falha na IA: {error}"
-msgstr "AI-villa: {error}"
+msgstr "Villa í gervigreind: {error}"
 
 #: crates/bigiris/src/gui.rs:2424
 msgid ""
 "Esta build não inclui IA. Recompile com `cargo build --features ai` (requer "
 "glslc, do pacote shaderc)."
 msgstr ""
-"Þessi útgáfa inniheldur ekki AI. Byggðu aftur með `cargo build --features "
+"Þessi útgáfa er án gervigreindar. Byggðu aftur með `cargo build --features "
 "ai` (krefst glslc úr pakkanum shaderc)."
 
 #: crates/bigiris/src/gui.rs:2430
@@ -135,8 +135,8 @@ msgid ""
 "O arquivo será sobrescrito. JPEG é recodificado a cada gravação; isso pode "
 "reduzir a qualidade."
 msgstr ""
-"Skráin verður yfirrituð. JPEG er endurkóðað í hvert skipti sem hún er "
-"vistuð; þetta getur dregið úr gæðum."
+"Skráin verður yfirskrifuð. JPEG er endurkóðað í hvert skipti sem það er "
+"vistað; það getur dregið úr gæðum."
 
 #: crates/bigiris/src/gui.rs:2604
 msgid "O arquivo será sobrescrito."
@@ -175,7 +175,7 @@ msgstr "Vista"
 
 #: crates/bigiris/src/gui.rs:2664
 msgid "Salvo"
-msgstr "Skráin var vistuð."
+msgstr "Vistað"
 
 #: crates/bigiris/src/gui.rs:2743
 msgid ""
@@ -246,7 +246,7 @@ msgstr "Vistað. Ekki tókst að halda sumum lýsigögnum: {list}"
 
 #: crates/bigiris/src/gui.rs:3132
 msgid "Salve ou desfaça as alterações antes de navegar"
-msgstr "Vista eða afturkalla breytingar áður en farið er"
+msgstr "Vistaðu eða afturkallaðu breytingarnar áður en þú flettir"
 
 #: crates/bigiris/src/gui.rs:3215 crates/bigiris/src/gui.rs:4107
 #: crates/bigiris/src/gui.rs:5157 crates/bigiris/src/gui.rs:5292
@@ -268,7 +268,7 @@ msgstr "Prenta…"
 #: crates/bigiris/src/gui.rs:3221 crates/bigiris/src/gui.rs:4119
 #: crates/bigiris/src/gui.rs:5157
 msgid "Processar uma pasta…"
-msgstr "Vinna úr þessari möppu…"
+msgstr "Vinna úr möppu…"
 
 #: crates/bigiris/src/gui.rs:3227
 msgid "Editar imagem"
@@ -292,7 +292,7 @@ msgstr "Færa í ruslið"
 
 #: crates/bigiris/src/gui.rs:3237
 msgid "Atalhos do teclado"
-msgstr "Flýtilyklaborð"
+msgstr "Flýtilyklar"
 
 #: crates/bigiris/src/gui.rs:3238
 msgid "Sobre o BigIris"
@@ -326,7 +326,7 @@ msgstr "Undirbúningur prentunar mistókst"
 
 #: crates/bigiris/src/gui.rs:3748
 msgid "Não foi possível imprimir"
-msgstr "Gat ekki prentað"
+msgstr "Ekki tókst að prenta"
 
 #: crates/bigiris/src/gui.rs:3751 crates/bigiris/src/gui.rs:3883
 #: crates/bigiris/src/gui/dialogs/animate.rs:53
@@ -363,23 +363,23 @@ msgstr "Flakk"
 
 #: crates/bigiris/src/gui.rs:3943
 msgid "Anterior / próximo"
-msgstr "Fyrri / Næsta"
+msgstr "Fyrri / næsta"
 
 #: crates/bigiris/src/gui.rs:3944
 msgid "Primeiro / último"
-msgstr "Fyrst / síðast"
+msgstr "Fyrsta / síðasta"
 
 #: crates/bigiris/src/gui.rs:3945
 msgid "Slideshow (auto-avanço)"
-msgstr "Skyggnusýning"
+msgstr "Skyggnusýning (sjálfvirk fletting)"
 
 #: crates/bigiris/src/gui.rs:3951
 msgid "Aproximar / afastar"
-msgstr "Aðdráttur inn / út"
+msgstr "Renna að / frá"
 
 #: crates/bigiris/src/gui.rs:3954
 msgid "Zoom contínuo"
-msgstr "Stöðug aðdráttur"
+msgstr "Samfelldur aðdráttur"
 
 #: crates/bigiris/src/gui.rs:3958
 msgid "Janela"
@@ -387,7 +387,7 @@ msgstr "Gluggi"
 
 #: crates/bigiris/src/gui.rs:3960
 msgid "Tela cheia"
-msgstr "Fylla skjá"
+msgstr "Fylla skjáinn"
 
 #: crates/bigiris/src/gui.rs:3961
 msgid "Modo teatro"
@@ -395,11 +395,11 @@ msgstr "Leikhúshamur"
 
 #: crates/bigiris/src/gui.rs:3962
 msgid "Fita de miniaturas"
-msgstr "Smámyndir"
+msgstr "Smámyndaræma"
 
 #: crates/bigiris/src/gui.rs:3963
 msgid "Histograma RGB"
-msgstr "RGB histogram"
+msgstr "RGB-stuðlarit"
 
 #: crates/bigiris/src/gui.rs:3964
 msgid "Fixar barras visíveis"
@@ -429,7 +429,7 @@ msgstr "Skera…"
 
 #: crates/bigiris/src/gui.rs:3976
 msgid "Remover fundo (IA)…"
-msgstr "Fjarlægja bakgrunn (AI)…"
+msgstr "Fjarlægja bakgrunn (gervigreind)…"
 
 #: crates/bigiris/src/gui.rs:3977
 #: crates/bigimage-integrations/src/action.rs:517
@@ -470,11 +470,11 @@ msgstr "Þessi gluggi"
 
 #: crates/bigiris/src/gui.rs:3996
 msgid "Sobre"
-msgstr "Um hugbúnaðinn"
+msgstr "Um"
 
 #: crates/bigiris/src/gui.rs:4006
 msgid "Roda do mouse"
-msgstr "Hjól músar"
+msgstr "Músarhjól"
 
 #: crates/bigiris/src/gui.rs:4034
 msgid "Atalhos de teclado"
@@ -485,16 +485,16 @@ msgid ""
 "Visualizador e conversor de imagens para Linux. Rápido, acessível por "
 "teclado e integrado ao gerenciador de arquivos."
 msgstr ""
-"Myndaskoðari og breytir fyrir Linux. Hratt, lyklaborð aðgengilegt og samþætt "
-"með skráastjóranum þínum."
+"Myndaskoðari og umbreytir fyrir Linux. Hraðvirkur, nothæfur með lyklaborði "
+"og samþættur skráastjóranum þínum."
 
 #: crates/bigiris/src/gui.rs:4093
 msgid "Abra suas imagens"
-msgstr "Opna myndir þínar"
+msgstr "Opnaðu myndirnar þínar"
 
 #: crates/bigiris/src/gui.rs:4098
 msgid "Arraste imagens para cá ou cole arquivos com Ctrl+V."
-msgstr "Sleppa myndum hér eða líma skrár með Ctrl+V."
+msgstr "Dragðu myndir hingað eða límdu skrár með Ctrl+V."
 
 #: crates/bigiris/src/gui.rs:4141
 msgid "Selecionar pasta com imagens"
@@ -560,7 +560,7 @@ msgstr "Birtustig"
 
 #: crates/bigiris/src/gui/dialogs/adjust.rs:39
 msgid "-100 escuro · 0 neutro · +100 claro"
-msgstr "-100 dökk · 0 hlutlaus · +101 ljós"
+msgstr "-100 dökkt · 0 hlutlaust · +100 ljóst"
 
 #: crates/bigiris/src/gui/dialogs/adjust.rs:43
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:335
@@ -569,7 +569,7 @@ msgstr "Birtuskil"
 
 #: crates/bigiris/src/gui/dialogs/adjust.rs:44
 msgid "-100 plano · 0 neutro · +100 agressivo"
-msgstr "-100 flatt · 0 hlutlaust · +101 sterkt"
+msgstr "-100 flatt · 0 hlutlaust · +100 sterkt"
 
 #: crates/bigiris/src/gui/dialogs/adjust.rs:48
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:336
@@ -578,7 +578,7 @@ msgstr "Mettun"
 
 #: crates/bigiris/src/gui/dialogs/adjust.rs:49
 msgid "-100 cinza · 0 neutro · +100 vibrante"
-msgstr "- 100 grár · 0 hlutlaus · + 1 00 skær"
+msgstr "-100 grátt · 0 hlutlaust · +100 líflegt"
 
 #: crates/bigiris/src/gui/dialogs/adjust.rs:53
 msgid "Gamma"
@@ -586,7 +586,7 @@ msgstr "Gamma"
 
 #: crates/bigiris/src/gui/dialogs/adjust.rs:55
 msgid "Abaixo de 1 clareia os meios-tons · 1 mantém · acima de 1 escurece"
-msgstr "Undir 1 léttir miðtónar · 1 varðveitir þá · fyrir ofan 1 dökkar þá"
+msgstr "Undir 1 lýsir miðtóna · 1 heldur óbreyttu · yfir 1 dekkir"
 
 #: crates/bigiris/src/gui/dialogs/adjust.rs:64
 #: crates/bigiris/src/gui/dialogs/batch.rs:375
@@ -616,7 +616,7 @@ msgstr "Úttak"
 #: crates/bigiris/src/gui/dialogs/adjust.rs:83
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:366
 msgid "Aplicar"
-msgstr "Virkja"
+msgstr "Beita"
 
 #: crates/bigiris/src/gui/dialogs/adjust.rs:190
 msgid "Ajustando…"
@@ -628,11 +628,11 @@ msgstr "Stilli"
 
 #: crates/bigiris/src/gui/dialogs/animate.rs:29
 msgid "Criar GIF animado — Prisma"
-msgstr "Búa til hreyfimyndir GIF — Prisma"
+msgstr "Búa til GIF-hreyfimynd — Prisma"
 
 #: crates/bigiris/src/gui/dialogs/animate.rs:33
 msgid "Criar GIF animado"
-msgstr "Búa til hreyfimynd GIF"
+msgstr "Búa til GIF-hreyfimynd"
 
 #: crates/bigiris/src/gui/dialogs/animate.rs:47
 msgid "Selecione pelo menos 2 imagens"
@@ -640,19 +640,19 @@ msgstr "Veldu að minnsta kosti 2 myndir"
 
 #: crates/bigiris/src/gui/dialogs/animate.rs:48
 msgid "Informe vários arquivos de uma vez para montar a animação."
-msgstr "Veldu margar skrár til að byggja upp hreyfimyndina."
+msgstr "Tilgreindu margar skrár í einu til að setja saman hreyfimyndina."
 
 #: crates/bigiris/src/gui/dialogs/animate.rs:66
 msgid "Atraso por quadro (ms)"
-msgstr "Frame töf (ms)"
+msgstr "Töf á ramma (ms)"
 
 #: crates/bigiris/src/gui/dialogs/animate.rs:67
 msgid "100 ≈ 10 fps · 40 ≈ 25 fps · 1000 = 1 s"
-msgstr "100 ≈ 15 fps · 40 = 25 fPS · 1. 000=1 sek"
+msgstr "100 ≈ 10 fps · 40 ≈ 25 fps · 1000 = 1 s"
 
 #: crates/bigiris/src/gui/dialogs/animate.rs:72
 msgid "Loop"
-msgstr "Endurtaka hreyfingu"
+msgstr "Endurtekning"
 
 #: crates/bigiris/src/gui/dialogs/animate.rs:74
 msgid "Infinito (padrão)"
@@ -733,11 +733,11 @@ msgstr "Mistókst"
 
 #: crates/bigiris/src/gui/dialogs/batch.rs:35
 msgid "Prisma — Lote"
-msgstr "Prisma - Batch"
+msgstr "Prisma — Runuvinnsla"
 
 #: crates/bigiris/src/gui/dialogs/batch.rs:39
 msgid "Conversão em lote"
-msgstr "Hópur viðskipti"
+msgstr "Runuumbreyting"
 
 #: crates/bigiris/src/gui/dialogs/batch.rs:46
 msgid "Arquivos"
@@ -755,7 +755,7 @@ msgstr "Bæta við möppu (myndir)"
 #: crates/bigiris/src/gui/dialogs/batch.rs:66
 #: crates/bigiris/src/gui/dialogs/convert.rs:45
 msgid "Conversão"
-msgstr "Umbreyta"
+msgstr "Umbreyting"
 
 #: crates/bigiris/src/gui/dialogs/batch.rs:77
 #: crates/bigiris/src/gui/dialogs/convert.rs:52
@@ -777,15 +777,15 @@ msgstr "Sama mappa og upprunaskráin"
 #: crates/bigiris/src/gui/dialogs/batch.rs:93
 #: crates/bigiris/src/gui/dialogs/convert.rs:69
 msgid "Usar a mesma pasta do arquivo de origem"
-msgstr "Nota upprunalega skráarmöppuna"
+msgstr "Nota möppu upprunaskrárinnar"
 
 #: crates/bigiris/src/gui/dialogs/batch.rs:108
 msgid "Aguardando. Clique em Processar para iniciar."
-msgstr "Tilbúinn. Smelltu á Ferli til að hefja."
+msgstr "Bíður. Smelltu á Vinna úr til að hefja."
 
 #: crates/bigiris/src/gui/dialogs/batch.rs:119
 msgid "Processar"
-msgstr "Framkvæma myndir"
+msgstr "Vinna úr"
 
 #: crates/bigiris/src/gui/dialogs/batch.rs:245
 msgid "Adicione ao menos uma imagem para processar."
@@ -797,7 +797,7 @@ msgstr "Ræsi…"
 
 #: crates/bigiris/src/gui/dialogs/batch.rs:258
 msgid "Processando…"
-msgstr "Vinna í…"
+msgstr "Vinn úr…"
 
 #: crates/bigiris/src/gui/dialogs/batch.rs:302
 msgid ""
@@ -829,7 +829,7 @@ msgstr "Bæta við myndmöppu"
 
 #: crates/bigiris/src/gui/dialogs/compare.rs:31
 msgid "Comparar imagens — Íris"
-msgstr "Bera saman myndir — Iris"
+msgstr "Bera saman myndir — Íris"
 
 #: crates/bigiris/src/gui/dialogs/compare.rs:43
 msgid "Comparar imagens"
@@ -856,15 +856,14 @@ msgstr "Umbreyta myndum — Prisma"
 #: crates/bigimage-integrations/src/action.rs:75
 #: data/nautilus/bigiris-menu.py:100
 msgid "Converter"
-msgstr "Umbreyta myndum"
+msgstr "Umbreyta"
 
 #: crates/bigiris/src/gui/dialogs/convert.rs:85
 msgid ""
 "Esta imagem tem transparência — JPEG perde o canal alfa. Considere PNG ou "
 "WebP."
 msgstr ""
-"Þessi mynd er með gegnsæi — JPEG sleppir alfa rásinni. Hugsaðu um PNG eða "
-"WebP."
+"Þessi mynd er með gegnsæi — JPEG glatar alfarásinni. Íhugaðu PNG eða WebP."
 
 #: crates/bigiris/src/gui/dialogs/convert.rs:106
 msgid ""
@@ -894,14 +893,14 @@ msgstr ""
 
 #: crates/bigiris/src/gui/dialogs/crop.rs:309
 msgid "Recortar — Prisma"
-msgstr "Skera - Prisma"
+msgstr "Skera — Prisma"
 
 #: crates/bigiris/src/gui/dialogs/crop.rs:321
 #: crates/bigiris/src/gui/dialogs/crop.rs:389
 #: crates/bigiris/src/gui/viewer/crop.rs:375
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:326
 msgid "Recortar"
-msgstr "Skera mynd"
+msgstr "Skera"
 
 #: crates/bigiris/src/gui/dialogs/crop.rs:348
 #: crates/bigiris/src/gui/dialogs/extent.rs:96
@@ -917,7 +916,7 @@ msgstr "Fyrsta skráin"
 
 #: crates/bigiris/src/gui/dialogs/crop.rs:355
 msgid "X (px)"
-msgstr "X (pixlar)"
+msgstr "X (px)"
 
 #: crates/bigiris/src/gui/dialogs/crop.rs:359
 msgid "Y (px)"
@@ -935,15 +934,15 @@ msgstr "Hæð (px)"
 
 #: crates/bigiris/src/gui/dialogs/crop.rs:388
 msgid "Centro 50%"
-msgstr "Miðjað 50%"
+msgstr "Miðja 50%"
 
 #: crates/bigiris/src/gui/dialogs/crop.rs:449
 msgid "Recortando…"
-msgstr "Skera…"
+msgstr "Sker…"
 
 #: crates/bigiris/src/gui/dialogs/crop.rs:455
 msgid "Recortando"
-msgstr "Skera"
+msgstr "Sker"
 
 #: crates/bigiris/src/gui/viewer/crop.rs:361
 msgid "Livre"
@@ -955,7 +954,7 @@ msgstr "Upprunalegt"
 
 #: crates/bigiris/src/gui/viewer/crop.rs:368
 msgid "Proporção"
-msgstr "Hlutföll"
+msgstr "Hlutfall"
 
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:46
 #: crates/bigiris/src/gui/dialogs/mod.rs:81
@@ -981,7 +980,8 @@ msgid ""
 "Aumentar resolução usa Lanczos3. Para IA (Real-ESRGAN): sudo pacman -S "
 "{package}"
 msgstr ""
-"Stækkun notar Lanczos3. Fyrir AI (Real-ESRGAN): sudo pacman -S {package}"
+"Aukin upplausn notar Lanczos3. Fyrir gervigreind (Real-ESRGAN): sudo pacman "
+"-S {package}"
 
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:275
 #: crates/bigiris/src/gui/dialogs/upscale.rs:246
@@ -1051,7 +1051,7 @@ msgstr "Halda hlutföllum"
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:364
 #: crates/bigiris/src/gui/dialogs/resize.rs:48
 msgid "Escala (%)"
-msgstr "Skala"
+msgstr "Kvarði (%)"
 
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:376
 msgid "Ferramentas"
@@ -1063,12 +1063,12 @@ msgstr "Fjarlægja bakgrunn (gervigreind)"
 
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:379
 msgid "Remover ruído (IA)"
-msgstr "Fjarlægja suð (AI)"
+msgstr "Fjarlægja suð (gervigreind)"
 
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:383
 #: crates/bigiris/src/gui/dialogs/upscale.rs:97
 msgid "Fator"
-msgstr "Stærð"
+msgstr "Stuðull"
 
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:384
 #: crates/bigiris/src/gui/dialogs/upscale.rs:40
@@ -1097,11 +1097,11 @@ msgstr "Hreinsar suð og þjöppunargalla með SCUNet, á tölvunni þinni"
 
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:989
 msgid "Real-ESRGAN (IA), no seu computador"
-msgstr "Real-ESRGAN (AI), á tölvunni þinni"
+msgstr "Real-ESRGAN (gervigreind), á tölvunni þinni"
 
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:991
 msgid "Lanczos3 (sem IA)"
-msgstr "Lanczos3 (án AI)"
+msgstr "Lanczos3 (án gervigreindar)"
 
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:1507
 #: crates/bigiris/src/gui/dialogs/remove_bg.rs:224
@@ -1124,7 +1124,7 @@ msgstr "Fjarlægi suð…"
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:1619
 #: crates/bigiris/src/gui/dialogs/upscale.rs:197
 msgid "Aumentando…"
-msgstr "Uppskalun…"
+msgstr "Eyk upplausn…"
 
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:1649
 msgid "{name}-editada"
@@ -1151,19 +1151,19 @@ msgstr ""
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:12
 msgid "YouTube community (1:1)"
-msgstr "YouTube samfélag (1:1)"
+msgstr "YouTube-samfélag (1:1)"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:13
 msgid "Instagram feed (4:5)"
-msgstr "Instagram straumur (4:5)"
+msgstr "Instagram-straumur (4:5)"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:14
 msgid "Stories / Shorts (9:16)"
-msgstr "Sögur / stuttmyndir (9:16)"
+msgstr "Stories / Shorts (9:16)"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:15
 msgid "Widescreen (16:9)"
-msgstr "Breiður skjár (16: 9)"
+msgstr "Breiðskjár (16:9)"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:16
 msgid "Personalizado…"
@@ -1171,15 +1171,15 @@ msgstr "Sérsniðið…"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:22
 msgid "Preto suave (#0d0e12)"
-msgstr "Mjúkur svartur (# 0d0e12)"
+msgstr "Mjúkt svart (#0d0e12)"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:23
 msgid "Preto puro (#000000)"
-msgstr "Hreint svart (# 000. 0)"
+msgstr "Hreint svart (#000000)"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:24
 msgid "Branco (#ffffff)"
-msgstr "Hvítt (# ffffff)"
+msgstr "Hvítt (#ffffff)"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:25
 msgid "Transparente"
@@ -1187,7 +1187,7 @@ msgstr "Gegnsætt"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:26
 msgid "Personalizada (hex)"
-msgstr "Sérsniðin (hex)"
+msgstr "Sérsniðinn (hex)"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:33
 msgid "Centro"
@@ -1195,15 +1195,15 @@ msgstr "Miðja"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:33
 msgid "Topo"
-msgstr "Efri brún"
+msgstr "Efst"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:33
 msgid "Base"
-msgstr "Neðri brún"
+msgstr "Neðst"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:49
 msgid "Letterbox — Prisma"
-msgstr "Pósthólf — Prisma"
+msgstr "Letterbox — Prisma"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:62
 msgid "Letterbox"
@@ -1219,21 +1219,21 @@ msgid ""
 "YouTube, feed do Instagram, Stories…) sem cortar nenhum pixel. A imagem "
 "original é centralizada e o resto é preenchido com a cor escolhida."
 msgstr ""
-"Stækkar strigann í kringum myndina til að passa fast snið (YouTube færslur, "
-"Instagram straumar, sögur...) án þess að skera niður punkta. Upprunalega "
-"myndin er miðjuð og eftirstandandi svæði er fyllt með völdum lit."
+"Stækkar strigann í kringum myndina svo hún passi í fast snið (YouTube-"
+"færslu, Instagram-straum, Stories…) án þess að skera burt einn einasta díl. "
+"Upprunalega myndin er miðjuð og afgangurinn fylltur með völdum lit."
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:104
 msgid "Proporção alvo"
-msgstr "Hlutfall myndar"
+msgstr "Markhlutfall"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:111
 msgid "Razão W"
-msgstr "Breiddarhlutfall"
+msgstr "Hlutfall B"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:114
 msgid "Razão H"
-msgstr "Hæð hlutfall"
+msgstr "Hlutfall H"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:124
 msgid "Cor de fundo"
@@ -1241,7 +1241,7 @@ msgstr "Bakgrunnslitur"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:130
 msgid "Hex (#RRGGBB)"
-msgstr "Hex (# RRGGBB)"
+msgstr "Hex (#RRGGBB)"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:138
 msgid "Posição da imagem"
@@ -1250,7 +1250,7 @@ msgstr "Staðsetning myndar"
 #: crates/bigiris/src/gui/dialogs/extent.rs:144
 #: crates/bigiris/src/gui/dialogs/upscale.rs:103
 msgid "Destino previsto"
-msgstr "Áfangastaður"
+msgstr "Áætlaður áfangastaður"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:171
 msgid "Estender"
@@ -1266,38 +1266,38 @@ msgstr "Stækka…"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:332
 msgid "Estendendo"
-msgstr "Stækkandi"
+msgstr "Stækka"
 
 #: crates/bigiris/src/gui/dialogs/flip.rs:20
 msgid "Espelhar imagens — Prisma"
-msgstr "Snúa myndum — Prisma"
+msgstr "Spegla myndir — Prisma"
 
 #: crates/bigiris/src/gui/dialogs/flip.rs:24
 #: crates/bigiris/src/gui/dialogs/flip.rs:47
 #: crates/bigimage-integrations/src/action.rs:87
 #: data/nautilus/bigiris-menu.py:142
 msgid "Espelhar"
-msgstr "Spegla mynd"
+msgstr "Spegla"
 
 #: crates/bigiris/src/gui/dialogs/flip.rs:26
 msgid "Horizontal (esquerda ↔ direita)"
-msgstr "Lárétt (vinstri - hægri)"
+msgstr "Lárétt (vinstri ↔ hægri)"
 
 #: crates/bigiris/src/gui/dialogs/flip.rs:26
 msgid "Vertical (cima ↔ baixo)"
-msgstr "Lóðrétt (efri ↔ neðri)"
+msgstr "Lóðrétt (upp ↔ niður)"
 
 #: crates/bigiris/src/gui/dialogs/flip.rs:29
 msgid "Eixo"
-msgstr "Ásar"
+msgstr "Ás"
 
 #: crates/bigiris/src/gui/dialogs/flip.rs:87
 msgid "Espelhando…"
-msgstr "Snúa við…"
+msgstr "Spegla…"
 
 #: crates/bigiris/src/gui/dialogs/flip.rs:93
 msgid "Espelhando"
-msgstr "Snúa við"
+msgstr "Spegla"
 
 #: crates/bigiris/src/gui/dialogs/mod.rs:64
 #: crates/bigimage-integrations/src/action.rs:151
@@ -1337,7 +1337,7 @@ msgstr "GIF"
 
 #: crates/bigiris/src/gui/dialogs/mod.rs:71
 msgid "ICO (até 256 × 256)"
-msgstr "ICO (allt að 256 × 264)"
+msgstr "ICO (allt að 256 × 256)"
 
 #: crates/bigiris/src/gui/dialogs/mod.rs:72
 msgid "PNM (Netpbm)"
@@ -1381,11 +1381,11 @@ msgstr "Gæði (JPEG/WebP/AVIF)"
 
 #: crates/bigiris/src/gui/dialogs/mod.rs:115
 msgid "1 menor qualidade · 85 equilíbrio · 100 maior qualidade"
-msgstr "1 lægri gæði · 85 jafnvægi · 100 hærri gæði"
+msgstr "1 lægstu gæði · 85 jafnvægi · 100 hæstu gæði"
 
 #: crates/bigiris/src/gui/dialogs/mod.rs:119
 msgid "Otimizar tamanho"
-msgstr "Stærð"
+msgstr "Fínstilla stærð"
 
 #: crates/bigiris/src/gui/dialogs/mod.rs:120
 msgid "PNG com compressão máxima; AVIF mais lento; arquivo menor"
@@ -1393,15 +1393,15 @@ msgstr "PNG með hámarksþjöppun; AVIF hægara; minni skrá"
 
 #: crates/bigiris/src/gui/dialogs/mod.rs:124
 msgid "Avançado"
-msgstr "Ítarlegra"
+msgstr "Ítarlegt"
 
 #: crates/bigiris/src/gui/dialogs/mod.rs:125
 msgid "Otimização do encoder"
-msgstr "Encoder bestun"
+msgstr "Fínstilling kóðara"
 
 #: crates/bigiris/src/gui/dialogs/mod.rs:167
 msgid "Pular se já existir"
-msgstr "Sleppa núverandi skrám"
+msgstr "Sleppa ef hún er til"
 
 #: crates/bigiris/src/gui/dialogs/mod.rs:168
 msgid "Sobrescrever o arquivo"
@@ -1409,7 +1409,7 @@ msgstr "Skrifa yfir skrána"
 
 #: crates/bigiris/src/gui/dialogs/mod.rs:169
 msgid "Incrementar (_1, _2, …)"
-msgstr "Bæta við endingu (_1, _2, …)"
+msgstr "Tölusetja (_1, _2, …)"
 
 #: crates/bigiris/src/gui/dialogs/mod.rs:190
 #: crates/bigiris/src/gui/dialogs/mod.rs:205
@@ -1513,19 +1513,19 @@ msgstr "EXIF-stefna"
 
 #: crates/bigiris/src/gui/dialogs/properties.rs:227
 msgid "{orientation} · use Girar ▸ Automático pra corrigir"
-msgstr "{orientation} · notaðu Snúa mynd ▸ Sjálfvirkt til að leiðrétta"
+msgstr "{orientation} · notaðu Snúa ▸ Sjálfvirkt til að leiðrétta"
 
 #: crates/bigiris/src/gui/dialogs/properties.rs:242
 msgid "Tons de cinza"
-msgstr "Grátóna"
+msgstr "Grátónar"
 
 #: crates/bigiris/src/gui/dialogs/properties.rs:243
 msgid "Tons de cinza + alfa"
-msgstr "Grátóna + alfa"
+msgstr "Grátónar + alfa"
 
 #: crates/bigiris/src/gui/dialogs/properties.rs:280
 msgid "Campos presentes: {count}"
-msgstr "Svið til staðar: {count}"
+msgstr "Reitir til staðar: {count}"
 
 #: crates/bigiris/src/gui/dialogs/remove_bg.rs:24
 msgid "Não foi possível ler a imagem: {error}"
@@ -1561,7 +1561,7 @@ msgstr "Veldu eina eða fleiri skrár þegar glugginn opnast."
 
 #: crates/bigiris/src/gui/dialogs/remove_bg.rs:127
 msgid "Modelo"
-msgstr "Gerð"
+msgstr "Líkan"
 
 #: crates/bigiris/src/gui/dialogs/remove_bg.rs:140
 msgid ""
@@ -1572,7 +1572,7 @@ msgstr ""
 
 #: crates/bigiris/src/gui/dialogs/remove_bg.rs:147
 msgid "Remover fundo com IA local"
-msgstr "Fjarlægja bakgrunn með staðbundnum AI"
+msgstr "Fjarlægja bakgrunn með staðbundinni gervigreind"
 
 #: crates/bigiris/src/gui/dialogs/remove_bg.rs:148
 msgid ""
@@ -1593,7 +1593,7 @@ msgstr "Vistaðar myndir"
 
 #: crates/bigiris/src/gui/dialogs/remove_bg.rs:376
 msgid "Falhas"
-msgstr "Mistök"
+msgstr "Villur"
 
 #: crates/bigiris/src/gui/dialogs/remove_bg.rs:378
 msgid "Com erros"
@@ -1614,7 +1614,7 @@ msgstr "BiRefNet-lite (MIT) · keyrir án nettengingar á tölvunni þinni"
 #: crates/bigiris/src/gui/dialogs/remove_bg.rs:538
 #: crates/bigiris/src/gui/dialogs/upscale.rs:142
 msgid "Aumentar"
-msgstr "Uppskalun myndar"
+msgstr "Auka upplausn"
 
 #: crates/bigiris/src/gui/dialogs/resize.rs:8
 msgid "Lanczos3 (padrão)"
@@ -1634,7 +1634,7 @@ msgstr "Bilinear"
 
 #: crates/bigiris/src/gui/dialogs/resize.rs:12
 msgid "Nearest (sem anti-aliasing)"
-msgstr "Næsta (ekki flísalagt)"
+msgstr "Nearest (án mýkingar)"
 
 #: crates/bigiris/src/gui/dialogs/resize.rs:29
 msgid "Redimensionar imagens — Prisma"
@@ -1646,12 +1646,12 @@ msgstr "Breyta stærð mynda — Prisma"
 #: crates/bigimage-integrations/src/action.rs:79
 #: data/nautilus/bigiris-menu.py:115
 msgid "Redimensionar"
-msgstr "Breyta stærð mynda"
+msgstr "Breyta stærð"
 
 #: crates/bigiris/src/gui/dialogs/resize.rs:47
 #: crates/bigiris/src/gui/dialogs/resize.rs:61
 msgid "Aresta máxima"
-msgstr "Hámarks brún"
+msgstr "Lengsta hlið"
 
 #: crates/bigiris/src/gui/dialogs/resize.rs:49
 msgid "Dimensão exata (WxH)"
@@ -1695,11 +1695,11 @@ msgstr "Hámarkshæð"
 
 #: crates/bigiris/src/gui/dialogs/resize.rs:120
 msgid "Kernel de interpolação"
-msgstr "Interpolation kjarna"
+msgstr "Brúunarkjarni"
 
 #: crates/bigiris/src/gui/dialogs/resize.rs:134
 msgid "Modo de redimensionamento"
-msgstr "Breyta stærð"
+msgstr "Stærðarbreytingarhamur"
 
 #: crates/bigiris/src/gui/dialogs/resize.rs:137
 msgid "Opções"
@@ -1707,11 +1707,11 @@ msgstr "Valkostir"
 
 #: crates/bigiris/src/gui/dialogs/resize.rs:292
 msgid "Redimensionando…"
-msgstr "Breyta stærð…"
+msgstr "Breyti stærð…"
 
 #: crates/bigiris/src/gui/dialogs/resize.rs:298
 msgid "Redimensionando"
-msgstr "Breyta stærð"
+msgstr "Breyti stærð"
 
 #: crates/bigiris/src/gui/dialogs/rotate.rs:25
 msgid "Girar imagens — Prisma"
@@ -1722,7 +1722,7 @@ msgstr "Snúa myndum — Prisma"
 #: crates/bigimage-integrations/src/action.rs:83
 #: data/nautilus/bigiris-menu.py:129
 msgid "Girar"
-msgstr "Snúa mynd"
+msgstr "Snúa"
 
 #: crates/bigiris/src/gui/dialogs/rotate.rs:31
 msgid "90° (horário)"
@@ -1744,19 +1744,19 @@ msgstr "Snúningur"
 
 #: crates/bigiris/src/gui/dialogs/rotate.rs:93
 msgid "Girando…"
-msgstr "Snúa…"
+msgstr "Sný…"
 
 #: crates/bigiris/src/gui/dialogs/rotate.rs:99
 msgid "Girando"
-msgstr "Snúa"
+msgstr "Sný"
 
 #: crates/bigiris/src/gui/dialogs/upscale.rs:26
 msgid "Aumentar resolução — Prisma"
-msgstr "Uppfærsla — Prisma"
+msgstr "Auka upplausn — Prisma"
 
 #: crates/bigiris/src/gui/dialogs/upscale.rs:65
 msgid "Usar IA (Real-ESRGAN)"
-msgstr "Nota AI (Real-ESRGAN)"
+msgstr "Nota gervigreind (Real-ESRGAN)"
 
 #: crates/bigiris/src/gui/dialogs/upscale.rs:112
 msgid "× {factor} (tamanho indisponível)"
@@ -1764,7 +1764,7 @@ msgstr "× {factor} (stærð ekki tiltæk)"
 
 #: crates/bigiris/src/gui/dialogs/upscale.rs:231
 msgid "Aumentando"
-msgstr "Uppskalun"
+msgstr "Eyk upplausn"
 
 #: crates/bigiris/src/gui/dialogs/upscale.rs:247
 msgid "Detalhes mais nítidos que Lanczos3; roda no seu computador"
@@ -1788,15 +1788,15 @@ msgstr "Undirbúningur var rofinn"
 
 #: crates/bigiris/src/gui/transfers.rs:86
 msgid "A seleção é muito grande. Abra menos arquivos por vez."
-msgstr "Valið er of stórt. Opna færri skrár í einu."
+msgstr "Valið er of stórt. Opnaðu færri skrár í einu."
 
 #: crates/bigiris/src/gui/transfers.rs:88
 msgid "Arraste ou copie arquivos locais de imagem."
-msgstr "Sleppa eða afrita staðbundnar myndskrár."
+msgstr "Dragðu eða afritaðu staðbundnar myndskrár."
 
 #: crates/bigiris/src/gui/transfers.rs:89
 msgid "A transferência demorou demais. Tente novamente."
-msgstr "Tíminn rann út. Reyndu aftur."
+msgstr "Flutningurinn tók of langan tíma. Reyndu aftur."
 
 #: crates/bigiris/src/gui/transfers.rs:91
 msgid "Não foi possível iniciar o visualizador. Tente novamente."
@@ -1808,7 +1808,7 @@ msgstr "Afritaðu myndskrár í skráastjóranum þínum og reyndu aftur."
 
 #: crates/bigiris/src/gui/transfers.rs:96
 msgid "Não foi possível abrir os arquivos"
-msgstr "Gat ekki opnað skrána"
+msgstr "Ekki tókst að opna skrárnar"
 
 #: crates/bigimage-integrations/src/action.rs:97
 #: data/nautilus/bigiris-menu.py:167
@@ -1818,7 +1818,7 @@ msgstr "Fyrir vefinn"
 #: crates/bigimage-integrations/src/action.rs:101
 #: data/nautilus/bigiris-menu.py:213
 msgid "Metadados"
-msgstr "Metagögn"
+msgstr "Lýsigögn"
 
 #: crates/bigimage-integrations/src/action.rs:105
 #: data/nautilus/bigiris-menu.py:223
@@ -1828,7 +1828,7 @@ msgstr "Tól"
 #: crates/bigimage-integrations/src/action.rs:111
 #: data/nautilus/bigiris-menu.py:234
 msgid "IA"
-msgstr "gervigreind"
+msgstr "Gervigreind"
 
 #: crates/bigimage-integrations/src/action.rs:116
 #: data/nautilus/bigiris-menu.py:244
@@ -1878,12 +1878,12 @@ msgstr "200%"
 #: crates/bigimage-integrations/src/action.rs:227
 #: data/nautilus/bigiris-menu.py:122
 msgid "HD (1920 px)"
-msgstr "HD (1920 pixlar)"
+msgstr "HD (1920 px)"
 
 #: crates/bigimage-integrations/src/action.rs:235
 #: data/nautilus/bigiris-menu.py:123
 msgid "4K (3840 px)"
-msgstr "4K (3840 pixlar)"
+msgstr "4K (3840 px)"
 
 #: crates/bigimage-integrations/src/action.rs:252
 #: data/nautilus/bigiris-menu.py:133
@@ -1918,22 +1918,22 @@ msgstr "+ Birtustig (+10)"
 #: crates/bigimage-integrations/src/action.rs:326
 #: data/nautilus/bigiris-menu.py:158
 msgid "− Brilho (-10)"
-msgstr "− Birtustig (- 10)"
+msgstr "− Birtustig (-10)"
 
 #: crates/bigimage-integrations/src/action.rs:334
 #: data/nautilus/bigiris-menu.py:159
 msgid "+ Contraste (+20)"
-msgstr "+ Andstæða (+20)"
+msgstr "+ Birtuskil (+20)"
 
 #: crates/bigimage-integrations/src/action.rs:342
 #: data/nautilus/bigiris-menu.py:160
 msgid "Preto e branco"
-msgstr "Svart og hvítt"
+msgstr "Svarthvítt"
 
 #: crates/bigimage-integrations/src/action.rs:350
 #: data/nautilus/bigiris-menu.py:161
 msgid "Cores vivas (+40)"
-msgstr "Lifandi litir (+40)"
+msgstr "Líflegir litir (+40)"
 
 #: crates/bigimage-integrations/src/action.rs:370
 #: data/nautilus/bigiris-menu.py:171
@@ -1968,27 +1968,27 @@ msgstr "Discord (2048 px · JPG q80)"
 #: crates/bigimage-integrations/src/action.rs:418
 #: data/nautilus/bigiris-menu.py:195
 msgid "Otimizar PNG (compressão máxima)"
-msgstr "Bjartsýni (PNG)"
+msgstr "Fínstilla PNG (hámarksþjöppun)"
 
 #: crates/bigimage-integrations/src/action.rs:430
 #: data/nautilus/bigiris-menu.py:199
 msgid "Letterbox YouTube post (1:1)"
-msgstr "YouTube færsla (1:1)"
+msgstr "Letterbox YouTube-færsla (1:1)"
 
 #: crates/bigimage-integrations/src/action.rs:438
 #: data/nautilus/bigiris-menu.py:202
 msgid "Letterbox Instagram feed (4:5)"
-msgstr "Instagram straumur (4:5)"
+msgstr "Letterbox Instagram-straumur (4:5)"
 
 #: crates/bigimage-integrations/src/action.rs:446
 #: data/nautilus/bigiris-menu.py:205
 msgid "Letterbox Stories / Shorts (9:16)"
-msgstr "Bréfhólfssögur / Stuttmyndir (9:16)"
+msgstr "Letterbox Stories / Shorts (9:16)"
 
 #: crates/bigimage-integrations/src/action.rs:454
 #: data/nautilus/bigiris-menu.py:208
 msgid "Letterbox personalizado…"
-msgstr "Sérsniðið pósthólf…"
+msgstr "Sérsniðið letterbox…"
 
 #: crates/bigimage-integrations/src/action.rs:463
 #: data/nautilus/bigiris-menu.py:217
@@ -1998,17 +1998,17 @@ msgstr "Skoða lýsigögn…"
 #: crates/bigimage-integrations/src/action.rs:471
 #: data/nautilus/bigiris-menu.py:218
 msgid "Remover tudo (re-encode limpo)"
-msgstr "Fjarlægja öll lýsigögn (hreinsa endurkóða)"
+msgstr "Fjarlægja allt (hrein endurkóðun)"
 
 #: crates/bigimage-integrations/src/action.rs:482
 #: data/nautilus/bigiris-menu.py:227
 msgid "Converter em lote (Prisma)…"
-msgstr "Batch umbreyta (Prisma)…"
+msgstr "Runuumbreyting (Prisma)…"
 
 #: crates/bigimage-integrations/src/action.rs:490
 #: data/nautilus/bigiris-menu.py:228
 msgid "Criar GIF animado…"
-msgstr "Búa til hreyfimynd GIF…"
+msgstr "Búa til GIF-hreyfimynd…"
 
 #: crates/bigimage-integrations/src/action.rs:498
 #: data/nautilus/bigiris-menu.py:229
@@ -2027,7 +2027,7 @@ msgstr "Umbreyta í PDF (LibreOffice)"
 
 #: data/nautilus/bigiris-menu.py:295
 msgid "Operações BigIris"
-msgstr "BigIris aðgerðir"
+msgstr "BigIris-aðgerðir"
 
 #: data/nautilus/bigiris-menu.py:374
 msgid "BigIris: Processar esta pasta…"
@@ -2035,7 +2035,7 @@ msgstr "BigIris: Vinna úr þessari möppu…"
 
 #: data/nautilus/bigiris-menu.py:375
 msgid "Converter imagens da pasta com o Prisma"
-msgstr "Umbreyta möppu myndum með Prisma"
+msgstr "Umbreyta myndum möppunnar með Prisma"
 
 #: scripts/translations.py:20
 msgid "Visualizador de imagens"
@@ -2043,8 +2043,8 @@ msgstr "Myndaskoðari"
 
 #: scripts/translations.py:21
 msgid "Visualize e converta imagens com integração ao gerenciador de arquivos"
-msgstr "Skoða og umbreyta myndum með skráastjóra samþættingu"
+msgstr "Skoða og umbreyta myndum, samþætt skráastjóranum"
 
 #: scripts/translations.py:24
 msgid "Visualizador e conversor de imagens moderno"
-msgstr "Nútíma myndskoðari og breytir"
+msgstr "Nútímalegur myndaskoðari og umbreytir"

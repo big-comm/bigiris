@@ -292,121 +292,133 @@ where
             }
         }
         let _close = CloseOnDrop(wake.clone());
-        let total = files.len();
         let start = Instant::now();
-        let bytes_in = Arc::new(AtomicU64::new(0));
-        let files = Arc::new(files);
-        let next_idx = Arc::new(AtomicUsize::new(0));
-        let progress_done = Arc::new(AtomicUsize::new(0));
-        let bytes_out = Arc::new(AtomicU64::new(0));
-        let work = Arc::new(work);
-        let n_workers = bigimage_core::resources::batch_worker_count(&files);
-
-        let workers: Vec<_> = (0..n_workers)
-            .map(|_| {
-                let files = files.clone();
-                let next_idx = next_idx.clone();
-                let progress_done = progress_done.clone();
-                let bytes_out = bytes_out.clone();
-                let bytes_in = bytes_in.clone();
-                let cancelled = cancelled.clone();
-                let work = work.clone();
-                let tx = tx.clone();
-                let wake = wake.clone();
-                std::thread::spawn(move || {
-                    let mut ok = 0usize;
-                    let mut skip = 0usize;
-                    let mut fail = 0usize;
-                    let mut first_err: Option<String> = None;
-                    loop {
-                        if cancelled.load(Ordering::Relaxed) {
-                            break;
-                        }
-                        let idx = next_idx.fetch_add(1, Ordering::Relaxed);
-                        if idx >= total {
-                            break;
-                        }
-                        let path = &files[idx];
-                        let display = path
-                            .file_name()
-                            .map(|n| n.to_string_lossy().into_owned())
-                            .unwrap_or_default();
-                        let input_bytes = std::fs::metadata(path).map(|m| m.len()).unwrap_or(0);
-                        // Scoped cancel lets closing the window stop an
-                        // isolated codec run instead of waiting up to 60 s.
-                        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                            crate::codec::with_cancel(cancelled.clone(), || work(path))
-                        }))
-                        .unwrap_or_else(|_| {
-                            Err(bigimage_core::BigImageError::Other(gettext(
-                                "falha inesperada no worker",
-                            )))
-                        });
-                        match result {
-                            Ok(ConvertOutcome::Written { output }) => {
-                                ok += 1;
-                                bytes_in.fetch_add(input_bytes, Ordering::Relaxed);
-                                if let Ok(meta) = std::fs::metadata(&output) {
-                                    bytes_out.fetch_add(meta.len(), Ordering::Relaxed);
-                                }
-                            }
-                            Ok(ConvertOutcome::Skipped { .. }) => skip += 1,
-                            Err(e) => {
-                                fail += 1;
-                                if first_err.is_none() {
-                                    first_err = Some(format!("{}: {e}", path.display()));
-                                }
-                            }
-                        }
-                        let done = progress_done.fetch_add(1, Ordering::Relaxed) + 1;
-                        if tx
-                            .send(AsyncBatchEvent::Progress { done, total, file: display })
-                            .is_err()
-                        {
-                            break;
-                        }
-                        wake.notify();
-                    }
-                    (ok, skip, fail, first_err)
+        let queue = Queue {
+            files,
+            next: AtomicUsize::new(0),
+            done: AtomicUsize::new(0),
+            bytes_in: AtomicU64::new(0),
+            bytes_out: AtomicU64::new(0),
+            cancelled,
+        };
+        let n_workers = bigimage_core::resources::batch_worker_count(&queue.files);
+        let tally = std::thread::scope(|scope| {
+            let handles: Vec<_> = (0..n_workers)
+                .map(|_| {
+                    let tx = tx.clone();
+                    let (queue, work, wake) = (&queue, &work, &wake);
+                    scope.spawn(move || run_worker(queue, work, &tx, wake))
                 })
-            })
-            .collect();
-
-        let mut ok = 0usize;
-        let mut skip = 0usize;
-        let mut fail = 0usize;
-        let mut first_err: Option<String> = None;
-        for handle in workers {
-            match handle.join() {
-                Ok((local_ok, local_skip, local_fail, local_first_err)) => {
-                    ok += local_ok;
-                    skip += local_skip;
-                    fail += local_fail;
-                    if first_err.is_none() {
-                        first_err = local_first_err;
-                    }
-                }
-                Err(_) => {
-                    fail += 1;
-                    first_err.get_or_insert_with(|| gettext("um worker terminou inesperadamente"));
+                .collect();
+            let mut tally = Tally::default();
+            for handle in handles {
+                match handle.join() {
+                    Ok(worker) => tally.add(worker),
+                    Err(_) => tally.add(Tally {
+                        fail: 1,
+                        first_err: Some(gettext("um worker terminou inesperadamente")),
+                        ..Tally::default()
+                    }),
                 }
             }
-        }
-        let done = progress_done.load(Ordering::Relaxed);
+            tally
+        });
         let _ = tx.send(AsyncBatchEvent::Done {
-            ok,
-            skip,
-            fail,
-            first_err,
+            ok: tally.ok,
+            skip: tally.skip,
+            fail: tally.fail,
+            first_err: tally.first_err,
             elapsed: start.elapsed(),
-            bytes_in: bytes_in.load(Ordering::Relaxed),
-            bytes_out: bytes_out.load(Ordering::Relaxed),
-            done,
-            total,
-            cancelled: cancelled.load(Ordering::Relaxed),
+            bytes_in: queue.bytes_in.load(Ordering::Relaxed),
+            bytes_out: queue.bytes_out.load(Ordering::Relaxed),
+            done: queue.done.load(Ordering::Relaxed),
+            total: queue.files.len(),
+            cancelled: queue.cancelled.load(Ordering::Relaxed),
         });
     });
     events
+}
+
+/// What the batch workers share: the files, the next one to take, and the
+/// running totals.
+struct Queue {
+    files: Vec<PathBuf>,
+    next: AtomicUsize,
+    done: AtomicUsize,
+    bytes_in: AtomicU64,
+    bytes_out: AtomicU64,
+    cancelled: Arc<AtomicBool>,
+}
+
+/// Outcome counts of one worker, or of the whole batch.
+#[derive(Default)]
+struct Tally {
+    ok: usize,
+    skip: usize,
+    fail: usize,
+    /// The first failure, shown in the summary.
+    first_err: Option<String>,
+}
+
+impl Tally {
+    fn add(&mut self, other: Tally) {
+        self.ok += other.ok;
+        self.skip += other.skip;
+        self.fail += other.fail;
+        if self.first_err.is_none() {
+            self.first_err = other.first_err;
+        }
+    }
+}
+
+/// Take files from `queue` until it is empty or cancelled, reporting each
+/// one to the GTK side.
+fn run_worker<W>(
+    queue: &Queue,
+    work: &W,
+    tx: &mpsc::Sender<AsyncBatchEvent>,
+    wake: &super::viewer::Wake,
+) -> Tally
+where
+    W: Fn(&Path) -> bigimage_core::Result<ConvertOutcome>,
+{
+    let total = queue.files.len();
+    let mut tally = Tally::default();
+    while !queue.cancelled.load(Ordering::Relaxed) {
+        let idx = queue.next.fetch_add(1, Ordering::Relaxed);
+        let Some(path) = queue.files.get(idx) else { break };
+        let display =
+            path.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
+        let input_bytes = std::fs::metadata(path).map(|m| m.len()).unwrap_or(0);
+        // Scoped cancel lets closing the window stop an isolated codec run
+        // instead of waiting up to 60 s.
+        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            crate::codec::with_cancel(queue.cancelled.clone(), || work(path))
+        }))
+        .unwrap_or_else(|_| {
+            Err(bigimage_core::BigImageError::Other(gettext("falha inesperada no worker")))
+        });
+        match result {
+            Ok(ConvertOutcome::Written { output }) => {
+                tally.ok += 1;
+                queue.bytes_in.fetch_add(input_bytes, Ordering::Relaxed);
+                if let Ok(meta) = std::fs::metadata(&output) {
+                    queue.bytes_out.fetch_add(meta.len(), Ordering::Relaxed);
+                }
+            }
+            Ok(ConvertOutcome::Skipped { .. }) => tally.skip += 1,
+            Err(e) => {
+                tally.fail += 1;
+                tally.first_err.get_or_insert_with(|| format!("{}: {e}", path.display()));
+            }
+        }
+        let done = queue.done.fetch_add(1, Ordering::Relaxed) + 1;
+        if tx.send(AsyncBatchEvent::Progress { done, total, file: display }).is_err() {
+            break;
+        }
+        wake.notify();
+    }
+    tally
 }
 
 /// Run `work` on each file across the worker pool and show the progress.

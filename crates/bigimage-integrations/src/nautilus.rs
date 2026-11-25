@@ -20,6 +20,7 @@
 use std::io;
 use std::path::{Path, PathBuf};
 
+use crate::action::ACTIONS;
 use crate::scope::{Scope, ScopePaths};
 
 const STALE_TREE_ROOT: &str = "BigIris";
@@ -33,8 +34,38 @@ const PYTHON_EXTENSION_FILENAME: &str = "bigiris-menu.py";
 const SYSTEM_EXTENSION_PATH: &str = "/usr/share/nautilus-python/extensions/bigiris-menu.py";
 
 /// The Python extension body, embedded at compile time from
-/// `data/nautilus/bigiris-menu.py` at the repo root.
+/// `data/nautilus/bigiris-menu.py` at the repo root; [`render`] fills its
+/// action table.
 const PYTHON_EXTENSION: &str = include_str!("../../../data/nautilus/bigiris-menu.py");
+const ACTIONS_PLACEHOLDER: &str = "\n_ACTIONS = []\n";
+
+/// The extension with `_ACTIONS` built from [`ACTIONS`], so Nautilus
+/// offers the same labels, icons, argv and MIME filters as every other
+/// file manager.
+fn render() -> String {
+    let py = |text: &str| format!("\"{}\"", text.replace('\\', "\\\\").replace('"', "\\\""));
+    let list = |items: &mut dyn Iterator<Item = &str>| {
+        format!("[{}]", items.map(|item| py(item)).collect::<Vec<_>>().join(", "))
+    };
+    let mut table = String::from("\n_ACTIONS = [\n");
+    for action in ACTIONS {
+        let (sub_id, sub_label, sub_icon) = match action.submenu {
+            Some(sub) => (py(sub.id), py(sub.label), py(sub.icon)),
+            None => ("None".to_owned(), "None".to_owned(), "None".to_owned()),
+        };
+        // `bigiris <args> %F`: the extension adds the binary and the paths.
+        let argv = list(&mut action.command.split_whitespace().filter(|arg| *arg != "%F").skip(1));
+        let mimes = list(&mut action.mime_types.iter().copied());
+        table.push_str(&format!(
+            "    ({}, {sub_id}, {sub_label}, {sub_icon}, {}, {argv}, {}, {mimes}),\n",
+            py(action.id),
+            py(action.label),
+            py(action.icon),
+        ));
+    }
+    table.push_str("]\n");
+    PYTHON_EXTENSION.replacen(ACTIONS_PLACEHOLDER, &table, 1)
+}
 
 /// Instala a extension Python e limpa resíduos de uma eventual árvore
 /// scripts legada (quem rodou `install-integrations` em versões
@@ -88,7 +119,7 @@ pub(crate) fn install_with_system_path(
     // nautilus-python extension: único ponto de entrada oficial.
     std::fs::create_dir_all(&ext_dir)?;
     let ext_file = ext_dir.join(PYTHON_EXTENSION_FILENAME);
-    crate::safe_fs::safe_write(&ext_file, PYTHON_EXTENSION, paths.scope)?;
+    crate::safe_fs::safe_write(&ext_file, render(), paths.scope)?;
     written.push(ext_file);
 
     Ok(written)
@@ -189,7 +220,7 @@ mod tests {
         let paths = ScopePaths::system_with_destdir(tmp.path().join("package"));
         let written = install_with_system_path(&paths, &host).unwrap();
         assert_eq!(written.len(), 1);
-        assert_eq!(std::fs::read_to_string(&written[0]).unwrap(), PYTHON_EXTENSION);
+        assert_eq!(std::fs::read_to_string(&written[0]).unwrap(), render());
         assert_eq!(std::fs::read_to_string(&host).unwrap(), "host stays unchanged");
         assert_eq!(paths.scope, Scope::System);
     }
@@ -233,6 +264,23 @@ mod tests {
         assert!(body.contains("Nautilus.MenuProvider"));
         assert!(body.contains("_TOP_LABEL = \"BigIris\""));
         assert!(body.contains("--dialog=convert"));
+    }
+
+    #[test]
+    fn extension_table_comes_from_actions() {
+        let body = render();
+        assert!(PYTHON_EXTENSION.contains(ACTIONS_PLACEHOLDER));
+        assert!(!body.contains(ACTIONS_PLACEHOLDER));
+        for action in ACTIONS {
+            assert_eq!(body.matches(&format!("    (\"{}\", ", action.id)).count(), 1, "{}", action.id);
+        }
+        assert!(body.contains(
+            "(\"web-letterbox-yt\", \"web\", \"Para web\", \"applications-internet-symbolic\", \
+             \"Letterbox YouTube post (1:1)\", [\"extent\", \"--aspect\", \"1:1\", \"--bg\", \
+             \"0d0e12\"], \"applications-internet-symbolic\", [\"image/*\"]),"
+        ));
+        assert!(body.contains("(\"view\", None, None, None, \"Visualizar em BigIris\", [], "));
+        assert!(!body.chars().any(|c| c.is_control() && c != '\n'));
     }
 
     #[test]

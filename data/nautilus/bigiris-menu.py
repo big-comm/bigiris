@@ -10,19 +10,14 @@
 #
 # Depois de instalar, recarregue o Nautilus: `nautilus -q`.
 #
-# O espelho textual deste menu em `.nemo_action` / `.desktop` / `.contract`
-# para outros gerenciadores fica em
-# crates/bigimage-integrations/src/action.rs — mantenha em sincronia quando
-# acoes forem adicionadas.
+# As acoes vem de crates/bigimage-integrations/src/action.rs: o instalador
+# substitui a linha `_ACTIONS = []` abaixo pela tabela gerada dali.
 
 import sys
 import gettext
 import os
 
 _ = gettext.translation("bigiris", localedir=os.environ.get("BIGIRIS_LOCALE_DIR", "/usr/share/locale"), fallback=True).gettext
-
-def n_(message):
-    return message
 
 import gi
 
@@ -47,213 +42,14 @@ sys.stderr.write("BigIris: extensão Nautilus carregada\n")
 _TOP_LABEL = "BigIris"
 _TOP_ICON = "com.biglinux.Iris"
 _BINARY = "bigiris"
+_FOLDER_MIMES = ("inode/directory",)
 
-# Symbolic icon names picked per-action. Falls back to the submenu icon
-# when an action leaves it as None. Keeps the icon column explicit so
-# non-obvious verbs (Personalizar…, AI models) signal affordance visually.
-_ICON_CONVERT = "image-x-generic-symbolic"
-_ICON_CUSTOM = "document-edit-symbolic"
-_ICON_RESIZE = "view-fullscreen-symbolic"
-_ICON_ROTATE_R = "object-rotate-right-symbolic"
-_ICON_ROTATE_L = "object-rotate-left-symbolic"
-_ICON_FLIP_H = "object-flip-horizontal-symbolic"
-_ICON_FLIP_V = "object-flip-vertical-symbolic"
-_ICON_BRIGHT = "display-brightness-symbolic"
-_ICON_COLOR = "color-pick-symbolic"
-_ICON_INFO = "dialog-information-symbolic"
-_ICON_TRASH = "edit-delete-symbolic"
-_ICON_GIF = "video-x-generic-symbolic"
-_ICON_COMPARE = "view-dual-symbolic"
-_ICON_AI = "applications-science-symbolic"
-_ICON_WEB = "applications-internet-symbolic"
-_ICON_PDF = "application-pdf-symbolic"
+# (id, submenu id or None, submenu label, submenu icon, label, argv, icon, MIME patterns)
+_ACTIONS = []
 
-# Filtros por mimetype. Mantenha em sincronia com IMAGE_MIME / DOC_MIME
-# em crates/bigimage-integrations/src/action.rs.
-_IMAGE_MIMES = ("image/",)  # prefix-match (image/*)
-_DOC_MIMES = {
-    "application/vnd.oasis.opendocument.text",
-    "application/vnd.oasis.opendocument.spreadsheet",
-    "application/vnd.oasis.opendocument.presentation",
-    "application/vnd.oasis.opendocument.graphics",
-    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-    "application/msword",
-    "application/vnd.ms-excel",
-    "application/vnd.ms-powerpoint",
-    "application/rtf",
-    "text/plain",
-    "text/markdown",
-    "text/csv",
-    "text/html",
-    "application/xhtml+xml",
-}
 
-# (submenu_id, submenu_label, submenu_icon, required_kind, [(label, [bigiris args], icon)])
-# `required_kind` é "image" ou "doc" — filtra o submenu por tipo de
-# seleção. Submenus só aparecem quando TODA a seleção bate no kind
-# exigido (all-or-nothing evita comandos rodando em arquivos inválidos).
-_SUBMENUS = [
-    (
-        "convert",
-        n_("Converter"),
-        "document-save-as-symbolic",
-        "image",
-        [
-            (n_("PNG"), ["convert", "--to", "png", "--overwrite", "skip"], _ICON_CONVERT),
-            (n_("JPG"), ["convert", "--to", "jpg", "--overwrite", "skip"], _ICON_CONVERT),
-            (n_("WebP"), ["convert", "--to", "webp", "--overwrite", "skip"], _ICON_CONVERT),
-            (n_("AVIF"), ["convert", "--to", "avif", "--overwrite", "skip"], _ICON_CONVERT),
-            (n_("TIFF"), ["convert", "--to", "tiff", "--overwrite", "skip"], _ICON_CONVERT),
-            # PDF fica no menu do BigOCRPDF — evita redundância.
-            (n_("Mais opções…"), ["--dialog=convert"], _ICON_CUSTOM),
-        ],
-    ),
-    (
-        "resize",
-        n_("Redimensionar"),
-        "view-fullscreen-symbolic",
-        "image",
-        [
-            (n_("25%"), ["resize", "--percent", "25"], _ICON_RESIZE),
-            (n_("50%"), ["resize", "--percent", "50"], _ICON_RESIZE),
-            (n_("200%"), ["resize", "--percent", "200"], _ICON_RESIZE),
-            (n_("HD (1920 px)"), ["resize", "--fit", "1920x1920"], _ICON_RESIZE),
-            (n_("4K (3840 px)"), ["resize", "--fit", "3840x3840"], _ICON_RESIZE),
-            (n_("Mais opções…"), ["--dialog=resize"], _ICON_CUSTOM),
-        ],
-    ),
-    (
-        "rotate",
-        n_("Girar"),
-        "object-rotate-right-symbolic",
-        "image",
-        [
-            (n_("90°"), ["rotate", "--degrees", "90"], _ICON_ROTATE_R),
-            (n_("180°"), ["rotate", "--degrees", "180"], _ICON_ROTATE_R),
-            (n_("270°"), ["rotate", "--degrees", "270"], _ICON_ROTATE_L),
-            (n_("Automático (EXIF)"), ["rotate", "--auto", "--overwrite", "increment"], _ICON_ROTATE_R),
-            (n_("Mais opções…"), ["--dialog=rotate"], _ICON_CUSTOM),
-        ],
-    ),
-    (
-        "flip",
-        n_("Espelhar"),
-        "object-flip-horizontal-symbolic",
-        "image",
-        [
-            (n_("Horizontal"), ["flip", "--axis", "horizontal"], _ICON_FLIP_H),
-            (n_("Vertical"), ["flip", "--axis", "vertical"], _ICON_FLIP_V),
-            (n_("Mais opções…"), ["--dialog=flip"], _ICON_CUSTOM),
-        ],
-    ),
-    (
-        "adjust",
-        n_("Ajustar cores"),
-        "image-adjust-symbolic",
-        "image",
-        [
-            (n_("+ Brilho (+10)"), ["adjust", "--brightness", "10"], _ICON_BRIGHT),
-            (n_("− Brilho (-10)"), ["adjust", "--brightness", "-10"], _ICON_BRIGHT),
-            (n_("+ Contraste (+20)"), ["adjust", "--contrast", "20"], _ICON_BRIGHT),
-            (n_("Preto e branco"), ["adjust", "--saturation", "-100"], _ICON_COLOR),
-            (n_("Cores vivas (+40)"), ["adjust", "--saturation", "40"], _ICON_COLOR),
-            (n_("Mais opções…"), ["--dialog=adjust"], _ICON_CUSTOM),
-        ],
-    ),
-    (
-        "web",
-        n_("Para web"),
-        "applications-internet-symbolic",
-        "image",
-        [
-            (n_("WhatsApp (1280 px · JPG q85)"), [
-                "resize", "--fit", "1280x1280", "--to", "jpg",
-                "--quality", "85", "--progressive",
-            ], _ICON_WEB),
-            (n_("Instagram (1080 px · JPG q90)"), [
-                "resize", "--fit", "1080x1080", "--to", "jpg",
-                "--quality", "90", "--progressive",
-            ], _ICON_WEB),
-            (n_("Facebook (2048 px · JPG q85)"), [
-                "resize", "--fit", "2048x2048", "--to", "jpg",
-                "--quality", "85", "--progressive",
-            ], _ICON_WEB),
-            (n_("Twitter · X (1200 px · JPG q85)"), [
-                "resize", "--fit", "1200x1200", "--to", "jpg",
-                "--quality", "85", "--progressive",
-            ], _ICON_WEB),
-            (n_("Telegram (2560 px · JPG q85)"), [
-                "resize", "--fit", "2560x2560", "--to", "jpg",
-                "--quality", "85", "--progressive",
-            ], _ICON_WEB),
-            (n_("Discord (2048 px · JPG q80)"), [
-                "resize", "--fit", "2048x2048", "--to", "jpg",
-                "--quality", "80", "--progressive",
-            ], _ICON_WEB),
-            (n_("Otimizar PNG (compressão máxima)"), [
-                "convert", "--to", "png", "--target", "maxima", "--optimize",
-                "--overwrite", "replace",
-            ], _ICON_CONVERT),
-            (n_("Letterbox YouTube post (1:1)"), [
-                "extent", "--aspect", "1:1", "--bg", "#0d0e12",
-            ], _ICON_WEB),
-            (n_("Letterbox Instagram feed (4:5)"), [
-                "extent", "--aspect", "4:5", "--bg", "#0d0e12",
-            ], _ICON_WEB),
-            (n_("Letterbox Stories / Shorts (9:16)"), [
-                "extent", "--aspect", "9:16", "--bg", "#0d0e12",
-            ], _ICON_WEB),
-            (n_("Letterbox personalizado…"), ["--dialog=extent"], _ICON_WEB),
-        ],
-    ),
-    (
-        "metadata",
-        n_("Metadados"),
-        "dialog-information-symbolic",
-        "image",
-        [
-            (n_("Ver metadados…"), ["--dialog=metadata"], _ICON_INFO),
-            (n_("Remover tudo (re-encode limpo)"), ["--dialog=convert"], _ICON_TRASH),
-        ],
-    ),
-    (
-        "utils",
-        n_("Utilidades"),
-        "applications-graphics-symbolic",
-        "image",
-        [
-            (n_("Converter em lote (Prisma)…"), ["--dialog=batch"], _ICON_CONVERT),
-            (n_("Criar GIF animado…"), ["--dialog=animate"], _ICON_GIF),
-            (n_("Comparar 2 imagens…"), ["--dialog=compare"], _ICON_COMPARE),
-        ],
-    ),
-    (
-        "ai",
-        n_("IA"),
-        "applications-science-symbolic",
-        "image",
-        [
-            (n_("Remover fundo (BiRefNet)"), ["--dialog=remove-bg"], _ICON_AI),
-            (n_("Aumentar resolução…"), ["--dialog=upscale"], _ICON_AI),
-        ],
-    ),
-    (
-        "pdf",
-        n_("PDF"),
-        _ICON_PDF,
-        "doc",
-        [
-            (n_("Converter para PDF (LibreOffice)"), ["to-pdf"], _ICON_PDF),
-        ],
-    ),
-]
-
-# Acoes top-level dentro do submenu Iris (fora de sub-sub-menus).
-_TOP_LEVEL_ACTIONS = [
-    (n_("Visualizar em BigIris"), [], _TOP_ICON),
-]
+def _matches(mime, patterns):
+    return any(mime == p or (p.endswith("/*") and mime.startswith(p[:-1])) for p in patterns)
 
 
 class BigIrisMenuProvider(GObject.GObject, Nautilus.MenuProvider):
@@ -276,112 +72,93 @@ class BigIrisMenuProvider(GObject.GObject, Nautilus.MenuProvider):
         # chama `get_file_items(files)`. Pegar sempre o ultimo argumento
         # preserva compatibilidade com ambos.
         files = args[-1] if args else []
-        image_paths = self._paths_of_kind(files, "image")
-        doc_paths = self._paths_of_kind(files, "doc")
-        folder_paths = self._paths_of_kind(files, "folder")
+        selected = self._local_files(files)
+        folder_paths = [path for path, mime in selected if _matches(mime, _FOLDER_MIMES)]
         if folder_paths:
+            image_paths = [path for path, mime in selected if mime.startswith("image/")]
             return self._folder_items(folder_paths + image_paths)
-        if not image_paths and not doc_paths:
+
+        # Paths per MIME filter. A selection that spans two filters (images
+        # and documents) gets no submenu, so no command runs on a file of the
+        # wrong type; actions outside submenus still run on their own files.
+        paths_by_filter = {}
+        for action in _ACTIONS:
+            patterns = tuple(action[7])
+            if patterns != _FOLDER_MIMES:
+                paths_by_filter[patterns] = [path for path, mime in selected if _matches(mime, patterns)]
+        mixed = sum(1 for paths in paths_by_filter.values() if paths) > 1
+
+        entries = []
+        submenus = {}
+        for action_id, sub_id, sub_label, sub_icon, label, argv, icon, patterns in _ACTIONS:
+            paths = paths_by_filter.get(tuple(patterns))
+            if not paths or (sub_id is not None and mixed):
+                continue
+            item = Nautilus.MenuItem(
+                name=f"BigIrisExtension::Action::{action_id}",
+                label=_(label),
+                icon=icon,
+            )
+            item.connect("activate", self._run_action, list(argv), list(paths))
+            if sub_id is None:
+                entries.append(item)
+                continue
+            if sub_id not in submenus:
+                sub_item = Nautilus.MenuItem(
+                    name=f"BigIrisExtension::Sub::{sub_id}",
+                    label=_(sub_label),
+                    icon=sub_icon,
+                )
+                submenus[sub_id] = Nautilus.Menu()
+                sub_item.set_submenu(submenus[sub_id])
+                entries.append(sub_item)
+            submenus[sub_id].append_item(item)
+
+        if not entries:
             return []
-
-        # All-or-nothing: quando a seleção mistura imagens e documentos,
-        # escondemos os submenus específicos pra não rodar comando em
-        # arquivo do tipo errado. "Visualizar" continua só pra imagens.
-        mixed = bool(image_paths) and bool(doc_paths)
-
+        top_menu = Nautilus.Menu()
+        for entry in entries:
+            top_menu.append_item(entry)
         top = Nautilus.MenuItem(
             name="BigIrisExtension::Top",
             label=_TOP_LABEL,
             tip=_("Operações BigIris"),
             icon=_TOP_ICON,
         )
-        top_menu = Nautilus.Menu()
         top.set_submenu(top_menu)
-
-        for sub_id, sub_label, sub_icon, kind, actions in _SUBMENUS:
-            if mixed:
-                continue
-            if kind == "image" and not image_paths:
-                continue
-            if kind == "doc" and not doc_paths:
-                continue
-            paths_for_sub = image_paths if kind == "image" else doc_paths
-
-            sub_item = Nautilus.MenuItem(
-                name=f"BigIrisExtension::Sub::{sub_id}",
-                label=_(sub_label),
-                icon=sub_icon,
-            )
-            sub_menu = Nautilus.Menu()
-            sub_item.set_submenu(sub_menu)
-
-            for action_label, action_args, action_icon in actions:
-                action_item = Nautilus.MenuItem(
-                    name=f"BigIrisExtension::Action::{sub_id}::{action_label}",
-                    label=_(action_label),
-                    icon=action_icon or sub_icon,
-                )
-                # `list(...)` defeats Python's late-binding-closure gotcha —
-                # every menu item gets its own snapshot of args/paths.
-                action_item.connect(
-                    "activate",
-                    self._run_action,
-                    list(action_args),
-                    list(paths_for_sub),
-                )
-                sub_menu.append_item(action_item)
-
-            top_menu.append_item(sub_item)
-
-        if image_paths:
-            for label, args, icon in _TOP_LEVEL_ACTIONS:
-                item = Nautilus.MenuItem(
-                    name=f"BigIrisExtension::Top::{label}",
-                    label=_(label),
-                    icon=icon,
-                )
-                item.connect("activate", self._run_action, list(args), list(image_paths))
-                top_menu.append_item(item)
-
         return [top]
 
     @staticmethod
-    def _paths_of_kind(files, kind):
+    def _local_files(files):
         out = []
         for f in files:
             try:
                 mime = f.get_mime_type() or ""
             except Exception:
                 continue
-            if kind == "image" and mime.startswith(_IMAGE_MIMES):
-                pass
-            elif kind == "doc" and mime in _DOC_MIMES:
-                pass
-            elif kind == "folder" and mime == "inode/directory":
-                pass
-            else:
-                continue
             loc = f.get_location()
             if loc and loc.get_path():
-                out.append(loc.get_path())
+                out.append((loc.get_path(), mime))
         return out
 
     def _folder_items(self, paths):
-        if not paths:
+        folder_action = next((a for a in _ACTIONS if tuple(a[7]) == _FOLDER_MIMES), None)
+        if not paths or folder_action is None:
             return []
         item = Nautilus.MenuItem(
             name="BigIrisExtension::BatchFolder",
             label=_("BigIris: Processar esta pasta…"),
             tip=_("Converter imagens da pasta com o Prisma"),
-            icon=_ICON_CONVERT,
+            icon=folder_action[6],
         )
-        item.connect("activate", self._run_action, ["--dialog=batch"], list(paths))
+        item.connect("activate", self._run_action, list(folder_action[5]), list(paths))
         return [item]
 
     def get_background_items(self, *args):
         try:
             folder = args[-1] if args else None
-            return self._folder_items(self._paths_of_kind([folder], "folder"))
+            paths = [path for path, mime in self._local_files([folder]) if _matches(mime, _FOLDER_MIMES)]
+            return self._folder_items(paths)
         except Exception as exc:
             sys.stderr.write(f"BigIris: erro em get_background_items: {exc!r}\n")
             return []
@@ -395,4 +172,3 @@ class BigIrisMenuProvider(GObject.GObject, Nautilus.MenuProvider):
             )
         except Exception as exc:
             sys.stderr.write(f"BigIris: falha ao invocar {_BINARY} {args}: {exc}\n")
-

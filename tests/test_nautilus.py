@@ -36,6 +36,16 @@ spec = importlib.util.spec_from_file_location("bigiris_menu", Path(__file__).res
 module = importlib.util.module_from_spec(spec)
 with patch.dict(sys.modules, {"gi": gi, "gi.repository": repository}):
     spec.loader.exec_module(module)
+# The installer fills the table from action.rs; these rows have its shape.
+module._ACTIONS = [
+    ("view", None, None, None, "Visualizar em BigIris", [], "com.biglinux.Iris", ["image/*"]),
+    ("batch-folder", None, None, None, "Processar esta pasta…", ["--dialog=batch"],
+     "folder-pictures-symbolic", ["inode/directory"]),
+    ("convert-png", "convert", "Converter", "document-save-as-symbolic", "PNG",
+     ["convert", "--to", "png", "--overwrite", "skip"], "image-x-generic-symbolic", ["image/*"]),
+    ("pdf-convert", "pdf", "PDF", "application-pdf-symbolic", "Converter para PDF (LibreOffice)",
+     ["to-pdf"], "application-pdf-symbolic", ["text/plain"]),
+]
 
 def file(mime, path):
     return SimpleNamespace(get_mime_type=lambda: mime,

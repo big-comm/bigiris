@@ -1,16 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-//! Comparar: two images side by side with a draggable divider.
+//! Compare: two images side by side with a draggable divider.
 
 use super::*;
 
-// ---------------------------------------------------------------------------
-// Compare dialog — two images in a `gtk::Paned`, drag the divider to sweep
-// between "antes" and "depois". Requires exactly 2 files; the rest are
-// ignored (first two in the selection are used).
-// ---------------------------------------------------------------------------
-
-/// Open the "Compare two" window. Needs two files — if fewer are given
-/// we fall back to the viewer with whatever's there.
+/// Open the compare window on the first two files; any further files are
+/// ignored. With fewer than two, the viewer opens instead.
 pub fn run_compare_dialog(files: Vec<PathBuf>) -> i32 {
     if files.len() < 2 {
         tracing::warn!(count = files.len(), "compare needs two files; falling back to viewer");
@@ -48,8 +42,7 @@ pub(in crate::gui) fn build_compare_dialog(
     );
     header.set_title_widget(Some(&title));
 
-    // Captions gone — titlebar now carries the Antes/Depois info so the
-    // full vertical space goes to the pictures.
+    // The title bar names both sides, so the pictures get the full height.
     let left_picture = make_compare_side(left_path, &window);
     let right_picture = make_compare_side(right_path, &window);
 

@@ -16,7 +16,7 @@ const EXTENT_RATIO_PRESETS: &[(&str, (u32, u32))] = &[
     (n_("Custom…"), (0, 0)),
 ];
 
-/// Background-colour presets for the "Letterbox" dialog. The first entry
+/// Background-color presets for the "Letterbox" dialog. The first entry
 /// is the default. `Custom` (last) reveals the hex entry.
 const EXTENT_BG_PRESETS: &[(&str, [u8; 4])] = &[
     (n_("Soft black (#0d0e12)"), [0x0d, 0x0e, 0x12, 0xFF]),
@@ -26,7 +26,7 @@ const EXTENT_BG_PRESETS: &[(&str, [u8; 4])] = &[
     (n_("Custom (hex)"), [0, 0, 0, 0xFF]),
 ];
 
-/// Gravity choices exposed in the Prisma dialog. Limited to centre +
+/// Gravity choices exposed in the Prisma dialog. Limited to center +
 /// vertical pinning because horizontal letterbox use cases are rarer in
 /// social-media workflows; the CLI exposes all nine for completeness.
 const EXTENT_GRAVITIES: &[(&str, Gravity)] =
@@ -105,7 +105,7 @@ fn fill_extent_dialog(
         .model(&translated_strings(&ratio_names))
         .build();
 
-    // Custom W:H entries — visible only when the "Personalizado…" preset is
+    // Custom W:H entries — visible only when the "Custom…" preset is
     // selected. Defaults to 1:1 so switching back and forth feels stable.
     let custom_w_spin = adw::SpinRow::with_range(1.0, 99.0, 1.0);
     custom_w_spin.set_title(&gettext("Width ratio"));
@@ -116,7 +116,7 @@ fn fill_extent_dialog(
     custom_w_spin.set_visible(false);
     custom_h_spin.set_visible(false);
 
-    // Background colour combo + hex entry (entry shown when "Personalizada"
+    // Background color combo + hex entry (entry shown when "Custom (hex)"
     // is picked).
     let bg_names: Vec<&str> = EXTENT_BG_PRESETS.iter().map(|(n, _)| *n).collect();
     let bg_row = adw::ComboRow::builder()
@@ -253,7 +253,7 @@ fn fill_extent_dialog(
         }
     };
 
-    // Reveal Custom W:H spins when the "Personalizado…" preset is picked,
+    // Reveal Custom W:H spins when the "Custom…" preset is picked,
     // and hide them again on every other selection.
     {
         let custom_w_spin = custom_w_spin.clone();
@@ -268,7 +268,7 @@ fn fill_extent_dialog(
         });
     }
 
-    // Reveal the hex entry when "Personalizada" is selected.
+    // Reveal the hex entry when "Custom (hex)" is selected.
     {
         let bg_hex = bg_hex.clone();
         let refresh = refresh.clone();

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-//! Aumentar resolução: Real-ESRGAN (when `realesrgan-native` is installed)
+//! Upscale: Real-ESRGAN (when `realesrgan-native` is installed)
 //! or Lanczos3, by an integer factor.
 
 use super::*;

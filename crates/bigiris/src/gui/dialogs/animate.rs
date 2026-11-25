@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-//! Criar GIF animado: build an animated GIF from the selected frames.
+//! Animated GIF: build an animated GIF from the selected frames.
 
 use super::*;
 use bigimage_core::{make_gif_with_policy, ConvertOutcome};
@@ -9,7 +9,7 @@ use std::sync::Arc;
 // ---------------------------------------------------------------------------
 // Animate dialog — pick a delay, a loop mode, an output path and build an
 // animated GIF from the selected frames. Minimal shape: every parameter
-// has a sensible default so the user can just hit "Criar GIF" and get
+// has a sensible default so the user can just hit "Create GIF" and get
 // something playable.
 // ---------------------------------------------------------------------------
 
@@ -357,7 +357,7 @@ mod gif_output_tests {
         let dir = tempfile::tempdir().unwrap();
         let frames = frames(dir.path());
         assert!(gif_output_path("   ", &frames).is_err());
-        let folder = dir.path().join("pasta.gif");
+        let folder = dir.path().join("folder.gif");
         std::fs::create_dir(&folder).unwrap();
         assert!(gif_output_path(&folder.to_string_lossy(), &frames).is_err());
     }

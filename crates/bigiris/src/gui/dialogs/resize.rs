@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-//! Redimensionar: scale by edge, percent or exact size.
+//! Resize: scale by edge, percent or exact size.
 
 use super::*;
 
@@ -12,7 +12,7 @@ const RESIZE_FILTERS: &[(&str, Filter)] = &[
     (n_("Nearest (no anti-aliasing)"), Filter::Nearest),
 ];
 
-/// Run the "Redimensionar" modal.
+/// Run the "Resize" modal.
 pub fn run_resize_dialog(files: Vec<PathBuf>) -> i32 {
     let files = Rc::new(files);
     run_dialog_app(move |app| build_resize_dialog(app, files.clone()).present())
@@ -276,9 +276,8 @@ fn fill_resize_dialog(
             let filter = RESIZE_FILTERS[filter_row.selected() as usize].1;
             let target = selected_target_format(&target_row);
             let policy = selected_overwrite(&overwrite_row);
-            // Resize dialog doesn't expose quality today — uses defaults.
-            // Users who need quality control go through Convert ▸ Personalizar…
-            // or chain via CLI.
+            // The resize dialog has no quality controls: the Convert dialog and
+            // the command line offer them.
             let opts = EncodeOptions::default();
 
             apply_btn.set_sensitive(false);

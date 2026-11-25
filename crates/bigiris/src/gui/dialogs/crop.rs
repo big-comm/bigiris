@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-//! Recortar: rectangular crop with an interactive preview.
+//! Crop: rectangular crop with an interactive preview.
 
 use super::*;
 
-/// Default crop: a centred 50% rectangle — a safe non-empty starting
+/// Default crop: a centered 50% rectangle — a safe non-empty starting
 /// point for the UI that's unlikely to match the full image.
 pub(in crate::gui) fn default_crop(img_w: u32, img_h: u32) -> CropRect {
     let w = (img_w / 2).max(1);
@@ -405,7 +405,7 @@ fn fill_crop_dialog(
     toolbar_view.set_content(Some(&content_h));
     window.set_content(Some(&toolbar_view));
 
-    // Reset button → re-centre to 50% of the first image.
+    // Reset button → re-center to 50% of the first image.
     {
         let x_spin = x_spin.clone();
         let y_spin = y_spin.clone();

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-//! Ajustar cores: brightness, contrast, saturation and gamma.
+//! Adjust colors: brightness, contrast, saturation and gamma.
 
 use super::*;
 
@@ -28,8 +28,7 @@ fn fill_adjust_dialog(
     files: Rc<Vec<PathBuf>>,
     preview_session: Option<Rc<PreviewSession>>,
 ) -> adw::ApplicationWindow {
-    // Preview session — loaded from the first file. Multi-select still works
-    // (Aplicar opera em todos), mas o preview mostra o primeiro.
+    // Apply processes every selected file; the preview shows only the first.
 
     let header = adw::HeaderBar::new();
     header.set_title_widget(Some(&adw::WindowTitle::new(&gettext("Adjust colors"), "Prisma")));

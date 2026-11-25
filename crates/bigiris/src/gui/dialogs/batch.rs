@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-//! Lote: batch conversion with progress, cancel and auto-close.
+//! Batch: batch conversion with progress, cancel and auto-close.
 
 use super::*;
 
-/// Prisma Lote — converter em lote. Pega a lista de arquivos recebida via
-/// CLI, expande pastas e aplica a conversão no pool paralelo compartilhado.
+/// Prisma Batch: converts the files given on the command line, with folders
+/// expanded one level, on the shared parallel pool.
 pub fn run_batch_dialog(files: Vec<PathBuf>) -> i32 {
     let files = Rc::new(RefCell::new(expand_batch_inputs(files)));
     run_dialog_app(move |app| build_batch_dialog(app, files.clone()).present())
@@ -39,10 +39,9 @@ pub(in crate::gui) fn build_batch_dialog(
     let title = adw::WindowTitle::new(&gettext("Batch conversion"), "Prisma");
     header.set_title_widget(Some(&title));
 
-    // ── Grupo: arquivos ─────────────────────────────────────────────────
-    // Lista mutável (compartilhada via Rc<RefCell>) — suporta adicionar
-    // arquivos e pastas depois do diálogo aberto. `summary_row` é
-    // re-renderizada sempre que mudar a lista, via `refresh_files_row`.
+    // ── Group: files ────────────────────────────────────────────────────
+    // Files and folders can be added after the dialog opens; every change
+    // to the list goes through `refresh_files_row`.
     let files_group = adw::PreferencesGroup::builder().title(gettext("Files")).build();
     let summary_row = adw::ActionRow::builder().use_markup(false).activatable(false).build();
     let add_files_btn = gtk::Button::builder()
@@ -62,7 +61,7 @@ pub(in crate::gui) fn build_batch_dialog(
     files_group.add(&summary_row);
     refresh_files_row(&summary_row, &files.borrow());
 
-    // ── Grupo: conversão ────────────────────────────────────────────────
+    // ── Group: conversion ───────────────────────────────────────────────
     let convert_group = adw::PreferencesGroup::builder().title(gettext("Conversion")).build();
 
     let format_row = format_row();
@@ -73,11 +72,11 @@ pub(in crate::gui) fn build_batch_dialog(
     convert_group.add(&encode.advanced);
     encode.bind(&window, &format_row);
 
-    // ── Grupo: destino ──────────────────────────────────────────────────
+    // ── Group: destination ──────────────────────────────────────────────
     let dest_group = adw::PreferencesGroup::builder().title(gettext("Destination")).build();
     let overwrite_row = overwrite_row();
     dest_group.add(&overwrite_row);
-    // Pasta de saída: None = mesma do original. Clicar abre FolderDialog.
+    // None writes next to each source file.
     let output_dir: Rc<RefCell<Option<PathBuf>>> = Rc::new(RefCell::new(None));
     let folder_row = adw::ActionRow::builder()
         .use_markup(false)
@@ -98,7 +97,7 @@ pub(in crate::gui) fn build_batch_dialog(
     folder_row.add_suffix(&clear_folder_btn);
     dest_group.add(&folder_row);
 
-    // ── Rodapé: barra de progresso + status + botões ────────────────────
+    // ── Footer: progress bar, status and buttons ────────────────────────
     let progress = gtk::ProgressBar::builder().show_text(true).text(gettext("Ready")).build();
     progress.set_margin_start(18);
     progress.set_margin_end(18);
@@ -127,7 +126,7 @@ pub(in crate::gui) fn build_batch_dialog(
     btn_bar.append(&cancel_btn);
     btn_bar.append(&apply_btn);
 
-    // ── Scroll wrapper (para listas longas no futuro) ───────────────────
+    // ── Scroll wrapper ──────────────────────────────────────────────────
     let options_col = gtk::Box::new(gtk::Orientation::Vertical, 14);
     options_col.set_margin_start(18);
     options_col.set_margin_end(18);
@@ -153,8 +152,8 @@ pub(in crate::gui) fn build_batch_dialog(
     toolbar_view.set_content(Some(&main_col));
     window.set_content(Some(&toolbar_view));
 
-    // Cancel signal shared with the worker thread — flipped by the
-    // Cancel button while a run is in flight, reset on each Apply.
+    // Shared with the worker thread: set by Cancel during a run, reset on
+    // each Process.
     let cancelled = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
     // True while a worker is running. The Cancel button uses this to
     // decide between "cancel the run" and "close the window".
@@ -169,7 +168,6 @@ pub(in crate::gui) fn build_batch_dialog(
         });
     }
 
-    // Handlers dos botões "Adicionar arquivos" e "Adicionar pasta".
     {
         let files = files.clone();
         let summary_row = summary_row.clone();
@@ -187,8 +185,6 @@ pub(in crate::gui) fn build_batch_dialog(
         });
     }
 
-    // Pasta de saída: clicar na row abre FolderDialog; o botão vassoura
-    // reseta para None (mesma pasta do original).
     {
         let output_dir = output_dir.clone();
         let folder_row = folder_row.clone();
@@ -367,17 +363,12 @@ pub(in crate::gui) fn build_batch_dialog(
     window
 }
 
-/// Atualiza a ActionRow de resumo do Prisma Lote com a contagem + peso
-/// total da lista atual de arquivos.
 fn refresh_files_row(row: &adw::ActionRow, files: &[PathBuf]) {
     let total: u64 = files.iter().filter_map(|p| std::fs::metadata(p).ok().map(|m| m.len())).sum();
     row.set_title(&format!("{}: {}", gettext("Selected files"), files.len()));
     row.set_subtitle(&format_size(total));
 }
 
-/// Abre um picker multi-arquivo e anexa os escolhidos à lista do batch,
-/// deduplicando pelas paths canônicas. Formatos filtrados pelos mesmos
-/// MIME types que o dashboard aceita.
 fn add_files_to_batch(
     window: &adw::ApplicationWindow,
     files: &Rc<RefCell<Vec<PathBuf>>>,
@@ -419,8 +410,8 @@ fn add_files_to_batch(
     });
 }
 
-/// Abre um picker de pasta e varre (não-recursivo, um nível só) em busca
-/// de arquivos com extensão de imagem conhecida; anexa à lista do batch.
+/// Adds the images directly inside the chosen folder; subfolders are not
+/// searched.
 fn add_folder_to_batch(
     window: &adw::ApplicationWindow,
     files: &Rc<RefCell<Vec<PathBuf>>>,
@@ -442,8 +433,7 @@ fn add_folder_to_batch(
     });
 }
 
-/// Adiciona novos paths à lista, pulando os que já estavam lá
-/// (comparação por PathBuf canônica).
+/// Paths are compared as given, not canonicalized.
 fn append_unique(files: &Rc<RefCell<Vec<PathBuf>>>, new_paths: Vec<PathBuf>) {
     let mut list = files.borrow_mut();
     for p in new_paths {
@@ -453,7 +443,7 @@ fn append_unique(files: &Rc<RefCell<Vec<PathBuf>>>, new_paths: Vec<PathBuf>) {
     }
 }
 
-/// Extensões que aceitamos numa varredura de pasta. Case-insensitive.
+/// Lowercase extensions a folder scan accepts, compared case-insensitively.
 const IMAGE_EXTENSIONS: &[&str] = &[
     "jpg", "jpeg", "png", "webp", "avif", "gif", "tif", "tiff", "bmp", "ico", "pnm", "ppm", "pgm",
     "pbm", "pam", "tga", "qoi", "hdr", "exr",

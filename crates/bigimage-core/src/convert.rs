@@ -589,7 +589,9 @@ mod tests {
         let leftovers: Vec<_> = std::fs::read_dir(dir.path())
             .unwrap()
             .filter_map(|e| e.ok())
-            .filter(|e| e.file_name().to_string_lossy().contains(".part-"))
+            .filter(|e| {
+                e.file_name().to_string_lossy().starts_with(crate::pipeline::TEMP_FILE_PREFIX)
+            })
             .collect();
         assert!(leftovers.is_empty(), "temp file leaked: {leftovers:?}");
     }

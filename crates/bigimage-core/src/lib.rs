@@ -46,6 +46,7 @@ pub use extent::{
 pub use flip::{flip_file, flip_file_with_options, FlipAxis};
 pub use format::Format;
 pub use metadata::{Metadata, MetadataLoss, MetadataSupport, SourceMetadata};
+pub use pipeline::TEMP_FILE_PREFIX;
 pub use preview::{PreviewOp, PreviewSession};
 pub use resize::{resize_file, Filter, ResizeMode};
 pub use rotate::{

@@ -4402,7 +4402,9 @@ mod anchor_tests {
         let leftovers: Vec<_> = std::fs::read_dir(dir.path())
             .unwrap()
             .flatten()
-            .filter(|entry| entry.file_name().to_string_lossy().contains(".bigiris-"))
+            .filter(|entry| {
+                entry.file_name().to_string_lossy().starts_with(bigimage_core::TEMP_FILE_PREFIX)
+            })
             .collect();
         assert!(leftovers.is_empty(), "atomic save left a temporary file behind");
     }

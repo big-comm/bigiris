@@ -370,6 +370,10 @@ fn replaced_file(output: &Path, policy: OverwritePolicy) -> Option<std::fs::Meta
 /// kernel applies the umask and any default ACL at creation. No `chmod` is
 /// needed for new outputs, which keeps writes working on FUSE/gvfs/SMB
 /// mounts that refuse `chmod`.
+/// Name prefix of the hidden file an output is written to before it is
+/// published; one left behind means a crash mid-write.
+pub const TEMP_FILE_PREFIX: &str = ".bigiris-";
+
 pub(crate) fn output_temp(
     output: &Path,
     policy: OverwritePolicy,
@@ -380,7 +384,7 @@ pub(crate) fn output_temp(
     let mode =
         replaced_file(output, policy).map_or(0o666, |meta| meta.permissions().mode() & 0o777);
     tempfile::Builder::new()
-        .prefix(".bigiris-")
+        .prefix(TEMP_FILE_PREFIX)
         .suffix(".part")
         .permissions(std::fs::Permissions::from_mode(mode))
         .tempfile_in(parent)

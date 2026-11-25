@@ -3741,11 +3741,8 @@ fn install_viewer_actions(
             };
             let Some(path) = path_for_external_tool(&state) else { return };
             let flag = std::ffi::OsString::from(format!("--dialog={dialog}"));
-            let _ = transfers::spawn_bigiris([
-                flag.as_os_str(),
-                std::ffi::OsStr::new("--"),
-                path.as_os_str(),
-            ]);
+            let window = state.borrow().window().clone();
+            transfers::launch(&window, vec![flag, "--".into(), path.into_os_string()]);
         });
         window.add_action(&action);
     }
@@ -3836,17 +3833,15 @@ fn open_file_chooser(window: &adw::ApplicationWindow) {
         .filters(&filters)
         .build();
 
+    let parent = window.clone();
     dialog.open_multiple(Some(window), gio::Cancellable::NONE, move |result| {
         let Ok(list) = result else { return };
-        let paths: Vec<std::ffi::OsString> = (0..list.n_items())
+        let paths: Vec<PathBuf> = (0..list.n_items())
             .filter_map(|i| list.item(i).and_downcast::<gio::File>()?.path())
-            .map(PathBuf::into_os_string)
             .collect();
-        if paths.is_empty() {
-            return;
-        }
-        // "--" keeps a file named like an option from being parsed as one.
-        let _ = transfers::spawn_bigiris(std::iter::once("--".into()).chain(paths));
+        // open_files puts "--" first, so a file named like an option is not
+        // parsed as one.
+        transfers::open_files(&parent, paths, false);
     });
 }
 
@@ -4386,9 +4381,8 @@ fn open_batch_folder_dialog(window: &adw::ApplicationWindow) {
     dialog.select_folder(Some(&parent), gio::Cancellable::NONE, move |result| {
         let Ok(folder) = result else { return };
         let Some(path) = folder.path() else { return };
-        let args =
-            [std::ffi::OsStr::new("--dialog=batch"), std::ffi::OsStr::new("--"), path.as_os_str()];
-        if transfers::spawn_bigiris(args).is_ok() {
+        let args = vec!["--dialog=batch".into(), "--".into(), path.into_os_string()];
+        if transfers::launch(&window, args) {
             window.close();
         }
     });

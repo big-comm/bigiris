@@ -356,13 +356,18 @@ pub(in crate::gui) fn build_remove_bg_dialog(
                     progress_bar.set_text(Some(&gettext("Concluído")));
                     progress_bar.add_css_class("success");
                     if originals.len() == 1 {
-                        if let (Some(orig), Some(Some(out))) = (originals.first(), results.first())
-                        {
-                            spawn_compare_viewer(orig, out);
+                        let compared = match (originals.first(), results.first()) {
+                            (Some(orig), Some(Some(out))) => {
+                                spawn_compare_viewer(&window, orig, out)
+                            }
+                            _ => true,
+                        };
+                        // Single-file: fecha imediato enquanto o Compare abre
+                        // (evita janela dupla visível); fica aberta para
+                        // mostrar o erro se ele não abrir.
+                        if compared {
+                            window.close();
                         }
-                        // Single-file: fecha imediato enquanto o
-                        // Compare abre — evita janela dupla visível.
-                        window.close();
                     } else {
                         // Lote: segura 2 s pra o usuário conferir o
                         // sumário antes de sumir.
@@ -425,15 +430,17 @@ fn model_subtitle() -> String {
 /// coexist (each `adw::Application` instance takes over the main loop).
 /// Called right after a successful single-file remove-bg so the user
 /// sees original vs. result side-by-side.
-fn spawn_compare_viewer(original: &Path, result: &Path) {
-    let flag = std::ffi::OsStr::new("--dialog=compare");
+fn spawn_compare_viewer(window: &adw::ApplicationWindow, original: &Path, result: &Path) -> bool {
     // `--` keeps a file named like `-x.png` from being read as a flag.
-    let _ = super::super::transfers::spawn_bigiris([
-        flag,
-        std::ffi::OsStr::new("--"),
-        original.as_os_str(),
-        result.as_os_str(),
-    ]);
+    super::super::transfers::launch(
+        window,
+        vec![
+            "--dialog=compare".into(),
+            "--".into(),
+            original.as_os_str().to_owned(),
+            result.as_os_str().to_owned(),
+        ],
+    )
 }
 
 #[cfg(test)]

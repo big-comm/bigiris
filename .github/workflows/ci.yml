@@ -243,7 +243,7 @@ jobs:
       - run: appstreamcli validate --no-net data/com.biglinux.Iris.metainfo.xml
 
   translations:
-    name: 30-language catalogs and localized integration assets
+    name: 29-language catalogs and localized integration assets
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0

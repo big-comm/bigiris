@@ -388,6 +388,48 @@ fn weights_ready(model: &bigimage_ai::ModelInfo) -> bool {
 
 #[cfg(feature = "ai")]
 #[test]
+fn inpaint_reencodes_jpeg_at_maximum_target() {
+    if !sandbox_available() || !weights_ready(&bigimage_ai::inpaint::MODEL) {
+        return;
+    }
+    let dir = tempfile::tempdir().unwrap();
+    let mut state = 0x2545_f491_4f6c_dd1du64;
+    let photo = image::RgbImage::from_fn(160, 120, |x, y| {
+        state ^= state << 13;
+        state ^= state >> 7;
+        state ^= state << 17;
+        let grain = (state >> 59) as u8;
+        image::Rgb([(x as u8).wrapping_add(grain), (y * 2) as u8, 120 + grain])
+    });
+    let source = dir.path().join("photo.jpg");
+    let options = bigimage_core::EncodeOptions {
+        target: bigimage_core::QualityTarget::Maximum,
+        ..Default::default()
+    };
+    let policy = bigimage_core::OverwritePolicy::Replace;
+    let image = image::DynamicImage::ImageRgb8(photo);
+    bigimage_core::save_image(image, &source, bigimage_core::Format::Jpeg, &options, policy)
+        .unwrap();
+    // Oracle: the same source re-encoded unchanged at the default target.
+    let default = bigimage_core::EncodeOptions::default();
+    bigimage_core::transform_file(&source, "_same", None, &default, policy, Ok).unwrap();
+    let quality =
+        |name: &str| bigimage_core::metadata::estimate_jpeg_quality(dir.path().join(name)).unwrap();
+    let balanced = quality("photo_same.jpg");
+    let mut mask = image::GrayImage::new(160, 120);
+    for y in 50..60 {
+        for x in 70..80 {
+            mask.put_pixel(x, y, image::Luma([255]));
+        }
+    }
+    mask.save(dir.path().join("mask.png")).unwrap();
+    success(run(dir.path(), &["inpaint", "--mask", "mask.png", "photo.jpg"]));
+    let written = quality("photo_inpaint.jpg");
+    assert!(written > balanced, "inpaint wrote quality {written}; balanced {balanced}");
+}
+
+#[cfg(feature = "ai")]
+#[test]
 fn ai_commands_write_their_outputs_with_installed_weights() {
     if !sandbox_available() {
         return;

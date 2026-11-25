@@ -1199,11 +1199,17 @@ fn run_upscale(
     })
 }
 
+/// Encoding for denoise and inpaint, which keep the source's format: a
+/// lossy one is re-encoded, at the target closest to the source.
+fn retouch_options() -> EncodeOptions {
+    EncodeOptions { target: QualityTarget::Maximum, ..EncodeOptions::default() }
+}
+
 /// Remove noise with SCUNet. Output `<stem>_denoised.<ext>`.
 fn run_denoise(policy: OverwritePolicy, files: &[PathBuf]) -> color_eyre::Result<()> {
     require_model(&bigimage_ai::denoise::MODEL)?;
     tracing::info!(?policy, count = files.len(), "denoise");
-    let opts = bigimage_core::EncodeOptions::default();
+    let opts = retouch_options();
     let mut reported = false;
     run_per_file(files, "denoise", Naming::image(None, policy), |f| {
         let outcome = bigimage_core::transform_file(f, "_denoised", None, &opts, policy, |img| {
@@ -1234,7 +1240,7 @@ fn run_inpaint(mask: &Path, policy: OverwritePolicy, files: &[PathBuf]) -> color
         return Err(mask_error(&"não marca nenhuma área (pinte de branco o que deve ser apagado)"));
     }
     tracing::info!(?mask, ?policy, count = files.len(), "inpaint");
-    let opts = bigimage_core::EncodeOptions::default();
+    let opts = retouch_options();
     let mut reported = false;
     run_per_file(files, "inpaint", Naming::image(None, policy), |f| {
         let outcome = bigimage_core::transform_file(f, "_inpaint", None, &opts, policy, |img| {

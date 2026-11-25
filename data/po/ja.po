@@ -715,7 +715,7 @@ msgstr "出力ファイルにフォルダーは指定できません。"
 
 #: crates/bigiris/src/gui/dialogs/animate.rs:219
 msgid "O arquivo de saída não pode ser um dos quadros."
-msgstr "出力ファイルにフレームのいずれかは指定できません。"
+msgstr "出力ファイルにはフレームのファイルを指定できません。"
 
 #: crates/bigiris/src/gui/dialogs/animate.rs:255
 msgid "Montando GIF…"
@@ -1257,7 +1257,7 @@ msgstr "画像の位置"
 #: crates/bigiris/src/gui/dialogs/extent.rs:144
 #: crates/bigiris/src/gui/dialogs/upscale.rs:103
 msgid "Destino previsto"
-msgstr "予測される出力先"
+msgstr "予定の出力先"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:171
 msgid "Estender"

@@ -1236,7 +1236,7 @@ msgstr "图像位置"
 #: crates/bigiris/src/gui/dialogs/extent.rs:144
 #: crates/bigiris/src/gui/dialogs/upscale.rs:103
 msgid "Destino previsto"
-msgstr "预计目标"
+msgstr "预计目标位置"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:171
 msgid "Estender"
@@ -1293,7 +1293,7 @@ msgstr "PNG"
 
 #: crates/bigiris/src/gui/dialogs/mod.rs:65
 msgid "JPG (JPEG)"
-msgstr "JPG (JPEG)"
+msgstr "JPG（JPEG）"
 
 #: crates/bigiris/src/gui/dialogs/mod.rs:66
 #: crates/bigimage-integrations/src/action.rs:167
@@ -1327,7 +1327,7 @@ msgstr "ICO（最大 256 × 256）"
 
 #: crates/bigiris/src/gui/dialogs/mod.rs:72
 msgid "PNM (Netpbm)"
-msgstr "PNM (Netpbm)"
+msgstr "PNM（Netpbm）"
 
 #: crates/bigiris/src/gui/dialogs/mod.rs:73
 msgid "TGA"
@@ -1798,7 +1798,7 @@ msgstr "无法打开文件"
 #: crates/bigimage-integrations/src/action.rs:97
 #: data/nautilus/bigiris-menu.py:167
 msgid "Para web"
-msgstr "用于网络"
+msgstr "用于网页"
 
 #: crates/bigimage-integrations/src/action.rs:101
 #: data/nautilus/bigiris-menu.py:213

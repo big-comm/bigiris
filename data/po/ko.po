@@ -697,7 +697,7 @@ msgstr "GIF 만들기"
 
 #: crates/bigiris/src/gui/dialogs/animate.rs:184
 msgid "Substituir arquivo existente?"
-msgstr "기존 파일을 바꾸시겠습니까?"
+msgstr "기존 파일을 바꿀까요?"
 
 #: crates/bigiris/src/gui/dialogs/animate.rs:188
 msgid "Substituir"

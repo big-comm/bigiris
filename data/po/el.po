@@ -1304,7 +1304,7 @@ msgstr "Οριζόντια (αριστερά ↔ δεξιά)"
 
 #: crates/bigiris/src/gui/dialogs/flip.rs:26
 msgid "Vertical (cima ↔ baixo)"
-msgstr "Κάθετη (επάνω ↔ κάτω)"
+msgstr "Κάθετα (επάνω ↔ κάτω)"
 
 #: crates/bigiris/src/gui/dialogs/flip.rs:29
 msgid "Eixo"
@@ -1653,7 +1653,7 @@ msgstr "Bilinear"
 
 #: crates/bigiris/src/gui/dialogs/resize.rs:12
 msgid "Nearest (sem anti-aliasing)"
-msgstr "Nearest (χωρίς εξομάλυνση)"
+msgstr "Πλησιέστερος γείτονας (χωρίς εξομάλυνση)"
 
 #: crates/bigiris/src/gui/dialogs/resize.rs:29
 msgid "Redimensionar imagens — Prisma"
@@ -1686,7 +1686,7 @@ msgstr "Λειτουργία"
 
 #: crates/bigiris/src/gui/dialogs/resize.rs:62
 msgid "pixels (lado maior)"
-msgstr "εικονοστοιχεία (μεγαλύτερη πλευρά)"
+msgstr "pixel (μεγαλύτερη πλευρά)"
 
 #: crates/bigiris/src/gui/dialogs/resize.rs:66
 msgid "Porcentagem"
@@ -1820,7 +1820,7 @@ msgstr "Η μεταφορά άργησε πολύ. Δοκιμάστε ξανά."
 
 #: crates/bigiris/src/gui/transfers.rs:91
 msgid "Não foi possível iniciar o visualizador. Tente novamente."
-msgstr "Δεν ήταν δυνατή η εκκίνηση της προβολής. Δοκιμάστε ξανά."
+msgstr "Δεν ήταν δυνατή η εκκίνηση του προγράμματος προβολής. Δοκιμάστε ξανά."
 
 #: crates/bigiris/src/gui/transfers.rs:93
 msgid "Copie arquivos de imagem no gerenciador e tente novamente."

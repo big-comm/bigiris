@@ -342,7 +342,7 @@ msgstr "Sulje"
 
 #: crates/bigiris/src/gui.rs:3849
 msgid "Mover para a lixeira?"
-msgstr "Siirrä roskakoriin?"
+msgstr "Siirretäänkö roskakoriin?"
 
 #: crates/bigiris/src/gui.rs:3853
 msgid ""
@@ -986,8 +986,8 @@ msgid ""
 "Aumentar resolução usa Lanczos3. Para IA (Real-ESRGAN): sudo pacman -S "
 "{package}"
 msgstr ""
-"Suurenna tarkkuutta käyttää Lanczos3:a. Tekoälyä varten (Real-ESRGAN): sudo "
-"pacman -S {package}"
+"Tarkkuuden suurennus käyttää Lanczos3-menetelmää. Tekoälyä varten (Real-"
+"ESRGAN): sudo pacman -S {package}"
 
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:275
 #: crates/bigiris/src/gui/dialogs/upscale.rs:246
@@ -1574,7 +1574,7 @@ msgstr "Malli"
 msgid ""
 "«origem»_nobg.png · PNG com alfa, sem sobrescrever (_1, _2… se já existir)"
 msgstr ""
-"«lähde»_nobg.png · PNG alfakanavalla, ei korvaa (_1, _2…, jos on jo olemassa)"
+"”lähde”_nobg.png · PNG alfakanavalla, ei korvaa (_1, _2…, jos on jo olemassa)"
 
 #: crates/bigiris/src/gui/dialogs/remove_bg.rs:147
 msgid "Remover fundo com IA local"

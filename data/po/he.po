@@ -266,7 +266,7 @@ msgstr "הדפסה…"
 #: crates/bigiris/src/gui.rs:3221 crates/bigiris/src/gui.rs:4119
 #: crates/bigiris/src/gui.rs:5157
 msgid "Processar uma pasta…"
-msgstr "עיבוד תיקייה זו…"
+msgstr "עיבוד תיקייה…"
 
 #: crates/bigiris/src/gui.rs:3227
 msgid "Editar imagem"
@@ -274,7 +274,7 @@ msgstr "עריכת תמונה"
 
 #: crates/bigiris/src/gui.rs:3228 crates/bigiris/src/gui.rs:3971
 msgid "Desfazer"
-msgstr "ביטול"
+msgstr "ביטול פעולה"
 
 #: crates/bigiris/src/gui.rs:3229 crates/bigiris/src/gui.rs:3972
 msgid "Refazer"
@@ -441,7 +441,7 @@ msgstr "חלונית עריכה"
 
 #: crates/bigiris/src/gui.rs:3980
 msgid "Ver original (segure)"
-msgstr "הצגת המקור (החזיקו)"
+msgstr "הצגת המקור (בלחיצה ממושכת)"
 
 #: crates/bigiris/src/gui.rs:3984
 #: crates/bigiris/src/gui/dialogs/properties.rs:120
@@ -615,11 +615,11 @@ msgstr "החלה"
 
 #: crates/bigiris/src/gui/dialogs/adjust.rs:190
 msgid "Ajustando…"
-msgstr "מכוונן…"
+msgstr "מתבצעת התאמה…"
 
 #: crates/bigiris/src/gui/dialogs/adjust.rs:196
 msgid "Ajustando"
-msgstr "מכוונן"
+msgstr "מתבצעת התאמה"
 
 #: crates/bigiris/src/gui/dialogs/animate.rs:29
 msgid "Criar GIF animado — Prisma"
@@ -879,7 +879,8 @@ msgstr "ממיר"
 msgid ""
 "Arraste nos cantos para redimensionar · dentro do recorte para mover · fora "
 "dele para uma nova seleção."
-msgstr "גררו את הפינות לשינוי גודל · בתוך החיתוך להזזה · מחוצה לו לבחירה חדשה."
+msgstr ""
+"יש לגרור את הפינות לשינוי גודל · בתוך החיתוך להזזה · מחוצה לו לבחירה חדשה."
 
 #: crates/bigiris/src/gui/dialogs/crop.rs:309
 msgid "Recortar — Prisma"
@@ -988,7 +989,7 @@ msgstr "הצגת המקור"
 
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:304
 msgid "Mostra a imagem sem as edições (segure \\)"
-msgstr "מציג את התמונה ללא העריכות (החזיקו את \\)"
+msgstr "מציג את התמונה ללא העריכות (בלחיצה ממושכת על \\)"
 
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:307
 msgid "Transformar"
@@ -1125,7 +1126,7 @@ msgstr "שמירה בשם"
 
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:1682
 msgid "Para alterar o próprio arquivo, use Salvar."
-msgstr "כדי לשנות את הקובץ עצמו, השתמשו בשמירה."
+msgstr "כדי לשנות את הקובץ עצמו, יש להשתמש בשמירה."
 
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:1719
 msgid "Cópia salva: {name}"
@@ -1135,7 +1136,8 @@ msgstr "העותק נשמר: {name}"
 msgid ""
 "O BigIris não sabe gravar este formato. Use, por exemplo, .png, .jpg "
 "ou .webp."
-msgstr "BigIris אינו יודע לכתוב תבנית זו. השתמשו למשל ב־.png, .jpg או .webp."
+msgstr ""
+"BigIris אינו יודע לכתוב תבנית זו. יש להשתמש למשל ב־.png, .jpg או .webp."
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:12
 msgid "YouTube community (1:1)"
@@ -1554,7 +1556,7 @@ msgstr "מודל"
 #: crates/bigiris/src/gui/dialogs/remove_bg.rs:140
 msgid ""
 "«origem»_nobg.png · PNG com alfa, sem sobrescrever (_1, _2… se já existir)"
-msgstr "״מקור״_nobg.png · PNG עם אלפא, ללא דריסה (_1, _2… אם כבר קיים)"
+msgstr "“מקור”_nobg.png · PNG עם אלפא, ללא דריסה (_1, _2… אם כבר קיים)"
 
 #: crates/bigiris/src/gui/dialogs/remove_bg.rs:147
 msgid "Remover fundo com IA local"
@@ -1620,7 +1622,7 @@ msgstr "Bilinear"
 
 #: crates/bigiris/src/gui/dialogs/resize.rs:12
 msgid "Nearest (sem anti-aliasing)"
-msgstr "Nearest (ללא החלקת קצוות)"
+msgstr "השכן הקרוב ביותר (ללא החלקת קצוות)"
 
 #: crates/bigiris/src/gui/dialogs/resize.rs:29
 msgid "Redimensionar imagens — Prisma"

@@ -343,7 +343,7 @@ msgstr "Bezárás"
 
 #: crates/bigiris/src/gui.rs:3849
 msgid "Mover para a lixeira?"
-msgstr "Áthelyezés a kukába?"
+msgstr "Áthelyezi a kukába?"
 
 #: crates/bigiris/src/gui.rs:3853
 msgid ""
@@ -869,8 +869,8 @@ msgid ""
 "Esta imagem tem transparência — JPEG perde o canal alfa. Considere PNG ou "
 "WebP."
 msgstr ""
-"Ez a kép átlátszó — a JPEG elveszíti az alfacsatornát. Fontolja meg a PNG "
-"vagy WebP formátumot."
+"Ez a kép átlátszó részeket tartalmaz — a JPEG elveszíti az alfacsatornát. "
+"Fontolja meg a PNG vagy WebP formátumot."
 
 #: crates/bigiris/src/gui/dialogs/convert.rs:106
 msgid ""
@@ -1522,7 +1522,7 @@ msgstr "(hiba: a formátum nem azonosítható a tartalom alapján)"
 
 #: crates/bigiris/src/gui/dialogs/properties.rs:225
 msgid "Orientação EXIF"
-msgstr "EXIF tájolás"
+msgstr "EXIF-tájolás"
 
 #: crates/bigiris/src/gui/dialogs/properties.rs:227
 msgid "{orientation} · use Girar ▸ Automático pra corrigir"
@@ -1672,7 +1672,7 @@ msgstr "Pontos méret (WxH)"
 
 #: crates/bigiris/src/gui/dialogs/resize.rs:50
 msgid "Encaixar em (WxH)"
-msgstr "Belefér (WxH)"
+msgstr "Illesztés a méretbe (WxH)"
 
 #: crates/bigiris/src/gui/dialogs/resize.rs:54
 msgid "Modo"

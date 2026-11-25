@@ -229,7 +229,7 @@ msgstr "geçersiz EXIF"
 
 #: crates/bigiris/src/gui.rs:2857
 msgid "perfil de cor convertido para sRGB"
-msgstr "renk profili sRGB’ye dönüştürüldü"
+msgstr "renk profili sRGB'ye dönüştürüldü"
 
 #: crates/bigiris/src/gui.rs:2858
 msgid "perfil de cor inválido ignorado"
@@ -275,7 +275,7 @@ msgstr "Resmi düzenle"
 
 #: crates/bigiris/src/gui.rs:3228 crates/bigiris/src/gui.rs:3971
 msgid "Desfazer"
-msgstr "Geri Al"
+msgstr "Geri al"
 
 #: crates/bigiris/src/gui.rs:3229 crates/bigiris/src/gui.rs:3972
 msgid "Refazer"
@@ -283,7 +283,7 @@ msgstr "Yinele"
 
 #: crates/bigiris/src/gui.rs:3232 crates/bigiris/src/gui.rs:3978
 msgid "Salvar alterações"
-msgstr "Değişiklikleri Kaydet"
+msgstr "Değişiklikleri kaydet"
 
 #: crates/bigiris/src/gui.rs:3233 crates/bigiris/src/gui.rs:3991
 msgid "Mover para a lixeira"
@@ -291,7 +291,7 @@ msgstr "Çöpe taşı"
 
 #: crates/bigiris/src/gui.rs:3237
 msgid "Atalhos do teclado"
-msgstr "Klavye Kısayolları"
+msgstr "Klavye kısayolları"
 
 #: crates/bigiris/src/gui.rs:3238
 msgid "Sobre o BigIris"
@@ -299,7 +299,7 @@ msgstr "BigIris Hakkında"
 
 #: crates/bigiris/src/gui.rs:3243
 msgid "Menu principal"
-msgstr "Ana Menü"
+msgstr "Ana menü"
 
 #: crates/bigiris/src/gui.rs:3595
 msgid "Salve ou desfaça as alterações antes de usar esta ferramenta"
@@ -362,11 +362,11 @@ msgstr "Gezinme"
 
 #: crates/bigiris/src/gui.rs:3943
 msgid "Anterior / próximo"
-msgstr "Önceki / Sonraki"
+msgstr "Önceki / sonraki"
 
 #: crates/bigiris/src/gui.rs:3944
 msgid "Primeiro / último"
-msgstr "İlk / Son"
+msgstr "İlk / son"
 
 #: crates/bigiris/src/gui.rs:3945
 msgid "Slideshow (auto-avanço)"
@@ -374,7 +374,7 @@ msgstr "Slayt gösterisi (otomatik ilerleme)"
 
 #: crates/bigiris/src/gui.rs:3951
 msgid "Aproximar / afastar"
-msgstr "Yakınlaştır / Uzaklaştır"
+msgstr "Yakınlaştır / uzaklaştır"
 
 #: crates/bigiris/src/gui.rs:3954
 msgid "Zoom contínuo"
@@ -386,7 +386,7 @@ msgstr "Pencere"
 
 #: crates/bigiris/src/gui.rs:3960
 msgid "Tela cheia"
-msgstr "Tam Ekran"
+msgstr "Tam ekran"
 
 #: crates/bigiris/src/gui.rs:3961
 msgid "Modo teatro"
@@ -415,12 +415,12 @@ msgstr "Düzenleme"
 #: crates/bigiris/src/gui.rs:3973
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:312
 msgid "Girar à direita"
-msgstr "Sağa Döndür"
+msgstr "Sağa döndür"
 
 #: crates/bigiris/src/gui.rs:3974
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:311
 msgid "Girar à esquerda"
-msgstr "Sola Döndür"
+msgstr "Sola döndür"
 
 #: crates/bigiris/src/gui.rs:3975
 msgid "Recortar…"
@@ -477,7 +477,7 @@ msgstr "Fare tekeri"
 
 #: crates/bigiris/src/gui.rs:4034
 msgid "Atalhos de teclado"
-msgstr "Klavye Kısayolları"
+msgstr "Klavye kısayolları"
 
 #: crates/bigiris/src/gui.rs:4060
 msgid ""
@@ -873,8 +873,8 @@ msgid ""
 "Esta imagem contém GPS (localização) no EXIF. Atenção ao compartilhar "
 "publicamente — nosso pipeline remove o EXIF automaticamente no re-encode."
 msgstr ""
-"Bu görüntünün EXIF verisinde GPS (konum) var. Herkese açık paylaşırken "
-"dikkatli olun — işlem hattımız yeniden kodlamada EXIF’i otomatik olarak "
+"Bu resmin EXIF verisinde GPS (konum) bilgisi var. Herkese açık paylaşırken "
+"dikkatli olun — işlem hattımız yeniden kodlamada EXIF'i otomatik olarak "
 "kaldırır."
 
 #: crates/bigiris/src/gui/dialogs/convert.rs:195
@@ -909,7 +909,7 @@ msgstr "Kırp"
 #: crates/bigiris/src/gui/dialogs/extent.rs:96
 #: crates/bigiris/src/gui/dialogs/upscale.rs:86
 msgid "Tamanho original"
-msgstr "Orijinal boyut"
+msgstr "Özgün boyut"
 
 #: crates/bigiris/src/gui/dialogs/crop.rs:349
 #: crates/bigiris/src/gui/dialogs/extent.rs:97
@@ -1001,7 +1001,7 @@ msgstr "Özgünü göster"
 
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:304
 msgid "Mostra a imagem sem as edições (segure \\)"
-msgstr "Görüntüyü düzenlemeler olmadan gösterir (\\ tuşunu basılı tutun)"
+msgstr "Resmi düzenlemeler olmadan gösterir (\\ tuşunu basılı tutun)"
 
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:307
 msgid "Transformar"
@@ -1025,7 +1025,7 @@ msgstr "Ufku hizalamak için fotoğrafı döndürür ve boş kenarları kırpar"
 
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:327
 msgid "Recortar na própria imagem (Ctrl+R)"
-msgstr "Görüntünün üzerinde kırp (Ctrl+R)"
+msgstr "Resmin üzerinde kırp (Ctrl+R)"
 
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:333
 msgid "Ajustes"
@@ -1139,7 +1139,7 @@ msgstr "Farklı kaydet"
 
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:1682
 msgid "Para alterar o próprio arquivo, use Salvar."
-msgstr "Dosyanın kendisini değiştirmek için Kaydet’i kullanın."
+msgstr "Dosyanın kendisini değiştirmek için Kaydet'i kullanın."
 
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:1719
 msgid "Cópia salva: {name}"
@@ -1153,7 +1153,7 @@ msgstr "BigIris bu biçimi yazamıyor. Örneğin .png, .jpg veya .webp kullanın
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:12
 msgid "YouTube community (1:1)"
-msgstr "YouTube topluluk (1:1)"
+msgstr "YouTube topluluğu (1:1)"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:13
 msgid "Instagram feed (4:5)"
@@ -1452,7 +1452,7 @@ msgstr "Kamera/yazılım kimliği mevcut"
 
 #: crates/bigiris/src/gui/dialogs/properties.rs:98
 msgid "Remova antes de publicar se for sensível."
-msgstr "Hassassa yayımlamadan önce kaldırın."
+msgstr "Hassas bilgi içeriyorsa yayımlamadan önce kaldırın."
 
 #: crates/bigiris/src/gui/dialogs/properties.rs:126
 msgid "Nome"
@@ -1579,7 +1579,7 @@ msgid ""
 "O modelo roda inteiramente no seu computador. Nenhuma imagem sai do disco — "
 "sem upload, sem conta, sem API externa."
 msgstr ""
-"Model tamamen bilgisayarınızda çalışır. Hiçbir görüntü diskten çıkmaz — "
+"Model tamamen bilgisayarınızda çalışır. Hiçbir resim diskten çıkmaz — "
 "yükleme yok, hesap yok, harici API yok."
 
 #: crates/bigiris/src/gui/dialogs/remove_bg.rs:262
@@ -1675,7 +1675,7 @@ msgstr "Yüzde"
 
 #: crates/bigiris/src/gui/dialogs/resize.rs:67
 msgid "100 = tamanho original"
-msgstr "100 = orijinal boyut"
+msgstr "100 = özgün boyut"
 
 #: crates/bigiris/src/gui/dialogs/resize.rs:71
 msgid "Largura"
@@ -1968,7 +1968,7 @@ msgstr "Discord (2048 px · JPG q80)"
 #: crates/bigimage-integrations/src/action.rs:418
 #: data/nautilus/bigiris-menu.py:195
 msgid "Otimizar PNG (compressão máxima)"
-msgstr "PNG'yi Optimize Et (maksimum sıkıştırma)"
+msgstr "PNG'yi optimize et (maksimum sıkıştırma)"
 
 #: crates/bigimage-integrations/src/action.rs:430
 #: data/nautilus/bigiris-menu.py:199
@@ -2013,7 +2013,7 @@ msgstr "Animasyonlu GIF oluştur…"
 #: crates/bigimage-integrations/src/action.rs:498
 #: data/nautilus/bigiris-menu.py:229
 msgid "Comparar 2 imagens…"
-msgstr "2 resim karşılaştır…"
+msgstr "2 resmi karşılaştır…"
 
 #: crates/bigimage-integrations/src/action.rs:507
 #: data/nautilus/bigiris-menu.py:238
@@ -2023,7 +2023,7 @@ msgstr "Arka planı sil (BiRefNet)"
 #: crates/bigimage-integrations/src/action.rs:528
 #: data/nautilus/bigiris-menu.py:248
 msgid "Converter para PDF (LibreOffice)"
-msgstr "PDF'ye Dönüştür (LibreOffice)"
+msgstr "PDF'ye dönüştür (LibreOffice)"
 
 #: data/nautilus/bigiris-menu.py:295
 msgid "Operações BigIris"

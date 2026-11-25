@@ -27,7 +27,7 @@ msgstr "Pilti ei saa avada"
 #: crates/bigiris/src/gui.rs:998 crates/bigiris/src/gui.rs:3593
 #: crates/bigiris/src/gui/viewer/crop.rs:600
 msgid "Aguarde o salvamento terminar"
-msgstr "Oodake salvestamise lõpetamist"
+msgstr "Oota, kuni salvestamine lõpeb"
 
 #: crates/bigiris/src/gui.rs:1009
 msgid "Descartar alterações?"
@@ -113,7 +113,7 @@ msgstr "Tühistatud"
 
 #: crates/bigiris/src/gui.rs:2418
 msgid "Falha na IA: {error}"
-msgstr "TI tõrge: {error}"
+msgstr "TI-tõrge: {error}"
 
 #: crates/bigiris/src/gui.rs:2424
 msgid ""
@@ -342,13 +342,13 @@ msgstr "Sulge"
 
 #: crates/bigiris/src/gui.rs:3849
 msgid "Mover para a lixeira?"
-msgstr "Teisalda prügikasti?"
+msgstr "Kas teisaldada prügikasti?"
 
 #: crates/bigiris/src/gui.rs:3853
 msgid ""
 "O arquivo será movido para a lixeira do sistema. Você pode restaurá-lo "
 "depois."
-msgstr "Fail teisaldatakse prügikasti. Saate selle hiljem taastada."
+msgstr "Fail teisaldatakse prügikasti. Saad selle hiljem taastada."
 
 #: crates/bigiris/src/gui.rs:3858
 msgid "Mover"
@@ -985,8 +985,8 @@ msgid ""
 "Aumentar resolução usa Lanczos3. Para IA (Real-ESRGAN): sudo pacman -S "
 "{package}"
 msgstr ""
-"Eraldusvõime suurendamine kasutab Lanczos3. TI jaoks (Real-ESRGAN): sudo "
-"pacman -S {package}"
+"Eraldusvõime suurendamine kasutab Lanczos3-meetodit. TI jaoks (Real-ESRGAN): "
+"sudo pacman -S {package}"
 
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:275
 #: crates/bigiris/src/gui/dialogs/upscale.rs:246
@@ -1128,7 +1128,7 @@ msgstr "Müra eemaldamine…"
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:1619
 #: crates/bigiris/src/gui/dialogs/upscale.rs:197
 msgid "Aumentando…"
-msgstr "Suurendatakse…"
+msgstr "Suurendamine…"
 
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:1649
 msgid "{name}-editada"

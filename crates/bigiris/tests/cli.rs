@@ -834,3 +834,30 @@ fn quality_target_is_accepted_in_both_languages_and_validated() {
         Some(1)
     );
 }
+
+/// A malformed embedded colour profile no longer fails the conversion: the
+/// pixels are used as sRGB and the run says so on its file's line.
+#[test]
+fn broken_profile_converts_with_note() {
+    if !sandbox_available() {
+        return;
+    }
+    use image::ImageEncoder;
+    let dir = tempfile::tempdir().unwrap();
+    let mut bytes = Vec::new();
+    let mut encoder = image::codecs::png::PngEncoder::new(&mut bytes);
+    encoder.set_icc_profile(b"not an ICC profile".to_vec()).unwrap();
+    let pixels = image::RgbImage::from_pixel(8, 6, image::Rgb([10, 128, 250]));
+    encoder.write_image(pixels.as_raw(), 8, 6, image::ExtendedColorType::Rgb8).unwrap();
+    std::fs::write(dir.path().join("broken.png"), bytes).unwrap();
+
+    let output =
+        run(dir.path(), &["convert", "--to", "png", "--overwrite", "increment", "broken.png"]);
+    let stderr = String::from_utf8_lossy(&output.stderr).into_owned();
+    assert!(output.status.success(), "{stderr}");
+    assert!(stderr.contains("info broken.png: o perfil de cor está corrompido"), "{stderr}");
+    let plain = dir.path().join("plain.png");
+    pixels.save(&plain).unwrap();
+    let output = run(dir.path(), &["convert", "--to", "jpg", "plain.png"]);
+    assert!(!String::from_utf8_lossy(&output.stderr).contains("perfil de cor"));
+}

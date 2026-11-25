@@ -1213,7 +1213,11 @@ where
     let mut outputs = std::collections::HashSet::new();
 
     for f in groups.iter().flatten() {
-        match op(f) {
+        let result = op(f);
+        if bigimage_core::color::take_ignored_profile() {
+            note_ignored_profile(f);
+        }
+        match result {
             Ok(ConvertOutcome::Written { output })
                 if naming.per_image_suffix && !outputs.insert(output.clone()) =>
             {
@@ -1252,6 +1256,16 @@ where
 }
 
 /// Why a `skip` line wrote nothing.
+/// The input's colour profile was malformed and its pixels were used as
+/// sRGB; the conversion went on.
+fn note_ignored_profile(input: &Path) {
+    eprintln!(
+        "info {}: {}",
+        input.display(),
+        gettext("o perfil de cor está corrompido; as cores foram tratadas como sRGB")
+    );
+}
+
 fn exists_note(output: &Path) -> String {
     fill(&gettext("já existe: {path}"), &[("path", &output.display().to_string())])
 }
@@ -1663,7 +1677,8 @@ fn run_batch(profile: &std::path::Path, inputs: &[PathBuf]) -> color_eyre::Resul
                         policy,
                     )
                     .map_err(|e| codec::sanitize_text(&e.to_string()));
-                    if tx.send((input.clone(), result)).is_err() {
+                    let ignored_profile = bigimage_core::color::take_ignored_profile();
+                    if tx.send((input.clone(), result, ignored_profile)).is_err() {
                         return;
                     }
                 }
@@ -1675,7 +1690,10 @@ fn run_batch(profile: &std::path::Path, inputs: &[PathBuf]) -> color_eyre::Resul
     let mut ok = 0usize;
     let mut skipped = 0usize;
     let mut failed = 0usize;
-    for (done, (input, result)) in rx.into_iter().enumerate() {
+    for (done, (input, result, ignored_profile)) in rx.into_iter().enumerate() {
+        if ignored_profile {
+            note_ignored_profile(&input);
+        }
         match result {
             Ok(ConvertOutcome::Written { output }) => {
                 ok += 1;

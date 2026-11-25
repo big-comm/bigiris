@@ -383,6 +383,9 @@ mod tests {
     #[test]
     fn limits_follow_the_output_size() {
         assert!(check_limits(0, 10, 2).is_err());
+        assert!(check_limits(1000, 1000, 4).is_ok());
+        assert!(check_limits(3000, 2000, 2).is_ok());
+        assert!(check_limits(8192, 8192, 4).is_err());
         // The RGBA output may reach 512 MiB, 128 Mi pixels, exactly.
         assert!(check_limits(8192, 4096, 2).is_ok());
         assert!(check_limits(8192, 4097, 2).is_err());
@@ -396,7 +399,7 @@ mod tests {
     }
 
     #[test]
-    fn budget_holds_one_band_of_the_network() {
+    fn budget_holds_one_network_band() {
         assert!(budget(3000, 2000, 4, false).run > budget(384, 256, 4, false).run);
         // Twice the rows add only the source and the output, never a larger
         // network pass.

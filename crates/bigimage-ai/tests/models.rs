@@ -187,7 +187,7 @@ fn realesrgan_enlarges_by_each_factor_and_keeps_alpha() {
 
 #[test]
 #[ignore = "needs realesrgan-native weights"]
-fn realesrgan_bands_reduce_like_the_whole_image() {
+fn realesrgan_bands_match_whole_reduction() {
     if !ready(&upscale::MODEL) {
         return;
     }

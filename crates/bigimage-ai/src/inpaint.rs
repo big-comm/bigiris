@@ -305,18 +305,18 @@ pub(crate) fn run_size(crop: Rect) -> (u32, u32) {
     (side(crop.width), side(crop.height))
 }
 
-/// Memory a fill needs, for its largest crop. Per run pixel: LaMa, and its RGB8 input, mask
-/// and output. Per crop pixel, at the peak: the f32 blend weight, the grown
-/// hole, the RGB8 crop and the resampler's pass (the hole's filters peak
-/// lower, at 8 B). Per image pixel: the RGBA8 copy and the RGB8 result,
-/// with alpha also the alpha plane and the RGBA8 result.
+/// Memory a fill needs at its largest crop: the buffers alive together at
+/// the peak, per run, crop and image pixel.
 fn budget(width: u32, height: u32, plans: &[Plan], alpha: bool) -> Budget {
     let image = u64::from(width) * u64::from(height);
     let crop = |plan: &Plan| {
         let (rw, rh) = plan.run;
         let run = u64::from(rw) * u64::from(rh);
+        // Run: RGB8 in, mask, RGB8 out. Crop: f32 weight, grown hole, RGB8
+        // crop, resampler pass (the hole filters peak lower, at 8 B).
         run * (RUN_BYTES_PER_PIXEL + 3 + 1 + 3) + plan.crop.pixels() * (4 + 1 + 3 + 3)
     };
+    // RGBA8 copy and RGB8 result; with alpha also its plane and RGBA8 result.
     let per_image_pixel = if alpha { 4 + 3 + 1 + 4 } else { 4 + 3 };
     Budget {
         load: LOAD_BYTES,

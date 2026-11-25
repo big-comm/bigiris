@@ -153,7 +153,7 @@ mod tests {
     }
 
     #[test]
-    fn cgroup_room_counts_inactive_cache_as_free() {
+    fn inactive_cache_counts_as_free() {
         let stat = "anon 100\nactive_file 30\ninactive_file 4000\ninactive_anon 5\n";
         assert_eq!(stat_bytes(stat, "inactive_file"), Some(4000));
         assert_eq!(stat_bytes(stat, "inactive_anon"), Some(5));

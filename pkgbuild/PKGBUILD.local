@@ -49,7 +49,8 @@ makedepends=('rust' 'cargo' 'pkgconf' 'gettext' 'python' 'shaderc')
 # shows up undefined. End-user Arch installs may also lack the plugin
 # depending on package set, so disabling LTO is the portable fix —
 # perf-wise we still get -O3 and the mimalloc batch win.
-options=('!lto')
+# The release profile strips debug info, so a -debug package would be empty.
+options=('!lto' '!debug')
 source=()
 md5sums=()
 install="$pkgname.install"

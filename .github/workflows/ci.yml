@@ -330,7 +330,10 @@ jobs:
       - name: namcap on the built package
         working-directory: pkgbuild
         shell: bash
+        # namcap resolves the Nautilus extension's Python modules through the
+        # installed tree of its optional dependency nautilus-python.
         run: |
+          pacman -S --noconfirm --needed nautilus-python
           namcap bigiris-*.pkg.tar | tee namcap.log
           # namcap wants one file per uncommon license; THIRD_PARTY_LICENSES
           # holds all of their texts in one file.

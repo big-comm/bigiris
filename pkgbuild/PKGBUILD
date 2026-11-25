@@ -40,7 +40,8 @@ makedepends=('rust' 'cargo' 'git' 'pkgconf' 'gettext' 'python' 'shaderc')
 # shows up undefined at the final link. Confirmed against the leaner
 # archlinux:latest CI image; some user setups can hit it too. We keep
 # -O3 and the mimalloc batch perf win without LTO.
-options=('!lto')
+# The release profile strips debug info, so a -debug package would be empty.
+options=('!lto' '!debug')
 pkgver=$(date +%y.%m.%d)
 pkgrel=$(date +%H%M)
 arch=('x86_64')

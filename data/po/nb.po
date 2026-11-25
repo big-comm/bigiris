@@ -141,7 +141,7 @@ msgstr ""
 
 #: crates/bigiris/src/gui.rs:2604
 msgid "O arquivo será sobrescrito."
-msgstr "Fila vil bli overskrevet."
+msgstr "Fila blir overskrevet."
 
 #: crates/bigiris/src/gui.rs:2610
 msgid ""
@@ -662,7 +662,7 @@ msgstr "Uendelig (standard)"
 
 #: crates/bigiris/src/gui/dialogs/animate.rs:75
 msgid "Uma vez"
-msgstr "En gang"
+msgstr "Én gang"
 
 #: crates/bigiris/src/gui/dialogs/animate.rs:76
 msgid "2 vezes"
@@ -728,7 +728,7 @@ msgstr "Ferdig"
 #: crates/bigiris/src/gui/dialogs/animate.rs:302
 msgid "O arquivo {file} passou a existir e foi mantido; nada foi gravado."
 msgstr ""
-"Fila {file} dukket opp i mellomtiden og ble beholdt; ingenting ble skrevet."
+"Fila {file} ble opprettet i mellomtiden og er beholdt; ingenting ble skrevet."
 
 #: crates/bigiris/src/gui/dialogs/animate.rs:309
 msgid "Falha"

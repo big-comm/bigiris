@@ -92,7 +92,7 @@ msgstr "Zooma in"
 
 #: crates/bigiris/src/gui.rs:2189
 msgid "Slideshow: pausado"
-msgstr "Bildspel: pausad"
+msgstr "Bildspel: pausat"
 
 #: crates/bigiris/src/gui.rs:2217
 msgid "Slideshow: a cada {interval} s"
@@ -726,7 +726,7 @@ msgstr "Klart"
 
 #: crates/bigiris/src/gui/dialogs/animate.rs:302
 msgid "O arquivo {file} passou a existir e foi mantido; nada foi gravado."
-msgstr "Filen {file} dök upp under tiden och behölls; inget skrevs."
+msgstr "Filen {file} skapades under tiden och behölls; inget skrevs."
 
 #: crates/bigiris/src/gui/dialogs/animate.rs:309
 msgid "Falha"
@@ -940,11 +940,11 @@ msgstr "Mitten 50%"
 
 #: crates/bigiris/src/gui/dialogs/crop.rs:449
 msgid "Recortando…"
-msgstr "Beskär…"
+msgstr "Beskärning pågår…"
 
 #: crates/bigiris/src/gui/dialogs/crop.rs:455
 msgid "Recortando"
-msgstr "Beskär"
+msgstr "Beskärning pågår"
 
 #: crates/bigiris/src/gui/viewer/crop.rs:361
 msgid "Livre"

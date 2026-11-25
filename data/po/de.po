@@ -736,7 +736,7 @@ msgstr "Fertig"
 #: crates/bigiris/src/gui/dialogs/animate.rs:302
 msgid "O arquivo {file} passou a existir e foi mantido; nada foi gravado."
 msgstr ""
-"Die Datei {file} ist inzwischen entstanden und wurde beibehalten; es wurde "
+"Die Datei {file} wurde zwischenzeitlich angelegt und beibehalten; es wurde "
 "nichts geschrieben."
 
 #: crates/bigiris/src/gui/dialogs/animate.rs:309
@@ -1619,7 +1619,7 @@ msgstr "Mit Fehlern"
 
 #: crates/bigiris/src/gui/dialogs/remove_bg.rs:402
 msgid "Processando {current}/{total} — {file}"
-msgstr "Verarbeite {current}/{total} — {file}"
+msgstr "Wird verarbeitet: {current}/{total} — {file}"
 
 #: crates/bigiris/src/gui/dialogs/remove_bg.rs:417
 msgid "BiRefNet-lite (MIT) · roda offline em {device}"
@@ -1986,7 +1986,7 @@ msgstr "Discord (2048 px · JPG q80)"
 #: crates/bigimage-integrations/src/action.rs:418
 #: data/nautilus/bigiris-menu.py:195
 msgid "Otimizar PNG (compressão máxima)"
-msgstr "PNG optimieren (maximale Komprimierung)"
+msgstr "PNG optimieren (maximale Kompression)"
 
 #: crates/bigimage-integrations/src/action.rs:430
 #: data/nautilus/bigiris-menu.py:199

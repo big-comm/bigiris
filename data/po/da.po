@@ -141,7 +141,7 @@ msgstr ""
 
 #: crates/bigiris/src/gui.rs:2604
 msgid "O arquivo será sobrescrito."
-msgstr "Filen vil blive overskrevet."
+msgstr "Filen bliver overskrevet."
 
 #: crates/bigiris/src/gui.rs:2610
 msgid ""
@@ -289,7 +289,7 @@ msgstr "Gem ændringer"
 
 #: crates/bigiris/src/gui.rs:3233 crates/bigiris/src/gui.rs:3991
 msgid "Mover para a lixeira"
-msgstr "Flyt til papirkurv"
+msgstr "Flyt til papirkurven"
 
 #: crates/bigiris/src/gui.rs:3237
 msgid "Atalhos do teclado"
@@ -661,7 +661,7 @@ msgstr "Uendelig (standard)"
 
 #: crates/bigiris/src/gui/dialogs/animate.rs:75
 msgid "Uma vez"
-msgstr "En gang"
+msgstr "Én gang"
 
 #: crates/bigiris/src/gui/dialogs/animate.rs:76
 msgid "2 vezes"
@@ -722,11 +722,12 @@ msgstr "Opbygger GIF…"
 #: crates/bigiris/src/gui/dialogs/animate.rs:297
 #: crates/bigiris/src/gui/dialogs/batch.rs:102
 msgid "Pronto"
-msgstr "Klar"
+msgstr "Færdig"
 
 #: crates/bigiris/src/gui/dialogs/animate.rs:302
 msgid "O arquivo {file} passou a existir e foi mantido; nada foi gravado."
-msgstr "Filen {file} opstod i mellemtiden og blev bevaret; intet blev skrevet."
+msgstr ""
+"Filen {file} blev oprettet i mellemtiden og er bevaret; intet blev skrevet."
 
 #: crates/bigiris/src/gui/dialogs/animate.rs:309
 msgid "Falha"
@@ -957,7 +958,7 @@ msgstr "Original"
 
 #: crates/bigiris/src/gui/viewer/crop.rs:368
 msgid "Proporção"
-msgstr "Billedformat"
+msgstr "Størrelsesforhold"
 
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:46
 #: crates/bigiris/src/gui/dialogs/mod.rs:81
@@ -1047,7 +1048,7 @@ msgstr "Størrelse"
 
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:352
 msgid "Manter proporção"
-msgstr "Bevar billedformat"
+msgstr "Bevar størrelsesforhold"
 
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:363
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:364
@@ -1228,7 +1229,7 @@ msgstr ""
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:104
 msgid "Proporção alvo"
-msgstr "Mål-billedformat"
+msgstr "Ønsket størrelsesforhold"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:111
 msgid "Razão W"
@@ -1429,7 +1430,7 @@ msgstr "Hvis outputfilen findes"
 
 #: crates/bigiris/src/gui/dialogs/mod.rs:283
 msgid "{first} e mais {count}"
-msgstr "{first} og {count} mere"
+msgstr "{first} og {count} til"
 
 #: crates/bigiris/src/gui/dialogs/mod.rs:298
 msgid "Escolher pasta de saída"
@@ -1496,7 +1497,7 @@ msgstr "Megapixel"
 
 #: crates/bigiris/src/gui/dialogs/properties.rs:205
 msgid "Razão de aspecto"
-msgstr "Billedformat"
+msgstr "Størrelsesforhold"
 
 #: crates/bigiris/src/gui/dialogs/properties.rs:208
 msgid "Modo de cor"
@@ -2026,7 +2027,7 @@ msgstr "Fjern baggrund (BiRefNet)"
 #: crates/bigimage-integrations/src/action.rs:528
 #: data/nautilus/bigiris-menu.py:248
 msgid "Converter para PDF (LibreOffice)"
-msgstr "Konverter til PDF (LibreOffice)"
+msgstr "Konvertér til PDF (LibreOffice)"
 
 #: data/nautilus/bigiris-menu.py:295
 msgid "Operações BigIris"

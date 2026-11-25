@@ -498,7 +498,7 @@ msgstr "Dragðu myndir hingað eða límdu skrár með Ctrl+V."
 
 #: crates/bigiris/src/gui.rs:4141
 msgid "Selecionar pasta com imagens"
-msgstr "Veldu möppu með myndum"
+msgstr "Velja möppu með myndum"
 
 #: crates/bigiris/src/gui.rs:4162
 msgid "Selecionar imagens"
@@ -721,7 +721,7 @@ msgstr "Bý til GIF…"
 #: crates/bigiris/src/gui/dialogs/animate.rs:297
 #: crates/bigiris/src/gui/dialogs/batch.rs:102
 msgid "Pronto"
-msgstr "Tilbúið"
+msgstr "Lokið"
 
 #: crates/bigiris/src/gui/dialogs/animate.rs:302
 msgid "O arquivo {file} passou a existir e foi mantido; nada foi gravado."
@@ -841,7 +841,7 @@ msgstr "Fyrir: {before}  ·  Eftir: {after}"
 
 #: crates/bigiris/src/gui/dialogs/compare.rs:69
 msgid "Arraste o divisor para comparar · Esc fecha"
-msgstr "Dragðu deilandann til að bera saman · Esc til að loka"
+msgstr "Dragðu skillínuna til að bera saman · Esc til að loka"
 
 #: crates/bigiris/src/gui/dialogs/compare.rs:157
 msgid "Não foi possível abrir esta imagem"
@@ -1262,11 +1262,11 @@ msgstr "—"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:326
 msgid "Estendendo…"
-msgstr "Stækka…"
+msgstr "Stækkun í gangi…"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:332
 msgid "Estendendo"
-msgstr "Stækka"
+msgstr "Stækkun í gangi"
 
 #: crates/bigiris/src/gui/dialogs/flip.rs:20
 msgid "Espelhar imagens — Prisma"
@@ -1293,11 +1293,11 @@ msgstr "Ás"
 
 #: crates/bigiris/src/gui/dialogs/flip.rs:87
 msgid "Espelhando…"
-msgstr "Spegla…"
+msgstr "Speglun í gangi…"
 
 #: crates/bigiris/src/gui/dialogs/flip.rs:93
 msgid "Espelhando"
-msgstr "Spegla"
+msgstr "Speglun í gangi"
 
 #: crates/bigiris/src/gui/dialogs/mod.rs:64
 #: crates/bigimage-integrations/src/action.rs:151
@@ -1493,7 +1493,7 @@ msgstr "Megapixlar"
 
 #: crates/bigiris/src/gui/dialogs/properties.rs:205
 msgid "Razão de aspecto"
-msgstr "Hlutföll"
+msgstr "Hlutfall"
 
 #: crates/bigiris/src/gui/dialogs/properties.rs:208
 msgid "Modo de cor"
@@ -1667,7 +1667,7 @@ msgstr "Hamur"
 
 #: crates/bigiris/src/gui/dialogs/resize.rs:62
 msgid "pixels (lado maior)"
-msgstr "pixlar (lengsta brún)"
+msgstr "pixlar (lengsta hlið)"
 
 #: crates/bigiris/src/gui/dialogs/resize.rs:66
 msgid "Porcentagem"
@@ -1687,7 +1687,7 @@ msgstr "Hæð"
 
 #: crates/bigiris/src/gui/dialogs/resize.rs:78
 msgid "Largura máxima"
-msgstr "Hámarks breidd"
+msgstr "Hámarksbreidd"
 
 #: crates/bigiris/src/gui/dialogs/resize.rs:81
 msgid "Altura máxima"

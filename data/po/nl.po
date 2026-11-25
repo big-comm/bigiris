@@ -731,7 +731,7 @@ msgstr "Klaar"
 #: crates/bigiris/src/gui/dialogs/animate.rs:302
 msgid "O arquivo {file} passou a existir e foi mantido; nada foi gravado."
 msgstr ""
-"Het bestand {file} is intussen verschenen en behouden; er is niets "
+"Het bestand {file} is intussen aangemaakt en behouden; er is niets "
 "geschreven."
 
 #: crates/bigiris/src/gui/dialogs/animate.rs:309
@@ -1688,7 +1688,7 @@ msgstr "Percentage"
 
 #: crates/bigiris/src/gui/dialogs/resize.rs:67
 msgid "100 = tamanho original"
-msgstr "100 = origineel formaat"
+msgstr "100 = originele grootte"
 
 #: crates/bigiris/src/gui/dialogs/resize.rs:71
 msgid "Largura"

@@ -372,7 +372,7 @@ msgstr "First / last"
 
 #: crates/bigiris/src/gui.rs:3945
 msgid "Slideshow (auto-avanço)"
-msgstr "Slideshow"
+msgstr "Slideshow (auto-advance)"
 
 #: crates/bigiris/src/gui.rs:3951
 msgid "Aproximar / afastar"
@@ -396,7 +396,7 @@ msgstr "Theater mode"
 
 #: crates/bigiris/src/gui.rs:3962
 msgid "Fita de miniaturas"
-msgstr "Thumbnails"
+msgstr "Thumbnail strip"
 
 #: crates/bigiris/src/gui.rs:3963
 msgid "Histograma RGB"
@@ -546,7 +546,7 @@ msgstr "a worker ended unexpectedly"
 
 #: crates/bigiris/src/gui/dialogs/adjust.rs:20
 msgid "Ajustar cores — Prisma"
-msgstr "Adjust colours — Prisma"
+msgstr "Adjust colors — Prisma"
 
 #: crates/bigiris/src/gui/dialogs/adjust.rs:35
 #: crates/bigimage-integrations/src/action.rs:91
@@ -607,7 +607,7 @@ msgstr "Tone"
 
 #: crates/bigiris/src/gui/dialogs/adjust.rs:74
 msgid "Cor"
-msgstr "Colour"
+msgstr "Color"
 
 #: crates/bigiris/src/gui/dialogs/adjust.rs:77
 #: crates/bigiris/src/gui/dialogs/remove_bg.rs:138
@@ -722,7 +722,7 @@ msgstr "Building GIF…"
 #: crates/bigiris/src/gui/dialogs/animate.rs:297
 #: crates/bigiris/src/gui/dialogs/batch.rs:102
 msgid "Pronto"
-msgstr "Ready"
+msgstr "Done"
 
 #: crates/bigiris/src/gui/dialogs/animate.rs:302
 msgid "O arquivo {file} passou a existir e foi mantido; nada foi gravado."
@@ -731,7 +731,7 @@ msgstr ""
 
 #: crates/bigiris/src/gui/dialogs/animate.rs:309
 msgid "Falha"
-msgstr "Failure"
+msgstr "Failed"
 
 #: crates/bigiris/src/gui/dialogs/batch.rs:35
 msgid "Prisma — Lote"
@@ -806,7 +806,7 @@ msgid ""
 "Cancelado após {done}/{total} em {timing}. {ok} gravado(s), {skip} "
 "ignorado(s), {fail} falha(s)."
 msgstr ""
-"Cancelled after {done}/{total} in {timing}. Written: {ok}, skipped: {skip}, "
+"Canceled after {done}/{total} in {timing}. Written: {ok}, skipped: {skip}, "
 "failed: {fail}."
 
 #: crates/bigiris/src/gui/dialogs/batch.rs:304
@@ -1385,7 +1385,7 @@ msgstr "1 lower quality · 85 balanced · 100 higher quality"
 
 #: crates/bigiris/src/gui/dialogs/mod.rs:119
 msgid "Otimizar tamanho"
-msgstr "Optimise size"
+msgstr "Optimize size"
 
 #: crates/bigiris/src/gui/dialogs/mod.rs:120
 msgid "PNG com compressão máxima; AVIF mais lento; arquivo menor"

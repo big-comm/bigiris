@@ -835,7 +835,7 @@ msgstr "Képeket tartalmazó mappa hozzáadása"
 
 #: crates/bigiris/src/gui/dialogs/compare.rs:31
 msgid "Comparar imagens — Íris"
-msgstr "Képek összehasonlítása — Iris"
+msgstr "Képek összehasonlítása — Íris"
 
 #: crates/bigiris/src/gui/dialogs/compare.rs:43
 msgid "Comparar imagens"

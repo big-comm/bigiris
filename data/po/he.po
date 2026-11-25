@@ -823,7 +823,7 @@ msgstr "הוספת תיקייה עם תמונות"
 
 #: crates/bigiris/src/gui/dialogs/compare.rs:31
 msgid "Comparar imagens — Íris"
-msgstr "השוואת תמונות — Iris"
+msgstr "השוואת תמונות — Íris"
 
 #: crates/bigiris/src/gui/dialogs/compare.rs:43
 msgid "Comparar imagens"

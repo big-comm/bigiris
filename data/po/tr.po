@@ -831,7 +831,7 @@ msgstr "Resim klasörü ekle"
 
 #: crates/bigiris/src/gui/dialogs/compare.rs:31
 msgid "Comparar imagens — Íris"
-msgstr "Resimleri karşılaştır — Iris"
+msgstr "Resimleri karşılaştır — Íris"
 
 #: crates/bigiris/src/gui/dialogs/compare.rs:43
 msgid "Comparar imagens"

@@ -834,7 +834,7 @@ msgstr "Lisää kuvakansio"
 
 #: crates/bigiris/src/gui/dialogs/compare.rs:31
 msgid "Comparar imagens — Íris"
-msgstr "Vertaa kuvia — Iris"
+msgstr "Vertaa kuvia — Íris"
 
 #: crates/bigiris/src/gui/dialogs/compare.rs:43
 msgid "Comparar imagens"

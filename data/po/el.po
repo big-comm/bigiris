@@ -842,7 +842,7 @@ msgstr "Προσθήκη φακέλου με εικόνες"
 
 #: crates/bigiris/src/gui/dialogs/compare.rs:31
 msgid "Comparar imagens — Íris"
-msgstr "Σύγκριση εικόνων — Iris"
+msgstr "Σύγκριση εικόνων — Íris"
 
 #: crates/bigiris/src/gui/dialogs/compare.rs:43
 msgid "Comparar imagens"

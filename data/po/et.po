@@ -834,7 +834,7 @@ msgstr "Lisa pildikaust"
 
 #: crates/bigiris/src/gui/dialogs/compare.rs:31
 msgid "Comparar imagens — Íris"
-msgstr "Võrdle pilte — Iris"
+msgstr "Võrdle pilte — Íris"
 
 #: crates/bigiris/src/gui/dialogs/compare.rs:43
 msgid "Comparar imagens"

@@ -18,7 +18,18 @@ LINGUAS="data/po/LINGUAS"
 # `--language=C` faz xgettext aceitar literais Rust como se fossem C
 # (sintaxe de chamada `gettext("…")` e a mesma). Avisos sobre apostrofos
 # em comentarios sao falsos-positivos esperados.
+# O scanner C ignora linhas iniciadas por `#` (diretivas do pre-processador),
+# entao `#[arg(help = gettext("…"))]` sumiria; ele le uma copia com `#[` → ` [`,
+# que mantem nomes e linhas das referencias.
+scan=$(mktemp -d)
+trap 'rm -rf "$scan"' EXIT
+mapfile -t rust_sources < <(grep -v '^\s*#' "$POTFILES" | grep -v '^\s*$' | grep '\.rs$')
+for source in "${rust_sources[@]}"; do
+  mkdir -p "$scan/${source%/*}"
+  sed 's/^\([[:space:]]*\)#\[/\1 [/' "$source" >"$scan/$source"
+done
 xgettext \
+  --directory="$scan" \
   --language=C \
   --keyword=gettext \
   --keyword=n_ \
@@ -28,7 +39,7 @@ xgettext \
   --msgid-bugs-address=https://github.com/big-comm/bigiris/issues \
   --copyright-holder="BigCommunity Team" \
   -o "$POT" \
-  $(grep -v '^\s*#' "$POTFILES" | grep -v '^\s*$' | grep '\.rs$')
+  "${rust_sources[@]}"
 
 # Extract Python markers with its own parser, without touching Nautilus' domain.
 xgettext --language=Python --keyword=_ --keyword=n_ --from-code=UTF-8 \

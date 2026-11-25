@@ -6,32 +6,7 @@
 use super::batch_runner::{format_size, run_batch_async};
 use super::*;
 
-/// Substitute `{name}` placeholders of a translated template in one pass,
-/// so a value that itself contains `{…}` (a file name) is never expanded.
-pub(in crate::gui) fn fill(template: &str, values: &[(&str, &str)]) -> String {
-    let mut out = String::with_capacity(template.len());
-    let mut rest = template;
-    while let Some(open) = rest.find('{') {
-        out.push_str(&rest[..open]);
-        let after = &rest[open + 1..];
-        let value = after.find('}').and_then(|close| {
-            let key = &after[..close];
-            values.iter().find(|(name, _)| *name == key).map(|(_, value)| (close, *value))
-        });
-        match value {
-            Some((close, value)) => {
-                out.push_str(value);
-                rest = &after[close + 1..];
-            }
-            None => {
-                out.push('{');
-                rest = after;
-            }
-        }
-    }
-    out.push_str(rest);
-    out
-}
+pub(in crate::gui) use crate::fill;
 
 /// Dialog signals capture related widgets for the duration of the dialog.
 /// Disconnect when the surface is released, before object finalization:

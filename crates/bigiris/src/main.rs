@@ -906,7 +906,7 @@ fn apply_user_locale() {
 
 /// Substitute `{name}` placeholders of a translated template in one pass,
 /// so a value that itself contains `{…}` (a file name) is never expanded.
-fn fill(template: &str, values: &[(&str, &str)]) -> String {
+pub(crate) fn fill(template: &str, values: &[(&str, &str)]) -> String {
     let mut out = String::with_capacity(template.len());
     let mut rest = template;
     while let Some(open) = rest.find('{') {

@@ -8,10 +8,12 @@
 //!
 //! 1. the mask (pixels ≥ [`MASK_THRESHOLD`] are filled) is grown by a few
 //!    pixels so the fill overlaps the object's edge,
-//! 2. a box with context around it is cropped ([`plan`]),
+//! 2. a box with context around it is cropped, one per group of marked
+//!    regions whose boxes would overlap, so distant marks each run at
+//!    their own resolution ([`plans`]),
 //! 3. a crop longer than [`MAX_RUN_SIDE`] is scaled down (the grown mask
 //!    with it, conservatively: any covered pixel stays a hole),
-//! 4. LaMa fills the crop, the fill is scaled back up, and
+//! 4. LaMa fills each crop in turn, the fill is scaled back up, and
 //! 5. it is pasted back with a feathered edge: fully inside the original
 //!    mask, fading out over the grown ring, untouched elsewhere.
 //!
@@ -29,8 +31,8 @@
 //! [`inpaint`] takes the image and a same-sized [`image::GrayImage`] mask
 //! (paint 255 where the object is) and returns the filled image; its
 //! progress callback reports [`Stage`]s and cancels with
-//! `ControlFlow::Break`. [`plan`] tells beforehand which box will run and
-//! at what size, e.g. to warn about a very large stroke.
+//! `ControlFlow::Break`. [`plans`] tells beforehand which boxes will run
+//! and at what size, e.g. to warn about a very large stroke.
 
 use std::ops::ControlFlow;
 
@@ -57,6 +59,11 @@ pub const MIN_SIDE: u32 = 9;
 pub const MAX_RUN_SIDE: u32 = 1024;
 /// Least context kept around the hole on each side.
 const MIN_CONTEXT: u32 = 64;
+/// Most runs of marked pixels traced into regions; a mask with more (a
+/// scattered selection) is filled as one crop around all of it.
+const MAX_MASK_RUNS: usize = 1 << 20;
+/// Most regions grouped by their crops; beyond it, one crop as well.
+const MAX_REGIONS: usize = 256;
 
 /// Measured: 102 MB of half-float weights, 0.25 GB peak for the whole
 /// process at 512², 0.54 GB at 1024².
@@ -129,20 +136,116 @@ pub struct Plan {
     pub feather: u32,
 }
 
-/// Where the fill of `mask` (same size as the image) will run, or `None`
-/// when the mask selects nothing.
-pub fn plan(mask: &GrayImage) -> Result<Option<Plan>, AiError> {
+/// The crops that fill `mask` (same size as the image), top to bottom: one
+/// per group of marked regions whose crops would overlap. Empty when the
+/// mask selects nothing.
+///
+/// # Errors
+///
+/// [`AiError::Processing`] when a side of the mask is under [`MIN_SIDE`].
+pub fn plans(mask: &GrayImage) -> Result<Vec<Plan>, AiError> {
     let (width, height) = mask.dimensions();
     if width < MIN_SIDE || height < MIN_SIDE {
         return Err(AiError::Processing(format!(
             "imagem de {width}×{height}: o preenchimento precisa de ao menos {MIN_SIDE} px por lado"
         )));
     }
-    let Some(bounds) = mask_bounds(mask) else { return Ok(None) };
+    let mut groups = match mask_regions(mask) {
+        Some(regions) if regions.len() <= MAX_REGIONS => regions,
+        _ => mask_bounds(mask).into_iter().collect(),
+    };
+    let crop = |bounds: Rect| plan_for(bounds, width, height).crop;
+    'merge: loop {
+        for i in 0..groups.len() {
+            for j in i + 1..groups.len() {
+                if overlap(crop(groups[i]), crop(groups[j])) {
+                    groups[i] = union(groups[i], groups[j]);
+                    groups.swap_remove(j);
+                    continue 'merge;
+                }
+            }
+        }
+        break;
+    }
+    groups.sort_by_key(|bounds| (bounds.y, bounds.x));
+    Ok(groups.into_iter().map(|bounds| plan_for(bounds, width, height)).collect())
+}
+
+/// The plan around marked pixels whose bounding box is `bounds`.
+fn plan_for(bounds: Rect, width: u32, height: u32) -> Plan {
     let feather = feather_for(bounds);
     let hole = grow(bounds, 2 * feather, width, height);
     let crop = crop_around(hole, width, height);
-    Ok(Some(Plan { crop, run: run_size(crop), feather }))
+    Plan { crop, run: run_size(crop), feather }
+}
+
+fn overlap(a: Rect, b: Rect) -> bool {
+    a.x < b.right() && b.x < a.right() && a.y < b.bottom() && b.y < a.bottom()
+}
+
+fn union(a: Rect, b: Rect) -> Rect {
+    let (x, y) = (a.x.min(b.x), a.y.min(b.y));
+    Rect { x, y, width: a.right().max(b.right()) - x, height: a.bottom().max(b.bottom()) - y }
+}
+
+/// Bounding boxes of the 8-connected regions of pixels ≥
+/// [`MASK_THRESHOLD`], traced as runs along the rows; `None` past
+/// [`MAX_MASK_RUNS`] runs.
+fn mask_regions(mask: &GrayImage) -> Option<Vec<Rect>> {
+    fn root(parent: &mut [u32], mut run: u32) -> u32 {
+        while parent[run as usize] != run {
+            let up = parent[parent[run as usize] as usize];
+            parent[run as usize] = up;
+            run = up;
+        }
+        run
+    }
+    let width = mask.width() as usize;
+    // Per run: its union-find parent and its box, kept whole at each root.
+    let mut parent: Vec<u32> = Vec::new();
+    let mut boxes: Vec<Rect> = Vec::new();
+    // Runs of the row above and of this row: start, end (exclusive), run.
+    let (mut above, mut current): (Vec<(usize, usize, u32)>, Vec<_>) = (Vec::new(), Vec::new());
+    for (y, line) in mask.as_raw().chunks_exact(width).enumerate() {
+        current.clear();
+        let (mut x, mut first) = (0, 0);
+        while x < width {
+            if line[x] < MASK_THRESHOLD {
+                x += 1;
+                continue;
+            }
+            let start = x;
+            while x < width && line[x] >= MASK_THRESHOLD {
+                x += 1;
+            }
+            if boxes.len() == MAX_MASK_RUNS {
+                return None;
+            }
+            let run = boxes.len() as u32;
+            parent.push(run);
+            boxes.push(Rect { x: start as u32, y: y as u32, width: (x - start) as u32, height: 1 });
+            current.push((start, x, run));
+            // Runs above that touch this one, diagonals included.
+            while first < above.len() && above[first].1 < start {
+                first += 1;
+            }
+            for &(_, _, other) in above[first..].iter().take_while(|r| r.0 <= x) {
+                let (a, b) = (root(&mut parent, other), root(&mut parent, run));
+                if a != b {
+                    parent[b as usize] = a;
+                    boxes[a as usize] = union(boxes[a as usize], boxes[b as usize]);
+                }
+            }
+        }
+        std::mem::swap(&mut above, &mut current);
+    }
+    let mut regions = Vec::new();
+    for run in 0..parent.len() {
+        if parent[run] == run as u32 {
+            regions.push(boxes[run]);
+        }
+    }
+    Some(regions)
 }
 
 /// Bounding box of the pixels ≥ [`MASK_THRESHOLD`].
@@ -202,22 +305,22 @@ pub(crate) fn run_size(crop: Rect) -> (u32, u32) {
     (side(crop.width), side(crop.height))
 }
 
-/// Memory one fill needs. Per run pixel: LaMa, and its RGB8 input, mask
+/// Memory a fill needs, for its largest crop. Per run pixel: LaMa, and its RGB8 input, mask
 /// and output. Per crop pixel, at the peak: the f32 blend weight, the grown
 /// hole, the RGB8 crop and the resampler's pass (the hole's filters peak
 /// lower, at 8 B). Per image pixel: the RGBA8 copy and the RGB8 result,
 /// with alpha also the alpha plane and the RGBA8 result.
-fn budget(width: u32, height: u32, plan: &Plan, alpha: bool) -> Budget {
+fn budget(width: u32, height: u32, plans: &[Plan], alpha: bool) -> Budget {
     let image = u64::from(width) * u64::from(height);
-    let (rw, rh) = plan.run;
-    let run = u64::from(rw) * u64::from(rh);
+    let crop = |plan: &Plan| {
+        let (rw, rh) = plan.run;
+        let run = u64::from(rw) * u64::from(rh);
+        run * (RUN_BYTES_PER_PIXEL + 3 + 1 + 3) + plan.crop.pixels() * (4 + 1 + 3 + 3)
+    };
     let per_image_pixel = if alpha { 4 + 3 + 1 + 4 } else { 4 + 3 };
     Budget {
         load: LOAD_BYTES,
-        run: RUN_FIXED_BYTES
-            + run * (RUN_BYTES_PER_PIXEL + 3 + 1 + 3)
-            + image * per_image_pixel
-            + plan.crop.pixels() * (4 + 1 + 3 + 3),
+        run: RUN_FIXED_BYTES + plans.iter().map(crop).max().unwrap_or(0) + image * per_image_pixel,
     }
 }
 
@@ -250,21 +353,29 @@ pub fn inpaint(
     if u64::from(width) * u64::from(height) * 4 > MAX_BYTES {
         return Err(AiError::Processing("imagem excede o limite de 512 MiB em RGBA".into()));
     }
-    let Some(plan) = plan(mask)? else { return Ok(input.clone()) };
-    let mut budget = budget(width, height, &plan, input.color().has_alpha());
+    let plans = plans(mask)?;
+    if plans.is_empty() {
+        return Ok(input.clone());
+    }
+    let mut budget = budget(width, height, &plans, input.color().has_alpha());
     budget.run = budget.run.saturating_add(engine::float_copy_bytes(input));
     #[cfg(feature = "native")]
     {
         SLOT.run(&MODEL, budget, &mut progress, |model, progress| {
             let mut source = engine::display_rgba8(input);
-            let Hole { grown, weight } = Hole::new(mask, &plan);
-            let crop = crop_rgb(&source, plan.crop);
-            let (run_rgb, run_mask) = to_run_size(crop, grown, &plan)?;
-            let (rw, rh) = engine::dims(plan.run.0, plan.run.1);
-            let filled =
-                model.run_with_progress(&run_rgb, &run_mask, rw, rh, engine::running(progress))?;
-            let filled = from_run_size(filled, &plan)?;
-            paste(&mut source, &filled, &weight, plan.crop);
+            let count = plans.len() as f32;
+            for (index, plan) in plans.iter().enumerate() {
+                let Hole { grown, weight } = Hole::new(mask, plan);
+                let crop = crop_rgb(&source, plan.crop);
+                let (run_rgb, run_mask) = to_run_size(crop, grown, plan)?;
+                let (rw, rh) = engine::dims(plan.run.0, plan.run.1);
+                let filled =
+                    model.run_with_progress(&run_rgb, &run_mask, rw, rh, |part: f32| {
+                        progress(Stage::Running(((index as f32 + part) / count).clamp(0.0, 1.0)))
+                    })?;
+                let filled = from_run_size(filled, plan)?;
+                paste(&mut source, &filled, &weight, plan.crop);
+            }
             let alpha = engine::alpha_of(input, &source);
             engine::assemble(engine::rgb_bytes(&source), alpha.as_deref(), width, height)
         })
@@ -467,6 +578,63 @@ mod tests {
         })
     }
 
+    fn only_plan(mask: &GrayImage) -> Plan {
+        let plans = plans(mask).unwrap();
+        assert_eq!(plans.len(), 1, "{plans:?}");
+        plans[0]
+    }
+
+    fn paint(mask: &mut GrayImage, rect: Rect) {
+        for y in rect.y..rect.bottom() {
+            for x in rect.x..rect.right() {
+                mask.put_pixel(x, y, image::Luma([255]));
+            }
+        }
+    }
+
+    #[test]
+    fn distant_marks_run_as_separate_crops() {
+        // Two 40 px marks at opposite corners of a 6000×4000 photo.
+        let mut mask = GrayImage::new(6000, 4000);
+        let first = Rect { x: 200, y: 300, width: 40, height: 40 };
+        let second = Rect { x: 5600, y: 3500, width: 40, height: 40 };
+        paint(&mut mask, second);
+        paint(&mut mask, first);
+        let plans = plans(&mask).unwrap();
+        assert_eq!(plans.len(), 2, "{plans:?}");
+        for (plan, mark) in plans.iter().zip([first, second]) {
+            assert_eq!(*plan, plan_for(mark, 6000, 4000));
+            assert_eq!(plan.run, (plan.crop.width, plan.crop.height));
+        }
+        // A third mark whose crop reaches the first joins its group.
+        paint(&mut mask, Rect { x: 300, y: 300, width: 10, height: 10 });
+        let plans = super::plans(&mask).unwrap();
+        assert_eq!(plans.len(), 2, "{plans:?}");
+        assert_eq!(plans[0], plan_for(Rect { x: 200, y: 300, width: 110, height: 40 }, 6000, 4000));
+    }
+
+    #[test]
+    fn regions_join_diagonal_runs() {
+        let mut mask = GrayImage::new(12, 6);
+        // A diagonal line, a U shape whose arms meet only below, and a dot.
+        for i in 0..4 {
+            mask.put_pixel(i, i, image::Luma([255]));
+        }
+        for (x, y) in [(6, 0), (6, 1), (6, 2), (7, 2), (8, 2), (8, 1), (8, 0), (11, 5)] {
+            mask.put_pixel(x, y, image::Luma([255]));
+        }
+        let mut regions = mask_regions(&mask).unwrap();
+        regions.sort_by_key(|r| (r.x, r.y));
+        assert_eq!(
+            regions,
+            [
+                Rect { x: 0, y: 0, width: 4, height: 4 },
+                Rect { x: 6, y: 0, width: 3, height: 3 },
+                Rect { x: 11, y: 5, width: 1, height: 1 },
+            ]
+        );
+    }
+
     #[test]
     fn bounds_follow_the_threshold() {
         let mut mask = GrayImage::new(20, 10);
@@ -482,7 +650,7 @@ mod tests {
     fn small_holes_keep_context_and_run_at_full_size() {
         let hole = Rect { x: 500, y: 400, width: 40, height: 30 };
         let mask = square_mask(2000, 1500, hole);
-        let plan = plan(&mask).unwrap().unwrap();
+        let plan = only_plan(&mask);
         assert_eq!(plan.feather, 2);
         // Hole grown by 4, then at least 64 px of context.
         assert_eq!(plan.crop, Rect { x: 432, y: 332, width: 176, height: 166 });
@@ -496,8 +664,8 @@ mod tests {
         assert_eq!(crop, Rect { x: 0, y: 0, width: 9, height: 9 });
         let crop = crop_around(Rect { x: 95, y: 3, width: 5, height: 2 }, 100, 9);
         assert_eq!((crop.right(), crop.height), (100, 9));
-        assert!(plan(&GrayImage::new(8, 20)).is_err());
-        assert_eq!(plan(&GrayImage::new(9, 9)).unwrap(), None);
+        assert!(plans(&GrayImage::new(8, 20)).is_err());
+        assert!(plans(&GrayImage::new(9, 9)).unwrap().is_empty());
     }
 
     #[test]
@@ -507,13 +675,13 @@ mod tests {
         // A thin strip keeps LaMa's minimum side.
         assert_eq!(run_size(Rect { x: 0, y: 0, width: 8000, height: 20 }), (1024, MIN_SIDE));
         let mask = square_mask(6000, 4000, Rect { x: 1000, y: 1000, width: 3000, height: 2000 });
-        let plan = plan(&mask).unwrap().unwrap();
+        let plan = only_plan(&mask);
         assert!(plan.run.0 <= MAX_RUN_SIDE && plan.run.1 <= MAX_RUN_SIDE);
         // Hole grown by 24 (feather 12), then (3048 + 2048) / 4 of context.
         assert_eq!(plan.crop, Rect { x: 0, y: 0, width: 5298, height: 4000 });
         assert_eq!(plan.run, (1024, 773));
         // The budget follows the run size, not the crop.
-        let b = budget(6000, 4000, &plan, true);
+        let b = budget(6000, 4000, std::slice::from_ref(&plan), true);
         assert!(b.run < 1024 * MIB, "{b:?}");
     }
 
@@ -607,7 +775,7 @@ mod tests {
     fn hole_weight_is_one_on_the_mask_and_zero_outside_the_hole() {
         let rect = Rect { x: 40, y: 40, width: 20, height: 20 };
         let mask = square_mask(200, 200, rect);
-        let plan = plan(&mask).unwrap().unwrap();
+        let plan = only_plan(&mask);
         let hole = Hole::new(&mask, &plan);
         let cw = plan.crop.width as usize;
         let at = |x: u32, y: u32| ((y - plan.crop.y) as usize) * cw + (x - plan.crop.x) as usize;

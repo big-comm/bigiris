@@ -274,7 +274,7 @@ fn lama_fills_a_masked_square_from_its_surroundings() {
             mask.put_pixel(x, y, image::Luma([255]));
         }
     }
-    let plan = inpaint::plan(&mask).unwrap().unwrap();
+    let plan = inpaint::plans(&mask).unwrap()[0];
     eprintln!("lama plan {plan:?}");
     let started = Instant::now();
     let out = inpaint::inpaint(&DynamicImage::ImageRgb8(dirty.clone()), &mask, go).unwrap();
@@ -303,10 +303,42 @@ fn lama_fills_a_masked_square_from_its_surroundings() {
             wide.put_pixel(x, y, image::Luma([255]));
         }
     }
-    let plan = inpaint::plan(&wide).unwrap().unwrap();
+    let plan = inpaint::plans(&wide).unwrap()[0];
     assert!(plan.run.0 < plan.crop.width, "{plan:?}");
     let started = Instant::now();
-    let out = inpaint::inpaint(&DynamicImage::ImageRgb8(clean), &wide, go).unwrap();
+    let out = inpaint::inpaint(&DynamicImage::ImageRgb8(clean.clone()), &wide, go).unwrap();
     report("lama 1200x900 scaled", started, inpaint::device());
     assert_eq!((out.width(), out.height()), (w, h));
+
+    // Two distant marks fill as two crops at full resolution, and every
+    // pixel beyond the grown holes keeps its value.
+    let marks = [(60u32, 50u32), (1100u32, 820u32)];
+    let mut dirty = clean;
+    let mut mask = GrayImage::new(w, h);
+    for (mx, my) in marks {
+        for y in my..my + 30 {
+            for x in mx..mx + 30 {
+                dirty.put_pixel(x, y, Rgb([10, 10, 10]));
+                mask.put_pixel(x, y, image::Luma([255]));
+            }
+        }
+    }
+    let plans = inpaint::plans(&mask).unwrap();
+    assert_eq!(plans.len(), 2, "{plans:?}");
+    assert!(plans.iter().all(|p| p.run == (p.crop.width, p.crop.height)), "{plans:?}");
+    let started = Instant::now();
+    let out = inpaint::inpaint(&DynamicImage::ImageRgb8(dirty.clone()), &mask, go).unwrap();
+    report("lama 1200x900 two marks", started, inpaint::device());
+    let out = out.into_rgb8();
+    let ring = 2 * plans.iter().map(|p| p.feather).max().unwrap();
+    for (x, y, pixel) in out.enumerate_pixels() {
+        let near = marks.iter().any(|&(mx, my)| {
+            x + ring >= mx && x < mx + 30 + ring && y + ring >= my && y < my + 30 + ring
+        });
+        if near {
+            assert_ne!(pixel.0, [10, 10, 10], "({x},{y}) not filled");
+        } else {
+            assert_eq!(pixel, dirty.get_pixel(x, y), "({x},{y})");
+        }
+    }
 }

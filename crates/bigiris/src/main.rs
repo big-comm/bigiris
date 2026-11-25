@@ -1230,7 +1230,7 @@ fn run_inpaint(mask: &Path, policy: OverwritePolicy, files: &[PathBuf]) -> color
     bigimage_core::content::ensure_static(mask).map_err(|e| mask_error(&e))?;
     let mask_image = bigimage_core::open_image(mask).map_err(|e| mask_error(&e))?;
     let mask_image = bigimage_ai::inpaint::mask_from_image(&mask_image);
-    if bigimage_ai::inpaint::plan(&mask_image).map_err(|e| mask_error(&e))?.is_none() {
+    if bigimage_ai::inpaint::plans(&mask_image).map_err(|e| mask_error(&e))?.is_empty() {
         return Err(mask_error(&"não marca nenhuma área (pinte de branco o que deve ser apagado)"));
     }
     tracing::info!(?mask, ?policy, count = files.len(), "inpaint");

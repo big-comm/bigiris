@@ -27,11 +27,11 @@ msgstr "Resim açılamadı"
 #: crates/bigiris/src/gui.rs:998 crates/bigiris/src/gui.rs:3593
 #: crates/bigiris/src/gui/viewer/crop.rs:600
 msgid "Aguarde o salvamento terminar"
-msgstr "Depolamanın bitmesini bekle"
+msgstr "Kaydetmenin bitmesini bekleyin"
 
 #: crates/bigiris/src/gui.rs:1009
 msgid "Descartar alterações?"
-msgstr "Değişiklikleri Atla?"
+msgstr "Değişiklikler atılsın mı?"
 
 #: crates/bigiris/src/gui.rs:1010
 msgid "A imagem tem edições que ainda não foram salvas."
@@ -43,7 +43,7 @@ msgstr "Düzenlemeye devam et"
 
 #: crates/bigiris/src/gui.rs:1013
 msgid "Descartar"
-msgstr "Değişiklikleri Atla"
+msgstr "At"
 
 #: crates/bigiris/src/gui.rs:1083
 msgid "Imagem anterior"
@@ -51,7 +51,7 @@ msgstr "Önceki resim"
 
 #: crates/bigiris/src/gui.rs:1084
 msgid "Próxima imagem"
-msgstr "Bir sonraki resim"
+msgstr "Sonraki resim"
 
 #: crates/bigiris/src/gui.rs:1100
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:292
@@ -68,7 +68,7 @@ msgstr "Resim özellikleri (Ctrl+I)"
 
 #: crates/bigiris/src/gui.rs:1116
 msgid "Tela cheia (F11)"
-msgstr "Tam Ekran (F11)"
+msgstr "Tam ekran (F11)"
 
 #: crates/bigiris/src/gui.rs:1125
 msgid "Afastar"
@@ -76,15 +76,15 @@ msgstr "Uzaklaştır"
 
 #: crates/bigiris/src/gui.rs:1129 crates/bigiris/src/gui.rs:3952
 msgid "Ajustar à janela"
-msgstr "Pencereye Uygunlaştır"
+msgstr "Pencereye sığdır"
 
 #: crates/bigiris/src/gui.rs:1130 crates/bigiris/src/gui.rs:3953
 msgid "Tamanho real (100%)"
-msgstr "Gerçek Boyut (% 100)"
+msgstr "Gerçek boyut (%100)"
 
 #: crates/bigiris/src/gui.rs:1139 crates/bigiris/src/gui.rs:3949
 msgid "Zoom"
-msgstr "Zoom"
+msgstr "Yakınlaştırma"
 
 #: crates/bigiris/src/gui.rs:1143
 msgid "Aproximar"
@@ -92,7 +92,7 @@ msgstr "Yakınlaştır"
 
 #: crates/bigiris/src/gui.rs:2189
 msgid "Slideshow: pausado"
-msgstr "Slayt gösterisi: durduruldu"
+msgstr "Slayt gösterisi: duraklatıldı"
 
 #: crates/bigiris/src/gui.rs:2217
 msgid "Slideshow: a cada {interval} s"
@@ -113,15 +113,15 @@ msgstr "İptal edildi"
 
 #: crates/bigiris/src/gui.rs:2418
 msgid "Falha na IA: {error}"
-msgstr "Yapay zekâ hatası: {error}"
+msgstr "YZ hatası: {error}"
 
 #: crates/bigiris/src/gui.rs:2424
 msgid ""
 "Esta build não inclui IA. Recompile com `cargo build --features ai` (requer "
 "glslc, do pacote shaderc)."
 msgstr ""
-"Bu derleme yapay zekâ içermiyor. `cargo build --features ai` ile yeniden "
-"derleyin (shaderc paketindeki glslc gerekir)."
+"Bu derleme YZ içermiyor. `cargo build --features ai` ile yeniden derleyin "
+"(shaderc paketindeki glslc gerekir)."
 
 #: crates/bigiris/src/gui.rs:2430
 msgid "{model} não está instalado. Instale com: sudo pacman -S {package}"
@@ -153,7 +153,7 @@ msgstr ""
 
 #: crates/bigiris/src/gui.rs:2613
 msgid "Salvar alterações?"
-msgstr "Değişiklikleri kaydet?"
+msgstr "Değişiklikler kaydedilsin mi?"
 
 #: crates/bigiris/src/gui.rs:2614 crates/bigiris/src/gui.rs:3857
 #: crates/bigiris/src/gui/dialogs/animate.rs:187
@@ -176,7 +176,7 @@ msgstr "Kaydet"
 
 #: crates/bigiris/src/gui.rs:2664
 msgid "Salvo"
-msgstr "Dosya kaydedildi."
+msgstr "Kaydedildi"
 
 #: crates/bigiris/src/gui.rs:2743
 msgid ""
@@ -245,12 +245,12 @@ msgstr "Kaydedildi. Bazı meta veriler korunamadı: {list}"
 
 #: crates/bigiris/src/gui.rs:3132
 msgid "Salve ou desfaça as alterações antes de navegar"
-msgstr "Navigasyondan önce değişiklikleri kaydet veya geri al"
+msgstr "Gezinmeden önce değişiklikleri kaydedin veya geri alın"
 
 #: crates/bigiris/src/gui.rs:3215 crates/bigiris/src/gui.rs:4107
 #: crates/bigiris/src/gui.rs:5157 crates/bigiris/src/gui.rs:5292
 msgid "Abrir imagens…"
-msgstr "Görüntüleri aç…"
+msgstr "Resimleri aç…"
 
 #: crates/bigiris/src/gui.rs:3216 crates/bigiris/src/gui.rs:3988
 msgid "Colar arquivos de imagem"
@@ -258,7 +258,7 @@ msgstr "Resim dosyalarını yapıştır"
 
 #: crates/bigiris/src/gui.rs:3218 crates/bigiris/src/gui.rs:3987
 msgid "Copiar imagem"
-msgstr "Resim kopyala"
+msgstr "Resmi kopyala"
 
 #: crates/bigiris/src/gui.rs:3219
 msgid "Imprimir…"
@@ -267,11 +267,11 @@ msgstr "Yazdır…"
 #: crates/bigiris/src/gui.rs:3221 crates/bigiris/src/gui.rs:4119
 #: crates/bigiris/src/gui.rs:5157
 msgid "Processar uma pasta…"
-msgstr "Bu klasörü işle…"
+msgstr "Bir klasörü işle…"
 
 #: crates/bigiris/src/gui.rs:3227
 msgid "Editar imagem"
-msgstr "Resim Düzenle"
+msgstr "Resmi düzenle"
 
 #: crates/bigiris/src/gui.rs:3228 crates/bigiris/src/gui.rs:3971
 msgid "Desfazer"
@@ -287,7 +287,7 @@ msgstr "Değişiklikleri Kaydet"
 
 #: crates/bigiris/src/gui.rs:3233 crates/bigiris/src/gui.rs:3991
 msgid "Mover para a lixeira"
-msgstr "Zibile Taş"
+msgstr "Çöpe taşı"
 
 #: crates/bigiris/src/gui.rs:3237
 msgid "Atalhos do teclado"
@@ -313,7 +313,7 @@ msgstr "Resimler"
 
 #: crates/bigiris/src/gui.rs:3617 crates/bigiris/src/gui.rs:3986
 msgid "Abrir imagens"
-msgstr "Görüntüleri aç"
+msgstr "Resimleri aç"
 
 #: crates/bigiris/src/gui.rs:3669 crates/bigiris/src/gui.rs:3709
 msgid "Não foi possível preparar a página"
@@ -325,7 +325,7 @@ msgstr "Yazdırma hazırlığı başarısız oldu"
 
 #: crates/bigiris/src/gui.rs:3748
 msgid "Não foi possível imprimir"
-msgstr "Yazdıramadı"
+msgstr "Yazdırılamadı"
 
 #: crates/bigiris/src/gui.rs:3751 crates/bigiris/src/gui.rs:3883
 #: crates/bigiris/src/gui/dialogs/animate.rs:53
@@ -340,7 +340,7 @@ msgstr "Kapat"
 
 #: crates/bigiris/src/gui.rs:3849
 msgid "Mover para a lixeira?"
-msgstr "Çöp kutusuna mı?"
+msgstr "Çöpe taşınsın mı?"
 
 #: crates/bigiris/src/gui.rs:3853
 msgid ""
@@ -350,7 +350,7 @@ msgstr "Dosya çöp kutusuna taşınacaktır. Daha sonra geri getirebilirsiniz."
 
 #: crates/bigiris/src/gui.rs:3858
 msgid "Mover"
-msgstr "Hareket et"
+msgstr "Taşı"
 
 #: crates/bigiris/src/gui.rs:3880
 msgid "Não foi possível mover para a lixeira"
@@ -358,7 +358,7 @@ msgstr "Çöp kutusuna taşınamadı"
 
 #: crates/bigiris/src/gui.rs:3941
 msgid "Navegação"
-msgstr "Navigasyon"
+msgstr "Gezinme"
 
 #: crates/bigiris/src/gui.rs:3943
 msgid "Anterior / próximo"
@@ -370,7 +370,7 @@ msgstr "İlk / Son"
 
 #: crates/bigiris/src/gui.rs:3945
 msgid "Slideshow (auto-avanço)"
-msgstr "Slayt gösterisi"
+msgstr "Slayt gösterisi (otomatik ilerleme)"
 
 #: crates/bigiris/src/gui.rs:3951
 msgid "Aproximar / afastar"
@@ -378,7 +378,7 @@ msgstr "Yakınlaştır / Uzaklaştır"
 
 #: crates/bigiris/src/gui.rs:3954
 msgid "Zoom contínuo"
-msgstr "Sürekli büyütme"
+msgstr "Sürekli yakınlaştırma"
 
 #: crates/bigiris/src/gui.rs:3958
 msgid "Janela"
@@ -394,15 +394,15 @@ msgstr "Tiyatro modu"
 
 #: crates/bigiris/src/gui.rs:3962
 msgid "Fita de miniaturas"
-msgstr "Miniatürler"
+msgstr "Küçük resim şeridi"
 
 #: crates/bigiris/src/gui.rs:3963
 msgid "Histograma RGB"
-msgstr "Histogram (RGB)"
+msgstr "RGB histogramı"
 
 #: crates/bigiris/src/gui.rs:3964
 msgid "Fixar barras visíveis"
-msgstr "Kontrolleri görünen olarak tut"
+msgstr "Çubukları sürekli göster"
 
 #: crates/bigiris/src/gui.rs:3965
 msgid "Sair da tela cheia ou fechar"
@@ -424,11 +424,11 @@ msgstr "Sola Döndür"
 
 #: crates/bigiris/src/gui.rs:3975
 msgid "Recortar…"
-msgstr "Kestir…"
+msgstr "Kırp…"
 
 #: crates/bigiris/src/gui.rs:3976
 msgid "Remover fundo (IA)…"
-msgstr "Arka Planı Sil…"
+msgstr "Arka planı sil (YZ)…"
 
 #: crates/bigiris/src/gui.rs:3977
 #: crates/bigimage-integrations/src/action.rs:517
@@ -465,7 +465,7 @@ msgstr "Yardım"
 
 #: crates/bigiris/src/gui.rs:3996
 msgid "Este diálogo"
-msgstr "Bu diyalog"
+msgstr "Bu iletişim kutusu"
 
 #: crates/bigiris/src/gui.rs:3996
 msgid "Sobre"
@@ -489,7 +489,7 @@ msgstr ""
 
 #: crates/bigiris/src/gui.rs:4093
 msgid "Abra suas imagens"
-msgstr "Resimlerini aç"
+msgstr "Resimlerinizi açın"
 
 #: crates/bigiris/src/gui.rs:4098
 msgid "Arraste imagens para cá ou cole arquivos com Ctrl+V."
@@ -497,7 +497,7 @@ msgstr "Resimleri buraya bırakın veya dosyaları Ctrl+V ile yapıştırın."
 
 #: crates/bigiris/src/gui.rs:4141
 msgid "Selecionar pasta com imagens"
-msgstr "Resimlerle dolu bir klasör seçin"
+msgstr "Resim içeren klasör seçin"
 
 #: crates/bigiris/src/gui.rs:4162
 msgid "Selecionar imagens"
@@ -536,11 +536,11 @@ msgstr "İşlem beklenmedik şekilde sona erdi. Lütfen tekrar deneyin."
 
 #: crates/bigiris/src/gui/batch_runner.rs:311
 msgid "falha inesperada no worker"
-msgstr "worker içinde beklenmeyen hata"
+msgstr "çalışan iş parçacığında beklenmeyen hata"
 
 #: crates/bigiris/src/gui/batch_runner.rs:359
 msgid "um worker terminou inesperadamente"
-msgstr "bir worker beklenmedik şekilde sona erdi"
+msgstr "bir iş parçacığı beklenmedik şekilde sona erdi"
 
 #: crates/bigiris/src/gui/dialogs/adjust.rs:20
 msgid "Ajustar cores — Prisma"
@@ -559,25 +559,25 @@ msgstr "Parlaklık"
 
 #: crates/bigiris/src/gui/dialogs/adjust.rs:39
 msgid "-100 escuro · 0 neutro · +100 claro"
-msgstr "-100 koyu · 0 nötr · +101 aydınlık"
+msgstr "-100 koyu · 0 nötr · +100 açık"
 
 #: crates/bigiris/src/gui/dialogs/adjust.rs:43
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:335
 msgid "Contraste"
-msgstr "Fark"
+msgstr "Kontrast"
 
 #: crates/bigiris/src/gui/dialogs/adjust.rs:44
 msgid "-100 plano · 0 neutro · +100 agressivo"
-msgstr "- 100 düz · 0 nötr · + 1 00 güçlü"
+msgstr "-100 düz · 0 nötr · +100 güçlü"
 
 #: crates/bigiris/src/gui/dialogs/adjust.rs:48
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:336
 msgid "Saturação"
-msgstr "Doluluk"
+msgstr "Doygunluk"
 
 #: crates/bigiris/src/gui/dialogs/adjust.rs:49
 msgid "-100 cinza · 0 neutro · +100 vibrante"
-msgstr "- 100 gri · 0 nötr · + 1 00 canlı"
+msgstr "-100 gri · 0 nötr · +100 canlı"
 
 #: crates/bigiris/src/gui/dialogs/adjust.rs:53
 msgid "Gamma"
@@ -585,9 +585,7 @@ msgstr "Gamma"
 
 #: crates/bigiris/src/gui/dialogs/adjust.rs:55
 msgid "Abaixo de 1 clareia os meios-tons · 1 mantém · acima de 1 escurece"
-msgstr ""
-"1' in altındaki orta tonları aydınlatır · 1 onları korur · 2' nin "
-"üstündekiler onları koyulaştırır"
+msgstr "1'in altı orta tonları açar · 1 korur · 1'in üstü koyulaştırır"
 
 #: crates/bigiris/src/gui/dialogs/adjust.rs:64
 #: crates/bigiris/src/gui/dialogs/batch.rs:375
@@ -603,7 +601,7 @@ msgstr "Seçilen dosyalar"
 
 #: crates/bigiris/src/gui/dialogs/adjust.rs:69
 msgid "Tom"
-msgstr "Tonu"
+msgstr "Ton"
 
 #: crates/bigiris/src/gui/dialogs/adjust.rs:74
 msgid "Cor"
@@ -612,7 +610,7 @@ msgstr "Renk"
 #: crates/bigiris/src/gui/dialogs/adjust.rs:77
 #: crates/bigiris/src/gui/dialogs/remove_bg.rs:138
 msgid "Saída"
-msgstr "Çıkış"
+msgstr "Çıktı"
 
 #: crates/bigiris/src/gui/dialogs/adjust.rs:83
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:366
@@ -621,7 +619,7 @@ msgstr "Uygula"
 
 #: crates/bigiris/src/gui/dialogs/adjust.rs:190
 msgid "Ajustando…"
-msgstr "Düzenleniyor…"
+msgstr "Ayarlanıyor…"
 
 #: crates/bigiris/src/gui/dialogs/adjust.rs:196
 msgid "Ajustando"
@@ -641,19 +639,19 @@ msgstr "En az 2 resim seçin"
 
 #: crates/bigiris/src/gui/dialogs/animate.rs:48
 msgid "Informe vários arquivos de uma vez para montar a animação."
-msgstr "Animasyonu oluşturmak için birden fazla dosya seçin."
+msgstr "Animasyonu oluşturmak için aynı anda birden fazla dosya verin."
 
 #: crates/bigiris/src/gui/dialogs/animate.rs:66
 msgid "Atraso por quadro (ms)"
-msgstr "Çerçeve gecikmesi (ms)"
+msgstr "Kare gecikmesi (ms)"
 
 #: crates/bigiris/src/gui/dialogs/animate.rs:67
 msgid "100 ≈ 10 fps · 40 ≈ 25 fps · 1000 = 1 s"
-msgstr "100 ≈ 12 fps · 40 = 25 fps· 1.000=1 saniye"
+msgstr "100 ≈ 10 fps · 40 ≈ 25 fps · 1000 = 1 s"
 
 #: crates/bigiris/src/gui/dialogs/animate.rs:72
 msgid "Loop"
-msgstr "Animasyonu tekrarla"
+msgstr "Döngü"
 
 #: crates/bigiris/src/gui/dialogs/animate.rs:74
 msgid "Infinito (padrão)"
@@ -661,19 +659,19 @@ msgstr "Sonsuz (varsayılan)"
 
 #: crates/bigiris/src/gui/dialogs/animate.rs:75
 msgid "Uma vez"
-msgstr "Bir kere."
+msgstr "Bir kez"
 
 #: crates/bigiris/src/gui/dialogs/animate.rs:76
 msgid "2 vezes"
-msgstr "2 kez."
+msgstr "2 kez"
 
 #: crates/bigiris/src/gui/dialogs/animate.rs:77
 msgid "5 vezes"
-msgstr "5 kez."
+msgstr "5 kez"
 
 #: crates/bigiris/src/gui/dialogs/animate.rs:78
 msgid "10 vezes"
-msgstr "10 kez."
+msgstr "10 kez"
 
 #: crates/bigiris/src/gui/dialogs/animate.rs:83
 msgid "Velocidade do encoder"
@@ -681,19 +679,19 @@ msgstr "Kodlayıcı hızı"
 
 #: crates/bigiris/src/gui/dialogs/animate.rs:84
 msgid "maior = mais rápido, paleta um pouco pior · padrão 10"
-msgstr "yüksek = daha hızlı, palet kalitesi biraz daha düşük · varsayılan 10"
+msgstr "yüksek = daha hızlı, biraz daha kötü palet · varsayılan 10"
 
 #: crates/bigiris/src/gui/dialogs/animate.rs:94
 msgid "Arquivo de saída (.gif)"
-msgstr "Çıkış dosyası (.gif)"
+msgstr "Çıktı dosyası (.gif)"
 
 #: crates/bigiris/src/gui/dialogs/animate.rs:98
 msgid "Quadros"
-msgstr "Çerçeve"
+msgstr "Kareler"
 
 #: crates/bigiris/src/gui/dialogs/animate.rs:111
 msgid "Criar GIF"
-msgstr "GIF Yarat"
+msgstr "GIF oluştur"
 
 #: crates/bigiris/src/gui/dialogs/animate.rs:184
 msgid "Substituir arquivo existente?"
@@ -717,7 +715,7 @@ msgstr "Çıktı dosyası karelerden biri olamaz."
 
 #: crates/bigiris/src/gui/dialogs/animate.rs:255
 msgid "Montando GIF…"
-msgstr "GIF oluşturuyor…"
+msgstr "GIF oluşturuluyor…"
 
 #: crates/bigiris/src/gui/dialogs/animate.rs:297
 #: crates/bigiris/src/gui/dialogs/batch.rs:102
@@ -734,11 +732,11 @@ msgstr "Başarısız"
 
 #: crates/bigiris/src/gui/dialogs/batch.rs:35
 msgid "Prisma — Lote"
-msgstr "Prisma — Grup"
+msgstr "Prisma — Toplu işlem"
 
 #: crates/bigiris/src/gui/dialogs/batch.rs:39
 msgid "Conversão em lote"
-msgstr "Grup dönüşümü"
+msgstr "Toplu dönüştürme"
 
 #: crates/bigiris/src/gui/dialogs/batch.rs:46
 msgid "Arquivos"
@@ -751,7 +749,7 @@ msgstr "Dosyaları ekle"
 
 #: crates/bigiris/src/gui/dialogs/batch.rs:56
 msgid "Adicionar pasta (imagens)"
-msgstr "Dizin ekle (resimler)"
+msgstr "Klasör ekle (resimler)"
 
 #: crates/bigiris/src/gui/dialogs/batch.rs:66
 #: crates/bigiris/src/gui/dialogs/convert.rs:45
@@ -766,27 +764,27 @@ msgstr "Hedef"
 #: crates/bigiris/src/gui/dialogs/batch.rs:84
 #: crates/bigiris/src/gui/dialogs/convert.rs:60
 msgid "Pasta de saída"
-msgstr "Çıkış dizini"
+msgstr "Çıktı klasörü"
 
 #: crates/bigiris/src/gui/dialogs/batch.rs:85
 #: crates/bigiris/src/gui/dialogs/batch.rs:207
 #: crates/bigiris/src/gui/dialogs/convert.rs:61
 #: crates/bigiris/src/gui/dialogs/convert.rs:148
 msgid "Mesma pasta do arquivo de origem"
-msgstr "Kaynak dosyasıyla aynı dizin"
+msgstr "Kaynak dosyayla aynı klasör"
 
 #: crates/bigiris/src/gui/dialogs/batch.rs:93
 #: crates/bigiris/src/gui/dialogs/convert.rs:69
 msgid "Usar a mesma pasta do arquivo de origem"
-msgstr "Kaynak dosya dizinini kullan"
+msgstr "Kaynak dosyanın klasörünü kullan"
 
 #: crates/bigiris/src/gui/dialogs/batch.rs:108
 msgid "Aguardando. Clique em Processar para iniciar."
-msgstr "Hazır. Başlamak için Süreç' e basın."
+msgstr "Bekleniyor. Başlamak için İşle'ye tıklayın."
 
 #: crates/bigiris/src/gui/dialogs/batch.rs:119
 msgid "Processar"
-msgstr "Resimleri İşle"
+msgstr "İşle"
 
 #: crates/bigiris/src/gui/dialogs/batch.rs:245
 msgid "Adicione ao menos uma imagem para processar."
@@ -829,15 +827,15 @@ msgstr "Tamamlandı"
 
 #: crates/bigiris/src/gui/dialogs/batch.rs:432
 msgid "Adicionar pasta com imagens"
-msgstr "Resim dizinini ekle"
+msgstr "Resim klasörü ekle"
 
 #: crates/bigiris/src/gui/dialogs/compare.rs:31
 msgid "Comparar imagens — Íris"
-msgstr "Resimleri Karşılaştır — Iris"
+msgstr "Resimleri karşılaştır — Iris"
 
 #: crates/bigiris/src/gui/dialogs/compare.rs:43
 msgid "Comparar imagens"
-msgstr "Görüntüleri karşılaştır"
+msgstr "Resimleri karşılaştır"
 
 #: crates/bigiris/src/gui/dialogs/compare.rs:45
 msgid "Antes: {before}  ·  Depois: {after}"
@@ -845,11 +843,11 @@ msgstr "Önce: {before}  ·  Sonra: {after}"
 
 #: crates/bigiris/src/gui/dialogs/compare.rs:69
 msgid "Arraste o divisor para comparar · Esc fecha"
-msgstr "Karşılaştırmak için ayırıcıyı çekin · Kapamak için Esc"
+msgstr "Karşılaştırmak için ayırıcıyı sürükleyin · Esc kapatır"
 
 #: crates/bigiris/src/gui/dialogs/compare.rs:157
 msgid "Não foi possível abrir esta imagem"
-msgstr "Bu görüntü açılamadı"
+msgstr "Bu resim açılamadı"
 
 #: crates/bigiris/src/gui/dialogs/convert.rs:20
 msgid "Converter imagens — Prisma"
@@ -860,15 +858,15 @@ msgstr "Resimleri dönüştür — Prisma"
 #: crates/bigimage-integrations/src/action.rs:75
 #: data/nautilus/bigiris-menu.py:100
 msgid "Converter"
-msgstr "Resimleri Dönüştür"
+msgstr "Dönüştür"
 
 #: crates/bigiris/src/gui/dialogs/convert.rs:85
 msgid ""
 "Esta imagem tem transparência — JPEG perde o canal alfa. Considere PNG ou "
 "WebP."
 msgstr ""
-"Bu resim şeffaflık içeriyor — JPEG alfa kanalı bırakıyor. PNG veya WebP'yi "
-"düşünün."
+"Bu resimde saydamlık var — JPEG alfa kanalını kaybeder. PNG veya WebP'yi "
+"değerlendirin."
 
 #: crates/bigiris/src/gui/dialogs/convert.rs:106
 msgid ""
@@ -898,14 +896,14 @@ msgstr ""
 
 #: crates/bigiris/src/gui/dialogs/crop.rs:309
 msgid "Recortar — Prisma"
-msgstr "Kestir - Prizma (Prisma)"
+msgstr "Kırp — Prisma"
 
 #: crates/bigiris/src/gui/dialogs/crop.rs:321
 #: crates/bigiris/src/gui/dialogs/crop.rs:389
 #: crates/bigiris/src/gui/viewer/crop.rs:375
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:326
 msgid "Recortar"
-msgstr "Resim kes"
+msgstr "Kırp"
 
 #: crates/bigiris/src/gui/dialogs/crop.rs:348
 #: crates/bigiris/src/gui/dialogs/extent.rs:96
@@ -939,15 +937,15 @@ msgstr "Yükseklik (px)"
 
 #: crates/bigiris/src/gui/dialogs/crop.rs:388
 msgid "Centro 50%"
-msgstr "Merkezi %50"
+msgstr "Ortada %50"
 
 #: crates/bigiris/src/gui/dialogs/crop.rs:449
 msgid "Recortando…"
-msgstr "Kesme…"
+msgstr "Kırpılıyor…"
 
 #: crates/bigiris/src/gui/dialogs/crop.rs:455
 msgid "Recortando"
-msgstr "Kesim"
+msgstr "Kırpılıyor"
 
 #: crates/bigiris/src/gui/viewer/crop.rs:361
 msgid "Livre"
@@ -985,8 +983,8 @@ msgid ""
 "Aumentar resolução usa Lanczos3. Para IA (Real-ESRGAN): sudo pacman -S "
 "{package}"
 msgstr ""
-"Çözünürlük artırma Lanczos3 kullanır. Yapay zekâ (Real-ESRGAN) için: sudo "
-"pacman -S {package}"
+"Çözünürlük artırma Lanczos3 kullanır. YZ için (Real-ESRGAN): sudo pacman -S "
+"{package}"
 
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:275
 #: crates/bigiris/src/gui/dialogs/upscale.rs:246
@@ -1007,7 +1005,7 @@ msgstr "Görüntüyü düzenlemeler olmadan gösterir (\\ tuşunu basılı tutun
 
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:307
 msgid "Transformar"
-msgstr "Dönüştür"
+msgstr "Dönüşüm"
 
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:313
 msgid "Espelhar horizontal"
@@ -1031,7 +1029,7 @@ msgstr "Görüntünün üzerinde kırp (Ctrl+R)"
 
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:333
 msgid "Ajustes"
-msgstr "Ayarlar"
+msgstr "Düzeltmeler"
 
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:337
 msgid "Gama"
@@ -1039,7 +1037,7 @@ msgstr "Gama"
 
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:342
 msgid "Restaurar ajustes"
-msgstr "Ayarları sıfırla"
+msgstr "Düzeltmeleri sıfırla"
 
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:346
 #: crates/bigiris/src/gui/dialogs/properties.rs:163
@@ -1055,7 +1053,7 @@ msgstr "En-boy oranını koru"
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:364
 #: crates/bigiris/src/gui/dialogs/resize.rs:48
 msgid "Escala (%)"
-msgstr "Ölçüm (%)"
+msgstr "Ölçek (%)"
 
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:376
 msgid "Ferramentas"
@@ -1067,12 +1065,12 @@ msgstr "Arka planı sil (YZ)"
 
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:379
 msgid "Remover ruído (IA)"
-msgstr "Gürültüyü Sil (Yapay Zekâ)"
+msgstr "Gürültüyü sil (YZ)"
 
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:383
 #: crates/bigiris/src/gui/dialogs/upscale.rs:97
 msgid "Fator"
-msgstr "Faktör"
+msgstr "Çarpan"
 
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:384
 #: crates/bigiris/src/gui/dialogs/upscale.rs:40
@@ -1102,11 +1100,11 @@ msgstr ""
 
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:989
 msgid "Real-ESRGAN (IA), no seu computador"
-msgstr "Real-ESRGAN (yapay zekâ), bilgisayarınızda"
+msgstr "Real-ESRGAN (YZ), bilgisayarınızda"
 
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:991
 msgid "Lanczos3 (sem IA)"
-msgstr "Lanczos3 (yapay zekâsız)"
+msgstr "Lanczos3 (YZ olmadan)"
 
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:1507
 #: crates/bigiris/src/gui/dialogs/remove_bg.rs:224
@@ -1159,15 +1157,15 @@ msgstr "YouTube topluluk (1:1)"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:13
 msgid "Instagram feed (4:5)"
-msgstr "Instagram feed (4:5)"
+msgstr "Instagram akışı (4:5)"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:14
 msgid "Stories / Shorts (9:16)"
-msgstr "Hikayeler / Kısa Filmler (9:16)"
+msgstr "Stories / Shorts (9:16)"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:15
 msgid "Widescreen (16:9)"
-msgstr "Geniş Ekran (16:9)"
+msgstr "Geniş ekran (16:9)"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:16
 msgid "Personalizado…"
@@ -1175,11 +1173,11 @@ msgstr "Özel…"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:22
 msgid "Preto suave (#0d0e12)"
-msgstr "Yumuşak siyah (# 0d0e12)"
+msgstr "Yumuşak siyah (#0d0e12)"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:23
 msgid "Preto puro (#000000)"
-msgstr "Saf Siyah (# 000. 0)"
+msgstr "Saf siyah (#000000)"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:24
 msgid "Branco (#ffffff)"
@@ -1191,27 +1189,27 @@ msgstr "Şeffaf"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:26
 msgid "Personalizada (hex)"
-msgstr "Özel (onaltılık)"
+msgstr "Özel (hex)"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:33
 msgid "Centro"
-msgstr "Merkezi"
+msgstr "Orta"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:33
 msgid "Topo"
-msgstr "Üst kenar"
+msgstr "Üst"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:33
 msgid "Base"
-msgstr "Alt kenar"
+msgstr "Alt"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:49
 msgid "Letterbox — Prisma"
-msgstr "Posta kutusu - Prisma"
+msgstr "Şeritli sığdır — Prisma"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:62
 msgid "Letterbox"
-msgstr "Letterbox"
+msgstr "Şeritli sığdır"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:63
 msgid "Prisma · sem corte"
@@ -1223,14 +1221,13 @@ msgid ""
 "YouTube, feed do Instagram, Stories…) sem cortar nenhum pixel. A imagem "
 "original é centralizada e o resto é preenchido com a cor escolhida."
 msgstr ""
-"Resmin etrafındaki tuvali sabit bir biçime (YouTube yazıları, Instagram "
-"feedleri, Hikayeler...) uygun hale getirmek için hiçbir piksel kesmeden "
-"genişletir. Orijinal resim merkeze alınır ve geri kalan alan seçilen renkle "
-"doldurulur."
+"Resmin etrafındaki tuvali, hiçbir pikseli kesmeden sabit bir biçime (YouTube "
+"gönderisi, Instagram akışı, Stories…) uyacak şekilde genişletir. Özgün resim "
+"ortalanır ve kalan alan seçilen renkle doldurulur."
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:104
 msgid "Proporção alvo"
-msgstr "Hedef görüntü oranı"
+msgstr "Hedef en-boy oranı"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:111
 msgid "Razão W"
@@ -1246,20 +1243,20 @@ msgstr "Arka plan rengi"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:130
 msgid "Hex (#RRGGBB)"
-msgstr "Heks (# RRGGBB)"
+msgstr "Hex (#RRGGBB)"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:138
 msgid "Posição da imagem"
-msgstr "Resim konumları"
+msgstr "Resim konumu"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:144
 #: crates/bigiris/src/gui/dialogs/upscale.rs:103
 msgid "Destino previsto"
-msgstr "Tahmin edilen hedef"
+msgstr "Tahmini sonuç"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:171
 msgid "Estender"
-msgstr "Uzat"
+msgstr "Genişlet"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:240
 msgid "—"
@@ -1267,26 +1264,26 @@ msgstr "—"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:326
 msgid "Estendendo…"
-msgstr "Uzatıyor…"
+msgstr "Genişletiliyor…"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:332
 msgid "Estendendo"
-msgstr "Uzatma"
+msgstr "Genişletiliyor"
 
 #: crates/bigiris/src/gui/dialogs/flip.rs:20
 msgid "Espelhar imagens — Prisma"
-msgstr "Resimleri ters çevir — Prisma"
+msgstr "Resimleri çevir — Prisma"
 
 #: crates/bigiris/src/gui/dialogs/flip.rs:24
 #: crates/bigiris/src/gui/dialogs/flip.rs:47
 #: crates/bigimage-integrations/src/action.rs:87
 #: data/nautilus/bigiris-menu.py:142
 msgid "Espelhar"
-msgstr "Resim ters çevir"
+msgstr "Çevir"
 
 #: crates/bigiris/src/gui/dialogs/flip.rs:26
 msgid "Horizontal (esquerda ↔ direita)"
-msgstr "Yatay (soldan sağa)"
+msgstr "Yatay (sol ↔ sağ)"
 
 #: crates/bigiris/src/gui/dialogs/flip.rs:26
 msgid "Vertical (cima ↔ baixo)"
@@ -1298,11 +1295,11 @@ msgstr "Eksen"
 
 #: crates/bigiris/src/gui/dialogs/flip.rs:87
 msgid "Espelhando…"
-msgstr "Dönüştürülüyor…"
+msgstr "Çevriliyor…"
 
 #: crates/bigiris/src/gui/dialogs/flip.rs:93
 msgid "Espelhando"
-msgstr "Dönüyor."
+msgstr "Çevriliyor"
 
 #: crates/bigiris/src/gui/dialogs/mod.rs:64
 #: crates/bigimage-integrations/src/action.rs:151
@@ -1342,7 +1339,7 @@ msgstr "GIF"
 
 #: crates/bigiris/src/gui/dialogs/mod.rs:71
 msgid "ICO (até 256 × 256)"
-msgstr "ICO (256 × 257'ye kadar)"
+msgstr "ICO (en fazla 256 × 256)"
 
 #: crates/bigiris/src/gui/dialogs/mod.rs:72
 msgid "PNM (Netpbm)"
@@ -1386,11 +1383,11 @@ msgstr "Kalite (JPEG/WebP/AVIF)"
 
 #: crates/bigiris/src/gui/dialogs/mod.rs:115
 msgid "1 menor qualidade · 85 equilíbrio · 100 maior qualidade"
-msgstr "1 düşük kalite · 85 dengeli · 100 yüksek kalite"
+msgstr "1 en düşük kalite · 85 denge · 100 en yüksek kalite"
 
 #: crates/bigiris/src/gui/dialogs/mod.rs:119
 msgid "Otimizar tamanho"
-msgstr "Boyutu Optimize Et"
+msgstr "Boyutu optimize et"
 
 #: crates/bigiris/src/gui/dialogs/mod.rs:120
 msgid "PNG com compressão máxima; AVIF mais lento; arquivo menor"
@@ -1406,20 +1403,20 @@ msgstr "Kodlayıcı optimizasyonu"
 
 #: crates/bigiris/src/gui/dialogs/mod.rs:167
 msgid "Pular se já existir"
-msgstr "Mevcut dosyaları atla"
+msgstr "Zaten varsa atla"
 
 #: crates/bigiris/src/gui/dialogs/mod.rs:168
 msgid "Sobrescrever o arquivo"
-msgstr "Dosyayı Üstüne Yaz"
+msgstr "Dosyanın üzerine yaz"
 
 #: crates/bigiris/src/gui/dialogs/mod.rs:169
 msgid "Incrementar (_1, _2, …)"
-msgstr "Bir uzantıyı ekle (_1, _2, …)"
+msgstr "Numara ekle (_1, _2, …)"
 
 #: crates/bigiris/src/gui/dialogs/mod.rs:190
 #: crates/bigiris/src/gui/dialogs/mod.rs:205
 msgid "Formato de destino"
-msgstr "Hedef biçimi"
+msgstr "Hedef biçim"
 
 #: crates/bigiris/src/gui/dialogs/mod.rs:201
 msgid "Manter o formato original"
@@ -1427,7 +1424,7 @@ msgstr "Özgün biçimi koru"
 
 #: crates/bigiris/src/gui/dialogs/mod.rs:223
 msgid "Se o arquivo de saída existir"
-msgstr "Çıkış dosyası mevcutsa"
+msgstr "Çıktı dosyası varsa"
 
 #: crates/bigiris/src/gui/dialogs/mod.rs:283
 msgid "{first} e mais {count}"
@@ -1435,7 +1432,7 @@ msgstr "{first} ve {count} tane daha"
 
 #: crates/bigiris/src/gui/dialogs/mod.rs:298
 msgid "Escolher pasta de saída"
-msgstr "Çıkış dizinini seçin"
+msgstr "Çıktı klasörünü seçin"
 
 #: crates/bigiris/src/gui/dialogs/properties.rs:60
 msgid "Não foi possível ler as informações do arquivo"
@@ -1534,7 +1531,7 @@ msgstr "Mevcut alanlar: {count}"
 
 #: crates/bigiris/src/gui/dialogs/remove_bg.rs:24
 msgid "Não foi possível ler a imagem: {error}"
-msgstr "Görüntü okunamadı: {error}"
+msgstr "Resim okunamadı: {error}"
 
 #: crates/bigiris/src/gui/dialogs/remove_bg.rs:39
 msgid "Não foi possível gravar o resultado: {error}"
@@ -1562,11 +1559,11 @@ msgstr "Resim seçilmedi"
 
 #: crates/bigiris/src/gui/dialogs/remove_bg.rs:97
 msgid "Informe um ou mais arquivos ao abrir o diálogo."
-msgstr "Diyalog açılırken bir veya daha fazla dosya seçin."
+msgstr "İletişim kutusunu açarken bir veya daha fazla dosya verin."
 
 #: crates/bigiris/src/gui/dialogs/remove_bg.rs:127
 msgid "Modelo"
-msgstr "Yapay zeka modeli"
+msgstr "Model"
 
 #: crates/bigiris/src/gui/dialogs/remove_bg.rs:140
 msgid ""
@@ -1575,7 +1572,7 @@ msgstr "“kaynak”_nobg.png · alfalı PNG, üzerine yazmadan (zaten varsa _1,
 
 #: crates/bigiris/src/gui/dialogs/remove_bg.rs:147
 msgid "Remover fundo com IA local"
-msgstr "Yerel AI ile arka planı sil"
+msgstr "Yerel YZ ile arka planı sil"
 
 #: crates/bigiris/src/gui/dialogs/remove_bg.rs:148
 msgid ""
@@ -1592,7 +1589,7 @@ msgstr "Model yüklenemedi: {error}"
 #: crates/bigiris/src/gui/dialogs/remove_bg.rs:355
 #: crates/bigiris/src/gui/dialogs/remove_bg.rs:375
 msgid "Imagens gravadas"
-msgstr "Kaydedilmiş resimler"
+msgstr "Kaydedilen resimler"
 
 #: crates/bigiris/src/gui/dialogs/remove_bg.rs:376
 msgid "Falhas"
@@ -1617,7 +1614,7 @@ msgstr "BiRefNet-lite (MIT) · bilgisayarınızda çevrimdışı çalışır"
 #: crates/bigiris/src/gui/dialogs/remove_bg.rs:538
 #: crates/bigiris/src/gui/dialogs/upscale.rs:142
 msgid "Aumentar"
-msgstr "Resim boyutunu yükselt"
+msgstr "Büyüt"
 
 #: crates/bigiris/src/gui/dialogs/resize.rs:8
 msgid "Lanczos3 (padrão)"
@@ -1637,11 +1634,11 @@ msgstr "Bilinear"
 
 #: crates/bigiris/src/gui/dialogs/resize.rs:12
 msgid "Nearest (sem anti-aliasing)"
-msgstr "En Yakın (Anti-aliasing yok)"
+msgstr "En yakın (kenar yumuşatma yok)"
 
 #: crates/bigiris/src/gui/dialogs/resize.rs:29
 msgid "Redimensionar imagens — Prisma"
-msgstr "Resimlerin boyutlarını değiştir — Prisma"
+msgstr "Resimleri yeniden boyutlandır — Prisma"
 
 #: crates/bigiris/src/gui/dialogs/resize.rs:41
 #: crates/bigiris/src/gui/dialogs/resize.rs:144
@@ -1649,20 +1646,20 @@ msgstr "Resimlerin boyutlarını değiştir — Prisma"
 #: crates/bigimage-integrations/src/action.rs:79
 #: data/nautilus/bigiris-menu.py:115
 msgid "Redimensionar"
-msgstr "Resimlerin boyutlarını değiştir"
+msgstr "Yeniden boyutlandır"
 
 #: crates/bigiris/src/gui/dialogs/resize.rs:47
 #: crates/bigiris/src/gui/dialogs/resize.rs:61
 msgid "Aresta máxima"
-msgstr "Maksimum kenar"
+msgstr "En uzun kenar"
 
 #: crates/bigiris/src/gui/dialogs/resize.rs:49
 msgid "Dimensão exata (WxH)"
-msgstr "Kesin boyut (WxH)"
+msgstr "Tam boyut (WxH)"
 
 #: crates/bigiris/src/gui/dialogs/resize.rs:50
 msgid "Encaixar em (WxH)"
-msgstr "İçine Uygunlaştır (WxH)"
+msgstr "İçine sığdır (WxH)"
 
 #: crates/bigiris/src/gui/dialogs/resize.rs:54
 msgid "Modo"
@@ -1698,27 +1695,27 @@ msgstr "Maksimum yükseklik"
 
 #: crates/bigiris/src/gui/dialogs/resize.rs:120
 msgid "Kernel de interpolação"
-msgstr "Aralaştırma çekirdeği"
+msgstr "Ara değerleme yöntemi"
 
 #: crates/bigiris/src/gui/dialogs/resize.rs:134
 msgid "Modo de redimensionamento"
-msgstr "Boyut değiştirme modu"
+msgstr "Yeniden boyutlandırma kipi"
 
 #: crates/bigiris/src/gui/dialogs/resize.rs:137
 msgid "Opções"
-msgstr "Opsiyonlar"
+msgstr "Seçenekler"
 
 #: crates/bigiris/src/gui/dialogs/resize.rs:292
 msgid "Redimensionando…"
-msgstr "Boyutlandırma…"
+msgstr "Yeniden boyutlandırılıyor…"
 
 #: crates/bigiris/src/gui/dialogs/resize.rs:298
 msgid "Redimensionando"
-msgstr "Boyut değiştir"
+msgstr "Yeniden boyutlandırılıyor"
 
 #: crates/bigiris/src/gui/dialogs/rotate.rs:25
 msgid "Girar imagens — Prisma"
-msgstr "Resimleri Döndür — Prisma"
+msgstr "Resimleri döndür — Prisma"
 
 #: crates/bigiris/src/gui/dialogs/rotate.rs:29
 #: crates/bigiris/src/gui/dialogs/rotate.rs:52
@@ -1739,11 +1736,11 @@ msgstr "180°"
 
 #: crates/bigiris/src/gui/dialogs/rotate.rs:31
 msgid "270° (anti-horário)"
-msgstr "270° (saat yönüne karşı)"
+msgstr "270° (saat yönünün tersine)"
 
 #: crates/bigiris/src/gui/dialogs/rotate.rs:34
 msgid "Rotação"
-msgstr "Çevirme"
+msgstr "Döndürme"
 
 #: crates/bigiris/src/gui/dialogs/rotate.rs:93
 msgid "Girando…"
@@ -1751,15 +1748,15 @@ msgstr "Döndürülüyor…"
 
 #: crates/bigiris/src/gui/dialogs/rotate.rs:99
 msgid "Girando"
-msgstr "Dönüşüm"
+msgstr "Döndürülüyor"
 
 #: crates/bigiris/src/gui/dialogs/upscale.rs:26
 msgid "Aumentar resolução — Prisma"
-msgstr "Yüksek ölçekli - Prisma"
+msgstr "Çözünürlüğü artır — Prisma"
 
 #: crates/bigiris/src/gui/dialogs/upscale.rs:65
 msgid "Usar IA (Real-ESRGAN)"
-msgstr "Yapay zekâ kullan (Real-ESRGAN)"
+msgstr "YZ kullan (Real-ESRGAN)"
 
 #: crates/bigiris/src/gui/dialogs/upscale.rs:112
 msgid "× {factor} (tamanho indisponível)"
@@ -1767,7 +1764,7 @@ msgstr "× {factor} (boyut kullanılamıyor)"
 
 #: crates/bigiris/src/gui/dialogs/upscale.rs:231
 msgid "Aumentando"
-msgstr "Yükseltme"
+msgstr "Büyütülüyor"
 
 #: crates/bigiris/src/gui/dialogs/upscale.rs:247
 msgid "Detalhes mais nítidos que Lanczos3; roda no seu computador"
@@ -1795,19 +1792,19 @@ msgstr "Seçim çok büyük. Bir seferde daha az dosya açın."
 
 #: crates/bigiris/src/gui/transfers.rs:88
 msgid "Arraste ou copie arquivos locais de imagem."
-msgstr "Yerel görüntü dosyalarını bırak veya kopyala."
+msgstr "Yerel resim dosyalarını sürükleyin veya kopyalayın."
 
 #: crates/bigiris/src/gui/transfers.rs:89
 msgid "A transferência demorou demais. Tente novamente."
-msgstr "Nakil zamanı doldu. Tekrar deneyelim."
+msgstr "Aktarım çok uzun sürdü. Tekrar deneyin."
 
 #: crates/bigiris/src/gui/transfers.rs:91
 msgid "Não foi possível iniciar o visualizador. Tente novamente."
-msgstr "Gösterici başlatılamadı. Tekrar deneyin."
+msgstr "Görüntüleyici başlatılamadı. Tekrar deneyin."
 
 #: crates/bigiris/src/gui/transfers.rs:93
 msgid "Copie arquivos de imagem no gerenciador e tente novamente."
-msgstr "Resim dosyalarını dosya yöneticinize kopyalayın ve tekrar deneyin."
+msgstr "Dosya yöneticisinde resim dosyalarını kopyalayın ve tekrar deneyin."
 
 #: crates/bigiris/src/gui/transfers.rs:96
 msgid "Não foi possível abrir os arquivos"
@@ -1821,17 +1818,17 @@ msgstr "Web için"
 #: crates/bigimage-integrations/src/action.rs:101
 #: data/nautilus/bigiris-menu.py:213
 msgid "Metadados"
-msgstr "Meta Veri"
+msgstr "Meta veriler"
 
 #: crates/bigimage-integrations/src/action.rs:105
 #: data/nautilus/bigiris-menu.py:223
 msgid "Utilidades"
-msgstr "Araçlar"
+msgstr "Yardımcı araçlar"
 
 #: crates/bigimage-integrations/src/action.rs:111
 #: data/nautilus/bigiris-menu.py:234
 msgid "IA"
-msgstr "Yapay zekâ"
+msgstr "YZ"
 
 #: crates/bigimage-integrations/src/action.rs:116
 #: data/nautilus/bigiris-menu.py:244
@@ -1841,7 +1838,7 @@ msgstr "PDF"
 #: crates/bigimage-integrations/src/action.rs:134
 #: data/nautilus/bigiris-menu.py:255
 msgid "Visualizar em BigIris"
-msgstr "BigIris'te Göster"
+msgstr "BigIris ile görüntüle"
 
 #: crates/bigimage-integrations/src/action.rs:142
 msgid "Processar esta pasta…"
@@ -1926,12 +1923,12 @@ msgstr "− Parlaklık (-10)"
 #: crates/bigimage-integrations/src/action.rs:334
 #: data/nautilus/bigiris-menu.py:159
 msgid "+ Contraste (+20)"
-msgstr "+ Farklılık (+20)"
+msgstr "+ Kontrast (+20)"
 
 #: crates/bigimage-integrations/src/action.rs:342
 #: data/nautilus/bigiris-menu.py:160
 msgid "Preto e branco"
-msgstr "Siyah beyaz."
+msgstr "Siyah beyaz"
 
 #: crates/bigimage-integrations/src/action.rs:350
 #: data/nautilus/bigiris-menu.py:161
@@ -1976,37 +1973,37 @@ msgstr "PNG'yi Optimize Et (maksimum sıkıştırma)"
 #: crates/bigimage-integrations/src/action.rs:430
 #: data/nautilus/bigiris-menu.py:199
 msgid "Letterbox YouTube post (1:1)"
-msgstr "Mailbox YouTube post (1:1)"
+msgstr "Şeritli sığdır: YouTube gönderisi (1:1)"
 
 #: crates/bigimage-integrations/src/action.rs:438
 #: data/nautilus/bigiris-menu.py:202
 msgid "Letterbox Instagram feed (4:5)"
-msgstr "Posta kutusu Instagram feed (4:5)"
+msgstr "Şeritli sığdır: Instagram akışı (4:5)"
 
 #: crates/bigimage-integrations/src/action.rs:446
 #: data/nautilus/bigiris-menu.py:205
 msgid "Letterbox Stories / Shorts (9:16)"
-msgstr "\"Short Stories\" (Ek klavye) 16."
+msgstr "Şeritli sığdır: Stories / Shorts (9:16)"
 
 #: crates/bigimage-integrations/src/action.rs:454
 #: data/nautilus/bigiris-menu.py:208
 msgid "Letterbox personalizado…"
-msgstr "Özel Posta Kutusu…"
+msgstr "Şeritli sığdır, özel…"
 
 #: crates/bigimage-integrations/src/action.rs:463
 #: data/nautilus/bigiris-menu.py:217
 msgid "Ver metadados…"
-msgstr "Meta verisini göster…"
+msgstr "Meta verileri göster…"
 
 #: crates/bigimage-integrations/src/action.rs:471
 #: data/nautilus/bigiris-menu.py:218
 msgid "Remover tudo (re-encode limpo)"
-msgstr "Tüm meta verileri sil (temiz yeniden kodlama)"
+msgstr "Tümünü kaldır (temiz yeniden kodlama)"
 
 #: crates/bigimage-integrations/src/action.rs:482
 #: data/nautilus/bigiris-menu.py:227
 msgid "Converter em lote (Prisma)…"
-msgstr "Grupla dönüştür (Prisma)…"
+msgstr "Toplu dönüştür (Prisma)…"
 
 #: crates/bigimage-integrations/src/action.rs:490
 #: data/nautilus/bigiris-menu.py:228
@@ -2038,7 +2035,7 @@ msgstr "BigIris: Bu klasörü işle…"
 
 #: data/nautilus/bigiris-menu.py:375
 msgid "Converter imagens da pasta com o Prisma"
-msgstr "Dizin resimlerini Prisma ile dönüştürün"
+msgstr "Klasördeki resimleri Prisma ile dönüştür"
 
 #: scripts/translations.py:20
 msgid "Visualizador de imagens"
@@ -2046,7 +2043,7 @@ msgstr "Resim görüntüleyici"
 
 #: scripts/translations.py:21
 msgid "Visualize e converta imagens com integração ao gerenciador de arquivos"
-msgstr "Dosya yöneticisi entegrasyonu ile görüntüleri görüntüle ve dönüştür"
+msgstr "Dosya yöneticisi entegrasyonuyla resimleri görüntüleyin ve dönüştürün"
 
 #: scripts/translations.py:24
 msgid "Visualizador e conversor de imagens moderno"

@@ -39,19 +39,19 @@ msgstr "Η εικόνα έχει μη αποθηκευμένες αλλαγές.
 
 #: crates/bigiris/src/gui.rs:1012
 msgid "Continuar editando"
-msgstr "Συνεχίστε την επεξεργασία"
+msgstr "Συνέχεια επεξεργασίας"
 
 #: crates/bigiris/src/gui.rs:1013
 msgid "Descartar"
-msgstr "Απόρριψη των αλλαγών"
+msgstr "Απόρριψη"
 
 #: crates/bigiris/src/gui.rs:1083
 msgid "Imagem anterior"
-msgstr "« Προηγούμενη εικόνα"
+msgstr "Προηγούμενη εικόνα"
 
 #: crates/bigiris/src/gui.rs:1084
 msgid "Próxima imagem"
-msgstr "Επόμενη εικόνα »"
+msgstr "Επόμενη εικόνα"
 
 #: crates/bigiris/src/gui.rs:1100
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:292
@@ -76,7 +76,7 @@ msgstr "Σμίκρυνση"
 
 #: crates/bigiris/src/gui.rs:1129 crates/bigiris/src/gui.rs:3952
 msgid "Ajustar à janela"
-msgstr "Τακτοποίηση στο παράθυρο"
+msgstr "Προσαρμογή στο παράθυρο"
 
 #: crates/bigiris/src/gui.rs:1130 crates/bigiris/src/gui.rs:3953
 msgid "Tamanho real (100%)"
@@ -84,7 +84,7 @@ msgstr "Πραγματικό μέγεθος (100%)"
 
 #: crates/bigiris/src/gui.rs:1139 crates/bigiris/src/gui.rs:3949
 msgid "Zoom"
-msgstr "Μεγέθυνση"
+msgstr "Ζουμ"
 
 #: crates/bigiris/src/gui.rs:1143
 msgid "Aproximar"
@@ -138,8 +138,8 @@ msgid ""
 "O arquivo será sobrescrito. JPEG é recodificado a cada gravação; isso pode "
 "reduzir a qualidade."
 msgstr ""
-"Το αρχείο θα αντικατασταθεί. Η μορφή κωδικοποιείται εκ νέου κάθε φορά που "
-"αποθηκεύεται. Αυτό μπορεί να μειώσει την ποιότητα. (JPEG)"
+"Το αρχείο θα αντικατασταθεί. Το JPEG επανακωδικοποιείται σε κάθε αποθήκευση· "
+"αυτό μπορεί να μειώσει την ποιότητα."
 
 #: crates/bigiris/src/gui.rs:2604
 msgid "O arquivo será sobrescrito."
@@ -178,7 +178,7 @@ msgstr "Αποθήκευση"
 
 #: crates/bigiris/src/gui.rs:2664
 msgid "Salvo"
-msgstr "Το αρχείο αποθηκεύτηκε."
+msgstr "Αποθηκεύτηκε"
 
 #: crates/bigiris/src/gui.rs:2743
 msgid ""
@@ -250,7 +250,7 @@ msgstr ""
 
 #: crates/bigiris/src/gui.rs:3132
 msgid "Salve ou desfaça as alterações antes de navegar"
-msgstr "Αποθήκευση ή αναίρεση αλλαγών πριν από την περιήγηση"
+msgstr "Αποθηκεύστε ή αναιρέστε τις αλλαγές πριν από την πλοήγηση"
 
 #: crates/bigiris/src/gui.rs:3215 crates/bigiris/src/gui.rs:4107
 #: crates/bigiris/src/gui.rs:5157 crates/bigiris/src/gui.rs:5292
@@ -263,7 +263,7 @@ msgstr "Επικόλληση αρχείων εικόνας"
 
 #: crates/bigiris/src/gui.rs:3218 crates/bigiris/src/gui.rs:3987
 msgid "Copiar imagem"
-msgstr "Αντιγραφή της εικόνας"
+msgstr "Αντιγραφή εικόνας"
 
 #: crates/bigiris/src/gui.rs:3219
 msgid "Imprimir…"
@@ -272,7 +272,7 @@ msgstr "Εκτύπωση…"
 #: crates/bigiris/src/gui.rs:3221 crates/bigiris/src/gui.rs:4119
 #: crates/bigiris/src/gui.rs:5157
 msgid "Processar uma pasta…"
-msgstr "Επεξεργασία αυτού του φακέλου…"
+msgstr "Επεξεργασία φακέλου…"
 
 #: crates/bigiris/src/gui.rs:3227
 msgid "Editar imagem"
@@ -288,23 +288,23 @@ msgstr "Επανάληψη"
 
 #: crates/bigiris/src/gui.rs:3232 crates/bigiris/src/gui.rs:3978
 msgid "Salvar alterações"
-msgstr "Αποθήκευση των αλλαγών"
+msgstr "Αποθήκευση αλλαγών"
 
 #: crates/bigiris/src/gui.rs:3233 crates/bigiris/src/gui.rs:3991
 msgid "Mover para a lixeira"
-msgstr "Μετακίνηση στον κάδο απορριμμάτων"
+msgstr "Μετακίνηση στα απορρίμματα"
 
 #: crates/bigiris/src/gui.rs:3237
 msgid "Atalhos do teclado"
-msgstr "Συντομεύσεις Πληκτρολογίου"
+msgstr "Συντομεύσεις πληκτρολογίου"
 
 #: crates/bigiris/src/gui.rs:3238
 msgid "Sobre o BigIris"
-msgstr "Σχετικά με το ΜπιγκΙρίς (BigIris)"
+msgstr "Σχετικά με το BigIris"
 
 #: crates/bigiris/src/gui.rs:3243
 msgid "Menu principal"
-msgstr "Κύριο Μενού"
+msgstr "Κύριο μενού"
 
 #: crates/bigiris/src/gui.rs:3595
 msgid "Salve ou desfaça as alterações antes de usar esta ferramenta"
@@ -346,15 +346,15 @@ msgstr "Κλείσιμο"
 
 #: crates/bigiris/src/gui.rs:3849
 msgid "Mover para a lixeira?"
-msgstr "Μετακίνηση στους κάδους;"
+msgstr "Μετακίνηση στα απορρίμματα;"
 
 #: crates/bigiris/src/gui.rs:3853
 msgid ""
 "O arquivo será movido para a lixeira do sistema. Você pode restaurá-lo "
 "depois."
 msgstr ""
-"Το αρχείο θα μετακινηθεί στον κάδο ανακύκλωσης. Μπορείτε να το επαναφέρετε "
-"αργότερα."
+"Το αρχείο θα μετακινηθεί στα απορρίμματα του συστήματος. Μπορείτε να το "
+"επαναφέρετε αργότερα."
 
 #: crates/bigiris/src/gui.rs:3858
 msgid "Mover"
@@ -362,7 +362,7 @@ msgstr "Μετακίνηση"
 
 #: crates/bigiris/src/gui.rs:3880
 msgid "Não foi possível mover para a lixeira"
-msgstr "Δεν ήταν δυνατή η μετακίνηση στον κάδο"
+msgstr "Δεν ήταν δυνατή η μετακίνηση στα απορρίμματα"
 
 #: crates/bigiris/src/gui.rs:3941
 msgid "Navegação"
@@ -370,7 +370,7 @@ msgstr "Πλοήγηση"
 
 #: crates/bigiris/src/gui.rs:3943
 msgid "Anterior / próximo"
-msgstr "Προηγούμενο / επόμενο"
+msgstr "Προηγούμενη / επόμενη"
 
 #: crates/bigiris/src/gui.rs:3944
 msgid "Primeiro / último"
@@ -378,7 +378,7 @@ msgstr "Πρώτη / τελευταία"
 
 #: crates/bigiris/src/gui.rs:3945
 msgid "Slideshow (auto-avanço)"
-msgstr "Παρουσίαση διαφανειών"
+msgstr "Προβολή διαφανειών (αυτόματη προώθηση)"
 
 #: crates/bigiris/src/gui.rs:3951
 msgid "Aproximar / afastar"
@@ -402,7 +402,7 @@ msgstr "Λειτουργία θεάτρου"
 
 #: crates/bigiris/src/gui.rs:3962
 msgid "Fita de miniaturas"
-msgstr "Μικρογραφίες"
+msgstr "Λωρίδα μικρογραφιών"
 
 #: crates/bigiris/src/gui.rs:3963
 msgid "Histograma RGB"
@@ -410,7 +410,7 @@ msgstr "Ιστόγραμμα RGB"
 
 #: crates/bigiris/src/gui.rs:3964
 msgid "Fixar barras visíveis"
-msgstr "Διατήρηση των χειριστηρίων ορατών"
+msgstr "Μόνιμη εμφάνιση γραμμών"
 
 #: crates/bigiris/src/gui.rs:3965
 msgid "Sair da tela cheia ou fechar"
@@ -423,12 +423,12 @@ msgstr "Επεξεργασία"
 #: crates/bigiris/src/gui.rs:3973
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:312
 msgid "Girar à direita"
-msgstr "Περιστροφή Δεξιά"
+msgstr "Περιστροφή δεξιά"
 
 #: crates/bigiris/src/gui.rs:3974
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:311
 msgid "Girar à esquerda"
-msgstr "Περιστροφή Αριστερά"
+msgstr "Περιστροφή αριστερά"
 
 #: crates/bigiris/src/gui.rs:3975
 msgid "Recortar…"
@@ -436,7 +436,7 @@ msgstr "Περικοπή…"
 
 #: crates/bigiris/src/gui.rs:3976
 msgid "Remover fundo (IA)…"
-msgstr "Αφαίρεση φόντου (ΑΙ)…"
+msgstr "Αφαίρεση φόντου (ΤΝ)…"
 
 #: crates/bigiris/src/gui.rs:3977
 #: crates/bigimage-integrations/src/action.rs:517
@@ -485,15 +485,15 @@ msgstr "Τροχός του ποντικιού"
 
 #: crates/bigiris/src/gui.rs:4034
 msgid "Atalhos de teclado"
-msgstr "Συντομεύσεις Πληκτρολογίου"
+msgstr "Συντομεύσεις πληκτρολογίου"
 
 #: crates/bigiris/src/gui.rs:4060
 msgid ""
 "Visualizador e conversor de imagens para Linux. Rápido, acessível por "
 "teclado e integrado ao gerenciador de arquivos."
 msgstr ""
-"Προβολέας εικόνων και μετατροπέας για Γρήγορο, προσβάσιμο από το "
-"πληκτρολόγιο και ενσωματωμένο με το διαχειριστή αρχείων σας."
+"Πρόγραμμα προβολής και μετατροπής εικόνων για Linux. Γρήγορο, προσβάσιμο από "
+"το πληκτρολόγιο και ενσωματωμένο στη διαχείριση αρχείων."
 
 #: crates/bigiris/src/gui.rs:4093
 msgid "Abra suas imagens"
@@ -501,16 +501,15 @@ msgstr "Ανοίξτε τις εικόνες σας"
 
 #: crates/bigiris/src/gui.rs:4098
 msgid "Arraste imagens para cá ou cole arquivos com Ctrl+V."
-msgstr ""
-"Αποθέστε εικόνες εδώ ή επικολλήστε αρχεία με το συνδυασμό πλήκτρων. (Ctrl+V)"
+msgstr "Σύρετε εικόνες εδώ ή επικολλήστε αρχεία με Ctrl+V."
 
 #: crates/bigiris/src/gui.rs:4141
 msgid "Selecionar pasta com imagens"
-msgstr "Επιλέξτε ένα φάκελο με εικόνες"
+msgstr "Επιλογή φακέλου με εικόνες"
 
 #: crates/bigiris/src/gui.rs:4162
 msgid "Selecionar imagens"
-msgstr "Επιλέξτε τις εικόνες"
+msgstr "Επιλογή εικόνων"
 
 #: crates/bigiris/src/gui.rs:4209
 msgid "{current} de {total}"
@@ -545,21 +544,21 @@ msgstr "Η επεξεργασία τερματίστηκε απροσδόκητ�
 
 #: crates/bigiris/src/gui/batch_runner.rs:311
 msgid "falha inesperada no worker"
-msgstr "απροσδόκητη αποτυχία του worker"
+msgstr "απροσδόκητη αποτυχία νήματος επεξεργασίας"
 
 #: crates/bigiris/src/gui/batch_runner.rs:359
 msgid "um worker terminou inesperadamente"
-msgstr "ένας worker τερματίστηκε απροσδόκητα"
+msgstr "ένα νήμα επεξεργασίας τερματίστηκε απροσδόκητα"
 
 #: crates/bigiris/src/gui/dialogs/adjust.rs:20
 msgid "Ajustar cores — Prisma"
-msgstr "Προσαρμογή χρωμάτων — Πρίσμα (Prisma)"
+msgstr "Προσαρμογή χρωμάτων — Prisma"
 
 #: crates/bigiris/src/gui/dialogs/adjust.rs:35
 #: crates/bigimage-integrations/src/action.rs:91
 #: data/nautilus/bigiris-menu.py:153
 msgid "Ajustar cores"
-msgstr "Προσαρμογή των χρωμάτων"
+msgstr "Προσαρμογή χρωμάτων"
 
 #: crates/bigiris/src/gui/dialogs/adjust.rs:38
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:334
@@ -568,7 +567,7 @@ msgstr "Φωτεινότητα"
 
 #: crates/bigiris/src/gui/dialogs/adjust.rs:39
 msgid "-100 escuro · 0 neutro · +100 claro"
-msgstr "-100 σκούρο · 0 ουδέτερο · +101 ελαφρύ"
+msgstr "-100 σκούρο · 0 ουδέτερο · +100 φωτεινό"
 
 #: crates/bigiris/src/gui/dialogs/adjust.rs:43
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:335
@@ -577,7 +576,7 @@ msgstr "Αντίθεση"
 
 #: crates/bigiris/src/gui/dialogs/adjust.rs:44
 msgid "-100 plano · 0 neutro · +100 agressivo"
-msgstr "-100 επίπεδη · 0 ουδέτερη · +101 ισχυρή"
+msgstr "-100 επίπεδη · 0 ουδέτερη · +100 έντονη"
 
 #: crates/bigiris/src/gui/dialogs/adjust.rs:48
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:336
@@ -586,7 +585,7 @@ msgstr "Κορεσμός"
 
 #: crates/bigiris/src/gui/dialogs/adjust.rs:49
 msgid "-100 cinza · 0 neutro · +100 vibrante"
-msgstr "-100 γκρι · 0 ουδέτερο · +101 ζωντανό"
+msgstr "-100 γκρι · 0 ουδέτερο · +100 ζωντανό"
 
 #: crates/bigiris/src/gui/dialogs/adjust.rs:53
 msgid "Gamma"
@@ -595,7 +594,7 @@ msgstr "Γάμμα"
 #: crates/bigiris/src/gui/dialogs/adjust.rs:55
 msgid "Abaixo de 1 clareia os meios-tons · 1 mantém · acima de 1 escurece"
 msgstr ""
-"Κάτω από 1 φωτίζει τους μεσαίους τόνους · 1 τους διατηρεί · πάνω από 2 τους "
+"Κάτω από 1 φωτίζει τους μεσαίους τόνους · 1 τους διατηρεί · πάνω από 1 τους "
 "σκουραίνει"
 
 #: crates/bigiris/src/gui/dialogs/adjust.rs:64
@@ -608,7 +607,7 @@ msgstr ""
 #: crates/bigiris/src/gui/dialogs/rotate.rs:42
 #: crates/bigiris/src/gui/dialogs/upscale.rs:82
 msgid "Arquivos selecionados"
-msgstr "Τα επιλεγμένα αρχεία"
+msgstr "Επιλεγμένα αρχεία"
 
 #: crates/bigiris/src/gui/dialogs/adjust.rs:69
 msgid "Tom"
@@ -638,11 +637,11 @@ msgstr "Προσαρμογή"
 
 #: crates/bigiris/src/gui/dialogs/animate.rs:29
 msgid "Criar GIF animado — Prisma"
-msgstr "Δημιουργία κινούμενης εικόνας — Πρίσμα (Prisma) (GIF)"
+msgstr "Δημιουργία κινούμενου GIF — Prisma"
 
 #: crates/bigiris/src/gui/dialogs/animate.rs:33
 msgid "Criar GIF animado"
-msgstr "Δημιουργία κινούμενων εικόνων (GIF)"
+msgstr "Δημιουργία κινούμενου GIF"
 
 #: crates/bigiris/src/gui/dialogs/animate.rs:47
 msgid "Selecione pelo menos 2 imagens"
@@ -650,19 +649,19 @@ msgstr "Επιλέξτε τουλάχιστον 2 εικόνες"
 
 #: crates/bigiris/src/gui/dialogs/animate.rs:48
 msgid "Informe vários arquivos de uma vez para montar a animação."
-msgstr "Επιλέξτε πολλά αρχεία για να δημιουργήσετε την κίνηση."
+msgstr "Δώστε πολλά αρχεία μαζί για να δημιουργηθεί η κίνηση."
 
 #: crates/bigiris/src/gui/dialogs/animate.rs:66
 msgid "Atraso por quadro (ms)"
-msgstr "Καθυστέρηση πλαισίου (μs)"
+msgstr "Καθυστέρηση ανά καρέ (ms)"
 
 #: crates/bigiris/src/gui/dialogs/animate.rs:67
 msgid "100 ≈ 10 fps · 40 ≈ 25 fps · 1000 = 1 s"
-msgstr "100 ≈ 12 fps · 40 = 25 fps· 1.000=1 s"
+msgstr "100 ≈ 10 fps · 40 ≈ 25 fps · 1000 = 1 s"
 
 #: crates/bigiris/src/gui/dialogs/animate.rs:72
 msgid "Loop"
-msgstr "Επανάληψη της κίνησης"
+msgstr "Επανάληψη"
 
 #: crates/bigiris/src/gui/dialogs/animate.rs:74
 msgid "Infinito (padrão)"
@@ -686,24 +685,23 @@ msgstr "10 φορές"
 
 #: crates/bigiris/src/gui/dialogs/animate.rs:83
 msgid "Velocidade do encoder"
-msgstr "Ταχύτητα του κωδικοποιητή"
+msgstr "Ταχύτητα κωδικοποιητή"
 
 #: crates/bigiris/src/gui/dialogs/animate.rs:84
 msgid "maior = mais rápido, paleta um pouco pior · padrão 10"
-msgstr ""
-"υψηλότερη = ταχύτερη, ελαφρώς χαμηλότερη ποιότητα παλέτας · προεπιλογή 10"
+msgstr "μεγαλύτερη = ταχύτερη, ελαφρώς χειρότερη παλέτα · προεπιλογή 10"
 
 #: crates/bigiris/src/gui/dialogs/animate.rs:94
 msgid "Arquivo de saída (.gif)"
-msgstr "Αρχείο εξόδου (.jpg)"
+msgstr "Αρχείο εξόδου (.gif)"
 
 #: crates/bigiris/src/gui/dialogs/animate.rs:98
 msgid "Quadros"
-msgstr "Πλαίσια"
+msgstr "Καρέ"
 
 #: crates/bigiris/src/gui/dialogs/animate.rs:111
 msgid "Criar GIF"
-msgstr "Δημιουργήστε ένα αρχείο GIF"
+msgstr "Δημιουργία GIF"
 
 #: crates/bigiris/src/gui/dialogs/animate.rs:184
 msgid "Substituir arquivo existente?"
@@ -727,7 +725,7 @@ msgstr "Το αρχείο εξόδου δεν μπορεί να είναι έν�
 
 #: crates/bigiris/src/gui/dialogs/animate.rs:255
 msgid "Montando GIF…"
-msgstr "Χτίζοντας ένα βίντεο… (GIF)"
+msgstr "Δημιουργία GIF…"
 
 #: crates/bigiris/src/gui/dialogs/animate.rs:297
 #: crates/bigiris/src/gui/dialogs/batch.rs:102
@@ -745,11 +743,11 @@ msgstr "Αποτυχία"
 
 #: crates/bigiris/src/gui/dialogs/batch.rs:35
 msgid "Prisma — Lote"
-msgstr "Prisma — Παρτίδα"
+msgstr "Prisma — Μαζική επεξεργασία"
 
 #: crates/bigiris/src/gui/dialogs/batch.rs:39
 msgid "Conversão em lote"
-msgstr "Μετατροπή παρτίδας"
+msgstr "Μαζική μετατροπή"
 
 #: crates/bigiris/src/gui/dialogs/batch.rs:46
 msgid "Arquivos"
@@ -784,20 +782,20 @@ msgstr "Φάκελος εξόδου"
 #: crates/bigiris/src/gui/dialogs/convert.rs:61
 #: crates/bigiris/src/gui/dialogs/convert.rs:148
 msgid "Mesma pasta do arquivo de origem"
-msgstr "Ίδιο φάκελο με το αρχείο προέλευσης"
+msgstr "Ίδιος φάκελος με το αρχείο προέλευσης"
 
 #: crates/bigiris/src/gui/dialogs/batch.rs:93
 #: crates/bigiris/src/gui/dialogs/convert.rs:69
 msgid "Usar a mesma pasta do arquivo de origem"
-msgstr "Χρήση του φακέλου αρχείου προέλευσης"
+msgstr "Χρήση του φακέλου του αρχείου προέλευσης"
 
 #: crates/bigiris/src/gui/dialogs/batch.rs:108
 msgid "Aguardando. Clique em Processar para iniciar."
-msgstr "Κάντε κλικ στο κουμπί Επεξεργασία για να ξεκινήσετε."
+msgstr "Αναμονή. Πατήστε Επεξεργασία για να ξεκινήσει."
 
 #: crates/bigiris/src/gui/dialogs/batch.rs:119
 msgid "Processar"
-msgstr "Εικόνες της διαδικασίας"
+msgstr "Επεξεργασία"
 
 #: crates/bigiris/src/gui/dialogs/batch.rs:245
 msgid "Adicione ao menos uma imagem para processar."
@@ -805,7 +803,7 @@ msgstr "Προσθέστε τουλάχιστον μία εικόνα για ε�
 
 #: crates/bigiris/src/gui/dialogs/batch.rs:257
 msgid "Iniciando…"
-msgstr "Ξεκινώντας από…"
+msgstr "Έναρξη…"
 
 #: crates/bigiris/src/gui/dialogs/batch.rs:258
 msgid "Processando…"
@@ -836,15 +834,15 @@ msgstr ""
 #: crates/bigiris/src/gui/dialogs/batch.rs:342
 #: crates/bigiris/src/gui/dialogs/remove_bg.rs:356
 msgid "Concluído"
-msgstr "Έγινε"
+msgstr "Ολοκληρώθηκε"
 
 #: crates/bigiris/src/gui/dialogs/batch.rs:432
 msgid "Adicionar pasta com imagens"
-msgstr "Προσθήκη φακέλου εικόνας"
+msgstr "Προσθήκη φακέλου με εικόνες"
 
 #: crates/bigiris/src/gui/dialogs/compare.rs:31
 msgid "Comparar imagens — Íris"
-msgstr "Σύγκριση εικόνων — Ίρις"
+msgstr "Σύγκριση εικόνων — Iris"
 
 #: crates/bigiris/src/gui/dialogs/compare.rs:43
 msgid "Comparar imagens"
@@ -856,7 +854,7 @@ msgstr "Πριν: {before}  ·  Μετά: {after}"
 
 #: crates/bigiris/src/gui/dialogs/compare.rs:69
 msgid "Arraste o divisor para comparar · Esc fecha"
-msgstr "Σύρετε το διαχωριστικό για να συγκρίνετε · για να κλείσετε"
+msgstr "Σύρετε το διαχωριστικό για σύγκριση · Esc για κλείσιμο"
 
 #: crates/bigiris/src/gui/dialogs/compare.rs:157
 msgid "Não foi possível abrir esta imagem"
@@ -864,22 +862,22 @@ msgstr "Δεν ήταν δυνατό το άνοιγμα αυτής της ει�
 
 #: crates/bigiris/src/gui/dialogs/convert.rs:20
 msgid "Converter imagens — Prisma"
-msgstr "Μετατροπή εικόνων — Μετάφραση (Prisma)"
+msgstr "Μετατροπή εικόνων — Prisma"
 
 #: crates/bigiris/src/gui/dialogs/convert.rs:32
 #: crates/bigiris/src/gui/dialogs/convert.rs:79
 #: crates/bigimage-integrations/src/action.rs:75
 #: data/nautilus/bigiris-menu.py:100
 msgid "Converter"
-msgstr "Μετατρέψτε τις εικόνες"
+msgstr "Μετατροπή"
 
 #: crates/bigiris/src/gui/dialogs/convert.rs:85
 msgid ""
 "Esta imagem tem transparência — JPEG perde o canal alfa. Considere PNG ou "
 "WebP."
 msgstr ""
-"Αυτή η εικόνα έχει διαφάνεια — το αρχείο απορρίπτει το κανάλι Σκεφτείτε το ή "
-"Το αρχείο έχει διαφανή επιφάνεια. (PNG) (JPEG) (WebP)"
+"Αυτή η εικόνα έχει διαφάνεια — το JPEG χάνει το κανάλι άλφα. Προτιμήστε PNG "
+"ή WebP."
 
 #: crates/bigiris/src/gui/dialogs/convert.rs:106
 msgid ""
@@ -909,20 +907,20 @@ msgstr ""
 
 #: crates/bigiris/src/gui/dialogs/crop.rs:309
 msgid "Recortar — Prisma"
-msgstr "Περικοπή — πρίσμα (Prisma)"
+msgstr "Περικοπή — Prisma"
 
 #: crates/bigiris/src/gui/dialogs/crop.rs:321
 #: crates/bigiris/src/gui/dialogs/crop.rs:389
 #: crates/bigiris/src/gui/viewer/crop.rs:375
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:326
 msgid "Recortar"
-msgstr "Περικοπή της εικόνας"
+msgstr "Περικοπή"
 
 #: crates/bigiris/src/gui/dialogs/crop.rs:348
 #: crates/bigiris/src/gui/dialogs/extent.rs:96
 #: crates/bigiris/src/gui/dialogs/upscale.rs:86
 msgid "Tamanho original"
-msgstr "Το αρχικό μέγεθος"
+msgstr "Αρχικό μέγεθος"
 
 #: crates/bigiris/src/gui/dialogs/crop.rs:349
 #: crates/bigiris/src/gui/dialogs/extent.rs:97
@@ -932,25 +930,25 @@ msgstr "Πρώτο αρχείο"
 
 #: crates/bigiris/src/gui/dialogs/crop.rs:355
 msgid "X (px)"
-msgstr "Χ (πίξελ)"
+msgstr "X (px)"
 
 #: crates/bigiris/src/gui/dialogs/crop.rs:359
 msgid "Y (px)"
-msgstr "Υ (px)"
+msgstr "Y (px)"
 
 #: crates/bigiris/src/gui/dialogs/crop.rs:363
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:347
 msgid "Largura (px)"
-msgstr "Πλάτος (χιλ.)"
+msgstr "Πλάτος (px)"
 
 #: crates/bigiris/src/gui/dialogs/crop.rs:367
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:348
 msgid "Altura (px)"
-msgstr "Ύψος (χιλ.)"
+msgstr "Ύψος (px)"
 
 #: crates/bigiris/src/gui/dialogs/crop.rs:388
 msgid "Centro 50%"
-msgstr "Στο κέντρο 50%"
+msgstr "Κέντρο 50%"
 
 #: crates/bigiris/src/gui/dialogs/crop.rs:449
 msgid "Recortando…"
@@ -1022,11 +1020,11 @@ msgstr "Μετασχηματισμός"
 
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:313
 msgid "Espelhar horizontal"
-msgstr "Αναστροφή οριζόντια"
+msgstr "Κατοπτρισμός οριζόντια"
 
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:314
 msgid "Espelhar vertical"
-msgstr "Κάθετη αναστροφή"
+msgstr "Κατοπτρισμός κάθετα"
 
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:319
 msgid "Endireitar"
@@ -1044,7 +1042,7 @@ msgstr "Περικοπή στην ίδια την εικόνα (Ctrl+R)"
 
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:333
 msgid "Ajustes"
-msgstr "Ρυθμίσεις"
+msgstr "Προσαρμογές"
 
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:337
 msgid "Gama"
@@ -1052,7 +1050,7 @@ msgstr "Γάμμα"
 
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:342
 msgid "Restaurar ajustes"
-msgstr "Επαναφορά ρυθμίσεων"
+msgstr "Επαναφορά προσαρμογών"
 
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:346
 #: crates/bigiris/src/gui/dialogs/properties.rs:163
@@ -1102,7 +1100,7 @@ msgstr "Αποθήκευση ως…"
 
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:424
 msgid "Qualidade ao salvar como"
-msgstr "Ποιότητα για Αποθήκευση ως"
+msgstr "Ποιότητα (Αποθήκευση ως)"
 
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:978
 msgid "Recorta o objeto principal com BiRefNet-lite, no seu computador"
@@ -1126,7 +1124,7 @@ msgstr "Lanczos3 (χωρίς ΤΝ)"
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:1507
 #: crates/bigiris/src/gui/dialogs/remove_bg.rs:224
 msgid "Preparando…"
-msgstr "Προετοιμασία για…"
+msgstr "Προετοιμασία…"
 
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:1607
 #: crates/bigiris/src/gui/dialogs/remove_bg.rs:396
@@ -1144,7 +1142,7 @@ msgstr "Αφαίρεση θορύβου…"
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:1619
 #: crates/bigiris/src/gui/dialogs/upscale.rs:197
 msgid "Aumentando…"
-msgstr "Αναβάθμιση κλίμακας…"
+msgstr "Αύξηση ανάλυσης…"
 
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:1649
 msgid "{name}-editada"
@@ -1172,15 +1170,15 @@ msgstr ""
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:12
 msgid "YouTube community (1:1)"
-msgstr "Κοινότητα (1:1) (YouTube)"
+msgstr "YouTube community (1:1)"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:13
 msgid "Instagram feed (4:5)"
-msgstr "Ροή βίντεο (4:5) (Instagram)"
+msgstr "Ροή Instagram (4:5)"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:14
 msgid "Stories / Shorts (9:16)"
-msgstr "Ιστορίες / Σύντομες ιστορίες (9:16)"
+msgstr "Stories / Shorts (9:16)"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:15
 msgid "Widescreen (16:9)"
@@ -1188,15 +1186,15 @@ msgstr "Ευρεία οθόνη (16:9)"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:16
 msgid "Personalizado…"
-msgstr "Προσαρμογή…"
+msgstr "Προσαρμοσμένο…"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:22
 msgid "Preto suave (#0d0e12)"
-msgstr "Μαλακό μαύρο (#0δ0ε12)"
+msgstr "Απαλό μαύρο (#0d0e12)"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:23
 msgid "Preto puro (#000000)"
-msgstr "Καθαρό μαύρο (#000.001)"
+msgstr "Καθαρό μαύρο (#000000)"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:24
 msgid "Branco (#ffffff)"
@@ -1208,7 +1206,7 @@ msgstr "Διαφανές"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:26
 msgid "Personalizada (hex)"
-msgstr "Προσαρμογή (δεκαεξαδικό)"
+msgstr "Προσαρμοσμένο (hex)"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:33
 msgid "Centro"
@@ -1216,19 +1214,19 @@ msgstr "Κέντρο"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:33
 msgid "Topo"
-msgstr "Τοπ άκρη"
+msgstr "Πάνω"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:33
 msgid "Base"
-msgstr "Κατώτατη άκρη"
+msgstr "Κάτω"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:49
 msgid "Letterbox — Prisma"
-msgstr "Γραμματοκιβώτιο — Πρίσμα (Prisma)"
+msgstr "Πλαισίωση με λωρίδες — Prisma"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:62
 msgid "Letterbox"
-msgstr "Letterbox"
+msgstr "Πλαισίωση με λωρίδες"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:63
 msgid "Prisma · sem corte"
@@ -1240,13 +1238,13 @@ msgid ""
 "YouTube, feed do Instagram, Stories…) sem cortar nenhum pixel. A imagem "
 "original é centralizada e o resto é preenchido com a cor escolhida."
 msgstr ""
-"Επεκτείνει τον καμβά γύρω από την εικόνα για να χωρέσει σε μια σταθερή μορφή "
-"(αναρτήσεις στο Ιστορίες…) χωρίς περικοπή Η αρχική εικονα είναι στο κέντρο "
-"και η υπόλοιπη περιοχή γεμίζει με το επιλεγμένο χρώμα. (Instagram) (YouTube)"
+"Επεκτείνει τον καμβά γύρω από την εικόνα ώστε να χωρά σε σταθερή μορφή "
+"(ανάρτηση YouTube, ροή Instagram, Stories…) χωρίς περικοπή ούτε ενός pixel. "
+"Η αρχική εικόνα κεντράρεται και το υπόλοιπο γεμίζει με το επιλεγμένο χρώμα."
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:104
 msgid "Proporção alvo"
-msgstr "Αναλογία διαστάσεων στόχων"
+msgstr "Αναλογία διαστάσεων στόχου"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:111
 msgid "Razão W"
@@ -1254,24 +1252,24 @@ msgstr "Αναλογία πλάτους"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:114
 msgid "Razão H"
-msgstr "Αναλογία του ύψους"
+msgstr "Αναλογία ύψους"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:124
 msgid "Cor de fundo"
-msgstr "Χρώμα παρασκηνίου"
+msgstr "Χρώμα φόντου"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:130
 msgid "Hex (#RRGGBB)"
-msgstr "Δεκαεξαδικό (#RRGGBB)"
+msgstr "Hex (#RRGGBB)"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:138
 msgid "Posição da imagem"
-msgstr "Θέση της εικόνας"
+msgstr "Θέση εικόνας"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:144
 #: crates/bigiris/src/gui/dialogs/upscale.rs:103
 msgid "Destino previsto"
-msgstr "Προβλεπόμενος προορισμός"
+msgstr "Αναμενόμενο αποτέλεσμα"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:171
 msgid "Estender"
@@ -1291,14 +1289,14 @@ msgstr "Επέκταση"
 
 #: crates/bigiris/src/gui/dialogs/flip.rs:20
 msgid "Espelhar imagens — Prisma"
-msgstr "Αναστροφή εικόνων — Πρίσμα (Prisma)"
+msgstr "Κατοπτρισμός εικόνων — Prisma"
 
 #: crates/bigiris/src/gui/dialogs/flip.rs:24
 #: crates/bigiris/src/gui/dialogs/flip.rs:47
 #: crates/bigimage-integrations/src/action.rs:87
 #: data/nautilus/bigiris-menu.py:142
 msgid "Espelhar"
-msgstr "Αναστροφή εικόνας"
+msgstr "Κατοπτρισμός"
 
 #: crates/bigiris/src/gui/dialogs/flip.rs:26
 msgid "Horizontal (esquerda ↔ direita)"
@@ -1314,11 +1312,11 @@ msgstr "Άξονας"
 
 #: crates/bigiris/src/gui/dialogs/flip.rs:87
 msgid "Espelhando…"
-msgstr "Γυρίζοντας…"
+msgstr "Κατοπτρισμός…"
 
 #: crates/bigiris/src/gui/dialogs/flip.rs:93
 msgid "Espelhando"
-msgstr "Αναστροφή"
+msgstr "Κατοπτρισμός"
 
 #: crates/bigiris/src/gui/dialogs/mod.rs:64
 #: crates/bigimage-integrations/src/action.rs:151
@@ -1358,7 +1356,7 @@ msgstr "GIF"
 
 #: crates/bigiris/src/gui/dialogs/mod.rs:71
 msgid "ICO (até 256 × 256)"
-msgstr "Μέγιστη ανάλυση 256 × 240"
+msgstr "ICO (έως 256 × 256)"
 
 #: crates/bigiris/src/gui/dialogs/mod.rs:72
 msgid "PNM (Netpbm)"
@@ -1403,11 +1401,11 @@ msgstr "Ποιότητα (JPEG/WebP/AVIF)"
 
 #: crates/bigiris/src/gui/dialogs/mod.rs:115
 msgid "1 menor qualidade · 85 equilíbrio · 100 maior qualidade"
-msgstr "1 χαμηλότερης ποιότητας · 85 ισορροπημένη · 100 υψηλότερη ποιότητα"
+msgstr "1 χαμηλότερη ποιότητα · 85 ισορροπία · 100 υψηλότερη ποιότητα"
 
 #: crates/bigiris/src/gui/dialogs/mod.rs:119
 msgid "Otimizar tamanho"
-msgstr "Βελτιστοποίηση του μεγέθους"
+msgstr "Βελτιστοποίηση μεγέθους"
 
 #: crates/bigiris/src/gui/dialogs/mod.rs:120
 msgid "PNG com compressão máxima; AVIF mais lento; arquivo menor"
@@ -1419,11 +1417,11 @@ msgstr "Για προχωρημένους"
 
 #: crates/bigiris/src/gui/dialogs/mod.rs:125
 msgid "Otimização do encoder"
-msgstr "Βελτιστοποίηση του κωδικοποιητή"
+msgstr "Βελτιστοποίηση κωδικοποιητή"
 
 #: crates/bigiris/src/gui/dialogs/mod.rs:167
 msgid "Pular se já existir"
-msgstr "Παράβλεψη υπαρχόντων αρχείων"
+msgstr "Παράλειψη αν υπάρχει ήδη"
 
 #: crates/bigiris/src/gui/dialogs/mod.rs:168
 msgid "Sobrescrever o arquivo"
@@ -1431,7 +1429,7 @@ msgstr "Αντικατάσταση του αρχείου"
 
 #: crates/bigiris/src/gui/dialogs/mod.rs:169
 msgid "Incrementar (_1, _2, …)"
-msgstr "Προσθήκη επιθήματος (_1, _2, …)"
+msgstr "Αρίθμηση (_1, _2, …)"
 
 #: crates/bigiris/src/gui/dialogs/mod.rs:190
 #: crates/bigiris/src/gui/dialogs/mod.rs:205
@@ -1452,7 +1450,7 @@ msgstr "{first} και {count} ακόμη"
 
 #: crates/bigiris/src/gui/dialogs/mod.rs:298
 msgid "Escolher pasta de saída"
-msgstr "Επιλέξτε το φάκελο εξόδου"
+msgstr "Επιλογή φακέλου εξόδου"
 
 #: crates/bigiris/src/gui/dialogs/properties.rs:60
 msgid "Não foi possível ler as informações do arquivo"
@@ -1559,7 +1557,7 @@ msgstr "Δεν ήταν δυνατή η εγγραφή του αποτελέσμ
 
 #: crates/bigiris/src/gui/dialogs/remove_bg.rs:73
 msgid "Remover fundo — Prisma"
-msgstr "Αφαίρεση φόντου — Εικόνες (Prisma)"
+msgstr "Αφαίρεση φόντου — Prisma"
 
 #: crates/bigiris/src/gui/dialogs/remove_bg.rs:78
 #: crates/bigiris/src/gui/dialogs/remove_bg.rs:164
@@ -1579,7 +1577,7 @@ msgstr "Δεν έχει επιλεγεί εικόνα"
 
 #: crates/bigiris/src/gui/dialogs/remove_bg.rs:97
 msgid "Informe um ou mais arquivos ao abrir o diálogo."
-msgstr "Επιλέξτε ένα ή περισσότερα αρχεία κατά το άνοιγμα του διαλόγου."
+msgstr "Δώστε ένα ή περισσότερα αρχεία κατά το άνοιγμα του διαλόγου."
 
 #: crates/bigiris/src/gui/dialogs/remove_bg.rs:127
 msgid "Modelo"
@@ -1593,7 +1591,7 @@ msgstr ""
 
 #: crates/bigiris/src/gui/dialogs/remove_bg.rs:147
 msgid "Remover fundo com IA local"
-msgstr "Αφαίρεση φόντου με τοπική τεχνητή νοημοσύνη"
+msgstr "Αφαίρεση φόντου με τοπική ΤΝ"
 
 #: crates/bigiris/src/gui/dialogs/remove_bg.rs:148
 msgid ""
@@ -1618,7 +1616,7 @@ msgstr "Αποτυχίες"
 
 #: crates/bigiris/src/gui/dialogs/remove_bg.rs:378
 msgid "Com erros"
-msgstr "Με τα λάθη"
+msgstr "Με σφάλματα"
 
 #: crates/bigiris/src/gui/dialogs/remove_bg.rs:402
 msgid "Processando {current}/{total} — {file}"
@@ -1635,11 +1633,11 @@ msgstr "BiRefNet-lite (MIT) · λειτουργεί εκτός σύνδεσης 
 #: crates/bigiris/src/gui/dialogs/remove_bg.rs:538
 #: crates/bigiris/src/gui/dialogs/upscale.rs:142
 msgid "Aumentar"
-msgstr "Αναβαθμισμένη εικόνα"
+msgstr "Αύξηση"
 
 #: crates/bigiris/src/gui/dialogs/resize.rs:8
 msgid "Lanczos3 (padrão)"
-msgstr "Λάντσος3 (προεπιλογή) (Lanczos3)"
+msgstr "Lanczos3 (προεπιλογή)"
 
 #: crates/bigiris/src/gui/dialogs/resize.rs:9
 msgid "Mitchell"
@@ -1655,11 +1653,11 @@ msgstr "Bilinear"
 
 #: crates/bigiris/src/gui/dialogs/resize.rs:12
 msgid "Nearest (sem anti-aliasing)"
-msgstr "Πλησιέστερη (χωρίς ψευδαίσθηση)"
+msgstr "Nearest (χωρίς εξομάλυνση)"
 
 #: crates/bigiris/src/gui/dialogs/resize.rs:29
 msgid "Redimensionar imagens — Prisma"
-msgstr "Αλλαγή μεγέθους εικόνων (Prisma)"
+msgstr "Αλλαγή μεγέθους εικόνων — Prisma"
 
 #: crates/bigiris/src/gui/dialogs/resize.rs:41
 #: crates/bigiris/src/gui/dialogs/resize.rs:144
@@ -1667,12 +1665,12 @@ msgstr "Αλλαγή μεγέθους εικόνων (Prisma)"
 #: crates/bigimage-integrations/src/action.rs:79
 #: data/nautilus/bigiris-menu.py:115
 msgid "Redimensionar"
-msgstr "Αλλαγή μεγέθους εικόνων"
+msgstr "Αλλαγή μεγέθους"
 
 #: crates/bigiris/src/gui/dialogs/resize.rs:47
 #: crates/bigiris/src/gui/dialogs/resize.rs:61
 msgid "Aresta máxima"
-msgstr "Ανώτατη άκρη"
+msgstr "Μεγαλύτερη πλευρά"
 
 #: crates/bigiris/src/gui/dialogs/resize.rs:49
 msgid "Dimensão exata (WxH)"
@@ -1680,11 +1678,11 @@ msgstr "Ακριβές μέγεθος (WxH)"
 
 #: crates/bigiris/src/gui/dialogs/resize.rs:50
 msgid "Encaixar em (WxH)"
-msgstr "Ταιριάζει μέσα (WxH)"
+msgstr "Προσαρμογή εντός (WxH)"
 
 #: crates/bigiris/src/gui/dialogs/resize.rs:54
 msgid "Modo"
-msgstr "Κατάσταση"
+msgstr "Λειτουργία"
 
 #: crates/bigiris/src/gui/dialogs/resize.rs:62
 msgid "pixels (lado maior)"
@@ -1712,11 +1710,11 @@ msgstr "Μέγιστο πλάτος"
 
 #: crates/bigiris/src/gui/dialogs/resize.rs:81
 msgid "Altura máxima"
-msgstr "Μέγιστο ύψος 150εκ"
+msgstr "Μέγιστο ύψος"
 
 #: crates/bigiris/src/gui/dialogs/resize.rs:120
 msgid "Kernel de interpolação"
-msgstr "Πυρήνας παρεμβολής"
+msgstr "Μέθοδος παρεμβολής"
 
 #: crates/bigiris/src/gui/dialogs/resize.rs:134
 msgid "Modo de redimensionamento"
@@ -1736,7 +1734,7 @@ msgstr "Αλλαγή μεγέθους"
 
 #: crates/bigiris/src/gui/dialogs/rotate.rs:25
 msgid "Girar imagens — Prisma"
-msgstr "Περιστροφή εικόνων — Αρχική σελίδα (Prisma)"
+msgstr "Περιστροφή εικόνων — Prisma"
 
 #: crates/bigiris/src/gui/dialogs/rotate.rs:29
 #: crates/bigiris/src/gui/dialogs/rotate.rs:52
@@ -1757,7 +1755,7 @@ msgstr "180°"
 
 #: crates/bigiris/src/gui/dialogs/rotate.rs:31
 msgid "270° (anti-horário)"
-msgstr "270 ° (αριστερόστροφα)"
+msgstr "270° (αριστερόστροφα)"
 
 #: crates/bigiris/src/gui/dialogs/rotate.rs:34
 msgid "Rotação"
@@ -1765,7 +1763,7 @@ msgstr "Περιστροφή"
 
 #: crates/bigiris/src/gui/dialogs/rotate.rs:93
 msgid "Girando…"
-msgstr "Περιστρέφεται…"
+msgstr "Περιστροφή…"
 
 #: crates/bigiris/src/gui/dialogs/rotate.rs:99
 msgid "Girando"
@@ -1773,7 +1771,7 @@ msgstr "Περιστροφή"
 
 #: crates/bigiris/src/gui/dialogs/upscale.rs:26
 msgid "Aumentar resolução — Prisma"
-msgstr "Διαμέρισμα 2 Υπνοδωματίων - Πρίσμα (Prisma)"
+msgstr "Αύξηση ανάλυσης — Prisma"
 
 #: crates/bigiris/src/gui/dialogs/upscale.rs:65
 msgid "Usar IA (Real-ESRGAN)"
@@ -1785,7 +1783,7 @@ msgstr "× {factor} (μη διαθέσιμο μέγεθος)"
 
 #: crates/bigiris/src/gui/dialogs/upscale.rs:231
 msgid "Aumentando"
-msgstr "Αναβάθμιση"
+msgstr "Αύξηση ανάλυσης"
 
 #: crates/bigiris/src/gui/dialogs/upscale.rs:247
 msgid "Detalhes mais nítidos que Lanczos3; roda no seu computador"
@@ -1814,11 +1812,11 @@ msgstr "Η επιλογή είναι πολύ μεγάλη. Ανοίξτε λι�
 
 #: crates/bigiris/src/gui/transfers.rs:88
 msgid "Arraste ou copie arquivos locais de imagem."
-msgstr "Αποθέστε ή αντιγράψτε τοπικά αρχεία εικόνας."
+msgstr "Σύρετε ή αντιγράψτε τοπικά αρχεία εικόνας."
 
 #: crates/bigiris/src/gui/transfers.rs:89
 msgid "A transferência demorou demais. Tente novamente."
-msgstr "Η μεταφορά έληξε. Δοκιμάστε ξανά."
+msgstr "Η μεταφορά άργησε πολύ. Δοκιμάστε ξανά."
 
 #: crates/bigiris/src/gui/transfers.rs:91
 msgid "Não foi possível iniciar o visualizador. Tente novamente."
@@ -1826,8 +1824,7 @@ msgstr "Δεν ήταν δυνατή η εκκίνηση της προβολής
 
 #: crates/bigiris/src/gui/transfers.rs:93
 msgid "Copie arquivos de imagem no gerenciador e tente novamente."
-msgstr ""
-"Αντιγράψτε τα αρχεία εικόνας στη διαχείριση αρχείων σας και προσπαθήστε ξανά."
+msgstr "Αντιγράψτε αρχεία εικόνας στη διαχείριση αρχείων και δοκιμάστε ξανά."
 
 #: crates/bigiris/src/gui/transfers.rs:96
 msgid "Não foi possível abrir os arquivos"
@@ -1836,7 +1833,7 @@ msgstr "Δεν ήταν δυνατό το άνοιγμα των αρχείων"
 #: crates/bigimage-integrations/src/action.rs:97
 #: data/nautilus/bigiris-menu.py:167
 msgid "Para web"
-msgstr "Για τον ιστό"
+msgstr "Για το web"
 
 #: crates/bigimage-integrations/src/action.rs:101
 #: data/nautilus/bigiris-menu.py:213
@@ -1846,7 +1843,7 @@ msgstr "Μεταδεδομένα"
 #: crates/bigimage-integrations/src/action.rs:105
 #: data/nautilus/bigiris-menu.py:223
 msgid "Utilidades"
-msgstr "Υπηρεσίες κοινής ωφέλειας"
+msgstr "Βοηθητικά εργαλεία"
 
 #: crates/bigimage-integrations/src/action.rs:111
 #: data/nautilus/bigiris-menu.py:234
@@ -1861,7 +1858,7 @@ msgstr "PDF"
 #: crates/bigimage-integrations/src/action.rs:134
 #: data/nautilus/bigiris-menu.py:255
 msgid "Visualizar em BigIris"
-msgstr "Προβολή στο χάρτη (BigIris)"
+msgstr "Προβολή στο BigIris"
 
 #: crates/bigimage-integrations/src/action.rs:142
 msgid "Processar esta pasta…"
@@ -1901,12 +1898,12 @@ msgstr "200%"
 #: crates/bigimage-integrations/src/action.rs:227
 #: data/nautilus/bigiris-menu.py:122
 msgid "HD (1920 px)"
-msgstr "Υψηλής ευκρίνειας (1920 εικ.)"
+msgstr "HD (1920 px)"
 
 #: crates/bigimage-integrations/src/action.rs:235
 #: data/nautilus/bigiris-menu.py:123
 msgid "4K (3840 px)"
-msgstr "4Κ (3840 εικονοστοιχεία)"
+msgstr "4K (3840 px)"
 
 #: crates/bigimage-integrations/src/action.rs:252
 #: data/nautilus/bigiris-menu.py:133
@@ -1921,7 +1918,7 @@ msgstr "270°"
 #: crates/bigimage-integrations/src/action.rs:276
 #: data/nautilus/bigiris-menu.py:136
 msgid "Automático (EXIF)"
-msgstr "Αυτόματη λήψη (EXIF)"
+msgstr "Αυτόματα (EXIF)"
 
 #: crates/bigimage-integrations/src/action.rs:293
 #: data/nautilus/bigiris-menu.py:146
@@ -1931,7 +1928,7 @@ msgstr "Οριζόντια"
 #: crates/bigimage-integrations/src/action.rs:301
 #: data/nautilus/bigiris-menu.py:147
 msgid "Vertical"
-msgstr "Κατακόρυφος"
+msgstr "Κατακόρυφα"
 
 #: crates/bigimage-integrations/src/action.rs:318
 #: data/nautilus/bigiris-menu.py:157
@@ -1951,7 +1948,7 @@ msgstr "+ Αντίθεση (+20)"
 #: crates/bigimage-integrations/src/action.rs:342
 #: data/nautilus/bigiris-menu.py:160
 msgid "Preto e branco"
-msgstr "Μαύρο και άσπρο"
+msgstr "Ασπρόμαυρο"
 
 #: crates/bigimage-integrations/src/action.rs:350
 #: data/nautilus/bigiris-menu.py:161
@@ -1991,27 +1988,27 @@ msgstr "Discord (2048 px · JPG q80)"
 #: crates/bigimage-integrations/src/action.rs:418
 #: data/nautilus/bigiris-menu.py:195
 msgid "Otimizar PNG (compressão máxima)"
-msgstr "Βελτιστοποίηση μέγιστη συμπίεση) (PNG)"
+msgstr "Βελτιστοποίηση PNG (μέγιστη συμπίεση)"
 
 #: crates/bigimage-integrations/src/action.rs:430
 #: data/nautilus/bigiris-menu.py:199
 msgid "Letterbox YouTube post (1:1)"
-msgstr "Ανάρτηση γραμματοκιβωτίου (1:1) (YouTube)"
+msgstr "Πλαισίωση με λωρίδες: ανάρτηση YouTube (1:1)"
 
 #: crates/bigimage-integrations/src/action.rs:438
 #: data/nautilus/bigiris-menu.py:202
 msgid "Letterbox Instagram feed (4:5)"
-msgstr "Τροφοδοσία γραμματοκιβωτίου (4:5) (Instagram)"
+msgstr "Πλαισίωση με λωρίδες: ροή Instagram (4:5)"
 
 #: crates/bigimage-integrations/src/action.rs:446
 #: data/nautilus/bigiris-menu.py:205
 msgid "Letterbox Stories / Shorts (9:16)"
-msgstr "Ιστορίες γραμματοκιβωτίων / Σύντομες ιστορίες (9:16)"
+msgstr "Πλαισίωση με λωρίδες: Stories / Shorts (9:16)"
 
 #: crates/bigimage-integrations/src/action.rs:454
 #: data/nautilus/bigiris-menu.py:208
 msgid "Letterbox personalizado…"
-msgstr "Προσαρμοσμένο γραμματοκιβώτιο…"
+msgstr "Πλαισίωση με λωρίδες, προσαρμοσμένη…"
 
 #: crates/bigimage-integrations/src/action.rs:463
 #: data/nautilus/bigiris-menu.py:217
@@ -2021,17 +2018,17 @@ msgstr "Προβολή μεταδεδομένων…"
 #: crates/bigimage-integrations/src/action.rs:471
 #: data/nautilus/bigiris-menu.py:218
 msgid "Remover tudo (re-encode limpo)"
-msgstr "Αφαίρεση όλων των μεταδεδομένων (καθαρή εκ νέου κωδικοποίηση)"
+msgstr "Αφαίρεση όλων (καθαρή επανακωδικοποίηση)"
 
 #: crates/bigimage-integrations/src/action.rs:482
 #: data/nautilus/bigiris-menu.py:227
 msgid "Converter em lote (Prisma)…"
-msgstr "Μετατροπή παρτίδας (Πρίσμα)… (Prisma)"
+msgstr "Μαζική μετατροπή (Prisma)…"
 
 #: crates/bigimage-integrations/src/action.rs:490
 #: data/nautilus/bigiris-menu.py:228
 msgid "Criar GIF animado…"
-msgstr "Δημιουργία κινούμενης εικόνας… (GIF)"
+msgstr "Δημιουργία κινούμενου GIF…"
 
 #: crates/bigimage-integrations/src/action.rs:498
 #: data/nautilus/bigiris-menu.py:229
@@ -2046,11 +2043,11 @@ msgstr "Αφαίρεση φόντου (BiRefNet)"
 #: crates/bigimage-integrations/src/action.rs:528
 #: data/nautilus/bigiris-menu.py:248
 msgid "Converter para PDF (LibreOffice)"
-msgstr "Μετατροπή σε αρχείο κειμένου (LibreOffice)"
+msgstr "Μετατροπή σε PDF (LibreOffice)"
 
 #: data/nautilus/bigiris-menu.py:295
 msgid "Operações BigIris"
-msgstr "Ενέργειες (BigIris)"
+msgstr "Ενέργειες BigIris"
 
 #: data/nautilus/bigiris-menu.py:374
 msgid "BigIris: Processar esta pasta…"
@@ -2058,11 +2055,11 @@ msgstr "BigIris: Επεξεργασία αυτού του φακέλου…"
 
 #: data/nautilus/bigiris-menu.py:375
 msgid "Converter imagens da pasta com o Prisma"
-msgstr "Μετατροπή εικόνων φακέλων με το Πρίσμα (Prisma)"
+msgstr "Μετατροπή εικόνων του φακέλου με το Prisma"
 
 #: scripts/translations.py:20
 msgid "Visualizador de imagens"
-msgstr "Πρόγραμμα προβολής εικόνας"
+msgstr "Πρόγραμμα προβολής εικόνων"
 
 #: scripts/translations.py:21
 msgid "Visualize e converta imagens com integração ao gerenciador de arquivos"

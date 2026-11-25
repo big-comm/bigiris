@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# Regenera data/po/bigiris.pot a partir das fontes listadas em POTFILES.in
-# e propaga as novas msgids para cada catalogo .po em LINGUAS via msgmerge.
+# Regenerate data/po/bigiris.pot from the sources in POTFILES.in and merge
+# the new msgids into each catalog listed in LINGUAS.
 #
-# Uso (a partir da raiz do repo):
+# Usage, from the repository root:
 #   data/po/regen-pot.sh
 #
-# Pre-requisitos: gettext (xgettext, msgmerge).
+# Requires gettext (xgettext, msgmerge).
 
 set -euo pipefail
 
@@ -15,12 +15,8 @@ POT="data/po/bigiris.pot"
 POTFILES="data/po/POTFILES.in"
 LINGUAS="data/po/LINGUAS"
 
-# `--language=C` faz xgettext aceitar literais Rust como se fossem C
-# (sintaxe de chamada `gettext("…")` e a mesma). Avisos sobre apostrofos
-# em comentarios sao falsos-positivos esperados.
-# O scanner C ignora linhas iniciadas por `#` (diretivas do pre-processador),
-# entao `#[arg(help = gettext("…"))]` sumiria; ele le uma copia com `#[` → ` [`,
-# que mantem nomes e linhas das referencias.
+# The C scanner reads Rust's `gettext("…")` calls but skips `#` lines as
+# preprocessor directives, so it scans copies with `#[` turned into ` [`.
 scan=$(mktemp -d)
 trap 'rm -rf "$scan"' EXIT
 mapfile -t rust_sources < <(grep -v '^\s*#' "$POTFILES" | grep -v '^\s*$' | grep '\.rs$')
@@ -41,14 +37,15 @@ xgettext \
   -o "$POT" \
   "${rust_sources[@]}"
 
+mapfile -t python_sources < <(grep '\.py$' "$POTFILES")
 # Extract Python markers with its own parser, without touching Nautilus' domain.
 xgettext --language=Python --keyword=_ --keyword=n_ --from-code=UTF-8 \
   --join-existing --package-name=bigiris --package-version=0.1.0 \
   --msgid-bugs-address=https://github.com/big-comm/bigiris/issues \
   --copyright-holder="BigCommunity Team" -o "$POT" \
-  $(grep '\.py$' "$POTFILES")
+  "${python_sources[@]}"
 
-# Atualiza cada .po com as novas msgids preservando msgstrs existentes.
+# Merge the new msgids into each catalog, keeping existing translations.
 while read -r lang; do
   [[ -z "$lang" || "$lang" == \#* ]] && continue
   po="data/po/${lang}.po"
@@ -57,4 +54,4 @@ while read -r lang; do
   fi
 done < "$LINGUAS"
 
-echo "OK — $POT regenerado, .po de cada idioma atualizado."
+echo "OK: regenerated $POT and updated every catalog."

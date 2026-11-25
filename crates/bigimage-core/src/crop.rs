@@ -33,7 +33,7 @@ impl CropRect {
     pub(crate) fn validate_against(&self, img_w: u32, img_h: u32) -> Result<()> {
         if self.width == 0 || self.height == 0 {
             return Err(BigImageError::InvalidInput(format!(
-                "recorte com dimensão zero: {}x{}",
+                "crop with a zero dimension: {}x{}",
                 self.width, self.height
             )));
         }
@@ -51,7 +51,7 @@ impl CropRect {
         })?;
         if x_end > img_w || y_end > img_h {
             return Err(BigImageError::InvalidInput(format!(
-                "recorte ({}x{}+{}+{}) fora da imagem ({}x{})",
+                "crop ({}x{}+{}+{}) outside the image ({}x{})",
                 self.width, self.height, self.x, self.y, img_w, img_h
             )));
         }

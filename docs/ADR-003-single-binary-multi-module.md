@@ -1,51 +1,51 @@
-# ADR-003 — Binário único com múltiplos módulos (Íris + Prisma)
+# ADR-003: Single binary with multiple modules (Íris + Prisma)
 
-- **Status:** Aceito
-- **Data:** 2026-04-19
-- **Supersede:** variante anterior considerada com dois binários (`bigiris` + `bigprisma`)
+- **Status:** Accepted
+- **Date:** 2026-04-19
+- **Supersedes:** an earlier variant considered with two binaries (`bigiris` + `bigprisma`)
 
-## Contexto
+## Context
 
-O projeto precisa de:
+The project needs:
 
-1. Um visualizador de imagens moderno estilo Loupe (R7, R8, R9).
-2. Um sistema completo de conversão/edição em lote, acionado por clique direito (R4, R5).
-3. Preview ao vivo dos efeitos aplicados no módulo de conversão (R7: "visualizar as imagens e os efeitos ou recortes, rotações e etc sendo aplicados ao vivo na interface").
-4. IA para remover fundo e upscale (R10).
+1. A modern image viewer in the style of Loupe (R7, R8, R9).
+2. A complete batch conversion and editing system, launched from the right-click menu (R4, R5).
+3. A live preview of the effects applied in the conversion module (R7: "see the images and the effects, crops, rotations and so on being applied live in the interface").
+4. AI to remove backgrounds and upscale (R10).
 
-Duas arquiteturas foram consideradas:
+Two architectures were considered:
 
-- **A — Dois binários:** `bigiris` (viewer) e `bigprisma` (conversor), seguindo o princípio GNOME HIG "um app, um propósito".
-- **B — Um binário:** `bigiris` contendo módulos internos Íris (viewer) e Prisma (conversor), invocáveis por subcomandos, flags `--dialog=X` ou direto pela GUI.
+- **A, two binaries:** `bigiris` (viewer) and `bigprisma` (converter), following the GNOME HIG principle of "one app, one purpose".
+- **B, one binary:** `bigiris` containing the internal Íris (viewer) and Prisma (converter) modules, invoked through subcommands, `--dialog=X` flags or directly from the GUI.
 
-## Decisão
+## Decision
 
-**Arquitetura B.** Um único binário `bigiris`, um PKGBUILD `bigiris`, um `.desktop` principal. O módulo de conversão existe como submenu do viewer e como diálogos modais invocados por file-manager service menus.
+**Architecture B.** A single `bigiris` binary, one `bigiris` PKGBUILD, one main `.desktop` file. The conversion module exists as a submenu of the viewer and as modal dialogs invoked by file manager service menus.
 
-## Justificativa
+## Rationale
 
-1. **Componentes compartilhados.** Viewer e diálogos usam o mesmo core de decode, transformação, preview e encode, sem duplicar regras de segurança e nomes de saída.
-2. **Cache de modelo dentro de cada lote.** Uma sessão BiRefNet é reutilizada pelos arquivos processados no mesmo fluxo de IA; diálogos independentes continuam isolados em processos próprios.
-3. **Velocidade de desenvolvimento.** Um codebase, um CI, um PKGBUILD, uma submissão BigCommunity/BigLinux/Flathub.
-4. **UX sem fragmentação.** Usuário instala `bigiris` e tem tudo. Service menus disparam `bigiris --dialog=X` — mesma identidade, mesmo ícone, mesmo histórico, mesmas preferências.
-5. **Precedente sólido.** LibreOffice (soffice) faz exatamente isso: um binário, múltiplos `.desktop`, várias identidades de app percebida.
+1. **Shared components.** The viewer and the dialogs use the same decode, transform, preview and encode core, without duplicating safety rules and output names.
+2. **Model cache within each batch.** A BiRefNet session is reused by the files processed in the same AI flow; independent dialogs stay isolated in their own processes.
+3. **Development speed.** One codebase, one CI, one PKGBUILD, one submission to BigCommunity/BigLinux/Flathub.
+4. **UX without fragmentation.** The user installs `bigiris` and has everything. Service menus launch `bigiris --dialog=X`: same identity, same icon, same history, same preferences.
+5. **Solid precedent.** LibreOffice (soffice) does exactly this: one binary, several `.desktop` files, several perceived app identities.
 
-## Trade-offs aceitos
+## Accepted trade-offs
 
-- **Inchaço**: binário carrega código de todos os módulos mesmo quando usuário só quer converter. Mitigado por lazy-load: widgets IA só instanciados quando o diálogo IA é aberto; feature `ai` opcional no Cargo.toml permite distro enxuta.
-- **Raio de explosão de crash**: um panic derruba o processo corrente. Os diálogos avançados são lançados como processos independentes, limitando o impacto sobre o viewer já aberto.
-- **Imagem de marca**: "Prisma" perde visibilidade como produto separado. Mitigado mantendo "Prisma" como nome do módulo de conversão nos títulos de diálogo e em material de marketing — a narrativa Íris/Prisma sobrevive sem custo arquitetural.
+- **Bloat**: the binary carries code for every module even when the user only wants to convert. Mitigated by lazy loading: AI widgets are created only when the AI dialog opens; the optional `ai` feature in `Cargo.toml` allows a lean distribution build.
+- **Crash blast radius**: a panic brings down the current process. The advanced dialogs are launched as independent processes, limiting the impact on an already open viewer.
+- **Brand image**: "Prisma" loses visibility as a separate product. Mitigated by keeping "Prisma" as the name of the conversion module in dialog titles and marketing material: the Íris/Prisma story survives at no architectural cost.
 
-## Rota de reversão
+## Reversal path
 
-Se no futuro houver motivo forte para separar (ex.: Flatpak de viewer sem IA e Flatpak de converter com IA), a separação é factível porque:
+If a strong reason to split ever appears (for example a viewer Flatpak without AI and a converter Flatpak with AI), the split is feasible because:
 
-- `bigimage-core`, `bigimage-ai`, `bigimage-integrations` são crates brand-agnósticas.
-- Os módulos viewer e diálogos vivem em sub-módulos Rust do crate `bigiris` que podem ser promovidos a crates de biblioteca separados.
-- A API do core já é estável entre os dois.
+- `bigimage-core`, `bigimage-ai` and `bigimage-integrations` are brand-agnostic crates.
+- The viewer and dialog modules live in Rust submodules of the `bigiris` crate that can be promoted to separate library crates.
+- The core API is already stable across both.
 
-## Alternativas descartadas
+## Rejected alternatives
 
-- **A — Dois binários sob família BigPictus.** Aumento significativo de custo de manutenção sem benefício proporcional. Perde-se o preview ao vivo natural.
-- **Um binário sem modo CLI.** Violaria R3 (CLI espelho da GUI).
-- **Três binários (viewer, converter, CLI headless).** Complexidade explosiva, sem ganho concreto.
+- **A, two binaries under a BigPictus family.** A significant increase in maintenance cost with no proportional benefit. The natural live preview is lost.
+- **One binary without a CLI mode.** Would violate R3 (CLI mirroring the GUI).
+- **Three binaries (viewer, converter, headless CLI).** Explosive complexity, with no concrete gain.

@@ -4,7 +4,7 @@ use std::io::{Read, Seek, SeekFrom};
 fn invalid() -> std::io::Error {
     std::io::Error::new(
         std::io::ErrorKind::InvalidData,
-        "AVIF inválido: caixa fora do contêiner ou complexidade excessiva",
+        "invalid AVIF: box outside its container or too complex",
     )
 }
 pub(crate) fn inspect(reader: &mut (impl Read + Seek)) -> std::io::Result<()> {

@@ -102,7 +102,7 @@ fn check_weights(path: &Path) -> Availability {
         Ok(meta) if meta.is_file() && meta.len() > 0 => Availability::Ready,
         Ok(_) => Availability::Unreadable {
             path: path.to_path_buf(),
-            error: "não é um arquivo de pesos".into(),
+            error: "not a weights file".into(),
         },
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
             Availability::Missing { path: path.to_path_buf() }
@@ -163,13 +163,13 @@ pub fn cancel_on(flag: &AtomicBool) -> impl FnMut(Stage) -> ControlFlow<()> + '_
 pub enum AiError {
     /// Built without the `native` feature: no engine to run.
     #[error(
-        "esta build não inclui os motores de IA. Recompile com `cargo build --features ai` \
-         (requer `glslc`, do pacote shaderc)."
+        "this build does not include the AI engines. Rebuild with `cargo build --features ai` \
+         (needs `glslc`, from the shaderc package)."
     )]
     Disabled,
     /// The weights package is not installed.
     #[error(
-        "{model} não está instalado ({path} não existe). Instale com: sudo pacman -S {package}"
+        "{model} is not installed ({path} does not exist). Install it with: sudo pacman -S {package}"
     )]
     Missing {
         /// Model name.
@@ -180,7 +180,7 @@ pub enum AiError {
         path: PathBuf,
     },
     /// The weights file exists but cannot be read.
-    #[error("não foi possível ler os pesos de {model} em {path}: {error}")]
+    #[error("could not read the {model} weights at {path}: {error}")]
     Unreadable {
         /// Model name.
         model: &'static str,
@@ -196,13 +196,13 @@ pub enum AiError {
     #[error("GPU: {0}")]
     Gpu(String),
     /// Engine error (weights, worker threads).
-    #[error("inferência: {0}")]
+    #[error("inference: {0}")]
     Inference(String),
     /// Bad input or pre/post-processing error.
     #[error("processamento: {0}")]
     Processing(String),
     /// Not enough memory to start; nothing was allocated.
-    #[error("memória para IA: {0}")]
+    #[error("memory for AI: {0}")]
     Memory(String),
 }
 
@@ -453,7 +453,7 @@ pub(crate) fn assemble(
     width: u32,
     height: u32,
 ) -> Result<DynamicImage, AiError> {
-    let wrong = || AiError::Processing("tamanho de saída inesperado".into());
+    let wrong = || AiError::Processing("unexpected output size".into());
     match alpha {
         None => image::RgbImage::from_raw(width, height, rgb)
             .map(DynamicImage::ImageRgb8)

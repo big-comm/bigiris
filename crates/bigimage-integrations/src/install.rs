@@ -234,9 +234,8 @@ fn is_packaged(spec: &FmSpec, paths: &ScopePaths) -> bool {
 }
 
 // ─── App-level assets (desktop entry, icon, metainfo) ──────────────────
-// Embutidos em compile-time para que o binário saiba se instalar sozinho
-// em desktops onde o usuário rodou cargo build sem PKGBUILD. Os arquivos
-// vivem no diretório `data/` do repo; paths relativos a este arquivo.
+// Embedded at compile time so a binary built with plain `cargo build`
+// can install its own launcher, icon and metainfo.
 
 const APP_DESKTOP: &[u8] = include_bytes!("../../../data/com.biglinux.Iris.desktop");
 const APP_METAINFO: &[u8] = include_bytes!("../../../data/com.biglinux.Iris.metainfo.xml");
@@ -263,8 +262,7 @@ enum AssetKind {
 }
 
 /// FNV-1a 64 and length of every icon BigIris released before the marker
-/// existed and that differs from the current asset (the history of
-/// `data/icons/hicolor/scalable/apps/com.biglinux.Iris.svg`: b82d47a).
+/// existed and that differs from the current asset.
 /// The icon carries no textual id to recognize it by, so only these exact
 /// files count as ours. FNV is not a security boundary here: the file sits
 /// in the user's own home under our application id.
@@ -345,9 +343,8 @@ fn remove_if_ours(path: &std::path::Path, original: &[u8], kind: AssetKind) -> b
         && std::fs::remove_file(path).is_ok()
 }
 
-/// Escreve `.desktop`, ícone SVG e metainfo para os paths XDG do usuário.
-/// Falhas individuais não interrompem — a função retorna apenas os que
-/// foram gravados com sucesso. Diretórios ausentes são criados.
+/// Write the `.desktop`, SVG icon and metainfo to the scope's XDG paths,
+/// returning only the files written; one failure does not stop the rest.
 ///
 /// When the distro package already installed the launcher system-wide,
 /// a personal copy would shadow it and go stale on the next package
@@ -379,10 +376,9 @@ fn install_app_files_with_system(
     written
 }
 
-/// Melhor-esforço: atualiza caches XDG (desktop-database e icon cache)
-/// no escopo do usuário. GNOME Shell lê o nome do `.desktop` direto, mas
-/// busca e MIME-handler dependem desses caches. Se os binários não
-/// existirem, seguimos em frente sem avisar.
+/// Best effort: refresh the user's desktop database and icon cache. GNOME
+/// Shell reads the `.desktop` name directly, but search and MIME handlers
+/// depend on these caches; a missing tool is skipped silently.
 fn refresh_xdg_caches(paths: &ScopePaths) {
     use std::process::{Command, Stdio};
     let apps = paths.applications_dir();
@@ -395,13 +391,9 @@ fn refresh_xdg_caches(paths: &ScopePaths) {
         .status();
     if let Some(hicolor) = hicolor {
         for bin in ["gtk4-update-icon-cache", "gtk-update-icon-cache"] {
-            // `--ignore-theme-index` é obrigatório no escopo user: esta
-            // função só roda para `Scope::User` (ver `install`), e
-            // `~/.local/share/icons/hicolor` não tem `index.theme` próprio
-            // (só o tema system em `/usr/share` tem). Sem essa flag o
-            // comando recusa com "No theme index file" e — como o stderr é
-            // descartado — o cache nunca é gerado, deixando o ícone fora da
-            // busca do GNOME até um logout/login.
+            // `~/.local/share/icons/hicolor` has no `index.theme`, so without
+            // this flag the tool refuses with "No theme index file" and the
+            // icon stays out of GNOME search until the next login.
             let _ = Command::new(bin)
                 .arg("-q")
                 .arg("-f")
@@ -420,9 +412,8 @@ fn refresh_xdg_caches(paths: &ScopePaths) {
         .status();
 }
 
-/// Remove os arquivos instalados por [`install_app_files`]. Não remove
-/// diretórios — deixa isso para o sistema. Arquivos ausentes são
-/// ignorados (idempotente). Files the user placed there themselves (for
+/// Remove the files [`install_app_files`] wrote, leaving directories in
+/// place; missing files are skipped. Files the user placed there themselves (for
 /// example a menu-editor override of the launcher) are kept.
 fn uninstall_app_files(paths: &ScopePaths) -> Vec<PathBuf> {
     app_assets(paths)

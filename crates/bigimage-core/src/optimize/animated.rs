@@ -54,7 +54,7 @@ impl<W: Write> GifAnimation<W> {
         let too_big = || {
             encode_error(
                 image::ImageFormat::Gif,
-                format!("dimensões {width}×{height} grandes demais para GIF"),
+                format!("dimensions {width}×{height} too large for GIF"),
             )
         };
         let width = u16::try_from(width).map_err(|_| too_big())?;

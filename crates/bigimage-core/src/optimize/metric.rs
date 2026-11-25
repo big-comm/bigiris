@@ -80,7 +80,7 @@ impl Metric {
     /// Worst score of `distorted` over the backgrounds (100 = identical).
     pub(crate) fn score(&self, distorted: &RgbaImage) -> ImageResult<f64> {
         if distorted.dimensions() != (self.width, self.height) {
-            return Err(metric_error("dimensões diferentes"));
+            return Err(metric_error("different dimensions"));
         }
         let mut worst = f64::INFINITY;
         if self.alpha {
@@ -249,7 +249,7 @@ where
     let mut last_passed: Option<bool> = None;
     loop {
         if rounds >= MAX_ROUNDS || (rounds > 0 && started.elapsed() > BUDGET) {
-            tracing::debug!(rounds, "busca de qualidade interrompida pelo limite");
+            tracing::debug!(rounds, "quality search stopped at its limit");
             break;
         }
         rounds += 1;

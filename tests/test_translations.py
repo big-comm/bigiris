@@ -18,8 +18,8 @@ class TranslationContracts(unittest.TestCase):
             return translations.read_po(path)
 
     def test_unicode_and_multiline_messages_round_trip(self):
-        text = 'msgid "Abrir"\n" imagens"\nmsgstr "画像を開く"\n'
-        self.assertEqual(self.parse(text), {'Abrir imagens': '画像を開く'})
+        text = 'msgid "Open"\n" images"\nmsgstr "画像を開く"\n'
+        self.assertEqual(self.parse(text), {'Open images': '画像を開く'})
 
     def test_duplicate_message_is_rejected(self):
         with self.assertRaisesRegex(ValueError, 'duplicate'):

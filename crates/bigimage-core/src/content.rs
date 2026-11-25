@@ -40,7 +40,9 @@ pub fn ensure_static_local(path: &Path) -> Result<()> {
         })
     })();
     if result.map_err(|source| BigImageError::Decode { path: path.into(), source })? {
-        return Err(BigImageError::InvalidInput("imagem animada ou com múltiplas páginas: edição estática interrompida para evitar perda de conteúdo".into()));
+        return Err(BigImageError::InvalidInput(
+            "animated or multi-page image: static editing stopped to avoid losing content".into(),
+        ));
     }
     Ok(())
 }
@@ -154,7 +156,7 @@ pub(crate) fn inspect_gif(reader: &mut (impl Read + Seek)) -> image::ImageResult
     fn malformed() -> std::io::Error {
         std::io::Error::new(
             std::io::ErrorKind::InvalidData,
-            "GIF inválido: bloco ou quadro fora da tela",
+            "invalid GIF: block or frame outside the canvas",
         )
     }
     fn byte(reader: &mut impl Read) -> std::io::Result<u8> {

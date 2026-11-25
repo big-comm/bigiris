@@ -4,36 +4,36 @@
 
     <key name="window-width" type="i">
       <default>1280</default>
-      <summary>Largura padrão da janela</summary>
+      <summary>Default window width</summary>
     </key>
     <key name="window-height" type="i">
       <default>800</default>
-      <summary>Altura padrão da janela</summary>
+      <summary>Default window height</summary>
     </key>
     <key name="window-maximized" type="b">
       <default>false</default>
-      <summary>Janela maximizada</summary>
+      <summary>Window maximized</summary>
     </key>
 
     <key name="autohide-ui" type="b">
       <default>true</default>
-      <summary>Ocultar automaticamente a UI em idle (estilo player de vídeo)</summary>
+      <summary>Hide the UI automatically when idle, like a video player</summary>
     </key>
     <key name="autohide-delay-ms" type="u">
       <default>1500</default>
       <range min="500" max="10000"/>
-      <summary>Tempo (ms) sem atividade do usuário antes de ocultar a UI</summary>
+      <summary>Time (ms) without user activity before the UI hides</summary>
     </key>
 
     <key name="filmstrip-visible" type="b">
       <default>true</default>
-      <summary>Mostrar a tira de miniaturas na parte inferior</summary>
+      <summary>Show the thumbnail strip at the bottom</summary>
     </key>
 
     <key name="slideshow-interval-s" type="u">
       <default>5</default>
       <range min="1" max="3600"/>
-      <summary>Intervalo do slideshow em segundos</summary>
+      <summary>Slideshow interval in seconds</summary>
     </key>
 
   </schema>

@@ -51,7 +51,7 @@ impl ResizeMode {
     pub(crate) fn target_dims(&self, src_w: u32, src_h: u32) -> Result<(u32, u32)> {
         if src_w == 0 || src_h == 0 {
             return Err(BigImageError::InvalidInput(format!(
-                "origem com dimensão zero: {src_w}x{src_h}"
+                "source with a zero dimension: {src_w}x{src_h}"
             )));
         }
 
@@ -71,7 +71,7 @@ impl ResizeMode {
             ResizeMode::Exact { width, height } => {
                 if width == 0 || height == 0 {
                     return Err(BigImageError::InvalidInput(format!(
-                        "destino com dimensão zero: {width}x{height}"
+                        "target with a zero dimension: {width}x{height}"
                     )));
                 }
                 Ok((width, height))
@@ -79,7 +79,7 @@ impl ResizeMode {
             ResizeMode::Fit { width, height } => {
                 if width == 0 || height == 0 {
                     return Err(BigImageError::InvalidInput(format!(
-                        "caixa de encaixe com dimensão zero: {width}x{height}"
+                        "fit box with a zero dimension: {width}x{height}"
                     )));
                 }
                 let scale = f64::min(

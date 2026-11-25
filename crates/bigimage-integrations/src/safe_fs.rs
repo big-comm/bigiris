@@ -90,7 +90,7 @@ pub(crate) fn safe_write_with_mode(
             return Err(io::Error::new(
                 io::ErrorKind::PermissionDenied,
                 format!(
-                    "{} é um link simbólico para {}, que pertence a outro usuário",
+                    "{} is a symbolic link to {}, which belongs to another user",
                     path.display(),
                     target.path.display()
                 ),
@@ -140,7 +140,7 @@ fn resolve_target(path: &Path, scope: Scope) -> io::Result<Target> {
         let real = std::fs::canonicalize(path).map_err(|e| {
             io::Error::new(
                 e.kind(),
-                format!("{} é um link simbólico que não pôde ser resolvido: {e}", path.display()),
+                format!("{} is a symbolic link that could not be resolved: {e}", path.display()),
             )
         })?;
         let real_meta = std::fs::symlink_metadata(&real)?;
@@ -156,10 +156,7 @@ fn resolve_target(path: &Path, scope: Scope) -> io::Result<Target> {
 }
 
 fn not_regular(path: &Path) -> io::Error {
-    io::Error::new(
-        io::ErrorKind::InvalidInput,
-        format!("{} não é um arquivo comum", path.display()),
-    )
+    io::Error::new(io::ErrorKind::InvalidInput, format!("{} is not a regular file", path.display()))
 }
 
 #[cfg(test)]

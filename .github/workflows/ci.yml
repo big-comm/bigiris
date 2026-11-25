@@ -238,9 +238,8 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends appstream
-      # --no-net evita lookup das URLs (homepage, bugtracker) que sao
-      # warnings esperados antes do repo virar publico. Trocar por
-      # `appstreamcli validate` (sem --no-net) quando o repo for publico.
+      # --no-net skips the URL checks (homepage, bug tracker), which warn
+      # while the repository is private; drop it once the repository is public.
       - run: appstreamcli validate --no-net data/com.biglinux.Iris.metainfo.xml
 
   translations:

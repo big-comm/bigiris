@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: bigiris 0.1.0\n"
 "Report-Msgid-Bugs-To: https://github.com/big-comm/bigiris/issues\n"
-"POT-Creation-Date: 2026-11-25 18:21-0300\n"
+"POT-Creation-Date: 2026-11-25 18:32-0300\n"
 "PO-Revision-Date: 2026-10-14 01:36-0300\n"
 "Last-Translator: BigCommunity Team\n"
 "Language-Team: BigCommunity Team\n"
@@ -487,7 +487,7 @@ msgid "Remove background (AI)…"
 msgstr "Ukloni pozadinu (AI)…"
 
 #: crates/bigiris/src/gui.rs:4234
-#: crates/bigimage-integrations/src/action.rs:518
+#: crates/bigimage-integrations/src/action.rs:514
 msgid "Upscale…"
 msgstr "Povećaj razlučivost…"
 
@@ -585,7 +585,7 @@ msgstr ""
 msgid "Processing ended unexpectedly. Please try again."
 msgstr "Obrada je neočekivano završila. Pokušajte ponovno."
 
-#: crates/bigiris/src/gui/batch_runner.rs:319 crates/bigiris/src/main.rs:1721
+#: crates/bigiris/src/gui/batch_runner.rs:319 crates/bigiris/src/main.rs:1693
 msgid "a worker ended unexpectedly"
 msgstr "radni proces je neočekivano završio"
 
@@ -733,7 +733,7 @@ msgstr "Brzina enkodera"
 msgid "higher = faster, slightly lower palette quality · default 10"
 msgstr "više = brže, malo lošija kvaliteta palete · zadano 10"
 
-#: crates/bigiris/src/gui/dialogs/animate.rs:95 crates/bigiris/src/main.rs:612
+#: crates/bigiris/src/gui/dialogs/animate.rs:95 crates/bigiris/src/main.rs:610
 msgid "Output file (.gif)"
 msgstr "Izlazna datoteka (.gif)"
 
@@ -1774,7 +1774,7 @@ msgid "90° (clockwise)"
 msgstr "90° (u smjeru kazaljke na satu)"
 
 #: crates/bigiris/src/gui/dialogs/rotate.rs:31
-#: crates/bigimage-integrations/src/action.rs:260
+#: crates/bigimage-integrations/src/action.rs:259
 msgid "180°"
 msgstr "180°"
 
@@ -1986,29 +1986,17 @@ msgstr ""
 "Ciljni omjer (W:H). Platno se proširuje samo koliko je potrebno da slika "
 "stane u taj omjer"
 
-#: crates/bigiris/src/main.rs:352
-msgid "Convert files (headless)"
-msgstr "Pretvori datoteke (headless)"
-
-#: crates/bigiris/src/main.rs:356
+#: crates/bigiris/src/main.rs:358
 msgid ""
-"Target format: png, jpg, webp, avif, tiff, bmp, gif, ico, pnm/ppm/pgm/pbm, "
-"tga, qoi, hdr, exr"
+"Visual quality to aim for: maximum, balanced or smallest (also max, small). "
+"Each format looks for the smallest file that keeps this quality (SSIMULACRA2 "
+"85 / 80 / 70)"
 msgstr ""
-"Ciljni format: png, jpg, webp, avif, tiff, bmp, gif, ico, pnm/ppm/pgm/pbm, "
-"tga, qoi, hdr, exr"
+"Ciljna vizualna kvaliteta: maximum, balanced ili smallest (također max, "
+"small). Svaki format traži najmanju datoteku koja zadržava tu kvalitetu "
+"(SSIMULACRA2 85 / 80 / 70)"
 
 #: crates/bigiris/src/main.rs:364
-msgid ""
-"Visual quality to aim for: maxima, equilibrado or menor (also max, balanced, "
-"small). Each format looks for the smallest file that keeps this quality "
-"(SSIMULACRA2 85 / 80 / 70)"
-msgstr ""
-"Ciljna vizualna kvaliteta: maxima, equilibrado ili menor (također max, "
-"balanced, small). Svaki format traži najmanju datoteku koja zadržava tu "
-"kvalitetu (SSIMULACRA2 85 / 80 / 70)"
-
-#: crates/bigiris/src/main.rs:370
 msgid ""
 "Fixed quality 1..100 for JPEG/WebP/AVIF, without searching (ignores --"
 "target). In WebP, 100 writes losslessly"
@@ -2016,24 +2004,36 @@ msgstr ""
 "Fiksna kvaliteta 1..100 za JPEG/WebP/AVIF, bez pretraživanja (zanemaruje --"
 "target). Kod WebP-a 100 zapisuje bez gubitaka"
 
-#: crates/bigiris/src/main.rs:373 crates/bigiris/src/main.rs:414
+#: crates/bigiris/src/main.rs:367
 msgid "Accepted for compatibility: JPEG is always progressive"
 msgstr "Prihvaćeno radi kompatibilnosti: JPEG je uvijek progresivan"
 
-#: crates/bigiris/src/main.rs:375 crates/bigiris/src/main.rs:416
+#: crates/bigiris/src/main.rs:369
 msgid "Slower compression and smaller files, with no extra loss: PNG and AVIF"
 msgstr "Sporija kompresija i manje datoteke, bez dodatnih gubitaka: PNG i AVIF"
 
-#: crates/bigiris/src/main.rs:381 crates/bigiris/src/main.rs:422
-#: crates/bigiris/src/main.rs:449
+#: crates/bigiris/src/main.rs:382
+msgid "Convert files (headless)"
+msgstr "Pretvori datoteke (headless)"
+
+#: crates/bigiris/src/main.rs:386
+msgid ""
+"Target format: png, jpg, webp, avif, tiff, bmp, gif, ico, pnm/ppm/pgm/pbm, "
+"tga, qoi, hdr, exr"
+msgstr ""
+"Ciljni format: png, jpg, webp, avif, tiff, bmp, gif, ico, pnm/ppm/pgm/pbm, "
+"tga, qoi, hdr, exr"
+
+#: crates/bigiris/src/main.rs:395 crates/bigiris/src/main.rs:420
+#: crates/bigiris/src/main.rs:447
 msgid "What to do when the output file already exists"
 msgstr "Pravilo kada izlazna datoteka već postoji"
 
-#: crates/bigiris/src/main.rs:384
+#: crates/bigiris/src/main.rs:398
 msgid "Input files"
 msgstr "Ulazne datoteke"
 
-#: crates/bigiris/src/main.rs:387
+#: crates/bigiris/src/main.rs:401
 msgid ""
 "Resize files (headless). Exactly one mode among --max-edge / --percent / --"
 "exact / --fit is required"
@@ -2041,31 +2041,16 @@ msgstr ""
 "Promijeni veličinu datoteka (headless). Obavezan je točno jedan način od --"
 "max-edge / --percent / --exact / --fit"
 
-#: crates/bigiris/src/main.rs:395
+#: crates/bigiris/src/main.rs:409
 msgid "Interpolation kernel (default: lanczos3)"
 msgstr "Jezgra interpolacije (zadano: lanczos3)"
 
-#: crates/bigiris/src/main.rs:398 crates/bigiris/src/main.rs:443
+#: crates/bigiris/src/main.rs:412 crates/bigiris/src/main.rs:441
 msgid "Target format (optional; keeps the original format if omitted)"
 msgstr ""
 "Ciljni format (neobavezno; ako se izostavi, zadržava se izvorni format)"
 
-#: crates/bigiris/src/main.rs:405
-msgid ""
-"Visual quality to aim for: maxima, equilibrado or menor (also max, balanced, "
-"small)"
-msgstr ""
-"Ciljna vizualna kvaliteta: maxima, equilibrado ili menor (također max, "
-"balanced, small)"
-
-#: crates/bigiris/src/main.rs:411
-msgid ""
-"Fixed quality 1..100 for JPEG/WebP/AVIF, without searching (ignores --target)"
-msgstr ""
-"Fiksna kvaliteta 1..100 za JPEG/WebP/AVIF, bez pretraživanja (zanemaruje --"
-"target)"
-
-#: crates/bigiris/src/main.rs:428
+#: crates/bigiris/src/main.rs:426
 msgid ""
 "Rotate files (headless). Right-angle rotations through a re-encode pipeline; "
 "`--auto` reads the EXIF Orientation tag and applies the right rotation"
@@ -2073,28 +2058,28 @@ msgstr ""
 "Rotiraj datoteke (headless). Rotacije za pravi kut ponovnim kodiranjem; `--"
 "auto` čita EXIF oznaku Orientation i primjenjuje ispravnu rotaciju"
 
-#: crates/bigiris/src/main.rs:434
+#: crates/bigiris/src/main.rs:432
 msgid "Rotation in degrees: 90 | 180 | 270"
 msgstr "Stupnjevi: 90 | 180 | 270"
 
-#: crates/bigiris/src/main.rs:440
+#: crates/bigiris/src/main.rs:438
 msgid "Auto-orient from EXIF (Orientation tag)"
 msgstr "Automatska orijentacija prema EXIF-u (oznaka Orientation)"
 
-#: crates/bigiris/src/main.rs:455
+#: crates/bigiris/src/main.rs:453
 msgid "Mirror files horizontally or vertically (headless)"
 msgstr "Zrcali datoteke vodoravno ili okomito (headless)"
 
-#: crates/bigiris/src/main.rs:457
+#: crates/bigiris/src/main.rs:455
 msgid "Axis: horizontal | vertical"
 msgstr "Os: horizontal | vertical"
 
-#: crates/bigiris/src/main.rs:459 crates/bigiris/src/main.rs:473
-#: crates/bigiris/src/main.rs:497 crates/bigiris/src/main.rs:533
+#: crates/bigiris/src/main.rs:457 crates/bigiris/src/main.rs:471
+#: crates/bigiris/src/main.rs:495 crates/bigiris/src/main.rs:531
 msgid "Target format (optional)"
 msgstr "Ciljni format (neobavezno)"
 
-#: crates/bigiris/src/main.rs:466
+#: crates/bigiris/src/main.rs:464
 msgid ""
 "Crop a rectangle from images (headless). Use --rect WxH+X+Y, ImageMagick "
 "style"
@@ -2102,11 +2087,11 @@ msgstr ""
 "Obreži pravokutnik iz slika (headless). Koristite --rect WxH+X+Y u stilu "
 "ImageMagicka"
 
-#: crates/bigiris/src/main.rs:470
+#: crates/bigiris/src/main.rs:468
 msgid "Crop geometry in the WxH+X+Y format (e.g. 800x600+100+50)"
 msgstr "Geometrija obrezivanja u formatu WxH+X+Y (npr. 800x600+100+50)"
 
-#: crates/bigiris/src/main.rs:480
+#: crates/bigiris/src/main.rs:478
 msgid ""
 "Extend the canvas around the image (letterbox). Exactly one mode among --"
 "size and --aspect is required. The canvas is filled with --bg and the "
@@ -2116,35 +2101,35 @@ msgstr ""
 "size i --aspect. Platno se ispunjava bojom --bg, a izvorna slika postavlja "
 "se prema --gravity"
 
-#: crates/bigiris/src/main.rs:487
+#: crates/bigiris/src/main.rs:485
 msgid "Background color in hexadecimal (#RRGGBB or #RRGGBBAA)"
 msgstr "Boja pozadine u heksadecimalnom zapisu (#RRGGBB ili #RRGGBBAA)"
 
-#: crates/bigiris/src/main.rs:494
+#: crates/bigiris/src/main.rs:492
 msgid "Position of the original image on the extended canvas"
 msgstr "Položaj izvorne slike na proširenom platnu"
 
-#: crates/bigiris/src/main.rs:504
+#: crates/bigiris/src/main.rs:502
 msgid "Adjust color/tone (brightness, contrast, saturation, gamma)"
 msgstr "Prilagodi boju/ton (svjetlina, kontrast, zasićenost, gama)"
 
-#: crates/bigiris/src/main.rs:510
+#: crates/bigiris/src/main.rs:508
 msgid "Brightness -100..100 (0 = no change)"
 msgstr "Svjetlina -100..100 (0 = bez promjene)"
 
-#: crates/bigiris/src/main.rs:517
+#: crates/bigiris/src/main.rs:515
 msgid "Contrast -100..100 (0 = no change)"
 msgstr "Kontrast -100..100 (0 = bez promjene)"
 
-#: crates/bigiris/src/main.rs:524
+#: crates/bigiris/src/main.rs:522
 msgid "Saturation -100..100 (-100 = gray, 0 = no change)"
 msgstr "Zasićenost -100..100 (-100 = sivo, 0 = bez promjene)"
 
-#: crates/bigiris/src/main.rs:530
+#: crates/bigiris/src/main.rs:528
 msgid "Gamma 0.1..10.0 (< 1 brightens midtones, > 1 darkens)"
 msgstr "Gama 0.1..10.0 (< 1 posvjetljuje srednje tonove, > 1 zatamnjuje)"
 
-#: crates/bigiris/src/main.rs:540
+#: crates/bigiris/src/main.rs:538
 msgid ""
 "Remove the background with local AI (BiRefNet-lite, birefnet-native "
 "package). Writes `<name>_nobg.png` (PNG with alpha) next to each image"
@@ -2152,15 +2137,15 @@ msgstr ""
 "Ukloni pozadinu pomoću lokalnog AI-ja (BiRefNet-lite, paket birefnet-"
 "native). Zapisuje `<naziv>_nobg.png` (PNG s alfa kanalom) pokraj svake slike"
 
-#: crates/bigiris/src/main.rs:546
+#: crates/bigiris/src/main.rs:544
 msgid "Segmentation model"
 msgstr "Model segmentacije"
 
-#: crates/bigiris/src/main.rs:553
+#: crates/bigiris/src/main.rs:551
 msgid "What to do when `<name>_nobg.png` already exists"
 msgstr "Pravilo kada `<naziv>_nobg.png` već postoji"
 
-#: crates/bigiris/src/main.rs:559
+#: crates/bigiris/src/main.rs:557
 msgid ""
 "Increase resolution by 2, 3 or 4. With the realesrgan-native package it uses "
 "AI (Real-ESRGAN); without it, Lanczos3. Writes `<name>_<pct>pct.<ext>`"
@@ -2168,11 +2153,11 @@ msgstr ""
 "Povećaj razlučivost 2, 3 ili 4 puta. S paketom realesrgan-native koristi AI "
 "(Real-ESRGAN); bez njega Lanczos3. Zapisuje `<naziv>_<pct>pct.<ext>`"
 
-#: crates/bigiris/src/main.rs:561
+#: crates/bigiris/src/main.rs:559
 msgid "Integer factor (2, 3 or 4)"
 msgstr "Cjelobrojni faktor (2, 3 ili 4)"
 
-#: crates/bigiris/src/main.rs:567
+#: crates/bigiris/src/main.rs:565
 msgid ""
 "Engine: auto (Real-ESRGAN if installed, otherwise Lanczos3), realesrgan "
 "(fails if missing) or lanczos"
@@ -2180,12 +2165,12 @@ msgstr ""
 "Metoda: auto (Real-ESRGAN ako je instaliran, inače Lanczos3), realesrgan (ne "
 "uspijeva ako nedostaje) ili lanczos"
 
-#: crates/bigiris/src/main.rs:574 crates/bigiris/src/main.rs:586
-#: crates/bigiris/src/main.rs:604 crates/bigiris/src/main.rs:636
+#: crates/bigiris/src/main.rs:572 crates/bigiris/src/main.rs:584
+#: crates/bigiris/src/main.rs:602 crates/bigiris/src/main.rs:634
 msgid "Overwrite policy for the output file"
 msgstr "Pravilo prepisivanja izlazne datoteke"
 
-#: crates/bigiris/src/main.rs:580
+#: crates/bigiris/src/main.rs:578
 msgid ""
 "Remove noise and compression artifacts with local AI (SCUNet, scunet-native "
 "package). Writes `<name>_denoised.<ext>`"
@@ -2193,7 +2178,7 @@ msgstr ""
 "Ukloni šum i artefakte kompresije pomoću lokalnog AI-ja (SCUNet, paket "
 "scunet-native). Zapisuje `<naziv>_denoised.<ext>`"
 
-#: crates/bigiris/src/main.rs:592
+#: crates/bigiris/src/main.rs:590
 msgid ""
 "Erase objects: fills the area marked in the mask with local AI (LaMa, lama-"
 "native package). Writes `<name>_inpaint.<ext>`"
@@ -2201,7 +2186,7 @@ msgstr ""
 "Izbriši objekte: ispunjava područje označeno na maski pomoću lokalnog AI-ja "
 "(LaMa, paket lama-native). Zapisuje `<naziv>_inpaint.<ext>`"
 
-#: crates/bigiris/src/main.rs:597
+#: crates/bigiris/src/main.rs:595
 msgid ""
 "Mask the same size as the image: white = fill, black = keep (transparent "
 "areas are kept)"
@@ -2209,47 +2194,47 @@ msgstr ""
 "Maska iste veličine kao slika: bijelo = ispuni, crno = zadrži (prozirna "
 "područja se zadržavaju)"
 
-#: crates/bigiris/src/main.rs:610
+#: crates/bigiris/src/main.rs:608
 msgid "Create an animated GIF from a sequence of images (headless)"
 msgstr "Stvori animirani GIF iz niza slika (headless)"
 
-#: crates/bigiris/src/main.rs:617
+#: crates/bigiris/src/main.rs:615
 msgid "Delay between frames in milliseconds (100 ≈ 10 fps)"
 msgstr "Kašnjenje između okvira u milisekundama (100 ≈ 10 fps)"
 
-#: crates/bigiris/src/main.rs:623
+#: crates/bigiris/src/main.rs:621
 msgid "Number of repetitions: 0 = infinite (default), 1+ = fixed"
 msgstr "Broj ponavljanja: 0 = beskonačno (zadano), 1+ = fiksno"
 
-#: crates/bigiris/src/main.rs:629
+#: crates/bigiris/src/main.rs:627
 msgid "Encoder speed 1..30 (higher = faster, worse palette)"
 msgstr "Brzina kodera 1..30 (veća = brže, lošija paleta)"
 
-#: crates/bigiris/src/main.rs:639
+#: crates/bigiris/src/main.rs:637
 msgid "Frames in order (at least 1)"
 msgstr "Okviri redom (najmanje 1)"
 
-#: crates/bigiris/src/main.rs:642
+#: crates/bigiris/src/main.rs:640
 msgid "Process files or folders in parallel from a TOML profile"
 msgstr "Paralelno obradi datoteke ili mape prema TOML profilu"
 
-#: crates/bigiris/src/main.rs:644
+#: crates/bigiris/src/main.rs:642
 msgid "Profile file (.toml)"
 msgstr "Datoteka profila .toml"
 
-#: crates/bigiris/src/main.rs:649
+#: crates/bigiris/src/main.rs:647
 msgid "Install file manager integrations"
 msgstr "Instaliraj integracije s upraviteljima datoteka"
 
-#: crates/bigiris/src/main.rs:651
+#: crates/bigiris/src/main.rs:649
 msgid "Install in ~/.local/share (default)"
 msgstr "Instaliraj u ~/.local/share (zadano)"
 
-#: crates/bigiris/src/main.rs:655
+#: crates/bigiris/src/main.rs:653
 msgid "Install in /usr/share (requires root; usually done by the package)"
 msgstr "Instaliraj u /usr/share (zahtijeva root; obično to radi paket)"
 
-#: crates/bigiris/src/main.rs:663
+#: crates/bigiris/src/main.rs:661
 msgid ""
 "DESTDIR prefix for packaging (e.g. $pkgdir in the PKGBUILD). Only makes "
 "sense together with --system"
@@ -2257,11 +2242,11 @@ msgstr ""
 "Prefiks DESTDIR za pakiranje (npr. $pkgdir u PKGBUILD-u). Ima smisla samo u "
 "kombinaciji s --system"
 
-#: crates/bigiris/src/main.rs:667
+#: crates/bigiris/src/main.rs:665
 msgid "Remove previously installed integrations"
 msgstr "Ukloni prethodno instalirane integracije"
 
-#: crates/bigiris/src/main.rs:669
+#: crates/bigiris/src/main.rs:667
 msgid ""
 "Convert documents (ODT, DOCX, TXT, MD, RTF, XLSX, PPTX, etc.) to PDF with "
 "headless LibreOffice. The output is written next to the source file"
@@ -2269,148 +2254,148 @@ msgstr ""
 "Pretvori dokumente (ODT, DOCX, TXT, MD, RTF, XLSX, PPTX itd.) u PDF pomoću "
 "LibreOfficea u headless načinu. Izlaz se zapisuje pokraj izvorne datoteke"
 
-#: crates/bigiris/src/main.rs:675
+#: crates/bigiris/src/main.rs:673
 msgid "What to do when `<name>.pdf` already exists"
 msgstr "Pravilo kada `<naziv>.pdf` već postoji"
 
-#: crates/bigiris/src/main.rs:682
+#: crates/bigiris/src/main.rs:680
 msgid "Maximum time per document, in seconds"
 msgstr "Najdulje vrijeme po dokumentu, u sekundama"
 
-#: crates/bigiris/src/main.rs:695
+#: crates/bigiris/src/main.rs:693
 msgid "BiRefNet-lite (the only model available)"
 msgstr "BiRefNet-lite (jedini dostupni model)"
 
-#: crates/bigiris/src/main.rs:703
+#: crates/bigiris/src/main.rs:701
 msgid ""
 "Real-ESRGAN when the realesrgan-native package is installed, otherwise "
 "Lanczos3"
 msgstr "Real-ESRGAN kada je instaliran paket realesrgan-native, inače Lanczos3"
 
-#: crates/bigiris/src/main.rs:708
+#: crates/bigiris/src/main.rs:706
 msgid "Real-ESRGAN AI (requires realesrgan-native)"
 msgstr "AI Real-ESRGAN (zahtijeva realesrgan-native)"
 
-#: crates/bigiris/src/main.rs:711
+#: crates/bigiris/src/main.rs:709
 msgid "Lanczos3 resampling (no AI)"
 msgstr "Ponovno uzorkovanje Lanczos3 (bez AI-ja)"
 
-#: crates/bigiris/src/main.rs:793
+#: crates/bigiris/src/main.rs:765
 msgid "rotate: use --degrees 90|180|270 or --auto"
 msgstr "rotate: koristite --degrees 90|180|270 ili --auto"
 
-#: crates/bigiris/src/main.rs:865
+#: crates/bigiris/src/main.rs:837
 msgid "BigIris: the operation failed"
 msgstr "BigIris: operacija nije uspjela"
 
-#: crates/bigiris/src/main.rs:878
+#: crates/bigiris/src/main.rs:850
 msgid "Some files were not processed; see the details in the terminal."
 msgstr "Neke datoteke nisu obrađene; pojedinosti pogledajte u terminalu."
 
-#: crates/bigiris/src/main.rs:953
-msgid "invalid quality target: {value}; use maxima, equilibrado or menor"
+#: crates/bigiris/src/main.rs:925
+msgid "invalid quality target: {value}; use maximum, balanced or smallest"
 msgstr ""
-"neispravan cilj kvalitete: {value}; koristite maxima, equilibrado ili menor"
+"neispravan cilj kvalitete: {value}; koristite maximum, balanced ili smallest"
 
-#: crates/bigiris/src/main.rs:966 crates/bigiris/src/main.rs:1060
+#: crates/bigiris/src/main.rs:938 crates/bigiris/src/main.rs:1032
 msgid "invalid target format: {error}"
 msgstr "neispravan ciljni format: {error}"
 
-#: crates/bigiris/src/main.rs:976
+#: crates/bigiris/src/main.rs:948
 msgid "the original was already smaller; copied without recompression"
 msgstr "izvornik je već bio manji; kopiran bez ponovne kompresije"
 
-#: crates/bigiris/src/main.rs:1034
+#: crates/bigiris/src/main.rs:1006
 msgid "invalid --bg: {error}"
 msgstr "neispravan --bg: {error}"
 
-#: crates/bigiris/src/main.rs:1166
+#: crates/bigiris/src/main.rs:1138
 msgid "several inputs would write the same output file:"
 msgstr "više ulaza zapisalo bi istu izlaznu datoteku:"
 
-#: crates/bigiris/src/main.rs:1174
+#: crates/bigiris/src/main.rs:1146
 msgid "Rename the inputs, process them separately or use the increment policy."
 msgstr ""
 "Preimenujte ulaze, obradite ih zasebno ili koristite pravilo increment."
 
-#: crates/bigiris/src/main.rs:1226
+#: crates/bigiris/src/main.rs:1198
 msgid "replaced the output of another input: {path}"
 msgstr "zamijenjen izlaz drugog ulaza: {path}"
 
-#: crates/bigiris/src/main.rs:1261
+#: crates/bigiris/src/main.rs:1233
 msgid "the color profile is corrupted; colors were treated as sRGB"
 msgstr "profil boja je oštećen; boje su obrađene kao sRGB"
 
-#: crates/bigiris/src/main.rs:1266
+#: crates/bigiris/src/main.rs:1238
 msgid "already exists: {path}"
 msgstr "već postoji: {path}"
 
-#: crates/bigiris/src/main.rs:1272
+#: crates/bigiris/src/main.rs:1244
 msgid "{operation}: {written} written, {skipped} skipped, {failed} failed"
 msgstr ""
 "{operation}: zapisano {written}, preskočeno {skipped}, neuspjelo {failed}"
 
-#: crates/bigiris/src/main.rs:1366
+#: crates/bigiris/src/main.rs:1338
 msgid ""
 "{model} is not installed ({path} does not exist). Install it with: {command}"
 msgstr ""
 "{model} nije instaliran ({path} ne postoji). Instalirajte pomoću: {command}"
 
-#: crates/bigiris/src/main.rs:1376
+#: crates/bigiris/src/main.rs:1348
 msgid "could not read the {model} weights at {path}: {error}"
 msgstr "nije moguće pročitati težine modela {model} iz {path}: {error}"
 
-#: crates/bigiris/src/main.rs:1409
+#: crates/bigiris/src/main.rs:1381
 msgid "invalid factor: {factor}. Use 2, 3 or 4."
 msgstr "neispravan faktor: {factor}. Koristite 2, 3 ili 4."
 
-#: crates/bigiris/src/main.rs:1425
+#: crates/bigiris/src/main.rs:1397
 msgid "Real-ESRGAN unavailable; using Lanczos3. To use AI: {command}"
 msgstr "Real-ESRGAN nije dostupan; koristi se Lanczos3. Za AI: {command}"
 
-#: crates/bigiris/src/main.rs:1484
+#: crates/bigiris/src/main.rs:1456
 msgid "mask {path}: {error}"
 msgstr "maska {path}: {error}"
 
-#: crates/bigiris/src/main.rs:1495
+#: crates/bigiris/src/main.rs:1467
 msgid "marks no area (paint the areas to erase white)"
 msgstr "ne označava nijedno područje (obojite bijelom ono što treba izbrisati)"
 
-#: crates/bigiris/src/main.rs:1529
+#: crates/bigiris/src/main.rs:1501
 msgid "{count} frame(s)"
 msgstr "okviri: {count}"
 
-#: crates/bigiris/src/main.rs:1568
+#: crates/bigiris/src/main.rs:1540
 msgid "could not read {path}: {error}"
 msgstr "nije moguće pročitati {path}: {error}"
 
-#: crates/bigiris/src/main.rs:1599
+#: crates/bigiris/src/main.rs:1571
 msgid "invalid TOML profile: {error}"
 msgstr "neispravan TOML profil: {error}"
 
-#: crates/bigiris/src/main.rs:1602
+#: crates/bigiris/src/main.rs:1574
 msgid "quality must be between 1 and 100"
 msgstr "quality mora biti između 1 i 100"
 
-#: crates/bigiris/src/main.rs:1605
+#: crates/bigiris/src/main.rs:1577
 msgid "invalid profile format: {error}"
 msgstr "neispravan format profila: {error}"
 
-#: crates/bigiris/src/main.rs:1617
+#: crates/bigiris/src/main.rs:1589
 msgid "invalid overwrite: {value}; use skip, replace or increment"
 msgstr ""
 "neispravna vrijednost overwrite: {value}; koristite skip, replace ili "
 "increment"
 
-#: crates/bigiris/src/main.rs:1625
+#: crates/bigiris/src/main.rs:1597
 msgid "could not create {path}: {error}"
 msgstr "nije moguće stvoriti {path}: {error}"
 
-#: crates/bigiris/src/main.rs:1634
+#: crates/bigiris/src/main.rs:1606
 msgid "no images found for the batch"
 msgstr "nije pronađena nijedna slika za skupnu obradu"
 
-#: crates/bigiris/src/main.rs:1746
+#: crates/bigiris/src/main.rs:1715
 msgid ""
 "LibreOffice (`soffice`) not found in PATH. Install `libreoffice-fresh` "
 "(recommended) or `libreoffice-still` (e.g. `sudo pacman -S libreoffice-"
@@ -2420,83 +2405,83 @@ msgstr ""
 "`libreoffice-fresh` (preporučeno) ili `libreoffice-still` (npr. `sudo pacman "
 "-S libreoffice-fresh`)."
 
-#: crates/bigiris/src/main.rs:1798
+#: crates/bigiris/src/main.rs:1767
 msgid "not a regular file"
 msgstr "nije obična datoteka"
 
-#: crates/bigiris/src/main.rs:1801
+#: crates/bigiris/src/main.rs:1770
 msgid "invalid file name"
 msgstr "neispravan naziv datoteke"
 
-#: crates/bigiris/src/main.rs:1822
+#: crates/bigiris/src/main.rs:1791
 msgid "could not run soffice: {error}"
 msgstr "pokretanje soffice nije uspjelo: {error}"
 
-#: crates/bigiris/src/main.rs:1833
+#: crates/bigiris/src/main.rs:1802
 msgid "soffice exceeded the {seconds} s limit"
 msgstr "soffice je prekoračio ograničenje od {seconds} s"
 
-#: crates/bigiris/src/main.rs:1846
+#: crates/bigiris/src/main.rs:1815
 msgid "soffice did not produce the PDF ({status})"
 msgstr "soffice nije stvorio PDF ({status})"
 
-#: crates/bigiris/src/main.rs:1889
+#: crates/bigiris/src/main.rs:1858
 msgid "too many files with the same name: {path}"
 msgstr "previše datoteka s istim nazivom: {path}"
 
-#: crates/bigiris/src/main.rs:1932
+#: crates/bigiris/src/main.rs:1900
 msgid "installation failed: {error}"
 msgstr "instalacija nije uspjela: {error}"
 
-#: crates/bigiris/src/main.rs:1938
+#: crates/bigiris/src/main.rs:1906
 msgid "installed"
 msgstr "instalirano"
 
-#: crates/bigiris/src/main.rs:1939
+#: crates/bigiris/src/main.rs:1907
 msgid "installed in total: {files} file(s) in {managers} file manager(s)"
 msgstr "ukupno instalirano: datoteka: {files}, upravitelja: {managers}"
 
-#: crates/bigiris/src/main.rs:1955
+#: crates/bigiris/src/main.rs:1923
 msgid "removal failed: {error}"
 msgstr "uklanjanje nije uspjelo: {error}"
 
-#: crates/bigiris/src/main.rs:1958
+#: crates/bigiris/src/main.rs:1926
 msgid "removed"
 msgstr "uklonjeno"
 
-#: crates/bigiris/src/main.rs:1959
+#: crates/bigiris/src/main.rs:1927
 msgid "removed in total: {files} file(s) in {managers} file manager(s)"
 msgstr "ukupno uklonjeno: datoteka: {files}, upravitelja: {managers}"
 
-#: crates/bigiris/src/main.rs:1982
+#: crates/bigiris/src/main.rs:1950
 msgid "FAILED"
 msgstr "NEUSPJEH"
 
-#: crates/bigiris/src/main.rs:1987
+#: crates/bigiris/src/main.rs:1955
 msgid "provided by the package"
 msgstr "isporučuje paket"
 
-#: crates/bigiris/src/main.rs:1990
+#: crates/bigiris/src/main.rs:1958
 msgid "unchanged"
 msgstr "bez promjena"
 
-#: crates/bigiris/src/main.rs:1992
+#: crates/bigiris/src/main.rs:1960
 msgid "skipped"
 msgstr "preskočeno"
 
-#: crates/bigiris/src/main.rs:1997
+#: crates/bigiris/src/main.rs:1965
 msgid "detected"
 msgstr "pronađeno"
 
-#: crates/bigiris/src/main.rs:1997
+#: crates/bigiris/src/main.rs:1965
 msgid "not in PATH"
 msgstr "nema u varijabli PATH"
 
-#: crates/bigiris/src/main.rs:1999
+#: crates/bigiris/src/main.rs:1967
 msgid "{count} file(s)"
 msgstr "datoteka: {count}"
 
-#: crates/bigiris/src/main.rs:2024
+#: crates/bigiris/src/main.rs:1992
 msgid ""
 "warning: this build lacks the `gui` feature. Dialog '{dialog}' ignored "
 "(rebuild with --features gui)."
@@ -2504,7 +2489,7 @@ msgstr ""
 "upozorenje: trenutačna izgradnja nema značajku `gui`. Dijalog '{dialog}' "
 "zanemaren (ponovno prevedite s --features gui)."
 
-#: crates/bigiris/src/main.rs:2031
+#: crates/bigiris/src/main.rs:1999
 msgid ""
 "warning: this build lacks the `gui` feature. Viewer unavailable (rebuild "
 "with --features gui)."
@@ -2512,7 +2497,7 @@ msgstr ""
 "upozorenje: trenutačna izgradnja nema značajku `gui`. Preglednik nije "
 "dostupan (ponovno prevedite s --features gui)."
 
-#: crates/bigiris/src/main.rs:2036
+#: crates/bigiris/src/main.rs:2004
 msgid ""
 "warning: this build lacks the `gui` feature. Viewer unavailable; files "
 "received:"
@@ -2552,155 +2537,155 @@ msgstr "Obradi ovu mapu…"
 msgid "JPG"
 msgstr "JPG"
 
-#: crates/bigimage-integrations/src/action.rs:194
-#: crates/bigimage-integrations/src/action.rs:243
-#: crates/bigimage-integrations/src/action.rs:284
-#: crates/bigimage-integrations/src/action.rs:309
-#: crates/bigimage-integrations/src/action.rs:358
+#: crates/bigimage-integrations/src/action.rs:193
+#: crates/bigimage-integrations/src/action.rs:242
+#: crates/bigimage-integrations/src/action.rs:283
+#: crates/bigimage-integrations/src/action.rs:308
+#: crates/bigimage-integrations/src/action.rs:357
 msgid "More options…"
 msgstr "Više opcija…"
 
-#: crates/bigimage-integrations/src/action.rs:203
+#: crates/bigimage-integrations/src/action.rs:202
 msgid "25%"
 msgstr "25%"
 
-#: crates/bigimage-integrations/src/action.rs:211
+#: crates/bigimage-integrations/src/action.rs:210
 msgid "50%"
 msgstr "50%"
 
-#: crates/bigimage-integrations/src/action.rs:219
+#: crates/bigimage-integrations/src/action.rs:218
 msgid "200%"
 msgstr "200%"
 
-#: crates/bigimage-integrations/src/action.rs:227
+#: crates/bigimage-integrations/src/action.rs:226
 msgid "HD (1920 px)"
 msgstr "HD (1920 px)"
 
-#: crates/bigimage-integrations/src/action.rs:235
+#: crates/bigimage-integrations/src/action.rs:234
 msgid "4K (3840 px)"
 msgstr "4K (3840 px)"
 
-#: crates/bigimage-integrations/src/action.rs:252
+#: crates/bigimage-integrations/src/action.rs:251
 msgid "90°"
 msgstr "90°"
 
-#: crates/bigimage-integrations/src/action.rs:268
+#: crates/bigimage-integrations/src/action.rs:267
 msgid "270°"
 msgstr "270°"
 
-#: crates/bigimage-integrations/src/action.rs:276
+#: crates/bigimage-integrations/src/action.rs:275
 msgid "Automatic (EXIF)"
 msgstr "Automatski (EXIF)"
 
-#: crates/bigimage-integrations/src/action.rs:293
+#: crates/bigimage-integrations/src/action.rs:292
 msgid "Horizontal"
 msgstr "Vodoravno"
 
-#: crates/bigimage-integrations/src/action.rs:301
+#: crates/bigimage-integrations/src/action.rs:300
 msgid "Vertical"
 msgstr "Okomito"
 
-#: crates/bigimage-integrations/src/action.rs:318
+#: crates/bigimage-integrations/src/action.rs:317
 msgid "+ Brightness (+10)"
 msgstr "+ Svjetlina (+10)"
 
-#: crates/bigimage-integrations/src/action.rs:326
+#: crates/bigimage-integrations/src/action.rs:325
 msgid "− Brightness (-10)"
 msgstr "− Svjetlina (-10)"
 
-#: crates/bigimage-integrations/src/action.rs:334
+#: crates/bigimage-integrations/src/action.rs:333
 msgid "+ Contrast (+20)"
 msgstr "+ Kontrast (+20)"
 
-#: crates/bigimage-integrations/src/action.rs:342
+#: crates/bigimage-integrations/src/action.rs:341
 msgid "Black and white"
 msgstr "Crno-bijelo"
 
-#: crates/bigimage-integrations/src/action.rs:350
+#: crates/bigimage-integrations/src/action.rs:349
 msgid "Vivid colors (+40)"
 msgstr "Žive boje (+40)"
 
-#: crates/bigimage-integrations/src/action.rs:370
+#: crates/bigimage-integrations/src/action.rs:367
 msgid "WhatsApp (1280 px · JPG q85)"
 msgstr "WhatsApp (1280 px · JPG q85)"
 
-#: crates/bigimage-integrations/src/action.rs:378
+#: crates/bigimage-integrations/src/action.rs:375
 msgid "Instagram (1080 px · JPG q90)"
 msgstr "Instagram (1080 px · JPG q90)"
 
-#: crates/bigimage-integrations/src/action.rs:386
+#: crates/bigimage-integrations/src/action.rs:383
 msgid "Facebook (2048 px · JPG q85)"
 msgstr "Facebook (2048 px · JPG q85)"
 
-#: crates/bigimage-integrations/src/action.rs:394
+#: crates/bigimage-integrations/src/action.rs:391
 msgid "Twitter · X (1200 px · JPG q85)"
 msgstr "Twitter · X (1200 px · JPG q85)"
 
-#: crates/bigimage-integrations/src/action.rs:402
+#: crates/bigimage-integrations/src/action.rs:399
 msgid "Telegram (2560 px · JPG q85)"
 msgstr "Telegram (2560 px · JPG q85)"
 
-#: crates/bigimage-integrations/src/action.rs:410
+#: crates/bigimage-integrations/src/action.rs:407
 msgid "Discord (2048 px · JPG q80)"
 msgstr "Discord (2048 px · JPG q80)"
 
-#: crates/bigimage-integrations/src/action.rs:418
+#: crates/bigimage-integrations/src/action.rs:415
 msgid "Optimize PNG (maximum compression)"
 msgstr "Optimiziraj PNG (maksimalna kompresija)"
 
-#: crates/bigimage-integrations/src/action.rs:431
+#: crates/bigimage-integrations/src/action.rs:427
 msgid "Letterbox YouTube post (1:1)"
 msgstr "Uklopi s trakama: objava na YouTubeu (1:1)"
 
-#: crates/bigimage-integrations/src/action.rs:439
+#: crates/bigimage-integrations/src/action.rs:435
 msgid "Letterbox Instagram feed (4:5)"
 msgstr "Uklopi s trakama: Instagram feed (4:5)"
 
-#: crates/bigimage-integrations/src/action.rs:447
+#: crates/bigimage-integrations/src/action.rs:443
 msgid "Letterbox Stories / Shorts (9:16)"
 msgstr "Uklopi s trakama: Stories / Shorts (9:16)"
 
-#: crates/bigimage-integrations/src/action.rs:455
+#: crates/bigimage-integrations/src/action.rs:451
 msgid "Custom letterbox…"
 msgstr "Uklopi s trakama: prilagođeni format…"
 
-#: crates/bigimage-integrations/src/action.rs:464
+#: crates/bigimage-integrations/src/action.rs:460
 msgid "View metadata…"
 msgstr "Prikaži metapodatke…"
 
-#: crates/bigimage-integrations/src/action.rs:472
+#: crates/bigimage-integrations/src/action.rs:468
 msgid "Remove all metadata (clean re-encode)"
 msgstr "Ukloni sve metapodatke (čisto ponovno kodiranje)"
 
-#: crates/bigimage-integrations/src/action.rs:483
+#: crates/bigimage-integrations/src/action.rs:479
 msgid "Batch convert (Prisma)…"
 msgstr "Skupna pretvorba (Prisma)…"
 
-#: crates/bigimage-integrations/src/action.rs:491
+#: crates/bigimage-integrations/src/action.rs:487
 msgid "Create animated GIF…"
 msgstr "Izradi animirani GIF…"
 
-#: crates/bigimage-integrations/src/action.rs:499
+#: crates/bigimage-integrations/src/action.rs:495
 msgid "Compare 2 images…"
 msgstr "Usporedi 2 slike…"
 
-#: crates/bigimage-integrations/src/action.rs:508
+#: crates/bigimage-integrations/src/action.rs:504
 msgid "Remove background (BiRefNet)"
 msgstr "Ukloni pozadinu (BiRefNet)"
 
-#: crates/bigimage-integrations/src/action.rs:529
+#: crates/bigimage-integrations/src/action.rs:525
 msgid "Convert to PDF (LibreOffice)"
 msgstr "Pretvori u PDF (LibreOffice)"
 
-#: data/nautilus/bigiris-menu.py:125
+#: data/nautilus/bigiris-menu.py:115
 msgid "BigIris actions"
 msgstr "Radnje BigIrisa"
 
-#: data/nautilus/bigiris-menu.py:150
+#: data/nautilus/bigiris-menu.py:140
 msgid "BigIris: Process this folder…"
 msgstr "BigIris: Obradi ovu mapu…"
 
-#: data/nautilus/bigiris-menu.py:151
+#: data/nautilus/bigiris-menu.py:141
 msgid "Convert folder images with Prisma"
 msgstr "Pretvori slike iz mape pomoću Prisme"
 

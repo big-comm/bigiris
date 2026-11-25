@@ -1,96 +1,98 @@
-# Candidata local do BigIris para BigCommunity GNOME
+# Local BigIris candidate for BigCommunity GNOME
 
-Esta candidata reúne as correções e os testes descritos em
-[QUALITY.md](QUALITY.md). A adoção como aplicativo oficial depende da
-homologação da distribuição; o pacote local permite começar essa avaliação.
+This candidate gathers the fixes and tests described in
+[QUALITY.md](QUALITY.md). Adoption as an official application depends on the
+distribution's acceptance testing; the local package lets that evaluation
+start.
 
-## Entrega e reprodução
+## Delivery and reproduction
 
-- Binário completo: `target/release/bigiris`, com GTK/libadwaita e IA.
-- Pacote local: `target/quality/candidate/bigiris-0.1.0.local-3-x86_64.pkg.tar.zst`, acompanhado de SHA-256.
+- Complete binary: `target/release/bigiris`, with GTK/libadwaita and AI.
+- Local package: `target/quality/candidate/bigiris-0.1.0.local-3-x86_64.pkg.tar.zst`, with its SHA-256.
 - Gates: `target/quality/zoom-transition/gates/summary.json`.
-- Testes do release: `target/quality/zoom-transition/release/release-smoke.json`.
-- Quadros do zoom: `target/quality/zoom-transition/painted-frames.json`.
-- Fuzzing instrumentado: `target/quality/fuzz/summary.json`.
-- Estabilidade prolongada: `target/quality/long-soak/status.json`.
+- Release tests: `target/quality/zoom-transition/release/release-smoke.json`.
+- Zoom frames: `target/quality/zoom-transition/painted-frames.json`.
+- Instrumented fuzzing: `target/quality/fuzz/summary.json`.
+- Long-running stability: `target/quality/long-soak/status.json`.
 
-O pacote é recomposto com a receita `PKGBUILD.local` a partir do release
-compilado e dos dados atuais, depois dos testes do checkout. Isso valida o
-conteúdo e a etapa `package()`; não equivale a um build reproduzível em uma
-instalação limpa. Os resultados executados prevalecem sobre comandos apenas
-preparados. `running` no ensaio prolongado significa pendente.
+The package is reassembled with the `PKGBUILD.local` recipe from the compiled
+release and the current data, after the checkout's tests. This validates the
+contents and the `package()` step; it is not equivalent to a reproducible build
+on a clean installation. Results that ran take precedence over commands that
+were only prepared. `running` in the long-running test means pending.
 
-Para experimentar o pacote em uma instalação de homologação BigCommunity,
-instale o arquivo `.pkg.tar.zst` com `sudo pacman -U caminho/do/pacote`.
-O runtime exige `bubblewrap` e `util-linux`, namespaces disponíveis e as
-bibliotecas declaradas no pacote. `bigiris --self-test` decodifica uma imagem
-sintética pelo sandbox e verifica ausência dos diretórios privados e da
-rede do host. Se falhar, a candidata não deve ser aprovada nessa máquina.
+To try the package on a BigCommunity acceptance-testing installation, install
+the `.pkg.tar.zst` file with `sudo pacman -U path/to/package`. The runtime
+requires `bubblewrap` and `util-linux`, available namespaces and the libraries
+declared in the package. `bigiris --self-test` decodes a synthetic image
+through the sandbox and checks that the private directories and the host
+network are absent. If it fails, the candidate must not be approved on that
+machine.
 
-## Roteiro para Leonardo e Tales
+## Script for Leonardo and Tales
 
-1. Em instalação limpa, instalar, atualizar e remover o pacote. Conferir
-   desktop entry, ícone, schemas, tradução, Nautilus e resíduos da remoção.
-2. Abrir pelo Nautilus uma imagem, seleção e pasta; testar navegação,
-   zoom sob o cursor com roda, botões, `+`/`-`, `1` (100%) e `0` (ajustar);
-   conferir a fluidez com roda e touchpad, inversão durante a transição e
-   arrasto manual; repetir com animações desativadas no GTK. Avaliar o conforto
-   visual pessoal antes do envio ao repositório. Exercitar
-   conversão dos formatos anunciados, cancelamento, erros e arquivos em
-   sincronização. Confirmar ausência de alteração dos originais em falhas.
-3. Exercitar teclado e Orca, alto contraste, temas claro/escuro, escalas
-   100%, 150% e 200% e múltiplos monitores. O teste automatizado de janelas
-   não substitui essa avaliação de acessibilidade e uso.
-4. Comparar tempo até o primeiro frame, navegação, RAM/GPU e interação
-   com o visualizador atual, usando o mesmo acervo autorizado e o mesmo
-   hardware. Incluir máquina de pouca RAM e SSD lento.
-5. Conferir orientação, cor, transparência e precisão com imagens reais.
-   ICC RGB é normalizado para sRGB; perfis não RGB são recusados. O viewer
-   mostra o primeiro quadro/página; edição estática recusa animações e
-   TIFF multipágina. HDR não dispõe de gestão completa ou tone mapping.
-6. Avaliar as ferramentas de IA com e sem os pacotes de pesos
+1. On a clean installation, install, upgrade and remove the package. Check the
+   desktop entry, icon, schemas, translation, Nautilus and leftovers after
+   removal.
+2. From Nautilus, open an image, a selection and a folder; test navigation,
+   zoom under the cursor with the wheel, buttons, `+`/`-`, `1` (100%) and `0`
+   (fit); check smoothness with the wheel and the touchpad, reversal during the
+   transition and manual drag; repeat with animations disabled in GTK. Judge
+   personal visual comfort before submitting to the repository. Exercise
+   conversion of the advertised formats, cancellation, errors and files being
+   synced. Confirm that originals are not changed on failures.
+3. Exercise keyboard and Orca, high contrast, light and dark themes, 100%, 150%
+   and 200% scales and multiple monitors. The automated window test does not
+   replace this accessibility and usability evaluation.
+4. Compare time to first frame, navigation, RAM/GPU and interaction with the
+   current viewer, using the same authorized collection and the same hardware.
+   Include a low-RAM machine and a slow SSD.
+5. Check orientation, color, transparency and precision with real images. RGB
+   ICC is normalized to sRGB; non-RGB profiles are refused. The viewer shows
+   the first frame or page; static editing refuses animations and multi-page
+   TIFF. HDR has no full handling or tone mapping.
+6. Evaluate the AI tools with and without the weight packages
    (`birefnet-native`, `realesrgan-native`, `scunet-native`, `lama-native`):
-   nada é baixado, cada ferramenta sem o seu pacote explica como instalá-lo, e
-   visualização e conversões continuam disponíveis. Medir RAM, tempo,
-   cancelamento entre arquivos e reutilização do modelo na CPU e numa GPU
-   Vulkan, incluindo hardware físico de pouca RAM; a admissão de memória é uma
-   conferência preventiva, sem quota rígida de RSS.
-7. Exigir resultado final do ensaio prolongado e do Memcheck em ambiente
-   compatível. O soak iniciado exercita o core; adicionar sessão GNOME de
-   oito horas com slideshow e monitoramento de GPU antes da adoção oficial.
+   nothing is downloaded, each tool without its package explains how to install
+   it, and viewing and conversions stay available. Measure RAM, time,
+   cancellation between files and model reuse on the CPU and on a Vulkan GPU,
+   including low-RAM physical hardware; memory admission is a preventive
+   check, with no hard RSS quota.
+7. Require the final result of the long-running test and of Memcheck in a
+   compatible environment. The soak that was started exercises the core; add
+   an eight-hour GNOME session with slideshow and GPU monitoring before
+   official adoption.
 
-## Limites desta candidata
+## Limits of this candidate
 
-ASan/LSan, testes de ciclo de vida e estabilidade curta não provam ausência
-universal de vazamentos. O isolamento cobre decodificação e inspeção de
-metadados do executável; a inferência de IA e os encoders continuam no processo
-principal. O worker tem limites de espaço virtual, CPU, prazo, arquivos,
-descritores e scratch, sem quota cgroup de RSS nem filtro seccomp.
+ASan/LSan, lifecycle tests and short stability runs do not prove the universal
+absence of leaks. The sandbox covers the executable's decoding and metadata
+inspection; AI inference and the encoders stay in the main process. The worker
+has limits on virtual address space, CPU, deadline, files, descriptors and
+scratch, with no cgroup RSS quota and no seccomp filter.
 
-As inferências reais registradas nesta candidata usaram o motor ONNX anterior,
-com modelos baixados sob demanda. Os motores image-engine-native que o
-substituíram ainda precisam da mesma avaliação no pacote final.
+The real inferences recorded for this candidate used the previous ONNX engine,
+with models downloaded on demand. The image-engine-native engines that replaced
+it still need the same evaluation on the final package.
 
-O primeiro CI do PR nº 1 aprovou dez jobs, inclusive o empacotamento Arch e
-o Memcheck de oito ciclos do core. Quatro jobs falharam por seleção de stable
-no fuzzing e indisponibilidade do sandbox no runner Ubuntu. A configuração
-foi corrigida, mas a confirmação exige nova execução remota. O ensaio local
-de oito horas do core também terminou aprovado; GUI/GPU/IA não fazem parte
-desse ensaio. Resultados e limites estão em [QUALITY.md](QUALITY.md).
-Não foram concedidos privilégios amplos ao contêiner Arch. A publicação
-no repositório da distribuição e a associação MIME padrão exigem decisão
-de manutenção após a homologação.
+The first CI of PR #1 passed ten jobs, including Arch packaging and the
+eight-cycle Memcheck of the core. Four jobs failed because fuzzing selected
+stable and the sandbox was unavailable on the Ubuntu runner. The configuration
+was fixed, but confirmation needs a new remote run. The local eight-hour core
+test also passed; GUI, GPU and AI are not part of that test. Results and limits
+are in [QUALITY.md](QUALITY.md). No broad privileges were granted to the Arch
+container. Publishing to the distribution repository and the default MIME
+association need a maintenance decision after acceptance testing.
 
-## Administração pelo Git
+## Managing through Git
 
-Abra a pasta raiz do BigIris que contém `.git`, `Cargo.toml`, `crates/` e
-`pkgbuild/`. Confira a branch selecionada antes de integrar alterações. Abrir
-essa pasta
-em um cliente Git permite revisar diffs e arquivos novos; não publica nem
-atualiza automaticamente o repositório da distribuição. Confira os arquivos
-incluídos no commit, inclusive novos módulos e testes. Os artefatos de
-`target/quality/` são evidência local e não devem entrar no histórico.
+Open the BigIris root folder that contains `.git`, `Cargo.toml`, `crates/` and
+`pkgbuild/`. Check the selected branch before integrating changes. Opening that
+folder in a Git client lets you review diffs and new files; it does not publish
+or update the distribution repository automatically. Check the files included
+in the commit, including new modules and tests. The artifacts in
+`target/quality/` are local evidence and must not enter the history.
 
-Envie a candidata primeiro para a branch de desenvolvimento e obtenha CI
-remoto verde. A integração no repositório oficial deve seguir o roteiro de
-homologação acima e as decisões de manutenção de Leonardo e Tales.
+Send the candidate to the development branch first and get a green remote CI.
+Integration into the official repository must follow the acceptance script
+above and the maintenance decisions of Leonardo and Tales.

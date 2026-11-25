@@ -1,7 +1,7 @@
 # BigIris headless batch profile
 format = "webp"
-# Visual quality to keep: maxima | equilibrado | menor (default equilibrado).
-target = "equilibrado"
+# Visual quality to keep: maximum | balanced | smallest (default balanced).
+target = "balanced"
 # Optional fixed encoder quality 1..100 (JPEG/WebP/AVIF); disables the search.
 # quality = 85
 progressive = false

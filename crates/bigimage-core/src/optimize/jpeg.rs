@@ -104,7 +104,7 @@ fn encode_rgb_with(
                 .downcast_ref::<String>()
                 .cloned()
                 .or_else(|| panic.downcast_ref::<&str>().map(|s| (*s).to_owned()))
-                .unwrap_or_else(|| "erro interno do mozjpeg".to_owned());
+                .unwrap_or_else(|| "mozjpeg internal error".to_owned());
             Err(encode_error(image::ImageFormat::Jpeg, message))
         }
     }
@@ -166,7 +166,7 @@ pub(crate) fn encode(
     }
     let any_passed = found.iter().any(|(_, f)| f.passed);
     if !any_passed {
-        tracing::debug!(threshold, "JPEG não atingiu a meta; usando a maior qualidade");
+        tracing::debug!(threshold, "JPEG missed the target; using the highest quality");
     }
     let mut best: Option<Vec<u8>> = None;
     // Without a pass, the last attempt (4:4:4 at its top quality) is the

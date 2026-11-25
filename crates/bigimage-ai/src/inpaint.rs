@@ -147,7 +147,7 @@ pub fn plans(mask: &GrayImage) -> Result<Vec<Plan>, AiError> {
     let (width, height) = mask.dimensions();
     if width < MIN_SIDE || height < MIN_SIDE {
         return Err(AiError::Processing(format!(
-            "imagem de {width}×{height}: o preenchimento precisa de ao menos {MIN_SIDE} px por lado"
+            "image is {width}×{height}: inpainting needs at least {MIN_SIDE} px per side"
         )));
     }
     let mut groups = match mask_regions(mask) {
@@ -345,13 +345,13 @@ pub fn inpaint(
     let (width, height) = (input.width(), input.height());
     if mask.dimensions() != (width, height) {
         return Err(AiError::Processing(format!(
-            "a máscara tem {}×{} px; a imagem, {width}×{height}",
+            "the mask is {}×{} px; the image is {width}×{height}",
             mask.width(),
             mask.height()
         )));
     }
     if u64::from(width) * u64::from(height) * 4 > MAX_BYTES {
-        return Err(AiError::Processing("imagem excede o limite de 512 MiB em RGBA".into()));
+        return Err(AiError::Processing("image exceeds the 512 MiB RGBA limit".into()));
     }
     let plans = plans(mask)?;
     if plans.is_empty() {
@@ -542,7 +542,7 @@ pub(crate) fn to_run_size(
 pub(crate) fn from_run_size(filled: Vec<u8>, plan: &Plan) -> Result<image::RgbImage, AiError> {
     let (rw, rh) = plan.run;
     let filled = image::RgbImage::from_raw(rw, rh, filled)
-        .ok_or_else(|| AiError::Processing("saída do LaMa com tamanho inesperado".into()))?;
+        .ok_or_else(|| AiError::Processing("LaMa output has an unexpected size".into()))?;
     Ok(resize(DynamicImage::ImageRgb8(filled), (plan.crop.width, plan.crop.height))?.into_rgb8())
 }
 

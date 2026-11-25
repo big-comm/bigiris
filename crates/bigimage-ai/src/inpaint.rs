@@ -202,19 +202,22 @@ pub(crate) fn run_size(crop: Rect) -> (u32, u32) {
     (side(crop.width), side(crop.height))
 }
 
-/// Memory one fill needs: LaMa at the run size, the image's RGBA8 copy
-/// and result, and the crop's buffers (RGB8 in and out at both sizes,
-/// masks, f32 weights).
-fn budget(width: u32, height: u32, plan: &Plan) -> Budget {
+/// Memory one fill needs. Per run pixel: LaMa, and its RGB8 input, mask
+/// and output. Per crop pixel, at the peak: the f32 blend weight, the grown
+/// hole, the RGB8 crop and the resampler's pass (the hole's filters peak
+/// lower, at 8 B). Per image pixel: the RGBA8 copy and the RGB8 result,
+/// with alpha also the alpha plane and the RGBA8 result.
+fn budget(width: u32, height: u32, plan: &Plan, alpha: bool) -> Budget {
     let image = u64::from(width) * u64::from(height);
     let (rw, rh) = plan.run;
     let run = u64::from(rw) * u64::from(rh);
+    let per_image_pixel = if alpha { 4 + 3 + 1 + 4 } else { 4 + 3 };
     Budget {
         load: LOAD_BYTES,
         run: RUN_FIXED_BYTES
-            + run * (RUN_BYTES_PER_PIXEL + 8)
-            + image * 8
-            + plan.crop.pixels() * (3 + 3 + 1 + 1 + 4),
+            + run * (RUN_BYTES_PER_PIXEL + 3 + 1 + 3)
+            + image * per_image_pixel
+            + plan.crop.pixels() * (4 + 1 + 3 + 3),
     }
 }
 
@@ -248,20 +251,20 @@ pub fn inpaint(
         return Err(AiError::Processing("imagem excede o limite de 512 MiB em RGBA".into()));
     }
     let Some(plan) = plan(mask)? else { return Ok(input.clone()) };
-    let mut budget = budget(width, height, &plan);
+    let mut budget = budget(width, height, &plan, input.color().has_alpha());
     budget.run = budget.run.saturating_add(engine::float_copy_bytes(input));
     #[cfg(feature = "native")]
     {
         SLOT.run(&MODEL, budget, &mut progress, |model, progress| {
             let mut source = engine::display_rgba8(input);
-            let hole = Hole::new(mask, &plan);
+            let Hole { grown, weight } = Hole::new(mask, &plan);
             let crop = crop_rgb(&source, plan.crop);
-            let (run_rgb, run_mask) = to_run_size(&crop, &hole.grown, &plan)?;
+            let (run_rgb, run_mask) = to_run_size(crop, grown, &plan)?;
             let (rw, rh) = engine::dims(plan.run.0, plan.run.1);
             let filled =
                 model.run_with_progress(&run_rgb, &run_mask, rw, rh, engine::running(progress))?;
             let filled = from_run_size(filled, &plan)?;
-            paste(&mut source, &filled, &hole.weight, plan.crop);
+            paste(&mut source, &filled, &weight, plan.crop);
             let alpha = engine::alpha_of(input, &source);
             engine::assemble(engine::rgb_bytes(&source), alpha.as_deref(), width, height)
         })
@@ -286,62 +289,95 @@ impl Hole {
     pub(crate) fn new(mask: &GrayImage, plan: &Plan) -> Self {
         let Rect { x, y, width, height } = plan.crop;
         let (w, h) = (width as usize, height as usize);
-        let binary: Vec<u8> = (0..h)
-            .flat_map(|row| (0..w).map(move |col| (row, col)))
-            .map(|(row, col)| {
-                let value = mask.get_pixel(x + col as u32, y + row as u32)[0];
-                if value >= MASK_THRESHOLD {
-                    255
-                } else {
-                    0
-                }
-            })
-            .collect();
+        let mut binary = Vec::with_capacity(w * h);
+        for line in mask.as_raw().chunks_exact(mask.width() as usize).skip(y as usize).take(h) {
+            let line = &line[x as usize..][..w];
+            binary.extend(line.iter().map(|&v| if v >= MASK_THRESHOLD { 255 } else { 0 }));
+        }
         let k = plan.feather as usize;
         let half = dilate(&binary, w, h, k);
+        drop(binary);
         let grown = dilate(&half, w, h, k);
         let weight = box_blur(&half, w, h, k);
         Self { grown, weight }
     }
 }
 
-/// Square (Chebyshev) dilation by `radius`, separable.
-pub(crate) fn dilate(mask: &[u8], width: usize, height: usize, radius: usize) -> Vec<u8> {
-    let pass = |src: &[u8], len: usize, lines: usize, at: &dyn Fn(usize, usize) -> usize| {
-        let mut out = vec![0u8; src.len()];
-        for line in 0..lines {
-            for i in 0..len {
-                let lo = i.saturating_sub(radius);
-                let hi = (i + radius).min(len - 1);
-                out[at(line, i)] = (lo..=hi).map(|j| src[at(line, j)]).max().unwrap_or(0);
+/// Largest filter radius: a row window of 255s plus the entering pixel
+/// must fit a `u16`.
+const MAX_FILTER_RADIUS: usize = 127;
+
+/// `finish` of the sum of `values` over the `(2 radius + 1)²` square around
+/// each pixel, as running sums: rows, then columns a whole row at a time.
+/// Beyond the image an edge pixel repeats when `repeat_edges`, else counts
+/// as zero.
+fn box_filter<T: Copy + Default>(
+    values: &[u8],
+    width: usize,
+    height: usize,
+    radius: usize,
+    repeat_edges: bool,
+    finish: impl Fn(u32) -> T,
+) -> Vec<T> {
+    assert!(radius <= MAX_FILTER_RADIUS, "filter radius {radius}");
+    let r = radius as isize;
+    let mut rows = vec![0u16; values.len()];
+    for (line, out) in values.chunks_exact(width).zip(rows.chunks_exact_mut(width)) {
+        let at = |i: isize| -> u16 {
+            match usize::try_from(i) {
+                Ok(i) if i < width => u16::from(line[i]),
+                _ if !repeat_edges => 0,
+                Ok(_) => u16::from(line[width - 1]),
+                Err(_) => u16::from(line[0]),
             }
+        };
+        let mut sum: u16 = (-r..=r).map(at).sum();
+        for (i, slot) in out.iter_mut().enumerate() {
+            *slot = sum;
+            let i = i as isize;
+            sum = sum + at(i + r + 1) - at(i - r);
         }
-        out
+    }
+    let row = |y: isize| -> Option<&[u16]> {
+        let y = match usize::try_from(y) {
+            Ok(y) if y < height => y,
+            _ if !repeat_edges => return None,
+            Ok(_) => height - 1,
+            Err(_) => 0,
+        };
+        Some(&rows[y * width..][..width])
     };
-    let rows = pass(mask, width, height, &|line, i| line * width + i);
-    pass(&rows, height, width, &|line, i| i * width + line)
+    let mut sums = vec![0u32; width];
+    for y in -r..=r {
+        if let Some(line) = row(y) {
+            sums.iter_mut().zip(line).for_each(|(s, &v)| *s += u32::from(v));
+        }
+    }
+    let mut out = vec![T::default(); values.len()];
+    for (y, line) in out.chunks_exact_mut(width).enumerate() {
+        line.iter_mut().zip(&sums).for_each(|(o, &s)| *o = finish(s));
+        let y = y as isize;
+        if let Some(entering) = row(y + r + 1) {
+            sums.iter_mut().zip(entering).for_each(|(s, &v)| *s += u32::from(v));
+        }
+        if let Some(leaving) = row(y - r) {
+            sums.iter_mut().zip(leaving).for_each(|(s, &v)| *s -= u32::from(v));
+        }
+    }
+    out
+}
+
+/// Square (Chebyshev) dilation of a 0/255 mask by `radius`: 255 where a
+/// nonzero pixel lies within `radius` rows and columns.
+pub(crate) fn dilate(mask: &[u8], width: usize, height: usize, radius: usize) -> Vec<u8> {
+    box_filter(mask, width, height, radius, false, |count| if count > 0 { 255 } else { 0 })
 }
 
 /// Mean over the `(2 radius + 1)²` square around each pixel (edges
-/// clamped), scaled to 0..=1, separable.
+/// repeated), scaled to 0..=1.
 pub(crate) fn box_blur(mask: &[u8], width: usize, height: usize, radius: usize) -> Vec<f32> {
-    let pass = |src: &[f32], len: usize, lines: usize, at: &dyn Fn(usize, usize) -> usize| {
-        let mut out = vec![0f32; src.len()];
-        let span = (2 * radius + 1) as f32;
-        for line in 0..lines {
-            for i in 0..len {
-                let sum: f32 = (0..=2 * radius)
-                    .map(|d| (i + d).saturating_sub(radius).min(len - 1))
-                    .map(|j| src[at(line, j)])
-                    .sum();
-                out[at(line, i)] = sum / span;
-            }
-        }
-        out
-    };
-    let unit: Vec<f32> = mask.iter().map(|&v| f32::from(v) / 255.0).collect();
-    let rows = pass(&unit, width, height, &|line, i| line * width + i);
-    pass(&rows, height, width, &|line, i| i * width + line)
+    let full = 255 * (2 * radius as u32 + 1).pow(2);
+    box_filter(mask, width, height, radius, true, |sum| sum as f32 / full as f32)
 }
 
 /// RGB8 bytes of `rect` of `source`.
@@ -367,14 +403,14 @@ fn resize(image: DynamicImage, (width, height): (u32, u32)) -> Result<DynamicIma
 /// The crop and its hole at the run size. A scaled-down hole keeps every
 /// run pixel the full-size hole touches.
 pub(crate) fn to_run_size(
-    crop: &image::RgbImage,
-    grown: &[u8],
+    crop: image::RgbImage,
+    grown: Vec<u8>,
     plan: &Plan,
 ) -> Result<(Vec<u8>, Vec<u8>), AiError> {
-    let rgb = resize(DynamicImage::ImageRgb8(crop.clone()), plan.run)?.into_rgb8().into_raw();
+    let rgb = resize(DynamicImage::ImageRgb8(crop), plan.run)?.into_rgb8().into_raw();
     let (cw, ch) = (plan.crop.width, plan.crop.height);
     if plan.run == (cw, ch) {
-        return Ok((rgb, grown.to_vec()));
+        return Ok((rgb, grown));
     }
     let (rw, rh) = plan.run;
     let mut mask = vec![0u8; (rw * rh) as usize];
@@ -477,7 +513,7 @@ mod tests {
         assert_eq!(plan.crop, Rect { x: 0, y: 0, width: 5298, height: 4000 });
         assert_eq!(plan.run, (1024, 773));
         // The budget follows the run size, not the crop.
-        let b = budget(6000, 4000, &plan);
+        let b = budget(6000, 4000, &plan, true);
         assert!(b.run < 1024 * MIB, "{b:?}");
     }
 
@@ -495,6 +531,76 @@ mod tests {
         assert!(weight[7 * w + 10] > 0.0 && weight[7 * w + 10] < 1.0);
         assert_eq!(weight[7 * w + 12], 0.0);
         assert_eq!(weight[0], 0.0);
+    }
+
+    /// Reference dilation: the maximum over each clipped window.
+    fn naive_dilate(mask: &[u8], width: usize, height: usize, radius: usize) -> Vec<u8> {
+        let mut out = vec![0u8; mask.len()];
+        for y in 0..height {
+            for x in 0..width {
+                let rows = y.saturating_sub(radius)..=(y + radius).min(height - 1);
+                let cols = x.saturating_sub(radius)..=(x + radius).min(width - 1);
+                out[y * width + x] = rows
+                    .flat_map(|j| cols.clone().map(move |i| mask[j * width + i]))
+                    .max()
+                    .unwrap_or(0);
+            }
+        }
+        out
+    }
+
+    /// Reference blur: the mean over each window with edge pixels repeated.
+    fn naive_box_blur(mask: &[u8], width: usize, height: usize, radius: usize) -> Vec<f32> {
+        let clamp = |i: usize, len: usize| i.saturating_sub(radius).min(len - 1);
+        let span = (2 * radius + 1) as f64;
+        let mut out = vec![0f32; mask.len()];
+        for y in 0..height {
+            for x in 0..width {
+                let mut sum = 0f64;
+                for dy in 0..=2 * radius {
+                    for dx in 0..=2 * radius {
+                        sum +=
+                            f64::from(mask[clamp(y + dy, height) * width + clamp(x + dx, width)]);
+                    }
+                }
+                out[y * width + x] = (sum / 255.0 / span / span) as f32;
+            }
+        }
+        out
+    }
+
+    #[test]
+    fn filters_match_the_naive_windows() {
+        let mut state = 0x9e37_79b9_7f4a_7c15u64;
+        for (width, height) in [(1, 1), (1, 7), (9, 1), (5, 9), (23, 17), (40, 3)] {
+            for density in [8u64, 64, 200] {
+                let mask: Vec<u8> = (0..width * height)
+                    .map(|_| {
+                        state ^= state << 13;
+                        state ^= state >> 7;
+                        state ^= state << 17;
+                        if state % 256 < density {
+                            255
+                        } else {
+                            0
+                        }
+                    })
+                    .collect();
+                for radius in [0, 1, 2, 5, 12] {
+                    let case = format!("{width}×{height}, density {density}, radius {radius}");
+                    assert_eq!(
+                        dilate(&mask, width, height, radius),
+                        naive_dilate(&mask, width, height, radius),
+                        "{case}"
+                    );
+                    let fast = box_blur(&mask, width, height, radius);
+                    let slow = naive_box_blur(&mask, width, height, radius);
+                    for (a, b) in fast.iter().zip(&slow) {
+                        assert!((a - b).abs() < 1e-6, "{case}: {a} vs {b}");
+                    }
+                }
+            }
+        }
     }
 
     #[test]
@@ -527,7 +633,7 @@ mod tests {
         let crop = image::RgbImage::from_pixel(40, 20, image::Rgb([5, 6, 7]));
         let mut grown = vec![0u8; 40 * 20];
         grown[7 * 40 + 13] = 255; // one full-size pixel
-        let (rgb, mask) = to_run_size(&crop, &grown, &plan).unwrap();
+        let (rgb, mask) = to_run_size(crop, grown, &plan).unwrap();
         assert_eq!(rgb.len(), 10 * 5 * 3);
         assert_eq!(mask.iter().filter(|&&v| v != 0).count(), 1);
         assert_eq!(mask[10 + 3], 255); // row 7·5/20 = 1, col 13·10/40 = 3

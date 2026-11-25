@@ -930,12 +930,13 @@ fn apply_reserved_space(state: &Rc<RefCell<ViewerState>>) {
         s.stack.clone(),
         s.osd_revealer.clone(),
         s.loading_spinner.clone(),
+        s.heavy_render.clone(),
         s.strip_revealer.clone(),
         s.histogram_area.clone(),
         s.edit_ui.grid.clone(),
     );
     drop(s);
-    let (stack, osd, spinner, strip, histogram, grid) = widgets;
+    let (stack, osd, spinner, heavy, strip, histogram, grid) = widgets;
     if stack.margin_end() == reserve {
         return;
     }
@@ -943,6 +944,7 @@ fn apply_reserved_space(state: &Rc<RefCell<ViewerState>>) {
     grid.set_margin_end(reserve);
     osd.set_margin_end(reserve);
     spinner.set_margin_end(reserve);
+    heavy.set_margin_end(reserve);
     strip.set_margin_end(12 + reserve);
     histogram.set_margin_end(12 + reserve);
 }

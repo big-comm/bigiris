@@ -429,6 +429,12 @@ struct ViewerState {
     /// Operations removed by Undo, available to Redo until a new edit or
     /// navigation invalidates the branch.
     redo_ops: Vec<EditOp>,
+    /// Progress and Cancel shown while the decode thread runs a heavy tool
+    /// again because its result is no longer cached.
+    heavy_render: gtk::Box,
+    /// Edit history (pending, redo) that was on screen before that render;
+    /// Cancel returns to it.
+    heavy_restore: Option<(Vec<EditOp>, Vec<EditOp>)>,
     /// True while an atomic encode is running off the GTK thread.
     saving: bool,
     /// Inline crop widgets and, while cropping, the active selection.
@@ -499,6 +505,12 @@ struct LoadRequest {
     max_pixels: Option<u64>,
 }
 
+/// A request handed to the decode thread with its own cancel flag.
+struct QueuedRequest {
+    request: LoadRequest,
+    cancel: Arc<AtomicBool>,
+}
+
 #[derive(Debug)]
 struct DecodedFrame {
     generation: u64,
@@ -537,22 +549,24 @@ fn file_modified(path: &Path) -> Option<std::time::SystemTime> {
 }
 
 /// One coalescing decode worker per viewer. When the user holds an arrow
-/// key, only the latest queued request survives; a decode already in flight
-/// may finish, but its generation is ignored by the UI.
+/// key, only the latest queued request survives, and a newer request
+/// cancels the one in flight, whose generation the UI ignores anyway.
 struct ViewerLoader {
     /// Images after the slow prefixes of the current edits, shared with
     /// the editing panel's tools.
     cache: Arc<Mutex<viewer::edits::EditCache>>,
-    pending: Arc<(Mutex<Option<LoadRequest>>, Condvar)>,
+    pending: Arc<(Mutex<Option<QueuedRequest>>, Condvar)>,
     results: Arc<Mutex<Option<DecodedFrame>>>,
     stopped: Arc<AtomicBool>,
+    /// Cancel flag of the latest request.
+    current: RefCell<Arc<AtomicBool>>,
     /// Signalled for every published result; closed when the worker stops.
     wake: viewer::Wake,
 }
 
 impl ViewerLoader {
     fn new() -> Self {
-        let pending = Arc::new((Mutex::new(None::<LoadRequest>), Condvar::new()));
+        let pending = Arc::new((Mutex::new(None::<QueuedRequest>), Condvar::new()));
         let results = Arc::new(Mutex::new(None));
         let stopped = Arc::new(AtomicBool::new(false));
         let worker_pending = pending.clone();
@@ -565,7 +579,7 @@ impl ViewerLoader {
         std::thread::Builder::new()
             .name("bigiris-viewer-decode".to_string())
             .spawn(move || loop {
-                let request = {
+                let QueuedRequest { request, cancel } = {
                     let (lock, ready) = &*worker_pending;
                     let mut slot = lock.lock().expect("viewer decode queue poisoned");
                     while slot.is_none() && !worker_stopped.load(Ordering::Relaxed) {
@@ -579,14 +593,14 @@ impl ViewerLoader {
                 let modified = file_modified(&request.path);
                 let edited = !request.ops.is_empty();
                 let oversized = request.max_pixels.is_some_and(|max| {
-                    crate::codec::with_cancel(worker_stopped.clone(), || {
+                    crate::codec::with_cancel(cancel.clone(), || {
                         header_pixels(&request.path).is_some_and(|pixels| pixels > max)
                     })
                 });
                 let pixels = if oversized {
                     Err("image too large to prefetch".to_string())
                 } else {
-                    crate::codec::with_cancel(worker_stopped.clone(), || {
+                    crate::codec::with_cancel(cancel, || {
                         decode_frame_cached(&request.path, &request.ops, Some(&worker_cache))
                     })
                     .map_err(|e| e.to_string())
@@ -605,7 +619,8 @@ impl ViewerLoader {
                 worker_wake.notify();
             })
             .expect("could not start viewer decoder");
-        Self { cache, pending, results, stopped, wake }
+        let current = RefCell::new(Arc::new(AtomicBool::new(false)));
+        Self { cache, pending, results, stopped, current, wake }
     }
 
     /// Forget cached edit results (navigation, save).
@@ -613,10 +628,28 @@ impl ViewerLoader {
         self.cache.lock().unwrap_or_else(|poisoned| poisoned.into_inner()).clear();
     }
 
+    /// Whether rendering `ops` on `path` would run a heavy tool again.
+    fn needs_heavy(&self, path: &Path, ops: &[EditOp]) -> bool {
+        let effective = viewer::edits::effective_ops(ops);
+        let modified = file_modified(path);
+        self.cache
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+            .needs_heavy(path, modified, &effective)
+    }
+
     fn request(&self, request: LoadRequest) {
+        let cancel = Arc::new(AtomicBool::new(false));
+        self.current.replace(cancel.clone()).store(true, Ordering::Release);
         let (lock, ready) = &*self.pending;
-        *lock.lock().expect("viewer decode queue poisoned") = Some(request);
+        *lock.lock().expect("viewer decode queue poisoned") =
+            Some(QueuedRequest { request, cancel });
         ready.notify_one();
+    }
+
+    /// Stop the latest request; its result reports the cancel as an error.
+    fn cancel(&self) {
+        self.current.borrow().store(true, Ordering::Release);
     }
 
     fn take_result(&self) -> Option<DecodedFrame> {
@@ -628,6 +661,7 @@ impl ViewerLoader {
         let (lock, ready) = &*self.pending;
         let mut slot = lock.lock().expect("viewer decode queue poisoned");
         self.stopped.store(true, Ordering::Relaxed);
+        self.cancel();
         *slot = None;
         ready.notify_one();
         self.wake.close();
@@ -863,6 +897,20 @@ fn build_window_preloaded(
         .visible(false)
         .build();
     loading_spinner.add_css_class("viewer-loading");
+    let heavy_cancel = gtk::Button::with_label(&gettext("Cancelar"));
+    heavy_cancel.set_halign(gtk::Align::Center);
+    let heavy_render = gtk::Box::builder()
+        .orientation(gtk::Orientation::Vertical)
+        .spacing(12)
+        .halign(gtk::Align::Center)
+        .valign(gtk::Align::Center)
+        .accessible_role(gtk::AccessibleRole::Status)
+        .visible(false)
+        .build();
+    heavy_render.add_css_class("viewer-loading");
+    heavy_render.append(&adw::Spinner::new());
+    heavy_render.append(&gtk::Label::new(Some(&gettext("Recalculando a edição…"))));
+    heavy_render.append(&heavy_cancel);
 
     let overlay = gtk::Overlay::new();
     overlay.add_css_class("viewer-canvas");
@@ -876,6 +924,7 @@ fn build_window_preloaded(
     overlay.add_overlay(&edit_ui.grid);
     overlay.add_overlay(&edit_ui.revealer);
     overlay.add_overlay(&loading_spinner);
+    overlay.add_overlay(&heavy_render);
     // Crop bar on top of everything; its selection layer sits right above
     // the picture (added first) so the OSD hint is not dimmed by it.
     overlay.add_overlay(&crop_ui.bar);
@@ -971,12 +1020,22 @@ fn build_window_preloaded(
         props_dialog: None,
         pending_ops: Vec::new(),
         redo_ops: Vec::new(),
+        heavy_render: heavy_render.clone(),
+        heavy_restore: None,
         saving: false,
         crop_ui,
         crop: None,
         edit_ui,
         edit: Default::default(),
     }));
+    {
+        let weak = Rc::downgrade(&state);
+        heavy_cancel.connect_clicked(move |_| {
+            if let Some(state) = weak.upgrade() {
+                cancel_heavy_render(&state);
+            }
+        });
+    }
 
     if let Some(settings) = settings.filter(|_| has_images) {
         let window = window.clone();
@@ -2045,6 +2104,9 @@ fn handle_key(
         };
     }
 
+    if key == Key::Escape && cancel_heavy_render(state) {
+        return glib::Propagation::Stop;
+    }
     match key {
         Key::Escape if viewer::edit_panel::is_open(state) => {
             viewer::edit_panel::close(state);
@@ -2322,12 +2384,14 @@ fn apply_edit(state: &Rc<RefCell<ViewerState>>, op: EditOp) {
         }
         s.files[s.idx].clone()
     };
-    {
+    let previous = {
         let mut s = state.borrow_mut();
+        let previous = edit_history(&s);
         s.pending_ops.push(op);
         s.redo_ops.clear();
-    }
-    rebuild_edited_texture(state, &path);
+        previous
+    };
+    rebuild_edited_texture(state, &path, previous);
     refresh_title(state);
     sync_edit_actions(state);
     pulse_osd(state);
@@ -2337,9 +2401,65 @@ fn apply_edit(state: &Rc<RefCell<ViewerState>>, op: EditOp) {
 /// Se não houver ops, recarrega o arquivo pelo worker do viewer.
 /// Falhas de decode logam e não mexem no paintable (o user vê a imagem
 /// anterior — melhor do que uma tela preta).
-fn rebuild_edited_texture(state: &Rc<RefCell<ViewerState>>, path: &Path) {
-    let ops = state.borrow().pending_ops.clone();
+/// `previous` is the history (pending, redo) on screen before this change:
+/// when the render has to run a heavy tool again, Cancel returns to it.
+fn rebuild_edited_texture(
+    state: &Rc<RefCell<ViewerState>>,
+    path: &Path,
+    previous: (Vec<EditOp>, Vec<EditOp>),
+) {
+    let (ops, heavy) = {
+        let s = state.borrow();
+        let heavy = s.loader.needs_heavy(path, &s.pending_ops);
+        (s.pending_ops.clone(), heavy)
+    };
     request_frame(state, path.to_path_buf(), ops);
+    let bar = {
+        let mut s = state.borrow_mut();
+        if heavy {
+            // Edits during the render keep the history it started from.
+            s.heavy_restore.get_or_insert(previous);
+        } else {
+            s.heavy_restore = None;
+        }
+        s.heavy_render.clone()
+    };
+    bar.set_visible(heavy);
+}
+
+/// Stop a heavy re-render and return to the history that was on screen.
+/// Returns false when no such render is running.
+fn cancel_heavy_render(state: &Rc<RefCell<ViewerState>>) -> bool {
+    let (path, previous) = {
+        let mut s = state.borrow_mut();
+        let Some((pending, redo)) = s.heavy_restore.take() else { return false };
+        let previous = edit_history(&s);
+        s.pending_ops = pending;
+        s.redo_ops = redo;
+        (s.files[s.idx].clone(), previous)
+    };
+    rebuild_edited_texture(state, &path, previous);
+    refresh_title(state);
+    sync_edit_actions(state);
+    viewer::edit_panel::refresh(state);
+    state.borrow().osd_label.set_text(&gettext("Cancelado"));
+    pulse_osd(state);
+    true
+}
+
+/// The current frame arrived, or the viewer left the file.
+fn end_heavy_render(state: &Rc<RefCell<ViewerState>>) {
+    let bar = {
+        let mut s = state.borrow_mut();
+        s.heavy_restore = None;
+        s.heavy_render.clone()
+    };
+    bar.set_visible(false);
+}
+
+/// History snapshot handed to [`rebuild_edited_texture`].
+fn edit_history(s: &ViewerState) -> (Vec<EditOp>, Vec<EditOp>) {
+    (s.pending_ops.clone(), s.redo_ops.clone())
 }
 
 fn apply_op_to_image(img: image::DynamicImage, op: EditOp) -> image::DynamicImage {
@@ -2559,16 +2679,17 @@ fn sync_edit_actions(state: &Rc<RefCell<ViewerState>>) {
 
 fn undo_edit(state: &Rc<RefCell<ViewerState>>) {
     viewer::edit_panel::flush_commit(state);
-    let path = {
+    let (path, previous) = {
         let mut s = state.borrow_mut();
         if s.saving || s.edit.busy() {
             return;
         }
+        let previous = edit_history(&s);
         let Some(op) = s.pending_ops.pop() else { return };
         s.redo_ops.push(op);
-        s.files[s.idx].clone()
+        (s.files[s.idx].clone(), previous)
     };
-    rebuild_edited_texture(state, &path);
+    rebuild_edited_texture(state, &path, previous);
     refresh_title(state);
     sync_edit_actions(state);
     pulse_osd(state);
@@ -2576,16 +2697,17 @@ fn undo_edit(state: &Rc<RefCell<ViewerState>>) {
 
 fn redo_edit(state: &Rc<RefCell<ViewerState>>) {
     viewer::edit_panel::flush_commit(state);
-    let path = {
+    let (path, previous) = {
         let mut s = state.borrow_mut();
         if s.saving || s.edit.busy() {
             return;
         }
+        let previous = edit_history(&s);
         let Some(op) = s.redo_ops.pop() else { return };
         s.pending_ops.push(op);
-        s.files[s.idx].clone()
+        (s.files[s.idx].clone(), previous)
     };
-    rebuild_edited_texture(state, &path);
+    rebuild_edited_texture(state, &path, previous);
     refresh_title(state);
     sync_edit_actions(state);
     pulse_osd(state);
@@ -2807,16 +2929,17 @@ fn present_save_failure(state: &Rc<RefCell<ViewerState>>, failure: &SaveFailure)
 
 /// Drop every pending edit and show the file as it is on disk.
 fn discard_edits(state: &Rc<RefCell<ViewerState>>) {
-    let path = {
+    let (path, previous) = {
         let mut s = state.borrow_mut();
         if s.saving || s.files.is_empty() {
             return;
         }
+        let previous = edit_history(&s);
         s.pending_ops.clear();
         s.redo_ops.clear();
-        s.files[s.idx].clone()
+        (s.files[s.idx].clone(), previous)
     };
-    rebuild_edited_texture(state, &path);
+    rebuild_edited_texture(state, &path, previous);
     refresh_title(state);
     sync_edit_actions(state);
 }
@@ -2950,6 +3073,7 @@ fn update_display(state: &Rc<RefCell<ViewerState>>) {
     // An AI tool still running belongs to the previous file: its result
     // would be dropped, and it would keep the new file's edits locked.
     viewer::edit_panel::cancel_tool(state);
+    end_heavy_render(state);
     state.borrow().loader.clear_cache();
     sync_edit_actions(state);
     if !show_cached_frame(state, &path) {
@@ -3205,6 +3329,7 @@ fn apply_decoded_frame(state: &Rc<RefCell<ViewerState>>, frame: DecodedFrame) {
         return;
     }
 
+    end_heavy_render(state);
     let spinner = {
         let s = state.borrow();
         (!s.saving).then(|| s.loading_spinner.clone())

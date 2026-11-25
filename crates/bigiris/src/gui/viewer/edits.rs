@@ -146,11 +146,14 @@ pub(in crate::gui) fn longest_prefix<'a>(
 
 /// Images after already-computed prefixes of the effective edits of one
 /// file, so heavy operations (background removal, upscale) are not run
-/// again on every later edit, Undo or Redo. Bounded: at most
-/// [`EditCache::CAPACITY`] entries, most recently used first.
-#[derive(Default)]
+/// again on every later edit, Undo or Redo. Bounded by pixel bytes, least
+/// recently used first, except that the newest entry and the latest heavy
+/// result are always kept: a tool that just ran is never computed twice.
 pub(in crate::gui) struct EditCache {
     entries: Vec<CacheEntry>,
+    budget: usize,
+    /// Operations of the latest heavy result, exempt from eviction.
+    pinned: Option<Vec<EditOp>>,
 }
 
 struct CacheEntry {
@@ -160,10 +163,34 @@ struct CacheEntry {
     image: std::sync::Arc<image::DynamicImage>,
 }
 
+impl Default for EditCache {
+    fn default() -> Self {
+        Self::with_budget(Self::MAX_BYTES)
+    }
+}
+
 impl EditCache {
-    pub(in crate::gui) const CAPACITY: usize = 2;
-    /// Larger results are recomputed instead of held in memory.
-    const MAX_PIXELS: u64 = 100_000_000;
+    /// Pixel bytes held beyond the two entries that are always kept.
+    const MAX_BYTES: usize = 1 << 30;
+
+    pub(in crate::gui) fn with_budget(budget: usize) -> Self {
+        Self { entries: Vec::new(), budget, pinned: None }
+    }
+
+    /// Entry index and length of the longest cached prefix of `ops`.
+    fn prefix(
+        &self,
+        path: &std::path::Path,
+        modified: Option<std::time::SystemTime>,
+        ops: &[EditOp],
+    ) -> Option<(usize, usize)> {
+        let candidates: Vec<usize> = (0..self.entries.len())
+            .filter(|&i| self.entries[i].path == path && self.entries[i].modified == modified)
+            .collect();
+        let (pick, len) =
+            longest_prefix(candidates.iter().map(|&i| self.entries[i].ops.as_slice()), ops)?;
+        Some((candidates[pick], len))
+    }
 
     /// The longest cached prefix of `ops` for this version of `path`.
     pub(in crate::gui) fn best(
@@ -172,16 +199,23 @@ impl EditCache {
         modified: Option<std::time::SystemTime>,
         ops: &[EditOp],
     ) -> Option<(usize, std::sync::Arc<image::DynamicImage>)> {
-        let candidates: Vec<usize> = (0..self.entries.len())
-            .filter(|&i| self.entries[i].path == path && self.entries[i].modified == modified)
-            .collect();
-        let (pick, len) =
-            longest_prefix(candidates.iter().map(|&i| self.entries[i].ops.as_slice()), ops)?;
-        let index = candidates[pick];
+        let (index, len) = self.prefix(path, modified, ops)?;
         let entry = self.entries.remove(index);
         let image = entry.image.clone();
         self.entries.insert(0, entry);
         Some((len, image))
+    }
+
+    /// True when rendering the effective edits `ops` has to run a heavy
+    /// operation that no cached prefix covers.
+    pub(in crate::gui) fn needs_heavy(
+        &self,
+        path: &std::path::Path,
+        modified: Option<std::time::SystemTime>,
+        ops: &[EditOp],
+    ) -> bool {
+        let done = self.prefix(path, modified, ops).map_or(0, |(_, len)| len);
+        ops[done..].iter().any(is_heavy)
     }
 
     pub(in crate::gui) fn insert(
@@ -191,17 +225,29 @@ impl EditCache {
         ops: Vec<EditOp>,
         image: std::sync::Arc<image::DynamicImage>,
     ) {
-        if u64::from(image.width()) * u64::from(image.height()) > Self::MAX_PIXELS {
-            return;
-        }
         // Other files and older versions of this one are never used again.
         self.entries.retain(|e| e.path == path && e.modified == modified && e.ops != ops);
+        if ops.last().is_some_and(is_heavy) {
+            self.pinned = Some(ops.clone());
+        } else if !self.entries.iter().any(|e| Some(&e.ops) == self.pinned.as_ref()) {
+            self.pinned = None;
+        }
         self.entries.insert(0, CacheEntry { path: path.to_path_buf(), modified, ops, image });
-        self.entries.truncate(Self::CAPACITY);
+        let mut bytes: usize = self.entries.iter().map(|e| e.image.as_bytes().len()).sum();
+        while bytes > self.budget {
+            let Some(victim) = (1..self.entries.len())
+                .rev()
+                .find(|&i| Some(&self.entries[i].ops) != self.pinned.as_ref())
+            else {
+                break;
+            };
+            bytes -= self.entries.remove(victim).image.as_bytes().len();
+        }
     }
 
     pub(in crate::gui) fn clear(&mut self) {
         self.entries.clear();
+        self.pinned = None;
     }
 
     #[cfg(test)]
@@ -312,7 +358,8 @@ mod tests {
         let t0 = Some(std::time::UNIX_EPOCH);
         let t1 = Some(std::time::UNIX_EPOCH + std::time::Duration::from_secs(1));
         let heavy = vec![EditOp::RemoveBackground];
-        let mut cache = EditCache::default();
+        // RGB8 rows of `w` pixels hold 3 × w bytes; four pixels fit.
+        let mut cache = EditCache::with_budget(12);
         cache.insert(path, t0, Vec::new(), img(1));
         cache.insert(path, t0, heavy.clone(), img(2));
         let ops = [EditOp::RemoveBackground, EditOp::RotateCw];
@@ -323,15 +370,21 @@ mod tests {
         // Changed on disk, or another file: no hit.
         assert!(cache.best(path, t1, &ops).is_none());
         assert!(cache.best(std::path::Path::new("/x/b.png"), t0, &ops).is_none());
-        // Never more than two images; the least recently used goes.
-        cache.insert(
-            path,
-            t0,
-            vec![EditOp::RemoveBackground, EditOp::Upscale { factor: 2, ai: false }],
-            img(3),
-        );
-        assert_eq!(cache.cached_ops().len(), EditCache::CAPACITY);
-        assert_eq!(cache.cached_ops()[1], Vec::<EditOp>::new());
+        // Over budget, the least recently used goes.
+        let upscaled = vec![EditOp::RemoveBackground, EditOp::Upscale { factor: 2, ai: false }];
+        cache.insert(path, t0, upscaled.clone(), img(3));
+        assert_eq!(cache.cached_ops(), vec![upscaled.clone(), Vec::new()]);
+        assert!(!cache.needs_heavy(path, t0, &[EditOp::RotateCw]));
+        assert!(!cache.needs_heavy(path, t0, &[upscaled[0], upscaled[1], EditOp::FlipH]));
+        assert!(cache.needs_heavy(path, t0, &heavy));
+        assert!(cache.needs_heavy(path, t1, &upscaled));
+        // A heavy result larger than the whole budget is still kept, and a
+        // later light entry does not push it out.
+        cache.insert(path, t0, vec![EditOp::Denoise], img(10));
+        assert_eq!(cache.cached_ops(), vec![vec![EditOp::Denoise]]);
+        cache.insert(path, t0, Vec::new(), img(1));
+        assert_eq!(cache.cached_ops(), vec![Vec::new(), vec![EditOp::Denoise]]);
+        assert!(!cache.needs_heavy(path, t0, &[EditOp::Denoise, EditOp::FlipV]));
         // A new version of the file drops the old entries.
         cache.insert(path, t1, Vec::new(), img(4));
         assert_eq!(cache.cached_ops(), vec![Vec::<EditOp>::new()]);

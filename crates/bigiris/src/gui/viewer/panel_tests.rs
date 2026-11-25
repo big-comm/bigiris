@@ -551,6 +551,66 @@ fn viewer_edit_panel_tools() {
     wait(&context, "viewer state released", &|| witness.upgrade().is_none());
 }
 
+/// A heavy edit the cache no longer holds is rendered again with progress,
+/// and Esc or Cancel returns to the history that was on screen.
+#[test]
+#[ignore = "requires a graphical display; run alone with GSETTINGS_BACKEND=memory"]
+fn viewer_heavy_render_cancel() {
+    let context = glib::MainContext::default();
+    let dir = tempfile::tempdir().unwrap();
+    let photo = dir.path().join("a.png");
+    landscape(&photo);
+    let (window, state, witness) =
+        open_viewer("com.biglinux.Iris.HeavyRenderProbe", vec![photo], (1000, 700));
+    // No budget: only the newest entry and the latest heavy result stay.
+    *state.borrow().loader.cache.lock().unwrap() = super::edits::EditCache::with_budget(0);
+    let bar = state.borrow().heavy_render.clone();
+    let up = EditOp::Upscale { factor: 2, ai: false };
+    let runs = heavy_runs();
+    apply_edit(&state, up);
+    assert!(bar.is_visible(), "no progress while the decode thread upscales");
+    wait_frame(&context, &state, (1280, 960));
+    assert!(!bar.is_visible());
+    apply_edit(&state, up);
+    wait_frame(&context, &state, (2560, 1920));
+    assert_eq!(heavy_runs(), runs + 2);
+    undo_edit(&state);
+    assert!(bar.is_visible(), "the evicted first upscale is not announced");
+    {
+        // Holding the cache keeps the decode thread from finishing.
+        let cache = state.borrow().loader.cache.clone();
+        let _held = cache.lock().unwrap();
+        crate::gui::lifecycle_tests::capture_window(&window, "heavy-render-progress");
+        assert!(bar.is_visible());
+    }
+    assert_eq!(
+        handle_key(&state, gdk::Key::Escape, gdk::ModifierType::empty()),
+        glib::Propagation::Stop
+    );
+    assert!(!bar.is_visible());
+    assert_eq!(state.borrow().pending_ops, [up, up]);
+    assert!(state.borrow().redo_ops.is_empty());
+    wait_frame(&context, &state, (2560, 1920));
+    assert!(window.is_visible(), "Esc closed the window instead of cancelling");
+    // The button does the same.
+    undo_edit(&state);
+    assert!(bar.is_visible());
+    labelled_button(&bar, &gettext("Cancelar")).emit_clicked();
+    assert_eq!(state.borrow().pending_ops, [up, up]);
+    wait_frame(&context, &state, (2560, 1920));
+    // Undoing past both upscales needs only the decoded file.
+    undo_edit(&state);
+    undo_edit(&state);
+    assert!(!bar.is_visible(), "undo to the decoded file shown as a heavy render");
+    wait_frame(&context, &state, (640, 480));
+
+    window.destroy();
+    drop(window);
+    settle(&context, 100);
+    drop(state);
+    wait(&context, "viewer state released", &|| witness.upgrade().is_none());
+}
+
 /// The panel's AI tools with the real models. Needs the BigLinux weights
 /// packages, or `BIGIRIS_{BIREFNET,REALESRGAN,SCUNET}_WEIGHTS`; a tool
 /// whose weights are missing is skipped with a message.

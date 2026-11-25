@@ -294,7 +294,10 @@ fn start_animate_run(
         }
         match result {
             Some(Ok(ConvertOutcome::Written { output })) => {
-                status.set_text(&format!("{}: {}", gettext("Pronto"), output.display()));
+                status.set_text(&fill(
+                    &gettext("Concluído: {file}"),
+                    &[("file", &output.display().to_string())],
+                ));
                 batch_runner::arm_auto_close(&window, 2);
             }
             Some(Ok(ConvertOutcome::Skipped { output })) => {

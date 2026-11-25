@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: bigiris 0.1.0\n"
 "Report-Msgid-Bugs-To: https://github.com/big-comm/bigiris/issues\n"
-"POT-Creation-Date: 2026-11-25 18:21-0300\n"
+"POT-Creation-Date: 2026-11-25 18:25-0300\n"
 "PO-Revision-Date: 2026-10-14 01:36-0300\n"
 "Last-Translator: BigCommunity Team\n"
 "Language-Team: BigCommunity Team\n"
@@ -1997,13 +1997,13 @@ msgstr ""
 
 #: crates/bigiris/src/main.rs:364
 msgid ""
-"Visual quality to aim for: maxima, equilibrado or menor (also max, balanced, "
-"small). Each format looks for the smallest file that keeps this quality "
-"(SSIMULACRA2 85 / 80 / 70)"
+"Visual quality to aim for: maximum, balanced or smallest (also max, small). "
+"Each format looks for the smallest file that keeps this quality (SSIMULACRA2 "
+"85 / 80 / 70)"
 msgstr ""
-"Qualidade visual pretendida: maxima, equilibrado ou menor (também max, "
-"balanced, small). Cada formato procura o ficheiro mais pequeno que mantém "
-"essa qualidade (SSIMULACRA2 85 / 80 / 70)"
+"Qualidade visual pretendida: maximum, balanced ou smallest (também max, "
+"small). Cada formato procura o ficheiro mais pequeno que mantém essa "
+"qualidade (SSIMULACRA2 85 / 80 / 70)"
 
 #: crates/bigiris/src/main.rs:370
 msgid ""
@@ -2051,11 +2051,10 @@ msgstr ""
 
 #: crates/bigiris/src/main.rs:405
 msgid ""
-"Visual quality to aim for: maxima, equilibrado or menor (also max, balanced, "
-"small)"
+"Visual quality to aim for: maximum, balanced or smallest (also max, small)"
 msgstr ""
-"Qualidade visual pretendida: maxima, equilibrado ou menor (também max, "
-"balanced, small)"
+"Qualidade visual pretendida: maximum, balanced ou smallest (também max, "
+"small)"
 
 #: crates/bigiris/src/main.rs:411
 msgid ""
@@ -2312,8 +2311,8 @@ msgid "Some files were not processed; see the details in the terminal."
 msgstr "Alguns ficheiros não foram processados; veja os detalhes no terminal."
 
 #: crates/bigiris/src/main.rs:953
-msgid "invalid quality target: {value}; use maxima, equilibrado or menor"
-msgstr "alvo de qualidade inválido: {value}; use maxima, equilibrado ou menor"
+msgid "invalid quality target: {value}; use maximum, balanced or smallest"
+msgstr "alvo de qualidade inválido: {value}; use maximum, balanced ou smallest"
 
 #: crates/bigiris/src/main.rs:966 crates/bigiris/src/main.rs:1060
 msgid "invalid target format: {error}"
@@ -2411,7 +2410,7 @@ msgstr "não foi possível criar {path}: {error}"
 msgid "no images found for the batch"
 msgstr "nenhuma imagem encontrada para o lote"
 
-#: crates/bigiris/src/main.rs:1746
+#: crates/bigiris/src/main.rs:1743
 msgid ""
 "LibreOffice (`soffice`) not found in PATH. Install `libreoffice-fresh` "
 "(recommended) or `libreoffice-still` (e.g. `sudo pacman -S libreoffice-"
@@ -2421,83 +2420,83 @@ msgstr ""
 "(recomendado) ou `libreoffice-still` (ex.: `sudo pacman -S libreoffice-"
 "fresh`)."
 
-#: crates/bigiris/src/main.rs:1798
+#: crates/bigiris/src/main.rs:1795
 msgid "not a regular file"
 msgstr "não é um ficheiro regular"
 
-#: crates/bigiris/src/main.rs:1801
+#: crates/bigiris/src/main.rs:1798
 msgid "invalid file name"
 msgstr "nome de ficheiro inválido"
 
-#: crates/bigiris/src/main.rs:1822
+#: crates/bigiris/src/main.rs:1819
 msgid "could not run soffice: {error}"
 msgstr "falha ao invocar o soffice: {error}"
 
-#: crates/bigiris/src/main.rs:1833
+#: crates/bigiris/src/main.rs:1830
 msgid "soffice exceeded the {seconds} s limit"
 msgstr "o soffice excedeu o limite de {seconds} s"
 
-#: crates/bigiris/src/main.rs:1846
+#: crates/bigiris/src/main.rs:1843
 msgid "soffice did not produce the PDF ({status})"
 msgstr "o soffice não gerou o PDF ({status})"
 
-#: crates/bigiris/src/main.rs:1889
+#: crates/bigiris/src/main.rs:1886
 msgid "too many files with the same name: {path}"
 msgstr "demasiados ficheiros com o mesmo nome: {path}"
 
-#: crates/bigiris/src/main.rs:1932
+#: crates/bigiris/src/main.rs:1928
 msgid "installation failed: {error}"
 msgstr "a instalação falhou: {error}"
 
-#: crates/bigiris/src/main.rs:1938
+#: crates/bigiris/src/main.rs:1934
 msgid "installed"
 msgstr "instalado"
 
-#: crates/bigiris/src/main.rs:1939
+#: crates/bigiris/src/main.rs:1935
 msgid "installed in total: {files} file(s) in {managers} file manager(s)"
 msgstr "total instalado: {files} ficheiro(s) em {managers} gestor(es)"
 
-#: crates/bigiris/src/main.rs:1955
+#: crates/bigiris/src/main.rs:1951
 msgid "removal failed: {error}"
 msgstr "a remoção falhou: {error}"
 
-#: crates/bigiris/src/main.rs:1958
+#: crates/bigiris/src/main.rs:1954
 msgid "removed"
 msgstr "removido"
 
-#: crates/bigiris/src/main.rs:1959
+#: crates/bigiris/src/main.rs:1955
 msgid "removed in total: {files} file(s) in {managers} file manager(s)"
 msgstr "total removido: {files} ficheiro(s) em {managers} gestor(es)"
 
-#: crates/bigiris/src/main.rs:1982
+#: crates/bigiris/src/main.rs:1978
 msgid "FAILED"
 msgstr "FALHA"
 
-#: crates/bigiris/src/main.rs:1987
+#: crates/bigiris/src/main.rs:1983
 msgid "provided by the package"
 msgstr "fornecido pelo pacote"
 
-#: crates/bigiris/src/main.rs:1990
+#: crates/bigiris/src/main.rs:1986
 msgid "unchanged"
 msgstr "sem alterações"
 
-#: crates/bigiris/src/main.rs:1992
+#: crates/bigiris/src/main.rs:1988
 msgid "skipped"
 msgstr "ignorado"
 
-#: crates/bigiris/src/main.rs:1997
+#: crates/bigiris/src/main.rs:1993
 msgid "detected"
 msgstr "detetado"
 
-#: crates/bigiris/src/main.rs:1997
+#: crates/bigiris/src/main.rs:1993
 msgid "not in PATH"
 msgstr "ausente no PATH"
 
-#: crates/bigiris/src/main.rs:1999
+#: crates/bigiris/src/main.rs:1995
 msgid "{count} file(s)"
 msgstr "{count} ficheiro(s)"
 
-#: crates/bigiris/src/main.rs:2024
+#: crates/bigiris/src/main.rs:2020
 msgid ""
 "warning: this build lacks the `gui` feature. Dialog '{dialog}' ignored "
 "(rebuild with --features gui)."
@@ -2505,7 +2504,7 @@ msgstr ""
 "aviso: compilação atual sem a feature `gui`. Diálogo '{dialog}' ignorado "
 "(recompile com --features gui)."
 
-#: crates/bigiris/src/main.rs:2031
+#: crates/bigiris/src/main.rs:2027
 msgid ""
 "warning: this build lacks the `gui` feature. Viewer unavailable (rebuild "
 "with --features gui)."
@@ -2513,7 +2512,7 @@ msgstr ""
 "aviso: compilação atual sem a feature `gui`. Visualizador indisponível "
 "(recompile com --features gui)."
 
-#: crates/bigiris/src/main.rs:2036
+#: crates/bigiris/src/main.rs:2032
 msgid ""
 "warning: this build lacks the `gui` feature. Viewer unavailable; files "
 "received:"

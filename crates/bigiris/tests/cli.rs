@@ -192,7 +192,7 @@ fn low_memory_refuses_ai_before_loading_and_preserves_inputs() {
     assert_eq!(output.status.code(), Some(1));
     let error = String::from_utf8_lossy(&output.stderr);
     // Refused by the budget, not by the (fake) weights.
-    assert!(error.contains("memória para IA") && error.contains("GiB"), "{error}");
+    assert!(error.contains("memory for AI") && error.contains("GiB"), "{error}");
     assert!(!dir.path().join("source_nobg.png").exists());
     assert_eq!(std::fs::read(dir.path().join("source.png")).unwrap(), original);
 }
@@ -455,7 +455,7 @@ fn inpaint_refuses_empty_masks_and_reports_size_mismatches() {
     assert!(String::from_utf8_lossy(&output.stderr).contains("marks no area"));
     let output = inpaint("small.png");
     assert_eq!(output.status.code(), Some(2));
-    assert!(String::from_utf8_lossy(&output.stderr).contains("máscara tem 10×10"));
+    assert!(String::from_utf8_lossy(&output.stderr).contains("the mask is 10×10"));
     assert!(!dir.path().join("a_inpaint.png").exists());
 }
 

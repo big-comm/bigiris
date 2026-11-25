@@ -397,7 +397,7 @@ pub fn read(path: impl AsRef<Path>) -> Result<Metadata> {
         .map_err(BigImageError::Io)?;
     let info = file.metadata().map_err(BigImageError::Io)?;
     if !info.is_file() || info.len() > 1024 * 1024 * 1024 {
-        return Err(BigImageError::InvalidInput("entrada de metadados inválida".into()));
+        return Err(BigImageError::InvalidInput("invalid metadata input".into()));
     }
     let mut reader = std::io::BufReader::new(file);
 
@@ -604,7 +604,7 @@ mod tests {
 
     #[test]
     fn nonexistent_path_returns_io_error() {
-        let err = read("/nao/existe/fx.jpg").unwrap_err();
+        let err = read("/does/not/exist/fx.jpg").unwrap_err();
         assert!(matches!(err, BigImageError::Io(_)));
     }
 }

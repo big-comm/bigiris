@@ -167,10 +167,10 @@ fn run(
 ) -> Result<DynamicImage, AiError> {
     let (width, height) = (input.width(), input.height());
     if width == 0 || height == 0 {
-        return Err(AiError::Processing("imagem vazia".into()));
+        return Err(AiError::Processing("empty image".into()));
     }
     if u64::from(width) * u64::from(height) * 4 > 512 * MIB {
-        return Err(AiError::Processing("imagem excede o limite de saída RGBA de 512 MiB".into()));
+        return Err(AiError::Processing("image exceeds the 512 MiB RGBA output limit".into()));
     }
     let mut budget = budget(width, height);
     budget.run = budget.run.saturating_add(engine::float_copy_bytes(input));
@@ -214,7 +214,7 @@ fn resize_rgba(
 /// its alpha.
 fn cut_out(mut source: image::RgbaImage, mask: Vec<u8>) -> Result<DynamicImage, AiError> {
     let mask = image::GrayImage::from_raw(INPUT_SIDE, INPUT_SIDE, mask)
-        .ok_or_else(|| AiError::Processing("máscara de tamanho inesperado".into()))?;
+        .ok_or_else(|| AiError::Processing("mask has an unexpected size".into()))?;
     let (width, height) = source.dimensions();
     let mask = bigimage_core::resize::apply_to(
         &DynamicImage::ImageLuma8(mask),

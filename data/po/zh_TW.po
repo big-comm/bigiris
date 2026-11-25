@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: bigiris 0.1.0\n"
 "Report-Msgid-Bugs-To: https://github.com/big-comm/bigiris/issues\n"
-"POT-Creation-Date: 2026-11-25 18:21-0300\n"
+"POT-Creation-Date: 2026-11-25 18:25-0300\n"
 "PO-Revision-Date: 2026-10-14 01:37-0300\n"
 "Last-Translator: BigCommunity Team\n"
 "Language-Team: BigCommunity Team\n"
@@ -1970,12 +1970,12 @@ msgstr ""
 
 #: crates/bigiris/src/main.rs:364
 msgid ""
-"Visual quality to aim for: maxima, equilibrado or menor (also max, balanced, "
-"small). Each format looks for the smallest file that keeps this quality "
-"(SSIMULACRA2 85 / 80 / 70)"
+"Visual quality to aim for: maximum, balanced or smallest (also max, small). "
+"Each format looks for the smallest file that keeps this quality (SSIMULACRA2 "
+"85 / 80 / 70)"
 msgstr ""
-"目標視覺品質：maxima、equilibrado 或 menor（也可用 max、balanced、small）。每"
-"種格式都會尋找能維持該品質的最小檔案（SSIMULACRA2 85 / 80 / 70）"
+"目標視覺品質：maximum、balanced 或 smallest（也可用 max、small）。每種格式都"
+"會尋找能維持該品質的最小檔案（SSIMULACRA2 85 / 80 / 70）"
 
 #: crates/bigiris/src/main.rs:370
 msgid ""
@@ -2020,10 +2020,8 @@ msgstr "目標格式（選用；省略時保留原始格式）"
 
 #: crates/bigiris/src/main.rs:405
 msgid ""
-"Visual quality to aim for: maxima, equilibrado or menor (also max, balanced, "
-"small)"
-msgstr ""
-"目標視覺品質：maxima、equilibrado 或 menor（也可用 max、balanced、small）"
+"Visual quality to aim for: maximum, balanced or smallest (also max, small)"
+msgstr "目標視覺品質：maximum、balanced 或 smallest（也可用 max、small）"
 
 #: crates/bigiris/src/main.rs:411
 msgid ""
@@ -2268,8 +2266,8 @@ msgid "Some files were not processed; see the details in the terminal."
 msgstr "部分檔案未能處理；請在終端機中查看詳細資訊。"
 
 #: crates/bigiris/src/main.rs:953
-msgid "invalid quality target: {value}; use maxima, equilibrado or menor"
-msgstr "品質目標無效：{value}；請使用 maxima、equilibrado 或 menor"
+msgid "invalid quality target: {value}; use maximum, balanced or smallest"
+msgstr "品質目標無效：{value}；請使用 maximum、balanced 或 smallest"
 
 #: crates/bigiris/src/main.rs:966 crates/bigiris/src/main.rs:1060
 msgid "invalid target format: {error}"
@@ -2365,7 +2363,7 @@ msgstr "無法建立 {path}：{error}"
 msgid "no images found for the batch"
 msgstr "找不到可批次處理的影像"
 
-#: crates/bigiris/src/main.rs:1746
+#: crates/bigiris/src/main.rs:1743
 msgid ""
 "LibreOffice (`soffice`) not found in PATH. Install `libreoffice-fresh` "
 "(recommended) or `libreoffice-still` (e.g. `sudo pacman -S libreoffice-"
@@ -2374,83 +2372,83 @@ msgstr ""
 "在 PATH 中找不到 LibreOffice（`soffice`）。請安裝 `libreoffice-fresh`（建議）"
 "或 `libreoffice-still`（例如：`sudo pacman -S libreoffice-fresh`）。"
 
-#: crates/bigiris/src/main.rs:1798
+#: crates/bigiris/src/main.rs:1795
 msgid "not a regular file"
 msgstr "不是一般檔案"
 
-#: crates/bigiris/src/main.rs:1801
+#: crates/bigiris/src/main.rs:1798
 msgid "invalid file name"
 msgstr "檔名無效"
 
-#: crates/bigiris/src/main.rs:1822
+#: crates/bigiris/src/main.rs:1819
 msgid "could not run soffice: {error}"
 msgstr "呼叫 soffice 失敗：{error}"
 
-#: crates/bigiris/src/main.rs:1833
+#: crates/bigiris/src/main.rs:1830
 msgid "soffice exceeded the {seconds} s limit"
 msgstr "soffice 超過了 {seconds} 秒的時間限制"
 
-#: crates/bigiris/src/main.rs:1846
+#: crates/bigiris/src/main.rs:1843
 msgid "soffice did not produce the PDF ({status})"
 msgstr "soffice 未產生 PDF（{status}）"
 
-#: crates/bigiris/src/main.rs:1889
+#: crates/bigiris/src/main.rs:1886
 msgid "too many files with the same name: {path}"
 msgstr "同名檔案過多：{path}"
 
-#: crates/bigiris/src/main.rs:1932
+#: crates/bigiris/src/main.rs:1928
 msgid "installation failed: {error}"
 msgstr "安裝失敗：{error}"
 
-#: crates/bigiris/src/main.rs:1938
+#: crates/bigiris/src/main.rs:1934
 msgid "installed"
 msgstr "已安裝"
 
-#: crates/bigiris/src/main.rs:1939
+#: crates/bigiris/src/main.rs:1935
 msgid "installed in total: {files} file(s) in {managers} file manager(s)"
 msgstr "共安裝：{managers} 個檔案管理員中的 {files} 個檔案"
 
-#: crates/bigiris/src/main.rs:1955
+#: crates/bigiris/src/main.rs:1951
 msgid "removal failed: {error}"
 msgstr "移除失敗：{error}"
 
-#: crates/bigiris/src/main.rs:1958
+#: crates/bigiris/src/main.rs:1954
 msgid "removed"
 msgstr "已移除"
 
-#: crates/bigiris/src/main.rs:1959
+#: crates/bigiris/src/main.rs:1955
 msgid "removed in total: {files} file(s) in {managers} file manager(s)"
 msgstr "共移除：{managers} 個檔案管理員中的 {files} 個檔案"
 
-#: crates/bigiris/src/main.rs:1982
+#: crates/bigiris/src/main.rs:1978
 msgid "FAILED"
 msgstr "失敗"
 
-#: crates/bigiris/src/main.rs:1987
+#: crates/bigiris/src/main.rs:1983
 msgid "provided by the package"
 msgstr "由套件提供"
 
-#: crates/bigiris/src/main.rs:1990
+#: crates/bigiris/src/main.rs:1986
 msgid "unchanged"
 msgstr "無變更"
 
-#: crates/bigiris/src/main.rs:1992
+#: crates/bigiris/src/main.rs:1988
 msgid "skipped"
 msgstr "已略過"
 
-#: crates/bigiris/src/main.rs:1997
+#: crates/bigiris/src/main.rs:1993
 msgid "detected"
 msgstr "已偵測到"
 
-#: crates/bigiris/src/main.rs:1997
+#: crates/bigiris/src/main.rs:1993
 msgid "not in PATH"
 msgstr "PATH 中找不到"
 
-#: crates/bigiris/src/main.rs:1999
+#: crates/bigiris/src/main.rs:1995
 msgid "{count} file(s)"
 msgstr "{count} 個檔案"
 
-#: crates/bigiris/src/main.rs:2024
+#: crates/bigiris/src/main.rs:2020
 msgid ""
 "warning: this build lacks the `gui` feature. Dialog '{dialog}' ignored "
 "(rebuild with --features gui)."
@@ -2458,7 +2456,7 @@ msgstr ""
 "警告：目前的建置未包含 `gui` 功能。已忽略對話方塊「{dialog}」（請使用 --"
 "features gui 重新編譯）。"
 
-#: crates/bigiris/src/main.rs:2031
+#: crates/bigiris/src/main.rs:2027
 msgid ""
 "warning: this build lacks the `gui` feature. Viewer unavailable (rebuild "
 "with --features gui)."
@@ -2466,7 +2464,7 @@ msgstr ""
 "警告：目前的建置未包含 `gui` 功能。無法使用檢視器（請使用 --features gui 重新"
 "編譯）。"
 
-#: crates/bigiris/src/main.rs:2036
+#: crates/bigiris/src/main.rs:2032
 msgid ""
 "warning: this build lacks the `gui` feature. Viewer unavailable; files "
 "received:"

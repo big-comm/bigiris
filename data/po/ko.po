@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: bigiris 0.1.0\n"
 "Report-Msgid-Bugs-To: https://github.com/big-comm/bigiris/issues\n"
-"POT-Creation-Date: 2026-11-25 18:21-0300\n"
+"POT-Creation-Date: 2026-11-25 18:25-0300\n"
 "PO-Revision-Date: 2026-10-14 01:36-0300\n"
 "Last-Translator: BigCommunity Team\n"
 "Language-Team: BigCommunity Team\n"
@@ -1987,13 +1987,12 @@ msgstr ""
 
 #: crates/bigiris/src/main.rs:364
 msgid ""
-"Visual quality to aim for: maxima, equilibrado or menor (also max, balanced, "
-"small). Each format looks for the smallest file that keeps this quality "
-"(SSIMULACRA2 85 / 80 / 70)"
-msgstr ""
-"목표 시각 품질: maxima, equilibrado 또는 menor (max, balanced, small도 가"
-"능). 각 형식에서 이 품질을 유지하는 가장 작은 파일을 찾습니다 (SSIMULACRA2 "
+"Visual quality to aim for: maximum, balanced or smallest (also max, small). "
+"Each format looks for the smallest file that keeps this quality (SSIMULACRA2 "
 "85 / 80 / 70)"
+msgstr ""
+"목표 시각 품질: maximum, balanced 또는 smallest (max, small도 가능). 각 형식"
+"에서 이 품질을 유지하는 가장 작은 파일을 찾습니다 (SSIMULACRA2 85 / 80 / 70)"
 
 #: crates/bigiris/src/main.rs:370
 msgid ""
@@ -2038,10 +2037,8 @@ msgstr "대상 형식 (선택 사항, 생략하면 원래 형식 유지)"
 
 #: crates/bigiris/src/main.rs:405
 msgid ""
-"Visual quality to aim for: maxima, equilibrado or menor (also max, balanced, "
-"small)"
-msgstr ""
-"목표 시각 품질: maxima, equilibrado 또는 menor (max, balanced, small도 가능)"
+"Visual quality to aim for: maximum, balanced or smallest (also max, small)"
+msgstr "목표 시각 품질: maximum, balanced 또는 smallest (max, small도 가능)"
 
 #: crates/bigiris/src/main.rs:411
 msgid ""
@@ -2292,8 +2289,9 @@ msgid "Some files were not processed; see the details in the terminal."
 msgstr "일부 파일을 처리하지 못했습니다. 자세한 내용은 터미널을 확인하세요."
 
 #: crates/bigiris/src/main.rs:953
-msgid "invalid quality target: {value}; use maxima, equilibrado or menor"
-msgstr "잘못된 품질 목표: {value}. maxima, equilibrado 또는 menor를 사용하세요"
+msgid "invalid quality target: {value}; use maximum, balanced or smallest"
+msgstr ""
+"잘못된 품질 목표: {value}. maximum, balanced 또는 smallest를 사용하세요"
 
 #: crates/bigiris/src/main.rs:966 crates/bigiris/src/main.rs:1060
 msgid "invalid target format: {error}"
@@ -2392,7 +2390,7 @@ msgstr "{path}을(를) 만들 수 없습니다: {error}"
 msgid "no images found for the batch"
 msgstr "일괄 처리할 이미지를 찾을 수 없습니다"
 
-#: crates/bigiris/src/main.rs:1746
+#: crates/bigiris/src/main.rs:1743
 msgid ""
 "LibreOffice (`soffice`) not found in PATH. Install `libreoffice-fresh` "
 "(recommended) or `libreoffice-still` (e.g. `sudo pacman -S libreoffice-"
@@ -2402,83 +2400,83 @@ msgstr ""
 "장) 또는 `libreoffice-still`을 설치하세요 (예: `sudo pacman -S libreoffice-"
 "fresh`)."
 
-#: crates/bigiris/src/main.rs:1798
+#: crates/bigiris/src/main.rs:1795
 msgid "not a regular file"
 msgstr "일반 파일이 아닙니다"
 
-#: crates/bigiris/src/main.rs:1801
+#: crates/bigiris/src/main.rs:1798
 msgid "invalid file name"
 msgstr "잘못된 파일 이름"
 
-#: crates/bigiris/src/main.rs:1822
+#: crates/bigiris/src/main.rs:1819
 msgid "could not run soffice: {error}"
 msgstr "soffice 실행 실패: {error}"
 
-#: crates/bigiris/src/main.rs:1833
+#: crates/bigiris/src/main.rs:1830
 msgid "soffice exceeded the {seconds} s limit"
 msgstr "soffice가 제한 시간 {seconds}초를 초과했습니다"
 
-#: crates/bigiris/src/main.rs:1846
+#: crates/bigiris/src/main.rs:1843
 msgid "soffice did not produce the PDF ({status})"
 msgstr "soffice가 PDF를 생성하지 않았습니다 ({status})"
 
-#: crates/bigiris/src/main.rs:1889
+#: crates/bigiris/src/main.rs:1886
 msgid "too many files with the same name: {path}"
 msgstr "같은 이름의 파일이 너무 많습니다: {path}"
 
-#: crates/bigiris/src/main.rs:1932
+#: crates/bigiris/src/main.rs:1928
 msgid "installation failed: {error}"
 msgstr "설치 실패: {error}"
 
-#: crates/bigiris/src/main.rs:1938
+#: crates/bigiris/src/main.rs:1934
 msgid "installed"
 msgstr "설치됨"
 
-#: crates/bigiris/src/main.rs:1939
+#: crates/bigiris/src/main.rs:1935
 msgid "installed in total: {files} file(s) in {managers} file manager(s)"
 msgstr "총 설치: 파일 관리자 {managers}개에 파일 {files}개"
 
-#: crates/bigiris/src/main.rs:1955
+#: crates/bigiris/src/main.rs:1951
 msgid "removal failed: {error}"
 msgstr "제거 실패: {error}"
 
-#: crates/bigiris/src/main.rs:1958
+#: crates/bigiris/src/main.rs:1954
 msgid "removed"
 msgstr "제거됨"
 
-#: crates/bigiris/src/main.rs:1959
+#: crates/bigiris/src/main.rs:1955
 msgid "removed in total: {files} file(s) in {managers} file manager(s)"
 msgstr "총 제거: 파일 관리자 {managers}개에서 파일 {files}개"
 
-#: crates/bigiris/src/main.rs:1982
+#: crates/bigiris/src/main.rs:1978
 msgid "FAILED"
 msgstr "실패"
 
-#: crates/bigiris/src/main.rs:1987
+#: crates/bigiris/src/main.rs:1983
 msgid "provided by the package"
 msgstr "패키지에서 제공"
 
-#: crates/bigiris/src/main.rs:1990
+#: crates/bigiris/src/main.rs:1986
 msgid "unchanged"
 msgstr "변경 없음"
 
-#: crates/bigiris/src/main.rs:1992
+#: crates/bigiris/src/main.rs:1988
 msgid "skipped"
 msgstr "건너뜀"
 
-#: crates/bigiris/src/main.rs:1997
+#: crates/bigiris/src/main.rs:1993
 msgid "detected"
 msgstr "감지됨"
 
-#: crates/bigiris/src/main.rs:1997
+#: crates/bigiris/src/main.rs:1993
 msgid "not in PATH"
 msgstr "PATH에 없음"
 
-#: crates/bigiris/src/main.rs:1999
+#: crates/bigiris/src/main.rs:1995
 msgid "{count} file(s)"
 msgstr "파일 {count}개"
 
-#: crates/bigiris/src/main.rs:2024
+#: crates/bigiris/src/main.rs:2020
 msgid ""
 "warning: this build lacks the `gui` feature. Dialog '{dialog}' ignored "
 "(rebuild with --features gui)."
@@ -2486,7 +2484,7 @@ msgstr ""
 "경고: 현재 빌드에 `gui` 기능이 없습니다. '{dialog}' 대화 상자를 무시했습니다 "
 "(--features gui로 다시 빌드하세요)."
 
-#: crates/bigiris/src/main.rs:2031
+#: crates/bigiris/src/main.rs:2027
 msgid ""
 "warning: this build lacks the `gui` feature. Viewer unavailable (rebuild "
 "with --features gui)."
@@ -2494,7 +2492,7 @@ msgstr ""
 "경고: 현재 빌드에 `gui` 기능이 없습니다. 뷰어를 사용할 수 없습니다 (--"
 "features gui로 다시 빌드하세요)."
 
-#: crates/bigiris/src/main.rs:2036
+#: crates/bigiris/src/main.rs:2032
 msgid ""
 "warning: this build lacks the `gui` feature. Viewer unavailable; files "
 "received:"

@@ -114,7 +114,7 @@ fn check_factor(factor: u8) -> Result<(), AiError> {
     if FACTORS.contains(&factor) {
         Ok(())
     } else {
-        Err(AiError::Processing(format!("fator {factor} inválido; use 2, 3 ou 4")))
+        Err(AiError::Processing(format!("invalid factor {factor}; use 2, 3 or 4")))
     }
 }
 
@@ -123,11 +123,11 @@ fn check_limits(width: u32, height: u32, factor: u8) -> Result<(), AiError> {
     let (fw, fh) = output_size(width, height, factor);
     let output = u64::from(fw) * u64::from(fh);
     if width == 0 || height == 0 {
-        return Err(AiError::Processing("imagem vazia".into()));
+        return Err(AiError::Processing("empty image".into()));
     }
     if output.saturating_mul(4) > MAX_OUTPUT_BYTES {
         return Err(AiError::Processing(format!(
-            "{fw}×{fh} excede o limite de saída de 512 MiB; reduza a imagem ou o fator"
+            "{fw}×{fh} exceeds the 512 MiB output limit; use a smaller image or factor"
         )));
     }
     Ok(())
@@ -250,7 +250,7 @@ pub(crate) fn banded(
     step: u32,
     mut network: impl FnMut(Range<u32>) -> Result<Vec<u8>, AiError>,
 ) -> Result<Vec<u8>, AiError> {
-    let wrong = || AiError::Processing("saída do Real-ESRGAN com tamanho inesperado".into());
+    let wrong = || AiError::Processing("Real-ESRGAN output has an unexpected size".into());
     let (fw, fh) = output_size(width, height, factor);
     let f = u32::from(factor);
     let row = fw as usize * 3;
@@ -292,7 +292,7 @@ fn enlarge_alpha(
 ) -> Result<Option<Vec<u8>>, AiError> {
     let Some(alpha) = alpha else { return Ok(None) };
     let alpha = image::GrayImage::from_raw(width, height, alpha.to_vec())
-        .ok_or_else(|| AiError::Processing("alfa com tamanho inesperado".into()))?;
+        .ok_or_else(|| AiError::Processing("alpha has an unexpected size".into()))?;
     let target = output_size(width, height, factor);
     Ok(Some(resize(DynamicImage::ImageLuma8(alpha), target)?.into_luma8().into_raw()))
 }

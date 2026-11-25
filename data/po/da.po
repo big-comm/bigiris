@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: bigiris 0.1.0\n"
 "Report-Msgid-Bugs-To: https://github.com/big-comm/bigiris/issues\n"
-"POT-Creation-Date: 2026-11-25 18:25-0300\n"
+"POT-Creation-Date: 2026-11-25 18:29-0300\n"
 "PO-Revision-Date: 2026-10-14 01:35-0300\n"
 "Last-Translator: BigCommunity Team\n"
 "Language-Team: BigCommunity Team\n"
@@ -586,7 +586,7 @@ msgstr ""
 msgid "Processing ended unexpectedly. Please try again."
 msgstr "Behandlingen stoppede uventet. Prøv igen."
 
-#: crates/bigiris/src/gui/batch_runner.rs:319 crates/bigiris/src/main.rs:1721
+#: crates/bigiris/src/gui/batch_runner.rs:319 crates/bigiris/src/main.rs:1693
 msgid "a worker ended unexpectedly"
 msgstr "en worker stoppede uventet"
 
@@ -733,7 +733,7 @@ msgstr "Encoder-hastighed"
 msgid "higher = faster, slightly lower palette quality · default 10"
 msgstr "højere = hurtigere, lidt lavere paletkvalitet · standard 10"
 
-#: crates/bigiris/src/gui/dialogs/animate.rs:95 crates/bigiris/src/main.rs:612
+#: crates/bigiris/src/gui/dialogs/animate.rs:95 crates/bigiris/src/main.rs:610
 msgid "Output file (.gif)"
 msgstr "Outputfil (.gif)"
 
@@ -1983,19 +1983,7 @@ msgstr ""
 "Målforhold (W:H). Lærredet udvides kun så meget som nødvendigt, for at "
 "billedet passer i dette forhold"
 
-#: crates/bigiris/src/main.rs:352
-msgid "Convert files (headless)"
-msgstr "Konvertér filer (headless)"
-
-#: crates/bigiris/src/main.rs:356
-msgid ""
-"Target format: png, jpg, webp, avif, tiff, bmp, gif, ico, pnm/ppm/pgm/pbm, "
-"tga, qoi, hdr, exr"
-msgstr ""
-"Målformat: png, jpg, webp, avif, tiff, bmp, gif, ico, pnm/ppm/pgm/pbm, tga, "
-"qoi, hdr, exr"
-
-#: crates/bigiris/src/main.rs:364
+#: crates/bigiris/src/main.rs:358
 msgid ""
 "Visual quality to aim for: maximum, balanced or smallest (also max, small). "
 "Each format looks for the smallest file that keeps this quality (SSIMULACRA2 "
@@ -2005,7 +1993,7 @@ msgstr ""
 "Hvert format søger den mindste fil, der bevarer denne kvalitet (SSIMULACRA2 "
 "85 / 80 / 70)"
 
-#: crates/bigiris/src/main.rs:370
+#: crates/bigiris/src/main.rs:364
 msgid ""
 "Fixed quality 1..100 for JPEG/WebP/AVIF, without searching (ignores --"
 "target). In WebP, 100 writes losslessly"
@@ -2013,25 +2001,37 @@ msgstr ""
 "Fast kvalitet 1..100 for JPEG/WebP/AVIF, uden søgning (ignorerer --target). "
 "I WebP gemmer 100 tabsfrit"
 
-#: crates/bigiris/src/main.rs:373 crates/bigiris/src/main.rs:414
+#: crates/bigiris/src/main.rs:367
 msgid "Accepted for compatibility: JPEG is always progressive"
 msgstr "Accepteres for kompatibilitet: JPEG er altid progressiv i forvejen"
 
-#: crates/bigiris/src/main.rs:375 crates/bigiris/src/main.rs:416
+#: crates/bigiris/src/main.rs:369
 msgid "Slower compression and smaller files, with no extra loss: PNG and AVIF"
 msgstr ""
 "Langsommere komprimering til mindre filer uden yderligere tab: PNG og AVIF"
 
-#: crates/bigiris/src/main.rs:381 crates/bigiris/src/main.rs:422
-#: crates/bigiris/src/main.rs:449
+#: crates/bigiris/src/main.rs:382
+msgid "Convert files (headless)"
+msgstr "Konvertér filer (headless)"
+
+#: crates/bigiris/src/main.rs:386
+msgid ""
+"Target format: png, jpg, webp, avif, tiff, bmp, gif, ico, pnm/ppm/pgm/pbm, "
+"tga, qoi, hdr, exr"
+msgstr ""
+"Målformat: png, jpg, webp, avif, tiff, bmp, gif, ico, pnm/ppm/pgm/pbm, tga, "
+"qoi, hdr, exr"
+
+#: crates/bigiris/src/main.rs:395 crates/bigiris/src/main.rs:420
+#: crates/bigiris/src/main.rs:447
 msgid "What to do when the output file already exists"
 msgstr "Politik, når outputfilen allerede findes"
 
-#: crates/bigiris/src/main.rs:384
+#: crates/bigiris/src/main.rs:398
 msgid "Input files"
 msgstr "Inputfiler"
 
-#: crates/bigiris/src/main.rs:387
+#: crates/bigiris/src/main.rs:401
 msgid ""
 "Resize files (headless). Exactly one mode among --max-edge / --percent / --"
 "exact / --fit is required"
@@ -2039,28 +2039,16 @@ msgstr ""
 "Ændr størrelse på filer (headless). Præcis én tilstand blandt --max-edge / --"
 "percent / --exact / --fit er påkrævet"
 
-#: crates/bigiris/src/main.rs:395
+#: crates/bigiris/src/main.rs:409
 msgid "Interpolation kernel (default: lanczos3)"
 msgstr "Interpolationskerne (standard: lanczos3)"
 
-#: crates/bigiris/src/main.rs:398 crates/bigiris/src/main.rs:443
+#: crates/bigiris/src/main.rs:412 crates/bigiris/src/main.rs:441
 msgid "Target format (optional; keeps the original format if omitted)"
 msgstr ""
 "Målformat (valgfrit; bevarer det oprindelige format, hvis det udelades)"
 
-#: crates/bigiris/src/main.rs:405
-msgid ""
-"Visual quality to aim for: maximum, balanced or smallest (also max, small)"
-msgstr ""
-"Ønsket visuel kvalitet: maximum, balanced eller smallest (også max, small)"
-
-#: crates/bigiris/src/main.rs:411
-msgid ""
-"Fixed quality 1..100 for JPEG/WebP/AVIF, without searching (ignores --target)"
-msgstr ""
-"Fast kvalitet 1..100 for JPEG/WebP/AVIF, uden søgning (ignorerer --target)"
-
-#: crates/bigiris/src/main.rs:428
+#: crates/bigiris/src/main.rs:426
 msgid ""
 "Rotate files (headless). Right-angle rotations through a re-encode pipeline; "
 "`--auto` reads the EXIF Orientation tag and applies the right rotation"
@@ -2068,28 +2056,28 @@ msgstr ""
 "Rotér filer (headless). Rotationer i trin på 90° via genkodning; `--auto` "
 "læser EXIF-tagget Orientation og anvender den rigtige rotation"
 
-#: crates/bigiris/src/main.rs:434
+#: crates/bigiris/src/main.rs:432
 msgid "Rotation in degrees: 90 | 180 | 270"
 msgstr "Grader: 90 | 180 | 270"
 
-#: crates/bigiris/src/main.rs:440
+#: crates/bigiris/src/main.rs:438
 msgid "Auto-orient from EXIF (Orientation tag)"
 msgstr "Automatisk orientering via EXIF (tagget Orientation)"
 
-#: crates/bigiris/src/main.rs:455
+#: crates/bigiris/src/main.rs:453
 msgid "Mirror files horizontally or vertically (headless)"
 msgstr "Spejlvend filer vandret eller lodret (headless)"
 
-#: crates/bigiris/src/main.rs:457
+#: crates/bigiris/src/main.rs:455
 msgid "Axis: horizontal | vertical"
 msgstr "Akse: horizontal | vertical"
 
-#: crates/bigiris/src/main.rs:459 crates/bigiris/src/main.rs:473
-#: crates/bigiris/src/main.rs:497 crates/bigiris/src/main.rs:533
+#: crates/bigiris/src/main.rs:457 crates/bigiris/src/main.rs:471
+#: crates/bigiris/src/main.rs:495 crates/bigiris/src/main.rs:531
 msgid "Target format (optional)"
 msgstr "Målformat (valgfrit)"
 
-#: crates/bigiris/src/main.rs:466
+#: crates/bigiris/src/main.rs:464
 msgid ""
 "Crop a rectangle from images (headless). Use --rect WxH+X+Y, ImageMagick "
 "style"
@@ -2097,11 +2085,11 @@ msgstr ""
 "Beskær et rektangel fra billederne (headless). Brug --rect WxH+X+Y i "
 "ImageMagick-stil"
 
-#: crates/bigiris/src/main.rs:470
+#: crates/bigiris/src/main.rs:468
 msgid "Crop geometry in the WxH+X+Y format (e.g. 800x600+100+50)"
 msgstr "Beskæringsgeometri i formatet WxH+X+Y (f.eks. 800x600+100+50)"
 
-#: crates/bigiris/src/main.rs:480
+#: crates/bigiris/src/main.rs:478
 msgid ""
 "Extend the canvas around the image (letterbox). Exactly one mode among --"
 "size and --aspect is required. The canvas is filled with --bg and the "
@@ -2111,35 +2099,35 @@ msgstr ""
 "size og --aspect er påkrævet. Lærredet udfyldes med --bg, og det oprindelige "
 "billede placeres efter --gravity"
 
-#: crates/bigiris/src/main.rs:487
+#: crates/bigiris/src/main.rs:485
 msgid "Background color in hexadecimal (#RRGGBB or #RRGGBBAA)"
 msgstr "Baggrundsfarve i hexadecimal (#RRGGBB eller #RRGGBBAA)"
 
-#: crates/bigiris/src/main.rs:494
+#: crates/bigiris/src/main.rs:492
 msgid "Position of the original image on the extended canvas"
 msgstr "Det oprindelige billedes placering på det udvidede lærred"
 
-#: crates/bigiris/src/main.rs:504
+#: crates/bigiris/src/main.rs:502
 msgid "Adjust color/tone (brightness, contrast, saturation, gamma)"
 msgstr "Juster farve/tone (lysstyrke, kontrast, mætning, gamma)"
 
-#: crates/bigiris/src/main.rs:510
+#: crates/bigiris/src/main.rs:508
 msgid "Brightness -100..100 (0 = no change)"
 msgstr "Lysstyrke -100..100 (0 = ingen ændring)"
 
-#: crates/bigiris/src/main.rs:517
+#: crates/bigiris/src/main.rs:515
 msgid "Contrast -100..100 (0 = no change)"
 msgstr "Kontrast -100..100 (0 = ingen ændring)"
 
-#: crates/bigiris/src/main.rs:524
+#: crates/bigiris/src/main.rs:522
 msgid "Saturation -100..100 (-100 = gray, 0 = no change)"
 msgstr "Mætning -100..100 (-100 = grå, 0 = ingen ændring)"
 
-#: crates/bigiris/src/main.rs:530
+#: crates/bigiris/src/main.rs:528
 msgid "Gamma 0.1..10.0 (< 1 brightens midtones, > 1 darkens)"
 msgstr "Gamma 0.1..10.0 (< 1 lysner mellemtoner, > 1 gør mørkere)"
 
-#: crates/bigiris/src/main.rs:540
+#: crates/bigiris/src/main.rs:538
 msgid ""
 "Remove the background with local AI (BiRefNet-lite, birefnet-native "
 "package). Writes `<name>_nobg.png` (PNG with alpha) next to each image"
@@ -2147,15 +2135,15 @@ msgstr ""
 "Fjern baggrund med lokal AI (BiRefNet-lite, pakken birefnet-native). Gemmer "
 "`<navn>_nobg.png` (PNG med alfa) ved siden af hvert billede"
 
-#: crates/bigiris/src/main.rs:546
+#: crates/bigiris/src/main.rs:544
 msgid "Segmentation model"
 msgstr "Segmenteringsmodel"
 
-#: crates/bigiris/src/main.rs:553
+#: crates/bigiris/src/main.rs:551
 msgid "What to do when `<name>_nobg.png` already exists"
 msgstr "Politik, når `<navn>_nobg.png` allerede findes"
 
-#: crates/bigiris/src/main.rs:559
+#: crates/bigiris/src/main.rs:557
 msgid ""
 "Increase resolution by 2, 3 or 4. With the realesrgan-native package it uses "
 "AI (Real-ESRGAN); without it, Lanczos3. Writes `<name>_<pct>pct.<ext>`"
@@ -2163,11 +2151,11 @@ msgstr ""
 "Øg opløsningen med 2, 3 eller 4. Med pakken realesrgan-native bruges AI "
 "(Real-ESRGAN); uden den Lanczos3. Gemmer `<navn>_<pct>pct.<ext>`"
 
-#: crates/bigiris/src/main.rs:561
+#: crates/bigiris/src/main.rs:559
 msgid "Integer factor (2, 3 or 4)"
 msgstr "Heltalsfaktor (2, 3 eller 4)"
 
-#: crates/bigiris/src/main.rs:567
+#: crates/bigiris/src/main.rs:565
 msgid ""
 "Engine: auto (Real-ESRGAN if installed, otherwise Lanczos3), realesrgan "
 "(fails if missing) or lanczos"
@@ -2175,12 +2163,12 @@ msgstr ""
 "Motor: auto (Real-ESRGAN, hvis installeret, ellers Lanczos3), realesrgan "
 "(fejler, hvis den mangler) eller lanczos"
 
-#: crates/bigiris/src/main.rs:574 crates/bigiris/src/main.rs:586
-#: crates/bigiris/src/main.rs:604 crates/bigiris/src/main.rs:636
+#: crates/bigiris/src/main.rs:572 crates/bigiris/src/main.rs:584
+#: crates/bigiris/src/main.rs:602 crates/bigiris/src/main.rs:634
 msgid "Overwrite policy for the output file"
 msgstr "Overskrivningspolitik for outputfilen"
 
-#: crates/bigiris/src/main.rs:580
+#: crates/bigiris/src/main.rs:578
 msgid ""
 "Remove noise and compression artifacts with local AI (SCUNet, scunet-native "
 "package). Writes `<name>_denoised.<ext>`"
@@ -2188,7 +2176,7 @@ msgstr ""
 "Fjern støj og komprimeringsartefakter med lokal AI (SCUNet, pakken scunet-"
 "native). Gemmer `<navn>_denoised.<ext>`"
 
-#: crates/bigiris/src/main.rs:592
+#: crates/bigiris/src/main.rs:590
 msgid ""
 "Erase objects: fills the area marked in the mask with local AI (LaMa, lama-"
 "native package). Writes `<name>_inpaint.<ext>`"
@@ -2196,7 +2184,7 @@ msgstr ""
 "Slet objekter: udfylder det område, der er markeret i masken, med lokal AI "
 "(LaMa, pakken lama-native). Gemmer `<navn>_inpaint.<ext>`"
 
-#: crates/bigiris/src/main.rs:597
+#: crates/bigiris/src/main.rs:595
 msgid ""
 "Mask the same size as the image: white = fill, black = keep (transparent "
 "areas are kept)"
@@ -2204,47 +2192,47 @@ msgstr ""
 "Maske i samme størrelse som billedet: hvid = udfyld, sort = bevar "
 "(gennemsigtige områder bevares)"
 
-#: crates/bigiris/src/main.rs:610
+#: crates/bigiris/src/main.rs:608
 msgid "Create an animated GIF from a sequence of images (headless)"
 msgstr "Opret animeret GIF ud fra en række billeder (headless)"
 
-#: crates/bigiris/src/main.rs:617
+#: crates/bigiris/src/main.rs:615
 msgid "Delay between frames in milliseconds (100 ≈ 10 fps)"
 msgstr "Forsinkelse mellem billeder i millisekunder (100 ≈ 10 fps)"
 
-#: crates/bigiris/src/main.rs:623
+#: crates/bigiris/src/main.rs:621
 msgid "Number of repetitions: 0 = infinite (default), 1+ = fixed"
 msgstr "Antal gentagelser: 0 = uendeligt (standard), 1+ = fast"
 
-#: crates/bigiris/src/main.rs:629
+#: crates/bigiris/src/main.rs:627
 msgid "Encoder speed 1..30 (higher = faster, worse palette)"
 msgstr "Encoder-hastighed 1..30 (højere = hurtigere, dårligere palet)"
 
-#: crates/bigiris/src/main.rs:639
+#: crates/bigiris/src/main.rs:637
 msgid "Frames in order (at least 1)"
 msgstr "Billeder i rækkefølge (mindst 1)"
 
-#: crates/bigiris/src/main.rs:642
+#: crates/bigiris/src/main.rs:640
 msgid "Process files or folders in parallel from a TOML profile"
 msgstr "Behandl filer eller mapper parallelt ud fra en TOML-profil"
 
-#: crates/bigiris/src/main.rs:644
+#: crates/bigiris/src/main.rs:642
 msgid "Profile file (.toml)"
 msgstr "Profilfil .toml"
 
-#: crates/bigiris/src/main.rs:649
+#: crates/bigiris/src/main.rs:647
 msgid "Install file manager integrations"
 msgstr "Installér integrationer med filhåndteringer"
 
-#: crates/bigiris/src/main.rs:651
+#: crates/bigiris/src/main.rs:649
 msgid "Install in ~/.local/share (default)"
 msgstr "Installér i ~/.local/share (standard)"
 
-#: crates/bigiris/src/main.rs:655
+#: crates/bigiris/src/main.rs:653
 msgid "Install in /usr/share (requires root; usually done by the package)"
 msgstr "Installér i /usr/share (kræver root; gøres normalt af pakken)"
 
-#: crates/bigiris/src/main.rs:663
+#: crates/bigiris/src/main.rs:661
 msgid ""
 "DESTDIR prefix for packaging (e.g. $pkgdir in the PKGBUILD). Only makes "
 "sense together with --system"
@@ -2252,11 +2240,11 @@ msgstr ""
 "DESTDIR-præfiks til pakning (f.eks. $pkgdir i PKGBUILD). Giver kun mening "
 "sammen med --system"
 
-#: crates/bigiris/src/main.rs:667
+#: crates/bigiris/src/main.rs:665
 msgid "Remove previously installed integrations"
 msgstr "Fjern tidligere installerede integrationer"
 
-#: crates/bigiris/src/main.rs:669
+#: crates/bigiris/src/main.rs:667
 msgid ""
 "Convert documents (ODT, DOCX, TXT, MD, RTF, XLSX, PPTX, etc.) to PDF with "
 "headless LibreOffice. The output is written next to the source file"
@@ -2264,149 +2252,149 @@ msgstr ""
 "Konvertér dokumenter (ODT, DOCX, TXT, MD, RTF, XLSX, PPTX osv.) til PDF via "
 "LibreOffice headless. Output gemmes ved siden af kildefilen"
 
-#: crates/bigiris/src/main.rs:675
+#: crates/bigiris/src/main.rs:673
 msgid "What to do when `<name>.pdf` already exists"
 msgstr "Politik, når `<navn>.pdf` allerede findes"
 
-#: crates/bigiris/src/main.rs:682
+#: crates/bigiris/src/main.rs:680
 msgid "Maximum time per document, in seconds"
 msgstr "Maksimal tid pr. dokument, i sekunder"
 
-#: crates/bigiris/src/main.rs:695
+#: crates/bigiris/src/main.rs:693
 msgid "BiRefNet-lite (the only model available)"
 msgstr "BiRefNet-lite (eneste tilgængelige model)"
 
-#: crates/bigiris/src/main.rs:703
+#: crates/bigiris/src/main.rs:701
 msgid ""
 "Real-ESRGAN when the realesrgan-native package is installed, otherwise "
 "Lanczos3"
 msgstr ""
 "Real-ESRGAN, når pakken realesrgan-native er installeret, ellers Lanczos3"
 
-#: crates/bigiris/src/main.rs:708
+#: crates/bigiris/src/main.rs:706
 msgid "Real-ESRGAN AI (requires realesrgan-native)"
 msgstr "AI Real-ESRGAN (kræver realesrgan-native)"
 
-#: crates/bigiris/src/main.rs:711
+#: crates/bigiris/src/main.rs:709
 msgid "Lanczos3 resampling (no AI)"
 msgstr "Lanczos3-resampling (uden AI)"
 
-#: crates/bigiris/src/main.rs:793
+#: crates/bigiris/src/main.rs:765
 msgid "rotate: use --degrees 90|180|270 or --auto"
 msgstr "rotate: brug --degrees 90|180|270 eller --auto"
 
-#: crates/bigiris/src/main.rs:865
+#: crates/bigiris/src/main.rs:837
 msgid "BigIris: the operation failed"
 msgstr "BigIris: handlingen mislykkedes"
 
-#: crates/bigiris/src/main.rs:878
+#: crates/bigiris/src/main.rs:850
 msgid "Some files were not processed; see the details in the terminal."
 msgstr "Nogle filer blev ikke behandlet; se detaljerne i terminalen."
 
-#: crates/bigiris/src/main.rs:953
+#: crates/bigiris/src/main.rs:925
 msgid "invalid quality target: {value}; use maximum, balanced or smallest"
 msgstr "ugyldigt kvalitetsmål: {value}; brug maximum, balanced eller smallest"
 
-#: crates/bigiris/src/main.rs:966 crates/bigiris/src/main.rs:1060
+#: crates/bigiris/src/main.rs:938 crates/bigiris/src/main.rs:1032
 msgid "invalid target format: {error}"
 msgstr "ugyldigt målformat: {error}"
 
-#: crates/bigiris/src/main.rs:976
+#: crates/bigiris/src/main.rs:948
 msgid "the original was already smaller; copied without recompression"
 msgstr "originalen var allerede mindre; kopieret uden genkomprimering"
 
-#: crates/bigiris/src/main.rs:1034
+#: crates/bigiris/src/main.rs:1006
 msgid "invalid --bg: {error}"
 msgstr "ugyldig --bg: {error}"
 
-#: crates/bigiris/src/main.rs:1166
+#: crates/bigiris/src/main.rs:1138
 msgid "several inputs would write the same output file:"
 msgstr "flere inputfiler ville skrive den samme outputfil:"
 
-#: crates/bigiris/src/main.rs:1174
+#: crates/bigiris/src/main.rs:1146
 msgid "Rename the inputs, process them separately or use the increment policy."
 msgstr ""
 "Omdøb inputfilerne, behandl dem hver for sig, eller brug politikken "
 "increment."
 
-#: crates/bigiris/src/main.rs:1226
+#: crates/bigiris/src/main.rs:1198
 msgid "replaced the output of another input: {path}"
 msgstr "erstattede outputtet fra et andet input: {path}"
 
-#: crates/bigiris/src/main.rs:1261
+#: crates/bigiris/src/main.rs:1233
 msgid "the color profile is corrupted; colors were treated as sRGB"
 msgstr "farveprofilen er beskadiget; farverne blev behandlet som sRGB"
 
-#: crates/bigiris/src/main.rs:1266
+#: crates/bigiris/src/main.rs:1238
 msgid "already exists: {path}"
 msgstr "findes allerede: {path}"
 
-#: crates/bigiris/src/main.rs:1272
+#: crates/bigiris/src/main.rs:1244
 msgid "{operation}: {written} written, {skipped} skipped, {failed} failed"
 msgstr ""
 "{operation}: skrevet: {written}, sprunget over: {skipped}, mislykket: "
 "{failed}"
 
-#: crates/bigiris/src/main.rs:1366
+#: crates/bigiris/src/main.rs:1338
 msgid ""
 "{model} is not installed ({path} does not exist). Install it with: {command}"
 msgstr ""
 "{model} er ikke installeret ({path} findes ikke). Installér med: {command}"
 
-#: crates/bigiris/src/main.rs:1376
+#: crates/bigiris/src/main.rs:1348
 msgid "could not read the {model} weights at {path}: {error}"
 msgstr "kunne ikke læse vægtene for {model} i {path}: {error}"
 
-#: crates/bigiris/src/main.rs:1409
+#: crates/bigiris/src/main.rs:1381
 msgid "invalid factor: {factor}. Use 2, 3 or 4."
 msgstr "ugyldig faktor: {factor}. Brug 2, 3 eller 4."
 
-#: crates/bigiris/src/main.rs:1425
+#: crates/bigiris/src/main.rs:1397
 msgid "Real-ESRGAN unavailable; using Lanczos3. To use AI: {command}"
 msgstr ""
 "Real-ESRGAN er ikke tilgængelig; bruger Lanczos3. For at bruge AI: {command}"
 
-#: crates/bigiris/src/main.rs:1484
+#: crates/bigiris/src/main.rs:1456
 msgid "mask {path}: {error}"
 msgstr "maske {path}: {error}"
 
-#: crates/bigiris/src/main.rs:1495
+#: crates/bigiris/src/main.rs:1467
 msgid "marks no area (paint the areas to erase white)"
 msgstr "markerer intet område (mal det, der skal slettes, hvidt)"
 
-#: crates/bigiris/src/main.rs:1529
+#: crates/bigiris/src/main.rs:1501
 msgid "{count} frame(s)"
 msgstr "billeder: {count}"
 
-#: crates/bigiris/src/main.rs:1568
+#: crates/bigiris/src/main.rs:1540
 msgid "could not read {path}: {error}"
 msgstr "kunne ikke læse {path}: {error}"
 
-#: crates/bigiris/src/main.rs:1599
+#: crates/bigiris/src/main.rs:1571
 msgid "invalid TOML profile: {error}"
 msgstr "ugyldig TOML-profil: {error}"
 
-#: crates/bigiris/src/main.rs:1602
+#: crates/bigiris/src/main.rs:1574
 msgid "quality must be between 1 and 100"
 msgstr "quality skal være mellem 1 og 100"
 
-#: crates/bigiris/src/main.rs:1605
+#: crates/bigiris/src/main.rs:1577
 msgid "invalid profile format: {error}"
 msgstr "ugyldigt profilformat: {error}"
 
-#: crates/bigiris/src/main.rs:1617
+#: crates/bigiris/src/main.rs:1589
 msgid "invalid overwrite: {value}; use skip, replace or increment"
 msgstr "ugyldig overwrite: {value}; brug skip, replace eller increment"
 
-#: crates/bigiris/src/main.rs:1625
+#: crates/bigiris/src/main.rs:1597
 msgid "could not create {path}: {error}"
 msgstr "kunne ikke oprette {path}: {error}"
 
-#: crates/bigiris/src/main.rs:1634
+#: crates/bigiris/src/main.rs:1606
 msgid "no images found for the batch"
 msgstr "ingen billeder fundet til batchen"
 
-#: crates/bigiris/src/main.rs:1743
+#: crates/bigiris/src/main.rs:1715
 msgid ""
 "LibreOffice (`soffice`) not found in PATH. Install `libreoffice-fresh` "
 "(recommended) or `libreoffice-still` (e.g. `sudo pacman -S libreoffice-"
@@ -2416,83 +2404,83 @@ msgstr ""
 "fresh` (anbefalet) eller `libreoffice-still` (f.eks. `sudo pacman -S "
 "libreoffice-fresh`)."
 
-#: crates/bigiris/src/main.rs:1795
+#: crates/bigiris/src/main.rs:1767
 msgid "not a regular file"
 msgstr "ikke en almindelig fil"
 
-#: crates/bigiris/src/main.rs:1798
+#: crates/bigiris/src/main.rs:1770
 msgid "invalid file name"
 msgstr "ugyldigt filnavn"
 
-#: crates/bigiris/src/main.rs:1819
+#: crates/bigiris/src/main.rs:1791
 msgid "could not run soffice: {error}"
 msgstr "kunne ikke kalde soffice: {error}"
 
-#: crates/bigiris/src/main.rs:1830
+#: crates/bigiris/src/main.rs:1802
 msgid "soffice exceeded the {seconds} s limit"
 msgstr "soffice overskred grænsen på {seconds} s"
 
-#: crates/bigiris/src/main.rs:1843
+#: crates/bigiris/src/main.rs:1815
 msgid "soffice did not produce the PDF ({status})"
 msgstr "soffice genererede ikke PDF'en ({status})"
 
-#: crates/bigiris/src/main.rs:1886
+#: crates/bigiris/src/main.rs:1858
 msgid "too many files with the same name: {path}"
 msgstr "for mange filer med samme navn: {path}"
 
-#: crates/bigiris/src/main.rs:1928
+#: crates/bigiris/src/main.rs:1900
 msgid "installation failed: {error}"
 msgstr "installationen mislykkedes: {error}"
 
-#: crates/bigiris/src/main.rs:1934
+#: crates/bigiris/src/main.rs:1906
 msgid "installed"
 msgstr "installeret"
 
-#: crates/bigiris/src/main.rs:1935
+#: crates/bigiris/src/main.rs:1907
 msgid "installed in total: {files} file(s) in {managers} file manager(s)"
 msgstr "installeret i alt: {files} fil(er) i {managers} filhåndtering(er)"
 
-#: crates/bigiris/src/main.rs:1951
+#: crates/bigiris/src/main.rs:1923
 msgid "removal failed: {error}"
 msgstr "fjernelsen mislykkedes: {error}"
 
-#: crates/bigiris/src/main.rs:1954
+#: crates/bigiris/src/main.rs:1926
 msgid "removed"
 msgstr "fjernet"
 
-#: crates/bigiris/src/main.rs:1955
+#: crates/bigiris/src/main.rs:1927
 msgid "removed in total: {files} file(s) in {managers} file manager(s)"
 msgstr "fjernet i alt: {files} fil(er) i {managers} filhåndtering(er)"
 
-#: crates/bigiris/src/main.rs:1978
+#: crates/bigiris/src/main.rs:1950
 msgid "FAILED"
 msgstr "FEJL"
 
-#: crates/bigiris/src/main.rs:1983
+#: crates/bigiris/src/main.rs:1955
 msgid "provided by the package"
 msgstr "leveret af pakken"
 
-#: crates/bigiris/src/main.rs:1986
+#: crates/bigiris/src/main.rs:1958
 msgid "unchanged"
 msgstr "uændret"
 
-#: crates/bigiris/src/main.rs:1988
+#: crates/bigiris/src/main.rs:1960
 msgid "skipped"
 msgstr "sprunget over"
 
-#: crates/bigiris/src/main.rs:1993
+#: crates/bigiris/src/main.rs:1965
 msgid "detected"
 msgstr "fundet"
 
-#: crates/bigiris/src/main.rs:1993
+#: crates/bigiris/src/main.rs:1965
 msgid "not in PATH"
 msgstr "mangler i PATH"
 
-#: crates/bigiris/src/main.rs:1995
+#: crates/bigiris/src/main.rs:1967
 msgid "{count} file(s)"
 msgstr "{count} fil(er)"
 
-#: crates/bigiris/src/main.rs:2020
+#: crates/bigiris/src/main.rs:1992
 msgid ""
 "warning: this build lacks the `gui` feature. Dialog '{dialog}' ignored "
 "(rebuild with --features gui)."
@@ -2500,7 +2488,7 @@ msgstr ""
 "advarsel: aktuel build uden feature `gui`. Dialogen '{dialog}' blev sprunget "
 "over (genkompilér med --features gui)."
 
-#: crates/bigiris/src/main.rs:2027
+#: crates/bigiris/src/main.rs:1999
 msgid ""
 "warning: this build lacks the `gui` feature. Viewer unavailable (rebuild "
 "with --features gui)."
@@ -2508,7 +2496,7 @@ msgstr ""
 "advarsel: aktuel build uden feature `gui`. Fremviseren er ikke tilgængelig "
 "(genkompilér med --features gui)."
 
-#: crates/bigiris/src/main.rs:2032
+#: crates/bigiris/src/main.rs:2004
 msgid ""
 "warning: this build lacks the `gui` feature. Viewer unavailable; files "
 "received:"

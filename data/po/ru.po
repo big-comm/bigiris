@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: bigiris 0.1.0\n"
 "Report-Msgid-Bugs-To: https://github.com/big-comm/bigiris/issues\n"
-"POT-Creation-Date: 2026-11-25 18:25-0300\n"
+"POT-Creation-Date: 2026-11-25 18:29-0300\n"
 "PO-Revision-Date: 2026-10-14 01:36-0300\n"
 "Last-Translator: BigCommunity Team\n"
 "Language-Team: BigCommunity Team\n"
@@ -587,7 +587,7 @@ msgstr ""
 msgid "Processing ended unexpectedly. Please try again."
 msgstr "Обработка неожиданно завершилась. Попробуйте ещё раз."
 
-#: crates/bigiris/src/gui/batch_runner.rs:319 crates/bigiris/src/main.rs:1721
+#: crates/bigiris/src/gui/batch_runner.rs:319 crates/bigiris/src/main.rs:1693
 msgid "a worker ended unexpectedly"
 msgstr "рабочий процесс неожиданно завершился"
 
@@ -734,7 +734,7 @@ msgstr "Скорость кодера"
 msgid "higher = faster, slightly lower palette quality · default 10"
 msgstr "выше = быстрее, немного ниже качество палитры · по умолчанию 10"
 
-#: crates/bigiris/src/gui/dialogs/animate.rs:95 crates/bigiris/src/main.rs:612
+#: crates/bigiris/src/gui/dialogs/animate.rs:95 crates/bigiris/src/main.rs:610
 msgid "Output file (.gif)"
 msgstr "Выходной файл (.gif)"
 
@@ -1986,19 +1986,7 @@ msgstr ""
 "Целевое соотношение сторон (W:H). Холст расширяется ровно настолько, чтобы "
 "изображение поместилось в этой пропорции"
 
-#: crates/bigiris/src/main.rs:352
-msgid "Convert files (headless)"
-msgstr "Преобразовать файлы (без GUI)"
-
-#: crates/bigiris/src/main.rs:356
-msgid ""
-"Target format: png, jpg, webp, avif, tiff, bmp, gif, ico, pnm/ppm/pgm/pbm, "
-"tga, qoi, hdr, exr"
-msgstr ""
-"Целевой формат: png, jpg, webp, avif, tiff, bmp, gif, ico, pnm/ppm/pgm/pbm, "
-"tga, qoi, hdr, exr"
-
-#: crates/bigiris/src/main.rs:364
+#: crates/bigiris/src/main.rs:358
 msgid ""
 "Visual quality to aim for: maximum, balanced or smallest (also max, small). "
 "Each format looks for the smallest file that keeps this quality (SSIMULACRA2 "
@@ -2008,7 +1996,7 @@ msgstr ""
 "small). Для каждого формата ищется наименьший файл, сохраняющий это качество "
 "(SSIMULACRA2 85 / 80 / 70)"
 
-#: crates/bigiris/src/main.rs:370
+#: crates/bigiris/src/main.rs:364
 msgid ""
 "Fixed quality 1..100 for JPEG/WebP/AVIF, without searching (ignores --"
 "target). In WebP, 100 writes losslessly"
@@ -2016,26 +2004,38 @@ msgstr ""
 "Фиксированное качество 1..100 для JPEG/WebP/AVIF, без поиска (игнорирует --"
 "target). В WebP значение 100 означает запись без потерь"
 
-#: crates/bigiris/src/main.rs:373 crates/bigiris/src/main.rs:414
+#: crates/bigiris/src/main.rs:367
 msgid "Accepted for compatibility: JPEG is always progressive"
 msgstr ""
 "Принимается для совместимости: JPEG всегда записывается как прогрессивный"
 
-#: crates/bigiris/src/main.rs:375 crates/bigiris/src/main.rs:416
+#: crates/bigiris/src/main.rs:369
 msgid "Slower compression and smaller files, with no extra loss: PNG and AVIF"
 msgstr ""
 "Более медленное сжатие и меньший файл без дополнительных потерь: PNG и AVIF"
 
-#: crates/bigiris/src/main.rs:381 crates/bigiris/src/main.rs:422
-#: crates/bigiris/src/main.rs:449
+#: crates/bigiris/src/main.rs:382
+msgid "Convert files (headless)"
+msgstr "Преобразовать файлы (без GUI)"
+
+#: crates/bigiris/src/main.rs:386
+msgid ""
+"Target format: png, jpg, webp, avif, tiff, bmp, gif, ico, pnm/ppm/pgm/pbm, "
+"tga, qoi, hdr, exr"
+msgstr ""
+"Целевой формат: png, jpg, webp, avif, tiff, bmp, gif, ico, pnm/ppm/pgm/pbm, "
+"tga, qoi, hdr, exr"
+
+#: crates/bigiris/src/main.rs:395 crates/bigiris/src/main.rs:420
+#: crates/bigiris/src/main.rs:447
 msgid "What to do when the output file already exists"
 msgstr "Действие, если выходной файл уже существует"
 
-#: crates/bigiris/src/main.rs:384
+#: crates/bigiris/src/main.rs:398
 msgid "Input files"
 msgstr "Входные файлы"
 
-#: crates/bigiris/src/main.rs:387
+#: crates/bigiris/src/main.rs:401
 msgid ""
 "Resize files (headless). Exactly one mode among --max-edge / --percent / --"
 "exact / --fit is required"
@@ -2043,30 +2043,16 @@ msgstr ""
 "Изменить размер файлов (без GUI). Требуется ровно один режим из --max-edge / "
 "--percent / --exact / --fit"
 
-#: crates/bigiris/src/main.rs:395
+#: crates/bigiris/src/main.rs:409
 msgid "Interpolation kernel (default: lanczos3)"
 msgstr "Ядро интерполяции (по умолчанию: lanczos3)"
 
-#: crates/bigiris/src/main.rs:398 crates/bigiris/src/main.rs:443
+#: crates/bigiris/src/main.rs:412 crates/bigiris/src/main.rs:441
 msgid "Target format (optional; keeps the original format if omitted)"
 msgstr ""
 "Целевой формат (необязательно; если не указан, сохраняется исходный формат)"
 
-#: crates/bigiris/src/main.rs:405
-msgid ""
-"Visual quality to aim for: maximum, balanced or smallest (also max, small)"
-msgstr ""
-"Желаемое визуальное качество: maximum, balanced или smallest (также max, "
-"small)"
-
-#: crates/bigiris/src/main.rs:411
-msgid ""
-"Fixed quality 1..100 for JPEG/WebP/AVIF, without searching (ignores --target)"
-msgstr ""
-"Фиксированное качество 1..100 для JPEG/WebP/AVIF, без поиска (игнорирует --"
-"target)"
-
-#: crates/bigiris/src/main.rs:428
+#: crates/bigiris/src/main.rs:426
 msgid ""
 "Rotate files (headless). Right-angle rotations through a re-encode pipeline; "
 "`--auto` reads the EXIF Orientation tag and applies the right rotation"
@@ -2075,28 +2061,28 @@ msgstr ""
 "перекодированием; `--auto` читает тег EXIF Orientation и применяет нужный "
 "поворот"
 
-#: crates/bigiris/src/main.rs:434
+#: crates/bigiris/src/main.rs:432
 msgid "Rotation in degrees: 90 | 180 | 270"
 msgstr "Угол, кратный 90°: 90 | 180 | 270"
 
-#: crates/bigiris/src/main.rs:440
+#: crates/bigiris/src/main.rs:438
 msgid "Auto-orient from EXIF (Orientation tag)"
 msgstr "Автоповорот по EXIF (тег Orientation)"
 
-#: crates/bigiris/src/main.rs:455
+#: crates/bigiris/src/main.rs:453
 msgid "Mirror files horizontally or vertically (headless)"
 msgstr "Отразить файлы по горизонтали или вертикали (без GUI)"
 
-#: crates/bigiris/src/main.rs:457
+#: crates/bigiris/src/main.rs:455
 msgid "Axis: horizontal | vertical"
 msgstr "Ось: horizontal | vertical"
 
-#: crates/bigiris/src/main.rs:459 crates/bigiris/src/main.rs:473
-#: crates/bigiris/src/main.rs:497 crates/bigiris/src/main.rs:533
+#: crates/bigiris/src/main.rs:457 crates/bigiris/src/main.rs:471
+#: crates/bigiris/src/main.rs:495 crates/bigiris/src/main.rs:531
 msgid "Target format (optional)"
 msgstr "Целевой формат (необязательно)"
 
-#: crates/bigiris/src/main.rs:466
+#: crates/bigiris/src/main.rs:464
 msgid ""
 "Crop a rectangle from images (headless). Use --rect WxH+X+Y, ImageMagick "
 "style"
@@ -2104,11 +2090,11 @@ msgstr ""
 "Обрезать изображения по прямоугольнику (без GUI). Используйте --rect WxH+X+Y "
 "в стиле ImageMagick"
 
-#: crates/bigiris/src/main.rs:470
+#: crates/bigiris/src/main.rs:468
 msgid "Crop geometry in the WxH+X+Y format (e.g. 800x600+100+50)"
 msgstr "Геометрия обрезки в формате WxH+X+Y (напр.: 800x600+100+50)"
 
-#: crates/bigiris/src/main.rs:480
+#: crates/bigiris/src/main.rs:478
 msgid ""
 "Extend the canvas around the image (letterbox). Exactly one mode among --"
 "size and --aspect is required. The canvas is filled with --bg and the "
@@ -2118,35 +2104,35 @@ msgstr ""
 "из --size и --aspect. Холст заливается цветом --bg, а исходное изображение "
 "размещается согласно --gravity"
 
-#: crates/bigiris/src/main.rs:487
+#: crates/bigiris/src/main.rs:485
 msgid "Background color in hexadecimal (#RRGGBB or #RRGGBBAA)"
 msgstr "Цвет фона в шестнадцатеричном виде (#RRGGBB или #RRGGBBAA)"
 
-#: crates/bigiris/src/main.rs:494
+#: crates/bigiris/src/main.rs:492
 msgid "Position of the original image on the extended canvas"
 msgstr "Положение исходного изображения на расширенном холсте"
 
-#: crates/bigiris/src/main.rs:504
+#: crates/bigiris/src/main.rs:502
 msgid "Adjust color/tone (brightness, contrast, saturation, gamma)"
 msgstr "Коррекция цвета и тона (яркость, контраст, насыщение, гамма)"
 
-#: crates/bigiris/src/main.rs:510
+#: crates/bigiris/src/main.rs:508
 msgid "Brightness -100..100 (0 = no change)"
 msgstr "Яркость -100..100 (0 = без изменений)"
 
-#: crates/bigiris/src/main.rs:517
+#: crates/bigiris/src/main.rs:515
 msgid "Contrast -100..100 (0 = no change)"
 msgstr "Контраст -100..100 (0 = без изменений)"
 
-#: crates/bigiris/src/main.rs:524
+#: crates/bigiris/src/main.rs:522
 msgid "Saturation -100..100 (-100 = gray, 0 = no change)"
 msgstr "Насыщение -100..100 (-100 = оттенки серого, 0 = без изменений)"
 
-#: crates/bigiris/src/main.rs:530
+#: crates/bigiris/src/main.rs:528
 msgid "Gamma 0.1..10.0 (< 1 brightens midtones, > 1 darkens)"
 msgstr "Гамма 0.1..10.0 (< 1 осветляет средние тона, > 1 затемняет)"
 
-#: crates/bigiris/src/main.rs:540
+#: crates/bigiris/src/main.rs:538
 msgid ""
 "Remove the background with local AI (BiRefNet-lite, birefnet-native "
 "package). Writes `<name>_nobg.png` (PNG with alpha) next to each image"
@@ -2154,15 +2140,15 @@ msgstr ""
 "Удалить фон с помощью локального ИИ (BiRefNet-lite, пакет birefnet-native). "
 "Записывает `<имя>_nobg.png` (PNG с альфа-каналом) рядом с каждым изображением"
 
-#: crates/bigiris/src/main.rs:546
+#: crates/bigiris/src/main.rs:544
 msgid "Segmentation model"
 msgstr "Модель сегментации"
 
-#: crates/bigiris/src/main.rs:553
+#: crates/bigiris/src/main.rs:551
 msgid "What to do when `<name>_nobg.png` already exists"
 msgstr "Действие, если `<имя>_nobg.png` уже существует"
 
-#: crates/bigiris/src/main.rs:559
+#: crates/bigiris/src/main.rs:557
 msgid ""
 "Increase resolution by 2, 3 or 4. With the realesrgan-native package it uses "
 "AI (Real-ESRGAN); without it, Lanczos3. Writes `<name>_<pct>pct.<ext>`"
@@ -2171,11 +2157,11 @@ msgstr ""
 "используется ИИ (Real-ESRGAN), без него — Lanczos3. Записывает "
 "`<имя>_<pct>pct.<ext>`"
 
-#: crates/bigiris/src/main.rs:561
+#: crates/bigiris/src/main.rs:559
 msgid "Integer factor (2, 3 or 4)"
 msgstr "Целый коэффициент (2, 3 или 4)"
 
-#: crates/bigiris/src/main.rs:567
+#: crates/bigiris/src/main.rs:565
 msgid ""
 "Engine: auto (Real-ESRGAN if installed, otherwise Lanczos3), realesrgan "
 "(fails if missing) or lanczos"
@@ -2183,12 +2169,12 @@ msgstr ""
 "Движок: auto (Real-ESRGAN, если установлен, иначе Lanczos3), realesrgan "
 "(ошибка, если не установлен) или lanczos"
 
-#: crates/bigiris/src/main.rs:574 crates/bigiris/src/main.rs:586
-#: crates/bigiris/src/main.rs:604 crates/bigiris/src/main.rs:636
+#: crates/bigiris/src/main.rs:572 crates/bigiris/src/main.rs:584
+#: crates/bigiris/src/main.rs:602 crates/bigiris/src/main.rs:634
 msgid "Overwrite policy for the output file"
 msgstr "Действие при перезаписи выходного файла"
 
-#: crates/bigiris/src/main.rs:580
+#: crates/bigiris/src/main.rs:578
 msgid ""
 "Remove noise and compression artifacts with local AI (SCUNet, scunet-native "
 "package). Writes `<name>_denoised.<ext>`"
@@ -2196,7 +2182,7 @@ msgstr ""
 "Удалить шум и артефакты сжатия с помощью локального ИИ (SCUNet, пакет scunet-"
 "native). Записывает `<имя>_denoised.<ext>`"
 
-#: crates/bigiris/src/main.rs:592
+#: crates/bigiris/src/main.rs:590
 msgid ""
 "Erase objects: fills the area marked in the mask with local AI (LaMa, lama-"
 "native package). Writes `<name>_inpaint.<ext>`"
@@ -2204,7 +2190,7 @@ msgstr ""
 "Стереть объекты: заполняет отмеченную на маске область с помощью локального "
 "ИИ (LaMa, пакет lama-native). Записывает `<имя>_inpaint.<ext>`"
 
-#: crates/bigiris/src/main.rs:597
+#: crates/bigiris/src/main.rs:595
 msgid ""
 "Mask the same size as the image: white = fill, black = keep (transparent "
 "areas are kept)"
@@ -2212,48 +2198,48 @@ msgstr ""
 "Маска того же размера, что и изображение: белое = заполнить, чёрное = "
 "сохранить (прозрачные области сохраняются)"
 
-#: crates/bigiris/src/main.rs:610
+#: crates/bigiris/src/main.rs:608
 msgid "Create an animated GIF from a sequence of images (headless)"
 msgstr "Создать анимированный GIF из последовательности изображений (без GUI)"
 
-#: crates/bigiris/src/main.rs:617
+#: crates/bigiris/src/main.rs:615
 msgid "Delay between frames in milliseconds (100 ≈ 10 fps)"
 msgstr "Задержка между кадрами в миллисекундах (100 ≈ 10 кадр/с)"
 
-#: crates/bigiris/src/main.rs:623
+#: crates/bigiris/src/main.rs:621
 msgid "Number of repetitions: 0 = infinite (default), 1+ = fixed"
 msgstr "Число повторов: 0 = бесконечно (по умолчанию), 1+ = заданное число"
 
-#: crates/bigiris/src/main.rs:629
+#: crates/bigiris/src/main.rs:627
 msgid "Encoder speed 1..30 (higher = faster, worse palette)"
 msgstr "Скорость кодировщика 1..30 (больше = быстрее, но хуже палитра)"
 
-#: crates/bigiris/src/main.rs:639
+#: crates/bigiris/src/main.rs:637
 msgid "Frames in order (at least 1)"
 msgstr "Кадры по порядку (минимум 1)"
 
-#: crates/bigiris/src/main.rs:642
+#: crates/bigiris/src/main.rs:640
 msgid "Process files or folders in parallel from a TOML profile"
 msgstr "Параллельно обработать файлы или папки по профилю TOML"
 
-#: crates/bigiris/src/main.rs:644
+#: crates/bigiris/src/main.rs:642
 msgid "Profile file (.toml)"
 msgstr "Файл профиля .toml"
 
-#: crates/bigiris/src/main.rs:649
+#: crates/bigiris/src/main.rs:647
 msgid "Install file manager integrations"
 msgstr "Установить интеграцию с файловыми менеджерами"
 
-#: crates/bigiris/src/main.rs:651
+#: crates/bigiris/src/main.rs:649
 msgid "Install in ~/.local/share (default)"
 msgstr "Установить в ~/.local/share (по умолчанию)"
 
-#: crates/bigiris/src/main.rs:655
+#: crates/bigiris/src/main.rs:653
 msgid "Install in /usr/share (requires root; usually done by the package)"
 msgstr ""
 "Установить в /usr/share (требуются права root; обычно это делает пакет)"
 
-#: crates/bigiris/src/main.rs:663
+#: crates/bigiris/src/main.rs:661
 msgid ""
 "DESTDIR prefix for packaging (e.g. $pkgdir in the PKGBUILD). Only makes "
 "sense together with --system"
@@ -2261,11 +2247,11 @@ msgstr ""
 "Префикс DESTDIR для упаковки (напр.: $pkgdir в PKGBUILD). Имеет смысл только "
 "вместе с --system"
 
-#: crates/bigiris/src/main.rs:667
+#: crates/bigiris/src/main.rs:665
 msgid "Remove previously installed integrations"
 msgstr "Удалить ранее установленную интеграцию"
 
-#: crates/bigiris/src/main.rs:669
+#: crates/bigiris/src/main.rs:667
 msgid ""
 "Convert documents (ODT, DOCX, TXT, MD, RTF, XLSX, PPTX, etc.) to PDF with "
 "headless LibreOffice. The output is written next to the source file"
@@ -2273,150 +2259,150 @@ msgstr ""
 "Преобразовать документы (ODT, DOCX, TXT, MD, RTF, XLSX, PPTX и т. д.) в PDF "
 "через LibreOffice без GUI. Результат записывается рядом с исходным файлом"
 
-#: crates/bigiris/src/main.rs:675
+#: crates/bigiris/src/main.rs:673
 msgid "What to do when `<name>.pdf` already exists"
 msgstr "Действие, если `<имя>.pdf` уже существует"
 
-#: crates/bigiris/src/main.rs:682
+#: crates/bigiris/src/main.rs:680
 msgid "Maximum time per document, in seconds"
 msgstr "Максимальное время на один документ, в секундах"
 
-#: crates/bigiris/src/main.rs:695
+#: crates/bigiris/src/main.rs:693
 msgid "BiRefNet-lite (the only model available)"
 msgstr "BiRefNet-lite (единственная доступная модель)"
 
-#: crates/bigiris/src/main.rs:703
+#: crates/bigiris/src/main.rs:701
 msgid ""
 "Real-ESRGAN when the realesrgan-native package is installed, otherwise "
 "Lanczos3"
 msgstr "Real-ESRGAN, если установлен пакет realesrgan-native, иначе Lanczos3"
 
-#: crates/bigiris/src/main.rs:708
+#: crates/bigiris/src/main.rs:706
 msgid "Real-ESRGAN AI (requires realesrgan-native)"
 msgstr "ИИ Real-ESRGAN (требуется realesrgan-native)"
 
-#: crates/bigiris/src/main.rs:711
+#: crates/bigiris/src/main.rs:709
 msgid "Lanczos3 resampling (no AI)"
 msgstr "Передискретизация Lanczos3 (без ИИ)"
 
-#: crates/bigiris/src/main.rs:793
+#: crates/bigiris/src/main.rs:765
 msgid "rotate: use --degrees 90|180|270 or --auto"
 msgstr "rotate: используйте --degrees 90|180|270 или --auto"
 
-#: crates/bigiris/src/main.rs:865
+#: crates/bigiris/src/main.rs:837
 msgid "BigIris: the operation failed"
 msgstr "BigIris: операция не удалась"
 
-#: crates/bigiris/src/main.rs:878
+#: crates/bigiris/src/main.rs:850
 msgid "Some files were not processed; see the details in the terminal."
 msgstr "Некоторые файлы не были обработаны; подробности смотрите в терминале."
 
-#: crates/bigiris/src/main.rs:953
+#: crates/bigiris/src/main.rs:925
 msgid "invalid quality target: {value}; use maximum, balanced or smallest"
 msgstr ""
 "неверная цель качества: {value}; используйте maximum, balanced или smallest"
 
-#: crates/bigiris/src/main.rs:966 crates/bigiris/src/main.rs:1060
+#: crates/bigiris/src/main.rs:938 crates/bigiris/src/main.rs:1032
 msgid "invalid target format: {error}"
 msgstr "неверный целевой формат: {error}"
 
-#: crates/bigiris/src/main.rs:976
+#: crates/bigiris/src/main.rs:948
 msgid "the original was already smaller; copied without recompression"
 msgstr "оригинал уже был меньше; скопирован без повторного сжатия"
 
-#: crates/bigiris/src/main.rs:1034
+#: crates/bigiris/src/main.rs:1006
 msgid "invalid --bg: {error}"
 msgstr "неверное значение --bg: {error}"
 
-#: crates/bigiris/src/main.rs:1166
+#: crates/bigiris/src/main.rs:1138
 msgid "several inputs would write the same output file:"
 msgstr "несколько входных файлов записали бы один и тот же выходной файл:"
 
-#: crates/bigiris/src/main.rs:1174
+#: crates/bigiris/src/main.rs:1146
 msgid "Rename the inputs, process them separately or use the increment policy."
 msgstr ""
 "Переименуйте входные файлы, обработайте их по отдельности или используйте "
 "политику increment."
 
-#: crates/bigiris/src/main.rs:1226
+#: crates/bigiris/src/main.rs:1198
 msgid "replaced the output of another input: {path}"
 msgstr "заменён выходной файл другого входного файла: {path}"
 
-#: crates/bigiris/src/main.rs:1261
+#: crates/bigiris/src/main.rs:1233
 msgid "the color profile is corrupted; colors were treated as sRGB"
 msgstr "цветовой профиль повреждён; цвета обработаны как sRGB"
 
-#: crates/bigiris/src/main.rs:1266
+#: crates/bigiris/src/main.rs:1238
 msgid "already exists: {path}"
 msgstr "уже существует: {path}"
 
-#: crates/bigiris/src/main.rs:1272
+#: crates/bigiris/src/main.rs:1244
 msgid "{operation}: {written} written, {skipped} skipped, {failed} failed"
 msgstr ""
 "{operation}: записано: {written}, пропущено: {skipped}, ошибок: {failed}"
 
-#: crates/bigiris/src/main.rs:1366
+#: crates/bigiris/src/main.rs:1338
 msgid ""
 "{model} is not installed ({path} does not exist). Install it with: {command}"
 msgstr ""
 "{model} не установлен ({path} не существует). Установите командой: {command}"
 
-#: crates/bigiris/src/main.rs:1376
+#: crates/bigiris/src/main.rs:1348
 msgid "could not read the {model} weights at {path}: {error}"
 msgstr "не удалось прочитать веса {model} из {path}: {error}"
 
-#: crates/bigiris/src/main.rs:1409
+#: crates/bigiris/src/main.rs:1381
 msgid "invalid factor: {factor}. Use 2, 3 or 4."
 msgstr "неверный коэффициент: {factor}. Используйте 2, 3 или 4."
 
-#: crates/bigiris/src/main.rs:1425
+#: crates/bigiris/src/main.rs:1397
 msgid "Real-ESRGAN unavailable; using Lanczos3. To use AI: {command}"
 msgstr ""
 "Real-ESRGAN недоступен; используется Lanczos3. Чтобы использовать ИИ: "
 "{command}"
 
-#: crates/bigiris/src/main.rs:1484
+#: crates/bigiris/src/main.rs:1456
 msgid "mask {path}: {error}"
 msgstr "маска {path}: {error}"
 
-#: crates/bigiris/src/main.rs:1495
+#: crates/bigiris/src/main.rs:1467
 msgid "marks no area (paint the areas to erase white)"
 msgstr "не отмечает ни одной области (закрасьте белым то, что нужно стереть)"
 
-#: crates/bigiris/src/main.rs:1529
+#: crates/bigiris/src/main.rs:1501
 msgid "{count} frame(s)"
 msgstr "кадров: {count}"
 
-#: crates/bigiris/src/main.rs:1568
+#: crates/bigiris/src/main.rs:1540
 msgid "could not read {path}: {error}"
 msgstr "не удалось прочитать {path}: {error}"
 
-#: crates/bigiris/src/main.rs:1599
+#: crates/bigiris/src/main.rs:1571
 msgid "invalid TOML profile: {error}"
 msgstr "неверный профиль TOML: {error}"
 
-#: crates/bigiris/src/main.rs:1602
+#: crates/bigiris/src/main.rs:1574
 msgid "quality must be between 1 and 100"
 msgstr "значение quality должно быть от 1 до 100"
 
-#: crates/bigiris/src/main.rs:1605
+#: crates/bigiris/src/main.rs:1577
 msgid "invalid profile format: {error}"
 msgstr "неверный формат в профиле: {error}"
 
-#: crates/bigiris/src/main.rs:1617
+#: crates/bigiris/src/main.rs:1589
 msgid "invalid overwrite: {value}; use skip, replace or increment"
 msgstr ""
 "неверное значение overwrite: {value}; используйте skip, replace или increment"
 
-#: crates/bigiris/src/main.rs:1625
+#: crates/bigiris/src/main.rs:1597
 msgid "could not create {path}: {error}"
 msgstr "не удалось создать {path}: {error}"
 
-#: crates/bigiris/src/main.rs:1634
+#: crates/bigiris/src/main.rs:1606
 msgid "no images found for the batch"
 msgstr "не найдено ни одного изображения для пакетной обработки"
 
-#: crates/bigiris/src/main.rs:1743
+#: crates/bigiris/src/main.rs:1715
 msgid ""
 "LibreOffice (`soffice`) not found in PATH. Install `libreoffice-fresh` "
 "(recommended) or `libreoffice-still` (e.g. `sudo pacman -S libreoffice-"
@@ -2426,83 +2412,83 @@ msgstr ""
 "(рекомендуется) или `libreoffice-still` (напр.: `sudo pacman -S libreoffice-"
 "fresh`)."
 
-#: crates/bigiris/src/main.rs:1795
+#: crates/bigiris/src/main.rs:1767
 msgid "not a regular file"
 msgstr "не является обычным файлом"
 
-#: crates/bigiris/src/main.rs:1798
+#: crates/bigiris/src/main.rs:1770
 msgid "invalid file name"
 msgstr "недопустимое имя файла"
 
-#: crates/bigiris/src/main.rs:1819
+#: crates/bigiris/src/main.rs:1791
 msgid "could not run soffice: {error}"
 msgstr "не удалось запустить soffice: {error}"
 
-#: crates/bigiris/src/main.rs:1830
+#: crates/bigiris/src/main.rs:1802
 msgid "soffice exceeded the {seconds} s limit"
 msgstr "soffice превысил лимит в {seconds} с"
 
-#: crates/bigiris/src/main.rs:1843
+#: crates/bigiris/src/main.rs:1815
 msgid "soffice did not produce the PDF ({status})"
 msgstr "soffice не создал PDF ({status})"
 
-#: crates/bigiris/src/main.rs:1886
+#: crates/bigiris/src/main.rs:1858
 msgid "too many files with the same name: {path}"
 msgstr "слишком много файлов с одинаковым именем: {path}"
 
-#: crates/bigiris/src/main.rs:1928
+#: crates/bigiris/src/main.rs:1900
 msgid "installation failed: {error}"
 msgstr "установка не удалась: {error}"
 
-#: crates/bigiris/src/main.rs:1934
+#: crates/bigiris/src/main.rs:1906
 msgid "installed"
 msgstr "установлено"
 
-#: crates/bigiris/src/main.rs:1935
+#: crates/bigiris/src/main.rs:1907
 msgid "installed in total: {files} file(s) in {managers} file manager(s)"
 msgstr "всего установлено файлов: {files}, файловых менеджеров: {managers}"
 
-#: crates/bigiris/src/main.rs:1951
+#: crates/bigiris/src/main.rs:1923
 msgid "removal failed: {error}"
 msgstr "удаление не удалось: {error}"
 
-#: crates/bigiris/src/main.rs:1954
+#: crates/bigiris/src/main.rs:1926
 msgid "removed"
 msgstr "удалено"
 
-#: crates/bigiris/src/main.rs:1955
+#: crates/bigiris/src/main.rs:1927
 msgid "removed in total: {files} file(s) in {managers} file manager(s)"
 msgstr "всего удалено файлов: {files}, файловых менеджеров: {managers}"
 
-#: crates/bigiris/src/main.rs:1978
+#: crates/bigiris/src/main.rs:1950
 msgid "FAILED"
 msgstr "ОШИБКА"
 
-#: crates/bigiris/src/main.rs:1983
+#: crates/bigiris/src/main.rs:1955
 msgid "provided by the package"
 msgstr "предоставлено пакетом"
 
-#: crates/bigiris/src/main.rs:1986
+#: crates/bigiris/src/main.rs:1958
 msgid "unchanged"
 msgstr "без изменений"
 
-#: crates/bigiris/src/main.rs:1988
+#: crates/bigiris/src/main.rs:1960
 msgid "skipped"
 msgstr "пропущено"
 
-#: crates/bigiris/src/main.rs:1993
+#: crates/bigiris/src/main.rs:1965
 msgid "detected"
 msgstr "обнаружен"
 
-#: crates/bigiris/src/main.rs:1993
+#: crates/bigiris/src/main.rs:1965
 msgid "not in PATH"
 msgstr "нет в PATH"
 
-#: crates/bigiris/src/main.rs:1995
+#: crates/bigiris/src/main.rs:1967
 msgid "{count} file(s)"
 msgstr "файлов: {count}"
 
-#: crates/bigiris/src/main.rs:2020
+#: crates/bigiris/src/main.rs:1992
 msgid ""
 "warning: this build lacks the `gui` feature. Dialog '{dialog}' ignored "
 "(rebuild with --features gui)."
@@ -2510,7 +2496,7 @@ msgstr ""
 "предупреждение: текущая сборка без feature `gui`. Диалог «{dialog}» пропущен "
 "(пересоберите с --features gui)."
 
-#: crates/bigiris/src/main.rs:2027
+#: crates/bigiris/src/main.rs:1999
 msgid ""
 "warning: this build lacks the `gui` feature. Viewer unavailable (rebuild "
 "with --features gui)."
@@ -2518,7 +2504,7 @@ msgstr ""
 "предупреждение: текущая сборка без feature `gui`. Просмотрщик недоступен "
 "(пересоберите с --features gui)."
 
-#: crates/bigiris/src/main.rs:2032
+#: crates/bigiris/src/main.rs:2004
 msgid ""
 "warning: this build lacks the `gui` feature. Viewer unavailable; files "
 "received:"

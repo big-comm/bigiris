@@ -309,23 +309,29 @@ the output shows `skip`. This also applies to `animate` (the target `.gif`),
 `remove-bg` (`<name>_nobg.png`), `upscale` (`<name>_<pct>pct.<ext>`),
 `denoise` (`<name>_denoised.<ext>`), `inpaint` (`<name>_inpaint.<ext>`) and
 `to-pdf`, which skips an existing `<name>.pdf` instead of replacing it.
-`upscale --engine` accepts `auto` (default: Real-ESRGAN if installed, otherwise
-Lanczos3), `realesrgan` (fails if the package is missing) and `lanczos`. In
-`inpaint`, the mask has the size of the image and the white area is filled from
-its surroundings. Apart from the marked areas and a narrow transition band
-around them, the pixels stay identical in PNG and TIFF; JPEG, WebP and AVIF are
-recompressed at the `maximum` quality target, as in `denoise`. The outputs of
-the AI tools are 8-bit and do not carry the source EXIF. Without the model
-package, `remove-bg`, `denoise`, `inpaint` and `upscale --engine realesrgan`
-stop with exit code 1 and say what to install. `to-pdf --timeout <seconds>`
-(1 to 3600, default 120) limits the time of each document in LibreOffice; when
-it runs out, the process and its children are terminated and no partial PDF is
-left behind. Outputs that would collide with each other in the same command are
-refused before anything is written. With `--notify` (used by the context menus,
-which do not show the terminal), a failure also shows in a desktop
-notification, through `notify-send` from the `libnotify` package. The messages,
-the notification and `--help` follow the system language; the status prefixes
-`ok`, `skip`, `err` and `info` do not change, so scripts can read them.
+Outputs that would collide with each other in the same command are refused
+before anything is written.
+
+- `upscale --engine` accepts `auto` (default: Real-ESRGAN if installed,
+  otherwise Lanczos3), `realesrgan` (fails if the package is missing) and
+  `lanczos`.
+- In `inpaint`, the mask has the size of the image and the white area is filled
+  from its surroundings. Apart from the marked areas and a narrow transition
+  band around them, the pixels stay identical in PNG and TIFF; JPEG, WebP and
+  AVIF are recompressed at the `maximum` quality target, as in `denoise`.
+- The outputs of the AI tools are 8-bit and do not carry the source EXIF.
+  Without the model package, `remove-bg`, `denoise`, `inpaint` and
+  `upscale --engine realesrgan` stop with exit code 1 and say what to install.
+- `to-pdf --timeout <seconds>` (1 to 3600, default 120) limits the time of each
+  document in LibreOffice; when it runs out, the process and its children are
+  terminated and no partial PDF is left behind.
+- With `--notify` (used by the context menus, which do not show the terminal),
+  a failure also shows in a desktop notification, through `notify-send` from
+  the `libnotify` package.
+
+The messages, the notification and `--help` follow the system language; the
+status prefixes `ok`, `skip`, `err` and `info` do not change, so scripts can
+read them.
 
 ### Exit codes
 

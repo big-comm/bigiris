@@ -178,6 +178,11 @@ Use `gettext("…")` na interface Rust e `_("…")` na extensão Nautilus. `n_("
 marca rótulos constantes; a tradução ocorre na apresentação, preservando
 IDs, opções e argumentos de comandos. O domínio do Nautilus é local à
 extensão, sem substituir os textos do gerenciador de arquivos.
+Na CLI, a ajuda do clap usa `#[arg(help = gettext("…"))]` e
+`#[command(about = gettext("…"))]`: um comentário `///` vira texto fixo na
+compilação e nunca é traduzido. Os prefixos de status (`ok`, `skip`, `err`,
+`info`, `erro`) e a linha do `--self-test` ficam na língua-fonte, porque
+scripts os leem.
 
 ```bash
 # Extrair mensagens novas e atualizar os catálogos:

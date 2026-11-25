@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: bigiris 0.1.0\n"
 "Report-Msgid-Bugs-To: https://github.com/big-comm/bigiris/issues\n"
-"POT-Creation-Date: 2026-11-25 14:23-0300\n"
+"POT-Creation-Date: 2026-11-25 16:16-0300\n"
 "PO-Revision-Date: 2026-10-14 01:36-0300\n"
 "Last-Translator: BigCommunity Team\n"
 "Language-Team: BigCommunity Team\n"
@@ -15,6 +15,40 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
+
+#: crates/bigiris/src/codec.rs:121
+msgid "o executável do BigIris foi removido; reinicie o BigIris"
+msgstr "BigIris の実行ファイルが削除されました。BigIris を再起動してください"
+
+#: crates/bigiris/src/codec.rs:331 crates/bigiris/src/codec.rs:425
+msgid "operação cancelada"
+msgstr "操作がキャンセルされました"
+
+#: crates/bigiris/src/codec.rs:338
+msgid "codec excedeu o limite de tempo"
+msgstr "コーデックが制限時間を超えました"
+
+#: crates/bigiris/src/codec.rs:394
+msgid "o BigIris foi atualizado; reinicie-o"
+msgstr "BigIris が更新されました。再起動してください"
+
+#: crates/bigiris/src/codec.rs:433
+msgid "entrada não regular ou acima de 1 GiB"
+msgstr "入力が通常ファイルでないか、1 GiB を超えています"
+
+#: crates/bigiris/src/codec.rs:519
+msgid "sandbox indisponível: instale bubblewrap e util-linux; {error}"
+msgstr ""
+"サンドボックスを利用できません: bubblewrap と util-linux をインストールしてく"
+"ださい; {error}"
+
+#: crates/bigiris/src/codec.rs:532
+msgid "o BigIris foi atualizado enquanto estava aberto; reinicie-o"
+msgstr "実行中に BigIris が更新されました。再起動してください"
+
+#: crates/bigiris/src/codec.rs:540
+msgid "codec isolado recusou a imagem ({status}){hint}: {details}"
+msgstr "隔離されたコーデックが画像を拒否しました ({status}){hint}: {details}"
 
 #: crates/bigiris/src/gui.rs:758
 msgid "BigIris"
@@ -556,13 +590,13 @@ msgstr ""
 msgid "O processamento terminou inesperadamente. Tente novamente."
 msgstr "処理が予期せず終了しました。もう一度お試しください。"
 
-#: crates/bigiris/src/gui/batch_runner.rs:342
-msgid "falha inesperada no worker"
-msgstr "ワーカーで予期しないエラーが発生しました"
-
-#: crates/bigiris/src/gui/batch_runner.rs:391
+#: crates/bigiris/src/gui/batch_runner.rs:319 crates/bigiris/src/main.rs:1703
 msgid "um worker terminou inesperadamente"
 msgstr "ワーカーが予期せず終了しました"
+
+#: crates/bigiris/src/gui/batch_runner.rs:399
+msgid "falha inesperada no worker"
+msgstr "ワーカーで予期しないエラーが発生しました"
 
 #: crates/bigiris/src/gui/dialogs/adjust.rs:20
 msgid "Ajustar cores — Prisma"
@@ -703,7 +737,7 @@ msgstr "エンコーダー速度"
 msgid "maior = mais rápido, paleta um pouco pior · padrão 10"
 msgstr "大きいほど高速、パレット品質はやや低下 · デフォルト 10"
 
-#: crates/bigiris/src/gui/dialogs/animate.rs:94
+#: crates/bigiris/src/gui/dialogs/animate.rs:94 crates/bigiris/src/main.rs:614
 msgid "Arquivo de saída (.gif)"
 msgstr "出力ファイル (.gif)"
 
@@ -1838,6 +1872,663 @@ msgstr ""
 #: crates/bigiris/src/gui/transfers.rs:96
 msgid "Não foi possível abrir os arquivos"
 msgstr "ファイルを開けませんでした"
+
+#: crates/bigiris/src/main.rs:44
+msgid "Visualizador rápido e conversor de imagens para Linux"
+msgstr "Linux 向けの高速な画像ビューアー兼コンバーター"
+
+#: crates/bigiris/src/main.rs:46
+msgid ""
+"Códigos de saída:\n"
+"  0  sucesso (inclui arquivos ignorados por já existirem)\n"
+"  1  uso inválido ou erro fatal antes de processar (nada foi gravado)\n"
+"  2  falha parcial: um ou mais arquivos não puderam ser processados"
+msgstr ""
+"終了コード:\n"
+"  0  成功 (既に存在するためスキップしたファイルを含む)\n"
+"  1  無効な使い方、または処理前の致命的なエラー (何も書き込まれていません)\n"
+"  2  部分的な失敗: 1 つ以上のファイルを処理できませんでした"
+
+#: crates/bigiris/src/main.rs:52
+msgid "Abrir apenas um diálogo modal específico (usado por service menus)"
+msgstr "特定のモーダルダイアログだけを開く (サービスメニューで使用)"
+
+#: crates/bigiris/src/main.rs:56
+msgid "Rodar smoke-test e sair (usado em CI e pós-install)"
+msgstr "スモークテストを実行して終了 (CI とインストール後の確認で使用)"
+
+#: crates/bigiris/src/main.rs:62
+msgid ""
+"Avisar falhas numa notificação do desktop (usado pelos menus de contexto, "
+"que não mostram o terminal)"
+msgstr ""
+"失敗をデスクトップ通知で知らせる (端末を表示しないコンテキストメニューで使用)"
+
+#: crates/bigiris/src/main.rs:68
+msgid "Arquivos a abrir no visualizador (quando sem subcomando)"
+msgstr "ビューアーで開くファイル (サブコマンドがない場合)"
+
+#: crates/bigiris/src/main.rs:98
+msgid "Não sobrescreve o arquivo existente (default)"
+msgstr "既存のファイルを上書きしない (デフォルト)"
+
+#: crates/bigiris/src/main.rs:100
+msgid "Sobrescreve o arquivo existente"
+msgstr "既存のファイルを上書きする"
+
+#: crates/bigiris/src/main.rs:102
+msgid "Gera nome incrementado (foo_1.png, foo_2.png, ...)"
+msgstr "連番付きの名前を生成 (foo_1.png, foo_2.png, ...)"
+
+#: crates/bigiris/src/main.rs:144
+msgid ""
+"Aresta máxima em pixels (preserva aspecto; no-op se a imagem já é menor)"
+msgstr "最長辺のピクセル数 (縦横比を維持。画像が既に小さい場合は何もしない)"
+
+#: crates/bigiris/src/main.rs:147
+msgid "Escala percentual (ex: 50 para metade; 200 para o dobro)"
+msgstr "パーセントで拡大縮小 (例: 50 で半分、200 で 2 倍)"
+
+#: crates/bigiris/src/main.rs:149
+msgid "Dimensão exata WxH (ignora aspecto)"
+msgstr "正確なサイズ WxH (縦横比を無視)"
+
+#: crates/bigiris/src/main.rs:154
+msgid "Encaixa dentro da caixa WxH preservando aspecto"
+msgstr "縦横比を維持して WxH の範囲内に収める"
+
+#: crates/bigiris/src/main.rs:184
+msgid "esperado formato WxH (ex. 1920x1080), recebido: {value}"
+msgstr "WxH 形式 (例: 1920x1080) で指定してください。指定値: {value}"
+
+#: crates/bigiris/src/main.rs:189 crates/bigiris/src/main.rs:255
+msgid "largura inválida: {error}"
+msgstr "無効な幅: {error}"
+
+#: crates/bigiris/src/main.rs:191 crates/bigiris/src/main.rs:257
+msgid "altura inválida: {error}"
+msgstr "無効な高さ: {error}"
+
+#: crates/bigiris/src/main.rs:247
+msgid "esperado WxH+X+Y, recebido: {value}"
+msgstr "WxH+X+Y 形式で指定してください。指定値: {value}"
+
+#: crates/bigiris/src/main.rs:250
+msgid "faltou o offset Y em {value}"
+msgstr "{value} に Y オフセットがありません"
+
+#: crates/bigiris/src/main.rs:253
+msgid "faltou largura/altura em {value}"
+msgstr "{value} に幅または高さがありません"
+
+#: crates/bigiris/src/main.rs:259
+msgid "offset X inválido: {error}"
+msgstr "無効な X オフセット: {error}"
+
+#: crates/bigiris/src/main.rs:261
+msgid "offset Y inválido: {error}"
+msgstr "無効な Y オフセット: {error}"
+
+#: crates/bigiris/src/main.rs:281
+msgid "esperado W:H (ex. 1:1, 9:16), recebido: {value}"
+msgstr "W:H 形式 (例: 1:1、9:16) で指定してください。指定値: {value}"
+
+#: crates/bigiris/src/main.rs:284
+msgid "razão W inválida: {error}"
+msgstr "無効な比率 W: {error}"
+
+#: crates/bigiris/src/main.rs:286
+msgid "razão H inválida: {error}"
+msgstr "無効な比率 H: {error}"
+
+#: crates/bigiris/src/main.rs:289
+msgid "razão com componente zero não faz sentido: {value}"
+msgstr "0 を含む比率は無効です: {value}"
+
+#: crates/bigiris/src/main.rs:332
+msgid "Tamanho exato do canvas em pixels (WxH)"
+msgstr "キャンバスの正確なサイズ (ピクセル、WxH)"
+
+#: crates/bigiris/src/main.rs:337
+msgid ""
+"Razão alvo (W:H). O canvas é estendido o mínimo necessário para caber a "
+"imagem nessa proporção"
+msgstr ""
+"目標の比率 (W:H)。画像がその比率に収まるよう、キャンバスを必要最小限だけ拡張"
+"します"
+
+#: crates/bigiris/src/main.rs:354
+msgid "Converter arquivos (headless)"
+msgstr "ファイルを変換 (ヘッドレス)"
+
+#: crates/bigiris/src/main.rs:358
+msgid ""
+"Formato de destino: png, jpg, webp, avif, tiff, bmp, gif, ico, pnm/ppm/pgm/"
+"pbm, tga, qoi, hdr, exr"
+msgstr ""
+"出力形式: png, jpg, webp, avif, tiff, bmp, gif, ico, pnm/ppm/pgm/pbm, tga, "
+"qoi, hdr, exr"
+
+#: crates/bigiris/src/main.rs:366
+msgid ""
+"Qualidade visual buscada: maxima, equilibrado ou menor (também max, "
+"balanced, small). Cada formato procura o menor arquivo que mantém essa "
+"qualidade (SSIMULACRA2 85 / 80 / 70)"
+msgstr ""
+"目標とする視覚品質: maxima、equilibrado、menor (max、balanced、small も可)。"
+"各形式でこの品質を保つ最小のファイルを探します (SSIMULACRA2 85 / 80 / 70)"
+
+#: crates/bigiris/src/main.rs:372
+msgid ""
+"Qualidade fixa 1..100 para JPEG/WebP/AVIF, sem busca (ignora --target). Em "
+"WebP, 100 grava sem perdas"
+msgstr ""
+"JPEG/WebP/AVIF の固定品質 1..100、探索なし (--target を無視)。WebP では 100 "
+"でロスレス保存"
+
+#: crates/bigiris/src/main.rs:375 crates/bigiris/src/main.rs:416
+msgid "Aceito por compatibilidade: o JPEG já é sempre progressivo"
+msgstr "互換性のために受け付けます: JPEG は常にプログレッシブです"
+
+#: crates/bigiris/src/main.rs:377 crates/bigiris/src/main.rs:418
+msgid "Compressão mais lenta e menor, sem perdas a mais: PNG e AVIF"
+msgstr "より遅く、より小さく圧縮 (画質の劣化は増えません): PNG と AVIF"
+
+#: crates/bigiris/src/main.rs:383 crates/bigiris/src/main.rs:424
+#: crates/bigiris/src/main.rs:451
+msgid "Política quando o arquivo de saída já existe"
+msgstr "出力ファイルが既に存在する場合のポリシー"
+
+#: crates/bigiris/src/main.rs:386
+msgid "Arquivos de entrada"
+msgstr "入力ファイル"
+
+#: crates/bigiris/src/main.rs:389
+msgid ""
+"Redimensionar arquivos (headless). Exatamente um modo entre --max-edge / --"
+"percent / --exact / --fit é obrigatório"
+msgstr ""
+"ファイルのサイズを変更 (ヘッドレス)。--max-edge / --percent / --exact / --"
+"fit のいずれか 1 つだけを指定する必要があります"
+
+#: crates/bigiris/src/main.rs:397
+msgid "Kernel de interpolação (default: lanczos3)"
+msgstr "補間カーネル (デフォルト: lanczos3)"
+
+#: crates/bigiris/src/main.rs:400 crates/bigiris/src/main.rs:445
+msgid "Formato de destino (opcional; mantém o formato original se omitido)"
+msgstr "出力形式 (省略可。省略時は元の形式を維持)"
+
+#: crates/bigiris/src/main.rs:407
+msgid ""
+"Qualidade visual buscada: maxima, equilibrado ou menor (também max, "
+"balanced, small)"
+msgstr ""
+"目標とする視覚品質: maxima、equilibrado、menor (max、balanced、small も可)"
+
+#: crates/bigiris/src/main.rs:413
+msgid "Qualidade fixa 1..100 para JPEG/WebP/AVIF, sem busca (ignora --target)"
+msgstr "JPEG/WebP/AVIF の固定品質 1..100、探索なし (--target を無視)"
+
+#: crates/bigiris/src/main.rs:430
+msgid ""
+"Girar arquivos (headless). Rotações cardinais via pipeline de re-encode; `--"
+"auto` lê o tag EXIF Orientation e aplica a rotação certa"
+msgstr ""
+"ファイルを回転 (ヘッドレス)。90 度単位の回転は再エンコードのパイプラインで行"
+"います。`--auto` は EXIF の Orientation タグを読み取り、正しい回転を適用しま"
+"す"
+
+#: crates/bigiris/src/main.rs:436
+msgid "Graus cardinais: 90 | 180 | 270"
+msgstr "回転角度: 90 | 180 | 270"
+
+#: crates/bigiris/src/main.rs:442
+msgid "Auto-orientar via EXIF (tag Orientation)"
+msgstr "EXIF (Orientation タグ) に従って向きを自動補正"
+
+#: crates/bigiris/src/main.rs:457
+msgid "Espelhar arquivos na horizontal ou vertical (headless)"
+msgstr "ファイルを水平または垂直に反転 (ヘッドレス)"
+
+#: crates/bigiris/src/main.rs:459
+msgid "Eixo: horizontal | vertical"
+msgstr "方向: horizontal | vertical"
+
+#: crates/bigiris/src/main.rs:461 crates/bigiris/src/main.rs:475
+#: crates/bigiris/src/main.rs:499 crates/bigiris/src/main.rs:535
+msgid "Formato de destino (opcional)"
+msgstr "出力形式 (省略可)"
+
+#: crates/bigiris/src/main.rs:468
+msgid ""
+"Recortar retângulo das imagens (headless). Use --rect WxH+X+Y ao estilo "
+"ImageMagick"
+msgstr ""
+"画像から矩形を切り抜く (ヘッドレス)。ImageMagick 形式の --rect WxH+X+Y を使用"
+"します"
+
+#: crates/bigiris/src/main.rs:472
+msgid "Geometria do recorte no formato WxH+X+Y (ex: 800x600+100+50)"
+msgstr "切り抜き範囲 (WxH+X+Y 形式、例: 800x600+100+50)"
+
+#: crates/bigiris/src/main.rs:482
+msgid ""
+"Estender a tela em volta da imagem (letterbox). Exatamente um modo entre --"
+"size e --aspect é obrigatório. O canvas é preenchido com --bg e a imagem "
+"original é posicionada por --gravity"
+msgstr ""
+"画像の周囲のキャンバスを拡張 (レターボックス)。--size と --aspect のいずれか "
+"1 つだけを指定する必要があります。キャンバスは --bg で塗りつぶされ、元の画像"
+"は --gravity で配置されます"
+
+#: crates/bigiris/src/main.rs:489
+msgid "Cor de fundo em hexadecimal (#RRGGBB ou #RRGGBBAA)"
+msgstr "背景色 (16 進数、#RRGGBB または #RRGGBBAA)"
+
+#: crates/bigiris/src/main.rs:496
+msgid "Posição da imagem original no canvas estendido"
+msgstr "拡張したキャンバス上の元の画像の位置"
+
+#: crates/bigiris/src/main.rs:506
+msgid "Ajustar cor/tom (brilho, contraste, saturação, gamma)"
+msgstr "色/トーンを調整 (明るさ、コントラスト、彩度、ガンマ)"
+
+#: crates/bigiris/src/main.rs:512
+msgid "Brilho -100..100 (0 = sem mudança)"
+msgstr "明るさ -100..100 (0 = 変更なし)"
+
+#: crates/bigiris/src/main.rs:519
+msgid "Contraste -100..100 (0 = sem mudança)"
+msgstr "コントラスト -100..100 (0 = 変更なし)"
+
+#: crates/bigiris/src/main.rs:526
+msgid "Saturação -100..100 (-100 = cinza, 0 = sem mudança)"
+msgstr "彩度 -100..100 (-100 = グレー、0 = 変更なし)"
+
+#: crates/bigiris/src/main.rs:532
+msgid "Gamma 0.1..10.0 (< 1 clareia midtones, > 1 escurece)"
+msgstr "ガンマ 0.1..10.0 (< 1 で中間調を明るく、> 1 で暗く)"
+
+#: crates/bigiris/src/main.rs:542
+msgid ""
+"Remover fundo usando IA local (BiRefNet-lite, pacote birefnet-native). Grava "
+"`<nome>_nobg.png` (PNG com alfa) ao lado de cada imagem"
+msgstr ""
+"ローカル AI で背景を除去 (BiRefNet-lite、birefnet-native パッケージ)。各画像"
+"の隣に `<名前>_nobg.png` (アルファ付き PNG) を保存します"
+
+#: crates/bigiris/src/main.rs:548
+msgid "Modelo de segmentação"
+msgstr "セグメンテーションモデル"
+
+#: crates/bigiris/src/main.rs:555
+msgid "Política quando `<nome>_nobg.png` já existe"
+msgstr "`<名前>_nobg.png` が既に存在する場合のポリシー"
+
+#: crates/bigiris/src/main.rs:561
+msgid ""
+"Aumentar resolução por 2, 3 ou 4. Com o pacote realesrgan-native usa IA "
+"(Real-ESRGAN); sem ele, Lanczos3. Grava `<nome>_<pct>pct.<ext>`"
+msgstr ""
+"解像度を 2、3、4 倍に上げる。realesrgan-native パッケージがあれば AI (Real-"
+"ESRGAN)、なければ Lanczos3 を使用します。`<名前>_<pct>pct.<ext>` を保存します"
+
+#: crates/bigiris/src/main.rs:563
+msgid "Fator inteiro (2, 3 ou 4)"
+msgstr "整数の倍率 (2、3、4)"
+
+#: crates/bigiris/src/main.rs:569
+msgid ""
+"Motor: auto (Real-ESRGAN se instalado, senão Lanczos3), realesrgan (falha se "
+"ausente) ou lanczos"
+msgstr ""
+"エンジン: auto (インストール済みなら Real-ESRGAN、なければ Lanczos3)、"
+"realesrgan (未インストールなら失敗)、lanczos"
+
+#: crates/bigiris/src/main.rs:576 crates/bigiris/src/main.rs:588
+#: crates/bigiris/src/main.rs:606 crates/bigiris/src/main.rs:638
+msgid "Política de sobrescrita do arquivo de saída"
+msgstr "出力ファイルの上書きポリシー"
+
+#: crates/bigiris/src/main.rs:582
+msgid ""
+"Remover ruído e artefatos de compressão com IA local (SCUNet, pacote scunet-"
+"native). Grava `<nome>_denoised.<ext>`"
+msgstr ""
+"ローカル AI でノイズと圧縮アーティファクトを除去 (SCUNet、scunet-native パッ"
+"ケージ)。`<名前>_denoised.<ext>` を保存します"
+
+#: crates/bigiris/src/main.rs:594
+msgid ""
+"Apagar objetos: preenche a área marcada na máscara com IA local (LaMa, "
+"pacote lama-native). Grava `<nome>_inpaint.<ext>`"
+msgstr ""
+"オブジェクトを消去: マスクで指定した領域をローカル AI で塗りつぶします "
+"(LaMa、lama-native パッケージ)。`<名前>_inpaint.<ext>` を保存します"
+
+#: crates/bigiris/src/main.rs:599
+msgid ""
+"Máscara do mesmo tamanho da imagem: branco = preencher, preto = manter "
+"(áreas transparentes são mantidas)"
+msgstr ""
+"画像と同じサイズのマスク: 白 = 塗りつぶす、黒 = 保持 (透明な領域は保持されま"
+"す)"
+
+#: crates/bigiris/src/main.rs:612
+msgid "Criar GIF animado a partir de uma sequência de imagens (headless)"
+msgstr "連続した画像からアニメーション GIF を作成 (ヘッドレス)"
+
+#: crates/bigiris/src/main.rs:619
+msgid "Atraso entre quadros em milissegundos (100 ≈ 10 fps)"
+msgstr "フレーム間隔 (ミリ秒、100 ≈ 10 fps)"
+
+#: crates/bigiris/src/main.rs:625
+msgid "Número de repetições: 0 = infinito (default), 1+ = fixo"
+msgstr "繰り返し回数: 0 = 無限 (デフォルト)、1 以上 = 指定回数"
+
+#: crates/bigiris/src/main.rs:631
+msgid "Velocidade do encoder 1..30 (maior = mais rápido, pior paleta)"
+msgstr "エンコーダー速度 1..30 (大きいほど高速、パレットは低品質)"
+
+#: crates/bigiris/src/main.rs:641
+msgid "Quadros em ordem (mínimo 1)"
+msgstr "順番に並べたフレーム (1 つ以上)"
+
+#: crates/bigiris/src/main.rs:644
+msgid "Processar arquivos ou pastas em paralelo a partir de um perfil TOML"
+msgstr "TOML プロファイルに従ってファイルやフォルダーを並列処理"
+
+#: crates/bigiris/src/main.rs:646
+msgid "Arquivo de perfil .toml"
+msgstr ".toml プロファイルファイル"
+
+#: crates/bigiris/src/main.rs:651
+msgid "Instalar integrações com gerenciadores de arquivos"
+msgstr "ファイルマネージャーとの統合をインストール"
+
+#: crates/bigiris/src/main.rs:653
+msgid "Instalar em ~/.local/share (default)"
+msgstr "~/.local/share にインストール (デフォルト)"
+
+#: crates/bigiris/src/main.rs:657
+msgid "Instalar em /usr/share (requer root; normalmente feito pelo pacote)"
+msgstr ""
+"/usr/share にインストール (root 権限が必要。通常はパッケージが行います)"
+
+#: crates/bigiris/src/main.rs:665
+msgid ""
+"Prefixo DESTDIR para empacotamento (ex: $pkgdir no PKGBUILD). Só faz sentido "
+"combinado com --system"
+msgstr ""
+"パッケージング用の DESTDIR プレフィックス (例: PKGBUILD の $pkgdir)。--"
+"system と併用した場合のみ有効です"
+
+#: crates/bigiris/src/main.rs:669
+msgid "Remover integrações previamente instaladas"
+msgstr "インストール済みの統合を削除"
+
+#: crates/bigiris/src/main.rs:671
+msgid ""
+"Converter documentos (ODT, DOCX, TXT, MD, RTF, XLSX, PPTX, etc.) para PDF "
+"via LibreOffice headless. Saída gravada ao lado do arquivo de origem"
+msgstr ""
+"ヘッドレスの LibreOffice で文書 (ODT、DOCX、TXT、MD、RTF、XLSX、PPTX など) "
+"を PDF に変換します。出力は元のファイルの隣に保存されます"
+
+#: crates/bigiris/src/main.rs:677
+msgid "Política quando `<nome>.pdf` já existe"
+msgstr "`<名前>.pdf` が既に存在する場合のポリシー"
+
+#: crates/bigiris/src/main.rs:684
+msgid "Tempo máximo por documento, em segundos"
+msgstr "文書あたりの最大処理時間 (秒)"
+
+#: crates/bigiris/src/main.rs:697
+msgid "BiRefNet-lite (único modelo disponível)"
+msgstr "BiRefNet-lite (利用可能な唯一のモデル)"
+
+#: crates/bigiris/src/main.rs:705
+msgid ""
+"Real-ESRGAN quando o pacote realesrgan-native está instalado, senão Lanczos3"
+msgstr ""
+"realesrgan-native パッケージがインストールされていれば Real-ESRGAN、なければ "
+"Lanczos3"
+
+#: crates/bigiris/src/main.rs:710
+msgid "IA Real-ESRGAN (requer realesrgan-native)"
+msgstr "Real-ESRGAN AI (realesrgan-native が必要)"
+
+#: crates/bigiris/src/main.rs:713
+msgid "Reamostragem Lanczos3 (sem IA)"
+msgstr "Lanczos3 リサンプリング (AI なし)"
+
+#: crates/bigiris/src/main.rs:795
+msgid "rotate: use --degrees 90|180|270 ou --auto"
+msgstr "rotate: --degrees 90|180|270 または --auto を指定してください"
+
+#: crates/bigiris/src/main.rs:867
+msgid "BigIris: a operação falhou"
+msgstr "BigIris: 操作に失敗しました"
+
+#: crates/bigiris/src/main.rs:881
+msgid "Alguns arquivos não foram processados; veja os detalhes no terminal."
+msgstr "一部のファイルを処理できませんでした。詳細は端末を確認してください。"
+
+#: crates/bigiris/src/main.rs:957
+msgid "alvo de qualidade inválido: {value}; use maxima, equilibrado ou menor"
+msgstr ""
+"無効な品質目標: {value}。maxima、equilibrado、menor のいずれかを指定してくだ"
+"さい"
+
+#: crates/bigiris/src/main.rs:970 crates/bigiris/src/main.rs:1064
+msgid "formato de destino inválido: {error}"
+msgstr "無効な出力形式: {error}"
+
+#: crates/bigiris/src/main.rs:980
+msgid "o original já era menor; copiado sem recompressão"
+msgstr "元のファイルの方が小さいため、再圧縮せずにコピーしました"
+
+#: crates/bigiris/src/main.rs:1038
+msgid "--bg inválido: {error}"
+msgstr "無効な --bg: {error}"
+
+#: crates/bigiris/src/main.rs:1170
+msgid "várias entradas gravariam o mesmo arquivo de saída:"
+msgstr "複数の入力の出力ファイルが重複しています:"
+
+#: crates/bigiris/src/main.rs:1178
+msgid ""
+"Renomeie as entradas, processe-as separadamente ou use a política increment."
+msgstr ""
+"入力の名前を変更するか、個別に処理するか、increment ポリシーを使用してくださ"
+"い。"
+
+#: crates/bigiris/src/main.rs:1226
+msgid "substituiu a saída de outra entrada: {path}"
+msgstr "別の入力の出力を置き換えました: {path}"
+
+#: crates/bigiris/src/main.rs:1256
+msgid "já existe: {path}"
+msgstr "既に存在します: {path}"
+
+#: crates/bigiris/src/main.rs:1262
+msgid ""
+"{operation}: {written} gravado(s), {skipped} ignorado(s), {failed} falha(s)"
+msgstr "{operation}: 書き込み {written}、スキップ {skipped}、失敗 {failed}"
+
+#: crates/bigiris/src/main.rs:1355
+msgid "{model} não está instalado ({path} não existe). Instale com: {command}"
+msgstr ""
+"{model} がインストールされていません ({path} が存在しません)。次のコマンドで"
+"インストールしてください: {command}"
+
+#: crates/bigiris/src/main.rs:1364
+msgid "não foi possível ler os pesos de {model} em {path}: {error}"
+msgstr "{path} から {model} の重みを読み込めませんでした: {error}"
+
+#: crates/bigiris/src/main.rs:1397
+msgid "fator inválido: {factor}. Use 2, 3 ou 4."
+msgstr "無効な倍率: {factor}。2、3、4 のいずれかを指定してください。"
+
+#: crates/bigiris/src/main.rs:1414
+msgid "Real-ESRGAN indisponível; usando Lanczos3. Para usar IA: {command}"
+msgstr ""
+"Real-ESRGAN を利用できないため、Lanczos3 を使用します。AI を使うには: "
+"{command}"
+
+#: crates/bigiris/src/main.rs:1474
+msgid "máscara {path}: {error}"
+msgstr "マスク {path}: {error}"
+
+#: crates/bigiris/src/main.rs:1486
+msgid "não marca nenhuma área (pinte de branco o que deve ser apagado)"
+msgstr "領域が指定されていません (消去する部分を白で塗ってください)"
+
+#: crates/bigiris/src/main.rs:1522
+msgid "{count} quadro(s)"
+msgstr "{count} フレーム"
+
+#: crates/bigiris/src/main.rs:1565
+msgid "não foi possível ler {path}: {error}"
+msgstr "{path} を読み込めませんでした: {error}"
+
+#: crates/bigiris/src/main.rs:1571
+msgid "perfil TOML inválido: {error}"
+msgstr "無効な TOML プロファイル: {error}"
+
+#: crates/bigiris/src/main.rs:1574
+msgid "quality deve estar entre 1 e 100"
+msgstr "quality は 1 から 100 の範囲で指定してください"
+
+#: crates/bigiris/src/main.rs:1577
+msgid "formato do perfil inválido: {error}"
+msgstr "プロファイルの形式が無効です: {error}"
+
+#: crates/bigiris/src/main.rs:1589
+msgid "overwrite inválido: {value}; use skip, replace ou increment"
+msgstr ""
+"無効な overwrite: {value}。skip、replace、increment のいずれかを指定してくだ"
+"さい"
+
+#: crates/bigiris/src/main.rs:1597
+msgid "não foi possível criar {path}: {error}"
+msgstr "{path} を作成できませんでした: {error}"
+
+#: crates/bigiris/src/main.rs:1620
+msgid "nenhuma imagem encontrada para o lote"
+msgstr "一括処理する画像が見つかりません"
+
+#: crates/bigiris/src/main.rs:1728
+msgid ""
+"LibreOffice (`soffice`) não encontrado no PATH. Instale `libreoffice-fresh` "
+"(recomendado) ou `libreoffice-still` (ex.: `sudo pacman -S libreoffice-"
+"fresh`)."
+msgstr ""
+"PATH に LibreOffice (`soffice`) が見つかりません。`libreoffice-fresh` (推奨) "
+"または `libreoffice-still` をインストールしてください (例: `sudo pacman -S "
+"libreoffice-fresh`)。"
+
+#: crates/bigiris/src/main.rs:1780
+msgid "não é um arquivo regular"
+msgstr "通常ファイルではありません"
+
+#: crates/bigiris/src/main.rs:1783
+msgid "nome de arquivo inválido"
+msgstr "無効なファイル名"
+
+#: crates/bigiris/src/main.rs:1804
+msgid "falha ao invocar soffice: {error}"
+msgstr "soffice の起動に失敗しました: {error}"
+
+#: crates/bigiris/src/main.rs:1815
+msgid "soffice excedeu o limite de {seconds} s"
+msgstr "soffice が制限時間 {seconds} 秒を超えました"
+
+#: crates/bigiris/src/main.rs:1828
+msgid "soffice não gerou o PDF ({status})"
+msgstr "soffice が PDF を生成しませんでした ({status})"
+
+#: crates/bigiris/src/main.rs:1871
+msgid "muitos arquivos com o mesmo nome: {path}"
+msgstr "同じ名前のファイルが多すぎます: {path}"
+
+#: crates/bigiris/src/main.rs:1914
+msgid "a instalação falhou: {error}"
+msgstr "インストールに失敗しました: {error}"
+
+#: crates/bigiris/src/main.rs:1920
+msgid "instalado"
+msgstr "インストール済み"
+
+#: crates/bigiris/src/main.rs:1921
+msgid "instalado no total: {files} arquivo(s) em {managers} gerenciador(es)"
+msgstr ""
+"インストール合計: {managers} 個のファイルマネージャーに {files} 個のファイル"
+
+#: crates/bigiris/src/main.rs:1937
+msgid "a remoção falhou: {error}"
+msgstr "削除に失敗しました: {error}"
+
+#: crates/bigiris/src/main.rs:1941
+msgid "removido"
+msgstr "削除済み"
+
+#: crates/bigiris/src/main.rs:1942
+msgid "removido no total: {files} arquivo(s) em {managers} gerenciador(es)"
+msgstr "削除合計: {managers} 個のファイルマネージャーから {files} 個のファイル"
+
+#: crates/bigiris/src/main.rs:1965
+msgid "FALHA"
+msgstr "失敗"
+
+#: crates/bigiris/src/main.rs:1970
+msgid "fornecido pelo pacote"
+msgstr "パッケージで提供"
+
+#: crates/bigiris/src/main.rs:1973
+msgid "sem alterações"
+msgstr "変更なし"
+
+#: crates/bigiris/src/main.rs:1975
+msgid "ignorado"
+msgstr "スキップ"
+
+#: crates/bigiris/src/main.rs:1981
+msgid "detectado"
+msgstr "検出済み"
+
+#: crates/bigiris/src/main.rs:1981
+msgid "ausente no PATH"
+msgstr "PATH にありません"
+
+#: crates/bigiris/src/main.rs:1983
+msgid "{count} arquivo(s)"
+msgstr "{count} 個のファイル"
+
+#: crates/bigiris/src/main.rs:2010
+msgid ""
+"aviso: build atual sem feature `gui`. Diálogo '{dialog}' ignorado (recompile "
+"com --features gui)."
+msgstr ""
+"警告: 現在のビルドには `gui` 機能が含まれていません。ダイアログ「{dialog}」は"
+"無視されました (--features gui で再ビルドしてください)。"
+
+#: crates/bigiris/src/main.rs:2017
+msgid ""
+"aviso: build atual sem feature `gui`. Visualizador indisponível (recompile "
+"com --features gui)."
+msgstr ""
+"警告: 現在のビルドには `gui` 機能が含まれていません。ビューアーは利用できませ"
+"ん (--features gui で再ビルドしてください)。"
+
+#: crates/bigiris/src/main.rs:2022
+msgid ""
+"aviso: build atual sem feature `gui`. Visualizador indisponível; arquivos "
+"recebidos:"
+msgstr ""
+"警告: 現在のビルドには `gui` 機能が含まれていません。ビューアーは利用できませ"
+"ん。受け取ったファイル:"
 
 #: crates/bigimage-integrations/src/action.rs:97
 msgid "Para web"

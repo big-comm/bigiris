@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: bigiris 0.1.0\n"
 "Report-Msgid-Bugs-To: https://github.com/big-comm/bigiris/issues\n"
-"POT-Creation-Date: 2026-11-25 14:23-0300\n"
+"POT-Creation-Date: 2026-11-25 16:16-0300\n"
 "PO-Revision-Date: 2026-10-14 01:36-0300\n"
 "Last-Translator: BigCommunity Team\n"
 "Language-Team: BigCommunity Team\n"
@@ -16,6 +16,38 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=3; plural=(n==1 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 "
 "|| n%100>=20) ? 1 : 2);\n"
+
+#: crates/bigiris/src/codec.rs:121
+msgid "o executável do BigIris foi removido; reinicie o BigIris"
+msgstr "plik wykonywalny BigIris został usunięty; uruchom BigIris ponownie"
+
+#: crates/bigiris/src/codec.rs:331 crates/bigiris/src/codec.rs:425
+msgid "operação cancelada"
+msgstr "operacja anulowana"
+
+#: crates/bigiris/src/codec.rs:338
+msgid "codec excedeu o limite de tempo"
+msgstr "kodek przekroczył limit czasu"
+
+#: crates/bigiris/src/codec.rs:394
+msgid "o BigIris foi atualizado; reinicie-o"
+msgstr "BigIris został zaktualizowany; uruchom go ponownie"
+
+#: crates/bigiris/src/codec.rs:433
+msgid "entrada não regular ou acima de 1 GiB"
+msgstr "dane wejściowe nie są zwykłym plikiem lub przekraczają 1 GiB"
+
+#: crates/bigiris/src/codec.rs:519
+msgid "sandbox indisponível: instale bubblewrap e util-linux; {error}"
+msgstr "piaskownica niedostępna: zainstaluj bubblewrap i util-linux; {error}"
+
+#: crates/bigiris/src/codec.rs:532
+msgid "o BigIris foi atualizado enquanto estava aberto; reinicie-o"
+msgstr "BigIris został zaktualizowany w trakcie działania; uruchom go ponownie"
+
+#: crates/bigiris/src/codec.rs:540
+msgid "codec isolado recusou a imagem ({status}){hint}: {details}"
+msgstr "izolowany kodek odrzucił obraz ({status}){hint}: {details}"
 
 #: crates/bigiris/src/gui.rs:758
 msgid "BigIris"
@@ -558,13 +590,13 @@ msgstr ""
 msgid "O processamento terminou inesperadamente. Tente novamente."
 msgstr "Przetwarzanie zakończyło się nieoczekiwanie. Spróbuj ponownie."
 
-#: crates/bigiris/src/gui/batch_runner.rs:342
-msgid "falha inesperada no worker"
-msgstr "nieoczekiwany błąd procesu roboczego"
-
-#: crates/bigiris/src/gui/batch_runner.rs:391
+#: crates/bigiris/src/gui/batch_runner.rs:319 crates/bigiris/src/main.rs:1703
 msgid "um worker terminou inesperadamente"
 msgstr "proces roboczy nieoczekiwanie zakończył działanie"
+
+#: crates/bigiris/src/gui/batch_runner.rs:399
+msgid "falha inesperada no worker"
+msgstr "nieoczekiwany błąd procesu roboczego"
 
 #: crates/bigiris/src/gui/dialogs/adjust.rs:20
 msgid "Ajustar cores — Prisma"
@@ -705,7 +737,7 @@ msgstr "Prędkość kodera"
 msgid "maior = mais rápido, paleta um pouco pior · padrão 10"
 msgstr "wyżej = szybciej, nieco gorsza jakość palety · domyślnie 10"
 
-#: crates/bigiris/src/gui/dialogs/animate.rs:94
+#: crates/bigiris/src/gui/dialogs/animate.rs:94 crates/bigiris/src/main.rs:614
 msgid "Arquivo de saída (.gif)"
 msgstr "Plik wyjściowy (.gif)"
 
@@ -1837,6 +1869,669 @@ msgstr "Skopiuj pliki obrazów w menedżerze plików i spróbuj ponownie."
 #: crates/bigiris/src/gui/transfers.rs:96
 msgid "Não foi possível abrir os arquivos"
 msgstr "Nie można otworzyć plików"
+
+#: crates/bigiris/src/main.rs:44
+msgid "Visualizador rápido e conversor de imagens para Linux"
+msgstr "Szybka przeglądarka i konwerter obrazów dla systemu Linux"
+
+#: crates/bigiris/src/main.rs:46
+msgid ""
+"Códigos de saída:\n"
+"  0  sucesso (inclui arquivos ignorados por já existirem)\n"
+"  1  uso inválido ou erro fatal antes de processar (nada foi gravado)\n"
+"  2  falha parcial: um ou mais arquivos não puderam ser processados"
+msgstr ""
+"Kody wyjścia:\n"
+"  0  sukces (w tym pliki pominięte, ponieważ już istnieją)\n"
+"  1  nieprawidłowe użycie lub błąd krytyczny przed przetwarzaniem (nic nie "
+"zapisano)\n"
+"  2  częściowe niepowodzenie: nie udało się przetworzyć co najmniej jednego "
+"pliku"
+
+#: crates/bigiris/src/main.rs:52
+msgid "Abrir apenas um diálogo modal específico (usado por service menus)"
+msgstr "Otwórz tylko określone okno modalne (używane przez menu usług)"
+
+#: crates/bigiris/src/main.rs:56
+msgid "Rodar smoke-test e sair (usado em CI e pós-install)"
+msgstr "Uruchom test dymny i zakończ (używane w CI i po instalacji)"
+
+#: crates/bigiris/src/main.rs:62
+msgid ""
+"Avisar falhas numa notificação do desktop (usado pelos menus de contexto, "
+"que não mostram o terminal)"
+msgstr ""
+"Zgłaszaj błędy w powiadomieniu pulpitu (używane przez menu kontekstowe, "
+"które nie pokazują terminala)"
+
+#: crates/bigiris/src/main.rs:68
+msgid "Arquivos a abrir no visualizador (quando sem subcomando)"
+msgstr "Pliki do otwarcia w przeglądarce (gdy nie podano podpolecenia)"
+
+#: crates/bigiris/src/main.rs:98
+msgid "Não sobrescreve o arquivo existente (default)"
+msgstr "Nie nadpisuj istniejącego pliku (domyślnie)"
+
+#: crates/bigiris/src/main.rs:100
+msgid "Sobrescreve o arquivo existente"
+msgstr "Nadpisz istniejący plik"
+
+#: crates/bigiris/src/main.rs:102
+msgid "Gera nome incrementado (foo_1.png, foo_2.png, ...)"
+msgstr "Utwórz nazwę z kolejnym numerem (foo_1.png, foo_2.png, ...)"
+
+#: crates/bigiris/src/main.rs:144
+msgid ""
+"Aresta máxima em pixels (preserva aspecto; no-op se a imagem já é menor)"
+msgstr ""
+"Maksymalna krawędź w pikselach (zachowuje proporcje; nic nie robi, jeśli "
+"obraz jest już mniejszy)"
+
+#: crates/bigiris/src/main.rs:147
+msgid "Escala percentual (ex: 50 para metade; 200 para o dobro)"
+msgstr "Skala w procentach (np. 50 to połowa; 200 to dwukrotność)"
+
+#: crates/bigiris/src/main.rs:149
+msgid "Dimensão exata WxH (ignora aspecto)"
+msgstr "Dokładny wymiar WxH (ignoruje proporcje)"
+
+#: crates/bigiris/src/main.rs:154
+msgid "Encaixa dentro da caixa WxH preservando aspecto"
+msgstr "Dopasuj do ramki WxH z zachowaniem proporcji"
+
+#: crates/bigiris/src/main.rs:184
+msgid "esperado formato WxH (ex. 1920x1080), recebido: {value}"
+msgstr "oczekiwano formatu WxH (np. 1920x1080), otrzymano: {value}"
+
+#: crates/bigiris/src/main.rs:189 crates/bigiris/src/main.rs:255
+msgid "largura inválida: {error}"
+msgstr "nieprawidłowa szerokość: {error}"
+
+#: crates/bigiris/src/main.rs:191 crates/bigiris/src/main.rs:257
+msgid "altura inválida: {error}"
+msgstr "nieprawidłowa wysokość: {error}"
+
+#: crates/bigiris/src/main.rs:247
+msgid "esperado WxH+X+Y, recebido: {value}"
+msgstr "oczekiwano WxH+X+Y, otrzymano: {value}"
+
+#: crates/bigiris/src/main.rs:250
+msgid "faltou o offset Y em {value}"
+msgstr "brak przesunięcia Y w {value}"
+
+#: crates/bigiris/src/main.rs:253
+msgid "faltou largura/altura em {value}"
+msgstr "brak szerokości/wysokości w {value}"
+
+#: crates/bigiris/src/main.rs:259
+msgid "offset X inválido: {error}"
+msgstr "nieprawidłowe przesunięcie X: {error}"
+
+#: crates/bigiris/src/main.rs:261
+msgid "offset Y inválido: {error}"
+msgstr "nieprawidłowe przesunięcie Y: {error}"
+
+#: crates/bigiris/src/main.rs:281
+msgid "esperado W:H (ex. 1:1, 9:16), recebido: {value}"
+msgstr "oczekiwano W:H (np. 1:1, 9:16), otrzymano: {value}"
+
+#: crates/bigiris/src/main.rs:284
+msgid "razão W inválida: {error}"
+msgstr "nieprawidłowa wartość W w proporcji: {error}"
+
+#: crates/bigiris/src/main.rs:286
+msgid "razão H inválida: {error}"
+msgstr "nieprawidłowa wartość H w proporcji: {error}"
+
+#: crates/bigiris/src/main.rs:289
+msgid "razão com componente zero não faz sentido: {value}"
+msgstr "proporcja ze składnikiem zerowym nie ma sensu: {value}"
+
+#: crates/bigiris/src/main.rs:332
+msgid "Tamanho exato do canvas em pixels (WxH)"
+msgstr "Dokładny rozmiar płótna w pikselach (WxH)"
+
+#: crates/bigiris/src/main.rs:337
+msgid ""
+"Razão alvo (W:H). O canvas é estendido o mínimo necessário para caber a "
+"imagem nessa proporção"
+msgstr ""
+"Docelowe proporcje (W:H). Płótno jest rozszerzane minimalnie, tak aby obraz "
+"zmieścił się w tych proporcjach"
+
+#: crates/bigiris/src/main.rs:354
+msgid "Converter arquivos (headless)"
+msgstr "Konwertuj pliki (bez GUI)"
+
+#: crates/bigiris/src/main.rs:358
+msgid ""
+"Formato de destino: png, jpg, webp, avif, tiff, bmp, gif, ico, pnm/ppm/pgm/"
+"pbm, tga, qoi, hdr, exr"
+msgstr ""
+"Format docelowy: png, jpg, webp, avif, tiff, bmp, gif, ico, pnm/ppm/pgm/pbm, "
+"tga, qoi, hdr, exr"
+
+#: crates/bigiris/src/main.rs:366
+msgid ""
+"Qualidade visual buscada: maxima, equilibrado ou menor (também max, "
+"balanced, small). Cada formato procura o menor arquivo que mantém essa "
+"qualidade (SSIMULACRA2 85 / 80 / 70)"
+msgstr ""
+"Docelowa jakość wizualna: maxima, equilibrado lub menor (także max, "
+"balanced, small). Dla każdego formatu wyszukiwany jest najmniejszy plik "
+"zachowujący tę jakość (SSIMULACRA2 85 / 80 / 70)"
+
+#: crates/bigiris/src/main.rs:372
+msgid ""
+"Qualidade fixa 1..100 para JPEG/WebP/AVIF, sem busca (ignora --target). Em "
+"WebP, 100 grava sem perdas"
+msgstr ""
+"Stała jakość 1..100 dla JPEG/WebP/AVIF, bez wyszukiwania (ignoruje --"
+"target). W WebP wartość 100 oznacza zapis bezstratny"
+
+#: crates/bigiris/src/main.rs:375 crates/bigiris/src/main.rs:416
+msgid "Aceito por compatibilidade: o JPEG já é sempre progressivo"
+msgstr ""
+"Akceptowane dla zgodności: JPEG jest zawsze zapisywany jako progresywny"
+
+#: crates/bigiris/src/main.rs:377 crates/bigiris/src/main.rs:418
+msgid "Compressão mais lenta e menor, sem perdas a mais: PNG e AVIF"
+msgstr "Wolniejsza kompresja i mniejszy plik bez dodatkowych strat: PNG i AVIF"
+
+#: crates/bigiris/src/main.rs:383 crates/bigiris/src/main.rs:424
+#: crates/bigiris/src/main.rs:451
+msgid "Política quando o arquivo de saída já existe"
+msgstr "Zachowanie, gdy plik wyjściowy już istnieje"
+
+#: crates/bigiris/src/main.rs:386
+msgid "Arquivos de entrada"
+msgstr "Pliki wejściowe"
+
+#: crates/bigiris/src/main.rs:389
+msgid ""
+"Redimensionar arquivos (headless). Exatamente um modo entre --max-edge / --"
+"percent / --exact / --fit é obrigatório"
+msgstr ""
+"Zmień rozmiar plików (bez GUI). Wymagany jest dokładnie jeden tryb spośród --"
+"max-edge / --percent / --exact / --fit"
+
+#: crates/bigiris/src/main.rs:397
+msgid "Kernel de interpolação (default: lanczos3)"
+msgstr "Jądro interpolacyjne (domyślnie: lanczos3)"
+
+#: crates/bigiris/src/main.rs:400 crates/bigiris/src/main.rs:445
+msgid "Formato de destino (opcional; mantém o formato original se omitido)"
+msgstr ""
+"Format docelowy (opcjonalny; jeśli pominięty, zachowany zostaje oryginalny "
+"format)"
+
+#: crates/bigiris/src/main.rs:407
+msgid ""
+"Qualidade visual buscada: maxima, equilibrado ou menor (também max, "
+"balanced, small)"
+msgstr ""
+"Docelowa jakość wizualna: maxima, equilibrado lub menor (także max, "
+"balanced, small)"
+
+#: crates/bigiris/src/main.rs:413
+msgid "Qualidade fixa 1..100 para JPEG/WebP/AVIF, sem busca (ignora --target)"
+msgstr ""
+"Stała jakość 1..100 dla JPEG/WebP/AVIF, bez wyszukiwania (ignoruje --target)"
+
+#: crates/bigiris/src/main.rs:430
+msgid ""
+"Girar arquivos (headless). Rotações cardinais via pipeline de re-encode; `--"
+"auto` lê o tag EXIF Orientation e aplica a rotação certa"
+msgstr ""
+"Obróć pliki (bez GUI). Obroty o wielokrotności 90° przez ponowne kodowanie; "
+"`--auto` odczytuje znacznik EXIF Orientation i stosuje właściwy obrót"
+
+#: crates/bigiris/src/main.rs:436
+msgid "Graus cardinais: 90 | 180 | 270"
+msgstr "Kąt będący wielokrotnością 90°: 90 | 180 | 270"
+
+#: crates/bigiris/src/main.rs:442
+msgid "Auto-orientar via EXIF (tag Orientation)"
+msgstr "Automatyczna orientacja według EXIF (znacznik Orientation)"
+
+#: crates/bigiris/src/main.rs:457
+msgid "Espelhar arquivos na horizontal ou vertical (headless)"
+msgstr "Odbij pliki w poziomie lub w pionie (bez GUI)"
+
+#: crates/bigiris/src/main.rs:459
+msgid "Eixo: horizontal | vertical"
+msgstr "Oś: horizontal | vertical"
+
+#: crates/bigiris/src/main.rs:461 crates/bigiris/src/main.rs:475
+#: crates/bigiris/src/main.rs:499 crates/bigiris/src/main.rs:535
+msgid "Formato de destino (opcional)"
+msgstr "Format docelowy (opcjonalny)"
+
+#: crates/bigiris/src/main.rs:468
+msgid ""
+"Recortar retângulo das imagens (headless). Use --rect WxH+X+Y ao estilo "
+"ImageMagick"
+msgstr ""
+"Przytnij obrazy do prostokąta (bez GUI). Użyj --rect WxH+X+Y w stylu "
+"ImageMagick"
+
+#: crates/bigiris/src/main.rs:472
+msgid "Geometria do recorte no formato WxH+X+Y (ex: 800x600+100+50)"
+msgstr "Geometria przycięcia w formacie WxH+X+Y (np. 800x600+100+50)"
+
+#: crates/bigiris/src/main.rs:482
+msgid ""
+"Estender a tela em volta da imagem (letterbox). Exatamente um modo entre --"
+"size e --aspect é obrigatório. O canvas é preenchido com --bg e a imagem "
+"original é posicionada por --gravity"
+msgstr ""
+"Rozszerz płótno wokół obrazu (letterbox). Wymagany jest dokładnie jeden tryb "
+"spośród --size i --aspect. Płótno jest wypełniane kolorem --bg, a oryginalny "
+"obraz umieszczany zgodnie z --gravity"
+
+#: crates/bigiris/src/main.rs:489
+msgid "Cor de fundo em hexadecimal (#RRGGBB ou #RRGGBBAA)"
+msgstr "Kolor tła w zapisie szesnastkowym (#RRGGBB lub #RRGGBBAA)"
+
+#: crates/bigiris/src/main.rs:496
+msgid "Posição da imagem original no canvas estendido"
+msgstr "Pozycja oryginalnego obrazu na rozszerzonym płótnie"
+
+#: crates/bigiris/src/main.rs:506
+msgid "Ajustar cor/tom (brilho, contraste, saturação, gamma)"
+msgstr "Dostosuj kolor i ton (jasność, kontrast, nasycenie, gamma)"
+
+#: crates/bigiris/src/main.rs:512
+msgid "Brilho -100..100 (0 = sem mudança)"
+msgstr "Jasność -100..100 (0 = bez zmian)"
+
+#: crates/bigiris/src/main.rs:519
+msgid "Contraste -100..100 (0 = sem mudança)"
+msgstr "Kontrast -100..100 (0 = bez zmian)"
+
+#: crates/bigiris/src/main.rs:526
+msgid "Saturação -100..100 (-100 = cinza, 0 = sem mudança)"
+msgstr "Nasycenie -100..100 (-100 = szarość, 0 = bez zmian)"
+
+#: crates/bigiris/src/main.rs:532
+msgid "Gamma 0.1..10.0 (< 1 clareia midtones, > 1 escurece)"
+msgstr "Gamma 0.1..10.0 (< 1 rozjaśnia tony średnie, > 1 przyciemnia)"
+
+#: crates/bigiris/src/main.rs:542
+msgid ""
+"Remover fundo usando IA local (BiRefNet-lite, pacote birefnet-native). Grava "
+"`<nome>_nobg.png` (PNG com alfa) ao lado de cada imagem"
+msgstr ""
+"Usuń tło za pomocą lokalnej AI (BiRefNet-lite, pakiet birefnet-native). "
+"Zapisuje `<nazwa>_nobg.png` (PNG z kanałem alfa) obok każdego obrazu"
+
+#: crates/bigiris/src/main.rs:548
+msgid "Modelo de segmentação"
+msgstr "Model segmentacji"
+
+#: crates/bigiris/src/main.rs:555
+msgid "Política quando `<nome>_nobg.png` já existe"
+msgstr "Zachowanie, gdy `<nazwa>_nobg.png` już istnieje"
+
+#: crates/bigiris/src/main.rs:561
+msgid ""
+"Aumentar resolução por 2, 3 ou 4. Com o pacote realesrgan-native usa IA "
+"(Real-ESRGAN); sem ele, Lanczos3. Grava `<nome>_<pct>pct.<ext>`"
+msgstr ""
+"Zwiększ rozdzielczość 2, 3 lub 4 razy. Z pakietem realesrgan-native używa AI "
+"(Real-ESRGAN); bez niego Lanczos3. Zapisuje `<nazwa>_<pct>pct.<ext>`"
+
+#: crates/bigiris/src/main.rs:563
+msgid "Fator inteiro (2, 3 ou 4)"
+msgstr "Współczynnik całkowity (2, 3 lub 4)"
+
+#: crates/bigiris/src/main.rs:569
+msgid ""
+"Motor: auto (Real-ESRGAN se instalado, senão Lanczos3), realesrgan (falha se "
+"ausente) ou lanczos"
+msgstr ""
+"Silnik: auto (Real-ESRGAN, jeśli zainstalowany, w przeciwnym razie "
+"Lanczos3), realesrgan (błąd, jeśli brak) lub lanczos"
+
+#: crates/bigiris/src/main.rs:576 crates/bigiris/src/main.rs:588
+#: crates/bigiris/src/main.rs:606 crates/bigiris/src/main.rs:638
+msgid "Política de sobrescrita do arquivo de saída"
+msgstr "Zasada nadpisywania pliku wyjściowego"
+
+#: crates/bigiris/src/main.rs:582
+msgid ""
+"Remover ruído e artefatos de compressão com IA local (SCUNet, pacote scunet-"
+"native). Grava `<nome>_denoised.<ext>`"
+msgstr ""
+"Usuń szum i artefakty kompresji za pomocą lokalnej AI (SCUNet, pakiet scunet-"
+"native). Zapisuje `<nazwa>_denoised.<ext>`"
+
+#: crates/bigiris/src/main.rs:594
+msgid ""
+"Apagar objetos: preenche a área marcada na máscara com IA local (LaMa, "
+"pacote lama-native). Grava `<nome>_inpaint.<ext>`"
+msgstr ""
+"Usuń obiekty: wypełnia obszar zaznaczony na masce za pomocą lokalnej AI "
+"(LaMa, pakiet lama-native). Zapisuje `<nazwa>_inpaint.<ext>`"
+
+#: crates/bigiris/src/main.rs:599
+msgid ""
+"Máscara do mesmo tamanho da imagem: branco = preencher, preto = manter "
+"(áreas transparentes são mantidas)"
+msgstr ""
+"Maska o tym samym rozmiarze co obraz: biały = wypełnij, czarny = zachowaj "
+"(obszary przezroczyste są zachowywane)"
+
+#: crates/bigiris/src/main.rs:612
+msgid "Criar GIF animado a partir de uma sequência de imagens (headless)"
+msgstr "Utwórz animowany GIF z sekwencji obrazów (bez GUI)"
+
+#: crates/bigiris/src/main.rs:619
+msgid "Atraso entre quadros em milissegundos (100 ≈ 10 fps)"
+msgstr "Opóźnienie między klatkami w milisekundach (100 ≈ 10 kl./s)"
+
+#: crates/bigiris/src/main.rs:625
+msgid "Número de repetições: 0 = infinito (default), 1+ = fixo"
+msgstr "Liczba powtórzeń: 0 = bez końca (domyślnie), 1+ = stała liczba"
+
+#: crates/bigiris/src/main.rs:631
+msgid "Velocidade do encoder 1..30 (maior = mais rápido, pior paleta)"
+msgstr "Szybkość kodera 1..30 (wyższa wartość = szybciej, ale gorsza paleta)"
+
+#: crates/bigiris/src/main.rs:641
+msgid "Quadros em ordem (mínimo 1)"
+msgstr "Klatki w kolejności (co najmniej 1)"
+
+#: crates/bigiris/src/main.rs:644
+msgid "Processar arquivos ou pastas em paralelo a partir de um perfil TOML"
+msgstr "Przetwarzaj pliki lub foldery równolegle na podstawie profilu TOML"
+
+#: crates/bigiris/src/main.rs:646
+msgid "Arquivo de perfil .toml"
+msgstr "Plik profilu .toml"
+
+#: crates/bigiris/src/main.rs:651
+msgid "Instalar integrações com gerenciadores de arquivos"
+msgstr "Zainstaluj integracje z menedżerami plików"
+
+#: crates/bigiris/src/main.rs:653
+msgid "Instalar em ~/.local/share (default)"
+msgstr "Zainstaluj w ~/.local/share (domyślnie)"
+
+#: crates/bigiris/src/main.rs:657
+msgid "Instalar em /usr/share (requer root; normalmente feito pelo pacote)"
+msgstr ""
+"Zainstaluj w /usr/share (wymaga uprawnień roota; zwykle robi to pakiet)"
+
+#: crates/bigiris/src/main.rs:665
+msgid ""
+"Prefixo DESTDIR para empacotamento (ex: $pkgdir no PKGBUILD). Só faz sentido "
+"combinado com --system"
+msgstr ""
+"Prefiks DESTDIR do pakowania (np. $pkgdir w PKGBUILD). Ma sens tylko w "
+"połączeniu z --system"
+
+#: crates/bigiris/src/main.rs:669
+msgid "Remover integrações previamente instaladas"
+msgstr "Usuń wcześniej zainstalowane integracje"
+
+#: crates/bigiris/src/main.rs:671
+msgid ""
+"Converter documentos (ODT, DOCX, TXT, MD, RTF, XLSX, PPTX, etc.) para PDF "
+"via LibreOffice headless. Saída gravada ao lado do arquivo de origem"
+msgstr ""
+"Konwertuj dokumenty (ODT, DOCX, TXT, MD, RTF, XLSX, PPTX itp.) do PDF za "
+"pomocą LibreOffice bez GUI. Wynik jest zapisywany obok pliku źródłowego"
+
+#: crates/bigiris/src/main.rs:677
+msgid "Política quando `<nome>.pdf` já existe"
+msgstr "Zachowanie, gdy `<nazwa>.pdf` już istnieje"
+
+#: crates/bigiris/src/main.rs:684
+msgid "Tempo máximo por documento, em segundos"
+msgstr "Maksymalny czas na dokument, w sekundach"
+
+#: crates/bigiris/src/main.rs:697
+msgid "BiRefNet-lite (único modelo disponível)"
+msgstr "BiRefNet-lite (jedyny dostępny model)"
+
+#: crates/bigiris/src/main.rs:705
+msgid ""
+"Real-ESRGAN quando o pacote realesrgan-native está instalado, senão Lanczos3"
+msgstr ""
+"Real-ESRGAN, gdy zainstalowany jest pakiet realesrgan-native, w przeciwnym "
+"razie Lanczos3"
+
+#: crates/bigiris/src/main.rs:710
+msgid "IA Real-ESRGAN (requer realesrgan-native)"
+msgstr "AI Real-ESRGAN (wymaga realesrgan-native)"
+
+#: crates/bigiris/src/main.rs:713
+msgid "Reamostragem Lanczos3 (sem IA)"
+msgstr "Przepróbkowanie Lanczos3 (bez AI)"
+
+#: crates/bigiris/src/main.rs:795
+msgid "rotate: use --degrees 90|180|270 ou --auto"
+msgstr "rotate: użyj --degrees 90|180|270 lub --auto"
+
+#: crates/bigiris/src/main.rs:867
+msgid "BigIris: a operação falhou"
+msgstr "BigIris: operacja nie powiodła się"
+
+#: crates/bigiris/src/main.rs:881
+msgid "Alguns arquivos não foram processados; veja os detalhes no terminal."
+msgstr "Niektóre pliki nie zostały przetworzone; szczegóły w terminalu."
+
+#: crates/bigiris/src/main.rs:957
+msgid "alvo de qualidade inválido: {value}; use maxima, equilibrado ou menor"
+msgstr "nieprawidłowy cel jakości: {value}; użyj maxima, equilibrado lub menor"
+
+#: crates/bigiris/src/main.rs:970 crates/bigiris/src/main.rs:1064
+msgid "formato de destino inválido: {error}"
+msgstr "nieprawidłowy format docelowy: {error}"
+
+#: crates/bigiris/src/main.rs:980
+msgid "o original já era menor; copiado sem recompressão"
+msgstr "oryginał był już mniejszy; skopiowano bez ponownej kompresji"
+
+#: crates/bigiris/src/main.rs:1038
+msgid "--bg inválido: {error}"
+msgstr "nieprawidłowa wartość --bg: {error}"
+
+#: crates/bigiris/src/main.rs:1170
+msgid "várias entradas gravariam o mesmo arquivo de saída:"
+msgstr "kilka plików wejściowych zapisałoby ten sam plik wyjściowy:"
+
+#: crates/bigiris/src/main.rs:1178
+msgid ""
+"Renomeie as entradas, processe-as separadamente ou use a política increment."
+msgstr ""
+"Zmień nazwy plików wejściowych, przetwórz je osobno lub użyj zasady "
+"increment."
+
+#: crates/bigiris/src/main.rs:1226
+msgid "substituiu a saída de outra entrada: {path}"
+msgstr "zastąpiono plik wyjściowy innego pliku wejściowego: {path}"
+
+#: crates/bigiris/src/main.rs:1256
+msgid "já existe: {path}"
+msgstr "już istnieje: {path}"
+
+#: crates/bigiris/src/main.rs:1262
+msgid ""
+"{operation}: {written} gravado(s), {skipped} ignorado(s), {failed} falha(s)"
+msgstr ""
+"{operation}: zapisano: {written}, pominięto: {skipped}, błędy: {failed}"
+
+#: crates/bigiris/src/main.rs:1355
+msgid "{model} não está instalado ({path} não existe). Instale com: {command}"
+msgstr ""
+"{model} nie jest zainstalowany ({path} nie istnieje). Zainstaluj poleceniem: "
+"{command}"
+
+#: crates/bigiris/src/main.rs:1364
+msgid "não foi possível ler os pesos de {model} em {path}: {error}"
+msgstr "nie można odczytać wag {model} z {path}: {error}"
+
+#: crates/bigiris/src/main.rs:1397
+msgid "fator inválido: {factor}. Use 2, 3 ou 4."
+msgstr "nieprawidłowy współczynnik: {factor}. Użyj 2, 3 lub 4."
+
+#: crates/bigiris/src/main.rs:1414
+msgid "Real-ESRGAN indisponível; usando Lanczos3. Para usar IA: {command}"
+msgstr "Real-ESRGAN niedostępny; używany jest Lanczos3. Aby użyć AI: {command}"
+
+#: crates/bigiris/src/main.rs:1474
+msgid "máscara {path}: {error}"
+msgstr "maska {path}: {error}"
+
+#: crates/bigiris/src/main.rs:1486
+msgid "não marca nenhuma área (pinte de branco o que deve ser apagado)"
+msgstr ""
+"nie zaznacza żadnego obszaru (zamaluj na biało to, co ma zostać usunięte)"
+
+#: crates/bigiris/src/main.rs:1522
+msgid "{count} quadro(s)"
+msgstr "klatki: {count}"
+
+#: crates/bigiris/src/main.rs:1565
+msgid "não foi possível ler {path}: {error}"
+msgstr "nie można odczytać {path}: {error}"
+
+#: crates/bigiris/src/main.rs:1571
+msgid "perfil TOML inválido: {error}"
+msgstr "nieprawidłowy profil TOML: {error}"
+
+#: crates/bigiris/src/main.rs:1574
+msgid "quality deve estar entre 1 e 100"
+msgstr "quality musi mieścić się w zakresie od 1 do 100"
+
+#: crates/bigiris/src/main.rs:1577
+msgid "formato do perfil inválido: {error}"
+msgstr "nieprawidłowy format w profilu: {error}"
+
+#: crates/bigiris/src/main.rs:1589
+msgid "overwrite inválido: {value}; use skip, replace ou increment"
+msgstr ""
+"nieprawidłowa wartość overwrite: {value}; użyj skip, replace lub increment"
+
+#: crates/bigiris/src/main.rs:1597
+msgid "não foi possível criar {path}: {error}"
+msgstr "nie można utworzyć {path}: {error}"
+
+#: crates/bigiris/src/main.rs:1620
+msgid "nenhuma imagem encontrada para o lote"
+msgstr "nie znaleziono żadnych obrazów do przetwarzania wsadowego"
+
+#: crates/bigiris/src/main.rs:1728
+msgid ""
+"LibreOffice (`soffice`) não encontrado no PATH. Instale `libreoffice-fresh` "
+"(recomendado) ou `libreoffice-still` (ex.: `sudo pacman -S libreoffice-"
+"fresh`)."
+msgstr ""
+"Nie znaleziono LibreOffice (`soffice`) w PATH. Zainstaluj `libreoffice-"
+"fresh` (zalecane) lub `libreoffice-still` (np. `sudo pacman -S libreoffice-"
+"fresh`)."
+
+#: crates/bigiris/src/main.rs:1780
+msgid "não é um arquivo regular"
+msgstr "nie jest zwykłym plikiem"
+
+#: crates/bigiris/src/main.rs:1783
+msgid "nome de arquivo inválido"
+msgstr "nieprawidłowa nazwa pliku"
+
+#: crates/bigiris/src/main.rs:1804
+msgid "falha ao invocar soffice: {error}"
+msgstr "nie udało się uruchomić soffice: {error}"
+
+#: crates/bigiris/src/main.rs:1815
+msgid "soffice excedeu o limite de {seconds} s"
+msgstr "soffice przekroczył limit {seconds} s"
+
+#: crates/bigiris/src/main.rs:1828
+msgid "soffice não gerou o PDF ({status})"
+msgstr "soffice nie utworzył pliku PDF ({status})"
+
+#: crates/bigiris/src/main.rs:1871
+msgid "muitos arquivos com o mesmo nome: {path}"
+msgstr "zbyt wiele plików o tej samej nazwie: {path}"
+
+#: crates/bigiris/src/main.rs:1914
+msgid "a instalação falhou: {error}"
+msgstr "instalacja nie powiodła się: {error}"
+
+#: crates/bigiris/src/main.rs:1920
+msgid "instalado"
+msgstr "zainstalowano"
+
+#: crates/bigiris/src/main.rs:1921
+msgid "instalado no total: {files} arquivo(s) em {managers} gerenciador(es)"
+msgstr "łącznie zainstalowano plików: {files}, menedżerów plików: {managers}"
+
+#: crates/bigiris/src/main.rs:1937
+msgid "a remoção falhou: {error}"
+msgstr "usuwanie nie powiodło się: {error}"
+
+#: crates/bigiris/src/main.rs:1941
+msgid "removido"
+msgstr "usunięto"
+
+#: crates/bigiris/src/main.rs:1942
+msgid "removido no total: {files} arquivo(s) em {managers} gerenciador(es)"
+msgstr "łącznie usunięto plików: {files}, menedżerów plików: {managers}"
+
+#: crates/bigiris/src/main.rs:1965
+msgid "FALHA"
+msgstr "BŁĄD"
+
+#: crates/bigiris/src/main.rs:1970
+msgid "fornecido pelo pacote"
+msgstr "dostarczone przez pakiet"
+
+#: crates/bigiris/src/main.rs:1973
+msgid "sem alterações"
+msgstr "bez zmian"
+
+#: crates/bigiris/src/main.rs:1975
+msgid "ignorado"
+msgstr "pominięto"
+
+#: crates/bigiris/src/main.rs:1981
+msgid "detectado"
+msgstr "wykryto"
+
+#: crates/bigiris/src/main.rs:1981
+msgid "ausente no PATH"
+msgstr "brak w PATH"
+
+#: crates/bigiris/src/main.rs:1983
+msgid "{count} arquivo(s)"
+msgstr "pliki: {count}"
+
+#: crates/bigiris/src/main.rs:2010
+msgid ""
+"aviso: build atual sem feature `gui`. Diálogo '{dialog}' ignorado (recompile "
+"com --features gui)."
+msgstr ""
+"ostrzeżenie: bieżąca kompilacja nie zawiera funkcji `gui`. Pominięto okno "
+"dialogowe „{dialog}” (skompiluj ponownie z --features gui)."
+
+#: crates/bigiris/src/main.rs:2017
+msgid ""
+"aviso: build atual sem feature `gui`. Visualizador indisponível (recompile "
+"com --features gui)."
+msgstr ""
+"ostrzeżenie: bieżąca kompilacja nie zawiera funkcji `gui`. Przeglądarka "
+"niedostępna (skompiluj ponownie z --features gui)."
+
+#: crates/bigiris/src/main.rs:2022
+msgid ""
+"aviso: build atual sem feature `gui`. Visualizador indisponível; arquivos "
+"recebidos:"
+msgstr ""
+"ostrzeżenie: bieżąca kompilacja nie zawiera funkcji `gui`. Przeglądarka "
+"niedostępna; otrzymane pliki:"
 
 #: crates/bigimage-integrations/src/action.rs:97
 msgid "Para web"

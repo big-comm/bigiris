@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: bigiris 0.1.0\n"
 "Report-Msgid-Bugs-To: https://github.com/big-comm/bigiris/issues\n"
-"POT-Creation-Date: 2026-11-25 14:23-0300\n"
+"POT-Creation-Date: 2026-11-25 16:16-0300\n"
 "PO-Revision-Date: 2026-10-14 01:37-0300\n"
 "Last-Translator: BigCommunity Team\n"
 "Language-Team: BigCommunity Team\n"
@@ -15,6 +15,40 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: crates/bigiris/src/codec.rs:121
+msgid "o executável do BigIris foi removido; reinicie o BigIris"
+msgstr "BigIris yürütülebilir dosyası kaldırıldı; BigIris'i yeniden başlatın"
+
+#: crates/bigiris/src/codec.rs:331 crates/bigiris/src/codec.rs:425
+msgid "operação cancelada"
+msgstr "işlem iptal edildi"
+
+#: crates/bigiris/src/codec.rs:338
+msgid "codec excedeu o limite de tempo"
+msgstr "codec zaman sınırını aştı"
+
+#: crates/bigiris/src/codec.rs:394
+msgid "o BigIris foi atualizado; reinicie-o"
+msgstr "BigIris güncellendi; yeniden başlatın"
+
+#: crates/bigiris/src/codec.rs:433
+msgid "entrada não regular ou acima de 1 GiB"
+msgstr "girdi normal bir dosya değil veya 1 GiB'tan büyük"
+
+#: crates/bigiris/src/codec.rs:519
+msgid "sandbox indisponível: instale bubblewrap e util-linux; {error}"
+msgstr ""
+"sandbox kullanılamıyor: bubblewrap ve util-linux paketlerini yükleyin; "
+"{error}"
+
+#: crates/bigiris/src/codec.rs:532
+msgid "o BigIris foi atualizado enquanto estava aberto; reinicie-o"
+msgstr "BigIris açıkken güncellendi; yeniden başlatın"
+
+#: crates/bigiris/src/codec.rs:540
+msgid "codec isolado recusou a imagem ({status}){hint}: {details}"
+msgstr "yalıtılmış codec resmi reddetti ({status}){hint}: {details}"
 
 #: crates/bigiris/src/gui.rs:758
 msgid "BigIris"
@@ -553,13 +587,13 @@ msgstr ""
 msgid "O processamento terminou inesperadamente. Tente novamente."
 msgstr "İşlem beklenmedik şekilde sona erdi. Lütfen tekrar deneyin."
 
-#: crates/bigiris/src/gui/batch_runner.rs:342
-msgid "falha inesperada no worker"
-msgstr "çalışan iş parçacığında beklenmeyen hata"
-
-#: crates/bigiris/src/gui/batch_runner.rs:391
+#: crates/bigiris/src/gui/batch_runner.rs:319 crates/bigiris/src/main.rs:1703
 msgid "um worker terminou inesperadamente"
 msgstr "bir iş parçacığı beklenmedik şekilde sona erdi"
+
+#: crates/bigiris/src/gui/batch_runner.rs:399
+msgid "falha inesperada no worker"
+msgstr "çalışan iş parçacığında beklenmeyen hata"
 
 #: crates/bigiris/src/gui/dialogs/adjust.rs:20
 msgid "Ajustar cores — Prisma"
@@ -699,7 +733,7 @@ msgstr "Kodlayıcı hızı"
 msgid "maior = mais rápido, paleta um pouco pior · padrão 10"
 msgstr "yüksek = daha hızlı, biraz daha kötü palet · varsayılan 10"
 
-#: crates/bigiris/src/gui/dialogs/animate.rs:94
+#: crates/bigiris/src/gui/dialogs/animate.rs:94 crates/bigiris/src/main.rs:614
 msgid "Arquivo de saída (.gif)"
 msgstr "Çıktı dosyası (.gif)"
 
@@ -1829,6 +1863,666 @@ msgstr "Dosya yöneticisinde resim dosyalarını kopyalayın ve tekrar deneyin."
 #: crates/bigiris/src/gui/transfers.rs:96
 msgid "Não foi possível abrir os arquivos"
 msgstr "Dosyalar açılamadı"
+
+#: crates/bigiris/src/main.rs:44
+msgid "Visualizador rápido e conversor de imagens para Linux"
+msgstr "Linux için hızlı resim görüntüleyici ve dönüştürücü"
+
+#: crates/bigiris/src/main.rs:46
+msgid ""
+"Códigos de saída:\n"
+"  0  sucesso (inclui arquivos ignorados por já existirem)\n"
+"  1  uso inválido ou erro fatal antes de processar (nada foi gravado)\n"
+"  2  falha parcial: um ou mais arquivos não puderam ser processados"
+msgstr ""
+"Çıkış kodları:\n"
+"  0  başarılı (zaten var olduğu için atlanan dosyalar dahil)\n"
+"  1  geçersiz kullanım veya işlemeden önce ölümcül hata (hiçbir şey "
+"yazılmadı)\n"
+"  2  kısmi başarısızlık: bir veya daha fazla dosya işlenemedi"
+
+#: crates/bigiris/src/main.rs:52
+msgid "Abrir apenas um diálogo modal específico (usado por service menus)"
+msgstr ""
+"Yalnızca belirli bir kalıcı (modal) iletişim kutusunu aç (servis menüleri "
+"tarafından kullanılır)"
+
+#: crates/bigiris/src/main.rs:56
+msgid "Rodar smoke-test e sair (usado em CI e pós-install)"
+msgstr "Smoke-test çalıştır ve çık (CI'da ve kurulum sonrasında kullanılır)"
+
+#: crates/bigiris/src/main.rs:62
+msgid ""
+"Avisar falhas numa notificação do desktop (usado pelos menus de contexto, "
+"que não mostram o terminal)"
+msgstr ""
+"Hataları masaüstü bildirimiyle bildir (terminali göstermeyen bağlam menüleri "
+"tarafından kullanılır)"
+
+#: crates/bigiris/src/main.rs:68
+msgid "Arquivos a abrir no visualizador (quando sem subcomando)"
+msgstr "Görüntüleyicide açılacak dosyalar (alt komut olmadığında)"
+
+#: crates/bigiris/src/main.rs:98
+msgid "Não sobrescreve o arquivo existente (default)"
+msgstr "Mevcut dosyanın üzerine yazmaz (varsayılan)"
+
+#: crates/bigiris/src/main.rs:100
+msgid "Sobrescreve o arquivo existente"
+msgstr "Mevcut dosyanın üzerine yazar"
+
+#: crates/bigiris/src/main.rs:102
+msgid "Gera nome incrementado (foo_1.png, foo_2.png, ...)"
+msgstr "Numaralı ad oluşturur (foo_1.png, foo_2.png, ...)"
+
+#: crates/bigiris/src/main.rs:144
+msgid ""
+"Aresta máxima em pixels (preserva aspecto; no-op se a imagem já é menor)"
+msgstr ""
+"Piksel cinsinden en uzun kenarın azami boyu (en-boy oranını korur; resim "
+"zaten daha küçükse değişiklik yapmaz)"
+
+#: crates/bigiris/src/main.rs:147
+msgid "Escala percentual (ex: 50 para metade; 200 para o dobro)"
+msgstr "Yüzde olarak ölçek (ör. yarısı için 50; iki katı için 200)"
+
+#: crates/bigiris/src/main.rs:149
+msgid "Dimensão exata WxH (ignora aspecto)"
+msgstr "Tam boyut WxH (en-boy oranını yok sayar)"
+
+#: crates/bigiris/src/main.rs:154
+msgid "Encaixa dentro da caixa WxH preservando aspecto"
+msgstr "En-boy oranını koruyarak WxH kutusunun içine sığdırır"
+
+#: crates/bigiris/src/main.rs:184
+msgid "esperado formato WxH (ex. 1920x1080), recebido: {value}"
+msgstr "WxH biçimi bekleniyordu (ör. 1920x1080), alınan: {value}"
+
+#: crates/bigiris/src/main.rs:189 crates/bigiris/src/main.rs:255
+msgid "largura inválida: {error}"
+msgstr "geçersiz genişlik: {error}"
+
+#: crates/bigiris/src/main.rs:191 crates/bigiris/src/main.rs:257
+msgid "altura inválida: {error}"
+msgstr "geçersiz yükseklik: {error}"
+
+#: crates/bigiris/src/main.rs:247
+msgid "esperado WxH+X+Y, recebido: {value}"
+msgstr "WxH+X+Y bekleniyordu, alınan: {value}"
+
+#: crates/bigiris/src/main.rs:250
+msgid "faltou o offset Y em {value}"
+msgstr "{value} içinde Y ofseti eksik"
+
+#: crates/bigiris/src/main.rs:253
+msgid "faltou largura/altura em {value}"
+msgstr "{value} içinde genişlik/yükseklik eksik"
+
+#: crates/bigiris/src/main.rs:259
+msgid "offset X inválido: {error}"
+msgstr "geçersiz X ofseti: {error}"
+
+#: crates/bigiris/src/main.rs:261
+msgid "offset Y inválido: {error}"
+msgstr "geçersiz Y ofseti: {error}"
+
+#: crates/bigiris/src/main.rs:281
+msgid "esperado W:H (ex. 1:1, 9:16), recebido: {value}"
+msgstr "W:H bekleniyordu (ör. 1:1, 9:16), alınan: {value}"
+
+#: crates/bigiris/src/main.rs:284
+msgid "razão W inválida: {error}"
+msgstr "geçersiz W oranı: {error}"
+
+#: crates/bigiris/src/main.rs:286
+msgid "razão H inválida: {error}"
+msgstr "geçersiz H oranı: {error}"
+
+#: crates/bigiris/src/main.rs:289
+msgid "razão com componente zero não faz sentido: {value}"
+msgstr "sıfır bileşenli oran anlamsız: {value}"
+
+#: crates/bigiris/src/main.rs:332
+msgid "Tamanho exato do canvas em pixels (WxH)"
+msgstr "Piksel cinsinden tam tuval boyutu (WxH)"
+
+#: crates/bigiris/src/main.rs:337
+msgid ""
+"Razão alvo (W:H). O canvas é estendido o mínimo necessário para caber a "
+"imagem nessa proporção"
+msgstr ""
+"Hedef oran (W:H). Tuval, resmin bu orana sığması için gereken en az miktarda "
+"genişletilir"
+
+#: crates/bigiris/src/main.rs:354
+msgid "Converter arquivos (headless)"
+msgstr "Dosyaları dönüştür (headless)"
+
+#: crates/bigiris/src/main.rs:358
+msgid ""
+"Formato de destino: png, jpg, webp, avif, tiff, bmp, gif, ico, pnm/ppm/pgm/"
+"pbm, tga, qoi, hdr, exr"
+msgstr ""
+"Hedef biçim: png, jpg, webp, avif, tiff, bmp, gif, ico, pnm/ppm/pgm/pbm, "
+"tga, qoi, hdr, exr"
+
+#: crates/bigiris/src/main.rs:366
+msgid ""
+"Qualidade visual buscada: maxima, equilibrado ou menor (também max, "
+"balanced, small). Cada formato procura o menor arquivo que mantém essa "
+"qualidade (SSIMULACRA2 85 / 80 / 70)"
+msgstr ""
+"Hedeflenen görsel kalite: maxima, equilibrado veya menor (ayrıca max, "
+"balanced, small). Her biçim bu kaliteyi koruyan en küçük dosyayı arar "
+"(SSIMULACRA2 85 / 80 / 70)"
+
+#: crates/bigiris/src/main.rs:372
+msgid ""
+"Qualidade fixa 1..100 para JPEG/WebP/AVIF, sem busca (ignora --target). Em "
+"WebP, 100 grava sem perdas"
+msgstr ""
+"JPEG/WebP/AVIF için arama yapmadan sabit kalite 1..100 (--target'ı yok "
+"sayar). WebP'de 100 kayıpsız yazar"
+
+#: crates/bigiris/src/main.rs:375 crates/bigiris/src/main.rs:416
+msgid "Aceito por compatibilidade: o JPEG já é sempre progressivo"
+msgstr "Uyumluluk için kabul edilir: JPEG zaten her zaman aşamalıdır"
+
+#: crates/bigiris/src/main.rs:377 crates/bigiris/src/main.rs:418
+msgid "Compressão mais lenta e menor, sem perdas a mais: PNG e AVIF"
+msgstr ""
+"Daha yavaş sıkıştırma ve daha küçük dosyalar, ek kayıp olmadan: PNG ve AVIF"
+
+#: crates/bigiris/src/main.rs:383 crates/bigiris/src/main.rs:424
+#: crates/bigiris/src/main.rs:451
+msgid "Política quando o arquivo de saída já existe"
+msgstr "Çıktı dosyası zaten varsa uygulanacak politika"
+
+#: crates/bigiris/src/main.rs:386
+msgid "Arquivos de entrada"
+msgstr "Girdi dosyaları"
+
+#: crates/bigiris/src/main.rs:389
+msgid ""
+"Redimensionar arquivos (headless). Exatamente um modo entre --max-edge / --"
+"percent / --exact / --fit é obrigatório"
+msgstr ""
+"Dosyaları yeniden boyutlandır (headless). --max-edge / --percent / --exact / "
+"--fit kiplerinden tam olarak biri zorunludur"
+
+#: crates/bigiris/src/main.rs:397
+msgid "Kernel de interpolação (default: lanczos3)"
+msgstr "Ara değerleme çekirdeği (varsayılan: lanczos3)"
+
+#: crates/bigiris/src/main.rs:400 crates/bigiris/src/main.rs:445
+msgid "Formato de destino (opcional; mantém o formato original se omitido)"
+msgstr "Hedef biçim (isteğe bağlı; belirtilmezse özgün biçim korunur)"
+
+#: crates/bigiris/src/main.rs:407
+msgid ""
+"Qualidade visual buscada: maxima, equilibrado ou menor (também max, "
+"balanced, small)"
+msgstr ""
+"Hedeflenen görsel kalite: maxima, equilibrado veya menor (ayrıca max, "
+"balanced, small)"
+
+#: crates/bigiris/src/main.rs:413
+msgid "Qualidade fixa 1..100 para JPEG/WebP/AVIF, sem busca (ignora --target)"
+msgstr ""
+"JPEG/WebP/AVIF için arama yapmadan sabit kalite 1..100 (--target'ı yok sayar)"
+
+#: crates/bigiris/src/main.rs:430
+msgid ""
+"Girar arquivos (headless). Rotações cardinais via pipeline de re-encode; `--"
+"auto` lê o tag EXIF Orientation e aplica a rotação certa"
+msgstr ""
+"Dosyaları döndür (headless). Dik açılı döndürmeler yeniden kodlama ile "
+"yapılır; `--auto` EXIF Orientation etiketini okur ve doğru döndürmeyi uygular"
+
+#: crates/bigiris/src/main.rs:436
+msgid "Graus cardinais: 90 | 180 | 270"
+msgstr "Dik açı derecesi: 90 | 180 | 270"
+
+#: crates/bigiris/src/main.rs:442
+msgid "Auto-orientar via EXIF (tag Orientation)"
+msgstr "EXIF ile otomatik yönlendir (Orientation etiketi)"
+
+#: crates/bigiris/src/main.rs:457
+msgid "Espelhar arquivos na horizontal ou vertical (headless)"
+msgstr "Dosyaları yatay veya dikey çevir (headless)"
+
+#: crates/bigiris/src/main.rs:459
+msgid "Eixo: horizontal | vertical"
+msgstr "Eksen: horizontal | vertical"
+
+#: crates/bigiris/src/main.rs:461 crates/bigiris/src/main.rs:475
+#: crates/bigiris/src/main.rs:499 crates/bigiris/src/main.rs:535
+msgid "Formato de destino (opcional)"
+msgstr "Hedef biçim (isteğe bağlı)"
+
+#: crates/bigiris/src/main.rs:468
+msgid ""
+"Recortar retângulo das imagens (headless). Use --rect WxH+X+Y ao estilo "
+"ImageMagick"
+msgstr ""
+"Resimlerden dikdörtgen kırp (headless). ImageMagick tarzında --rect WxH+X+Y "
+"kullanın"
+
+#: crates/bigiris/src/main.rs:472
+msgid "Geometria do recorte no formato WxH+X+Y (ex: 800x600+100+50)"
+msgstr "WxH+X+Y biçiminde kırpma geometrisi (ör. 800x600+100+50)"
+
+#: crates/bigiris/src/main.rs:482
+msgid ""
+"Estender a tela em volta da imagem (letterbox). Exatamente um modo entre --"
+"size e --aspect é obrigatório. O canvas é preenchido com --bg e a imagem "
+"original é posicionada por --gravity"
+msgstr ""
+"Resmin etrafındaki tuvali genişlet (letterbox). --size ve --aspect "
+"kiplerinden tam olarak biri zorunludur. Tuval --bg ile doldurulur ve özgün "
+"resim --gravity ile konumlandırılır"
+
+#: crates/bigiris/src/main.rs:489
+msgid "Cor de fundo em hexadecimal (#RRGGBB ou #RRGGBBAA)"
+msgstr "Onaltılık arka plan rengi (#RRGGBB veya #RRGGBBAA)"
+
+#: crates/bigiris/src/main.rs:496
+msgid "Posição da imagem original no canvas estendido"
+msgstr "Özgün resmin genişletilmiş tuvaldeki konumu"
+
+#: crates/bigiris/src/main.rs:506
+msgid "Ajustar cor/tom (brilho, contraste, saturação, gamma)"
+msgstr "Renk/ton ayarla (parlaklık, kontrast, doygunluk, gama)"
+
+#: crates/bigiris/src/main.rs:512
+msgid "Brilho -100..100 (0 = sem mudança)"
+msgstr "Parlaklık -100..100 (0 = değişiklik yok)"
+
+#: crates/bigiris/src/main.rs:519
+msgid "Contraste -100..100 (0 = sem mudança)"
+msgstr "Kontrast -100..100 (0 = değişiklik yok)"
+
+#: crates/bigiris/src/main.rs:526
+msgid "Saturação -100..100 (-100 = cinza, 0 = sem mudança)"
+msgstr "Doygunluk -100..100 (-100 = gri, 0 = değişiklik yok)"
+
+#: crates/bigiris/src/main.rs:532
+msgid "Gamma 0.1..10.0 (< 1 clareia midtones, > 1 escurece)"
+msgstr "Gama 0.1..10.0 (< 1 orta tonları açar, > 1 koyulaştırır)"
+
+#: crates/bigiris/src/main.rs:542
+msgid ""
+"Remover fundo usando IA local (BiRefNet-lite, pacote birefnet-native). Grava "
+"`<nome>_nobg.png` (PNG com alfa) ao lado de cada imagem"
+msgstr ""
+"Yerel YZ ile arka planı sil (BiRefNet-lite, birefnet-native paketi). Her "
+"resmin yanına `<ad>_nobg.png` (alfalı PNG) yazar"
+
+#: crates/bigiris/src/main.rs:548
+msgid "Modelo de segmentação"
+msgstr "Bölütleme modeli"
+
+#: crates/bigiris/src/main.rs:555
+msgid "Política quando `<nome>_nobg.png` já existe"
+msgstr "`<ad>_nobg.png` zaten varsa uygulanacak politika"
+
+#: crates/bigiris/src/main.rs:561
+msgid ""
+"Aumentar resolução por 2, 3 ou 4. Com o pacote realesrgan-native usa IA "
+"(Real-ESRGAN); sem ele, Lanczos3. Grava `<nome>_<pct>pct.<ext>`"
+msgstr ""
+"Çözünürlüğü 2, 3 veya 4 kat artır. realesrgan-native paketi varsa YZ (Real-"
+"ESRGAN), yoksa Lanczos3 kullanır. `<ad>_<pct>pct.<ext>` yazar"
+
+#: crates/bigiris/src/main.rs:563
+msgid "Fator inteiro (2, 3 ou 4)"
+msgstr "Tam sayı çarpan (2, 3 veya 4)"
+
+#: crates/bigiris/src/main.rs:569
+msgid ""
+"Motor: auto (Real-ESRGAN se instalado, senão Lanczos3), realesrgan (falha se "
+"ausente) ou lanczos"
+msgstr ""
+"Motor: auto (yüklüyse Real-ESRGAN, değilse Lanczos3), realesrgan (yoksa "
+"başarısız olur) veya lanczos"
+
+#: crates/bigiris/src/main.rs:576 crates/bigiris/src/main.rs:588
+#: crates/bigiris/src/main.rs:606 crates/bigiris/src/main.rs:638
+msgid "Política de sobrescrita do arquivo de saída"
+msgstr "Çıktı dosyasının üzerine yazma politikası"
+
+#: crates/bigiris/src/main.rs:582
+msgid ""
+"Remover ruído e artefatos de compressão com IA local (SCUNet, pacote scunet-"
+"native). Grava `<nome>_denoised.<ext>`"
+msgstr ""
+"Yerel YZ ile gürültüyü ve sıkıştırma bozulmalarını sil (SCUNet, scunet-"
+"native paketi). `<ad>_denoised.<ext>` yazar"
+
+#: crates/bigiris/src/main.rs:594
+msgid ""
+"Apagar objetos: preenche a área marcada na máscara com IA local (LaMa, "
+"pacote lama-native). Grava `<nome>_inpaint.<ext>`"
+msgstr ""
+"Nesneleri sil: maskede işaretlenen alanı yerel YZ ile doldurur (LaMa, lama-"
+"native paketi). `<ad>_inpaint.<ext>` yazar"
+
+#: crates/bigiris/src/main.rs:599
+msgid ""
+"Máscara do mesmo tamanho da imagem: branco = preencher, preto = manter "
+"(áreas transparentes são mantidas)"
+msgstr ""
+"Resimle aynı boyutta maske: beyaz = doldur, siyah = koru (saydam alanlar "
+"korunur)"
+
+#: crates/bigiris/src/main.rs:612
+msgid "Criar GIF animado a partir de uma sequência de imagens (headless)"
+msgstr "Bir resim dizisinden hareketli GIF oluştur (headless)"
+
+#: crates/bigiris/src/main.rs:619
+msgid "Atraso entre quadros em milissegundos (100 ≈ 10 fps)"
+msgstr "Kareler arası gecikme, milisaniye cinsinden (100 ≈ 10 fps)"
+
+#: crates/bigiris/src/main.rs:625
+msgid "Número de repetições: 0 = infinito (default), 1+ = fixo"
+msgstr "Tekrar sayısı: 0 = sonsuz (varsayılan), 1+ = sabit"
+
+#: crates/bigiris/src/main.rs:631
+msgid "Velocidade do encoder 1..30 (maior = mais rápido, pior paleta)"
+msgstr "Kodlayıcı hızı 1..30 (yüksek = daha hızlı, daha kötü palet)"
+
+#: crates/bigiris/src/main.rs:641
+msgid "Quadros em ordem (mínimo 1)"
+msgstr "Sıralı kareler (en az 1)"
+
+#: crates/bigiris/src/main.rs:644
+msgid "Processar arquivos ou pastas em paralelo a partir de um perfil TOML"
+msgstr "Bir TOML profiline göre dosya veya klasörleri paralel işle"
+
+#: crates/bigiris/src/main.rs:646
+msgid "Arquivo de perfil .toml"
+msgstr ".toml profil dosyası"
+
+#: crates/bigiris/src/main.rs:651
+msgid "Instalar integrações com gerenciadores de arquivos"
+msgstr "Dosya yöneticisi entegrasyonlarını yükle"
+
+#: crates/bigiris/src/main.rs:653
+msgid "Instalar em ~/.local/share (default)"
+msgstr "~/.local/share konumuna yükle (varsayılan)"
+
+#: crates/bigiris/src/main.rs:657
+msgid "Instalar em /usr/share (requer root; normalmente feito pelo pacote)"
+msgstr ""
+"/usr/share konumuna yükle (root gerektirir; genellikle paket tarafından "
+"yapılır)"
+
+#: crates/bigiris/src/main.rs:665
+msgid ""
+"Prefixo DESTDIR para empacotamento (ex: $pkgdir no PKGBUILD). Só faz sentido "
+"combinado com --system"
+msgstr ""
+"Paketleme için DESTDIR öneki (ör. PKGBUILD içinde $pkgdir). Yalnızca --"
+"system ile birlikte anlamlıdır"
+
+#: crates/bigiris/src/main.rs:669
+msgid "Remover integrações previamente instaladas"
+msgstr "Daha önce yüklenmiş entegrasyonları kaldır"
+
+#: crates/bigiris/src/main.rs:671
+msgid ""
+"Converter documentos (ODT, DOCX, TXT, MD, RTF, XLSX, PPTX, etc.) para PDF "
+"via LibreOffice headless. Saída gravada ao lado do arquivo de origem"
+msgstr ""
+"Belgeleri (ODT, DOCX, TXT, MD, RTF, XLSX, PPTX vb.) headless LibreOffice ile "
+"PDF'ye dönüştür. Çıktı, kaynak dosyanın yanına yazılır"
+
+#: crates/bigiris/src/main.rs:677
+msgid "Política quando `<nome>.pdf` já existe"
+msgstr "`<ad>.pdf` zaten varsa uygulanacak politika"
+
+#: crates/bigiris/src/main.rs:684
+msgid "Tempo máximo por documento, em segundos"
+msgstr "Belge başına azami süre, saniye cinsinden"
+
+#: crates/bigiris/src/main.rs:697
+msgid "BiRefNet-lite (único modelo disponível)"
+msgstr "BiRefNet-lite (mevcut tek model)"
+
+#: crates/bigiris/src/main.rs:705
+msgid ""
+"Real-ESRGAN quando o pacote realesrgan-native está instalado, senão Lanczos3"
+msgstr "realesrgan-native paketi yüklüyse Real-ESRGAN, değilse Lanczos3"
+
+#: crates/bigiris/src/main.rs:710
+msgid "IA Real-ESRGAN (requer realesrgan-native)"
+msgstr "Real-ESRGAN YZ (realesrgan-native gerektirir)"
+
+#: crates/bigiris/src/main.rs:713
+msgid "Reamostragem Lanczos3 (sem IA)"
+msgstr "Lanczos3 yeniden örnekleme (YZ olmadan)"
+
+#: crates/bigiris/src/main.rs:795
+msgid "rotate: use --degrees 90|180|270 ou --auto"
+msgstr "rotate: --degrees 90|180|270 veya --auto kullanın"
+
+#: crates/bigiris/src/main.rs:867
+msgid "BigIris: a operação falhou"
+msgstr "BigIris: işlem başarısız oldu"
+
+#: crates/bigiris/src/main.rs:881
+msgid "Alguns arquivos não foram processados; veja os detalhes no terminal."
+msgstr "Bazı dosyalar işlenemedi; ayrıntılar için terminale bakın."
+
+#: crates/bigiris/src/main.rs:957
+msgid "alvo de qualidade inválido: {value}; use maxima, equilibrado ou menor"
+msgstr ""
+"geçersiz kalite hedefi: {value}; maxima, equilibrado veya menor kullanın"
+
+#: crates/bigiris/src/main.rs:970 crates/bigiris/src/main.rs:1064
+msgid "formato de destino inválido: {error}"
+msgstr "geçersiz hedef biçim: {error}"
+
+#: crates/bigiris/src/main.rs:980
+msgid "o original já era menor; copiado sem recompressão"
+msgstr "özgün dosya zaten daha küçüktü; yeniden sıkıştırılmadan kopyalandı"
+
+#: crates/bigiris/src/main.rs:1038
+msgid "--bg inválido: {error}"
+msgstr "geçersiz --bg: {error}"
+
+#: crates/bigiris/src/main.rs:1170
+msgid "várias entradas gravariam o mesmo arquivo de saída:"
+msgstr "birden çok girdi aynı çıktı dosyasına yazacaktı:"
+
+#: crates/bigiris/src/main.rs:1178
+msgid ""
+"Renomeie as entradas, processe-as separadamente ou use a política increment."
+msgstr ""
+"Girdileri yeniden adlandırın, ayrı ayrı işleyin veya increment politikasını "
+"kullanın."
+
+#: crates/bigiris/src/main.rs:1226
+msgid "substituiu a saída de outra entrada: {path}"
+msgstr "başka bir girdinin çıktısının üzerine yazıldı: {path}"
+
+#: crates/bigiris/src/main.rs:1256
+msgid "já existe: {path}"
+msgstr "zaten var: {path}"
+
+#: crates/bigiris/src/main.rs:1262
+msgid ""
+"{operation}: {written} gravado(s), {skipped} ignorado(s), {failed} falha(s)"
+msgstr ""
+"{operation}: yazılan: {written}, atlanan: {skipped}, başarısız: {failed}"
+
+#: crates/bigiris/src/main.rs:1355
+msgid "{model} não está instalado ({path} não existe). Instale com: {command}"
+msgstr "{model} yüklü değil ({path} mevcut değil). Şununla yükleyin: {command}"
+
+#: crates/bigiris/src/main.rs:1364
+msgid "não foi possível ler os pesos de {model} em {path}: {error}"
+msgstr "{model} ağırlıkları {path} konumundan okunamadı: {error}"
+
+#: crates/bigiris/src/main.rs:1397
+msgid "fator inválido: {factor}. Use 2, 3 ou 4."
+msgstr "geçersiz çarpan: {factor}. 2, 3 veya 4 kullanın."
+
+#: crates/bigiris/src/main.rs:1414
+msgid "Real-ESRGAN indisponível; usando Lanczos3. Para usar IA: {command}"
+msgstr ""
+"Real-ESRGAN kullanılamıyor; Lanczos3 kullanılıyor. YZ kullanmak için: "
+"{command}"
+
+#: crates/bigiris/src/main.rs:1474
+msgid "máscara {path}: {error}"
+msgstr "maske {path}: {error}"
+
+#: crates/bigiris/src/main.rs:1486
+msgid "não marca nenhuma área (pinte de branco o que deve ser apagado)"
+msgstr "hiçbir alanı işaretlemiyor (silinecek yerleri beyaza boyayın)"
+
+#: crates/bigiris/src/main.rs:1522
+msgid "{count} quadro(s)"
+msgstr "kare sayısı: {count}"
+
+#: crates/bigiris/src/main.rs:1565
+msgid "não foi possível ler {path}: {error}"
+msgstr "{path} okunamadı: {error}"
+
+#: crates/bigiris/src/main.rs:1571
+msgid "perfil TOML inválido: {error}"
+msgstr "geçersiz TOML profili: {error}"
+
+#: crates/bigiris/src/main.rs:1574
+msgid "quality deve estar entre 1 e 100"
+msgstr "quality 1 ile 100 arasında olmalıdır"
+
+#: crates/bigiris/src/main.rs:1577
+msgid "formato do perfil inválido: {error}"
+msgstr "geçersiz profil biçimi: {error}"
+
+#: crates/bigiris/src/main.rs:1589
+msgid "overwrite inválido: {value}; use skip, replace ou increment"
+msgstr "geçersiz overwrite: {value}; skip, replace veya increment kullanın"
+
+#: crates/bigiris/src/main.rs:1597
+msgid "não foi possível criar {path}: {error}"
+msgstr "{path} oluşturulamadı: {error}"
+
+#: crates/bigiris/src/main.rs:1620
+msgid "nenhuma imagem encontrada para o lote"
+msgstr "toplu işlem için resim bulunamadı"
+
+#: crates/bigiris/src/main.rs:1728
+msgid ""
+"LibreOffice (`soffice`) não encontrado no PATH. Instale `libreoffice-fresh` "
+"(recomendado) ou `libreoffice-still` (ex.: `sudo pacman -S libreoffice-"
+"fresh`)."
+msgstr ""
+"LibreOffice (`soffice`) PATH içinde bulunamadı. `libreoffice-fresh` "
+"(önerilen) veya `libreoffice-still` paketini yükleyin (ör. `sudo pacman -S "
+"libreoffice-fresh`)."
+
+#: crates/bigiris/src/main.rs:1780
+msgid "não é um arquivo regular"
+msgstr "normal bir dosya değil"
+
+#: crates/bigiris/src/main.rs:1783
+msgid "nome de arquivo inválido"
+msgstr "geçersiz dosya adı"
+
+#: crates/bigiris/src/main.rs:1804
+msgid "falha ao invocar soffice: {error}"
+msgstr "soffice çağrılamadı: {error}"
+
+#: crates/bigiris/src/main.rs:1815
+msgid "soffice excedeu o limite de {seconds} s"
+msgstr "soffice {seconds} s sınırını aştı"
+
+#: crates/bigiris/src/main.rs:1828
+msgid "soffice não gerou o PDF ({status})"
+msgstr "soffice PDF oluşturmadı ({status})"
+
+#: crates/bigiris/src/main.rs:1871
+msgid "muitos arquivos com o mesmo nome: {path}"
+msgstr "aynı ada sahip çok fazla dosya: {path}"
+
+#: crates/bigiris/src/main.rs:1914
+msgid "a instalação falhou: {error}"
+msgstr "kurulum başarısız oldu: {error}"
+
+#: crates/bigiris/src/main.rs:1920
+msgid "instalado"
+msgstr "yüklendi"
+
+#: crates/bigiris/src/main.rs:1921
+msgid "instalado no total: {files} arquivo(s) em {managers} gerenciador(es)"
+msgstr "toplam yüklenen: dosya: {files}, yönetici: {managers}"
+
+#: crates/bigiris/src/main.rs:1937
+msgid "a remoção falhou: {error}"
+msgstr "kaldırma başarısız oldu: {error}"
+
+#: crates/bigiris/src/main.rs:1941
+msgid "removido"
+msgstr "kaldırıldı"
+
+#: crates/bigiris/src/main.rs:1942
+msgid "removido no total: {files} arquivo(s) em {managers} gerenciador(es)"
+msgstr "toplam kaldırılan: dosya: {files}, yönetici: {managers}"
+
+#: crates/bigiris/src/main.rs:1965
+msgid "FALHA"
+msgstr "BAŞARISIZ"
+
+#: crates/bigiris/src/main.rs:1970
+msgid "fornecido pelo pacote"
+msgstr "paket tarafından sağlanıyor"
+
+#: crates/bigiris/src/main.rs:1973
+msgid "sem alterações"
+msgstr "değişiklik yok"
+
+#: crates/bigiris/src/main.rs:1975
+msgid "ignorado"
+msgstr "atlandı"
+
+#: crates/bigiris/src/main.rs:1981
+msgid "detectado"
+msgstr "algılandı"
+
+#: crates/bigiris/src/main.rs:1981
+msgid "ausente no PATH"
+msgstr "PATH içinde yok"
+
+#: crates/bigiris/src/main.rs:1983
+msgid "{count} arquivo(s)"
+msgstr "dosya sayısı: {count}"
+
+#: crates/bigiris/src/main.rs:2010
+msgid ""
+"aviso: build atual sem feature `gui`. Diálogo '{dialog}' ignorado (recompile "
+"com --features gui)."
+msgstr ""
+"uyarı: mevcut derleme `gui` özelliği olmadan yapılmış. '{dialog}' iletişim "
+"kutusu yok sayıldı (--features gui ile yeniden derleyin)."
+
+#: crates/bigiris/src/main.rs:2017
+msgid ""
+"aviso: build atual sem feature `gui`. Visualizador indisponível (recompile "
+"com --features gui)."
+msgstr ""
+"uyarı: mevcut derleme `gui` özelliği olmadan yapılmış. Görüntüleyici "
+"kullanılamıyor (--features gui ile yeniden derleyin)."
+
+#: crates/bigiris/src/main.rs:2022
+msgid ""
+"aviso: build atual sem feature `gui`. Visualizador indisponível; arquivos "
+"recebidos:"
+msgstr ""
+"uyarı: mevcut derleme `gui` özelliği olmadan yapılmış. Görüntüleyici "
+"kullanılamıyor; alınan dosyalar:"
 
 #: crates/bigimage-integrations/src/action.rs:97
 msgid "Para web"

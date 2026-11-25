@@ -3,8 +3,15 @@
 use std::path::Path;
 use std::process::{Command, Output};
 
+/// The executable in the C locale, so messages are the Portuguese source text
+/// whatever locale the test runner has.
+fn bigiris() -> Command {
+    let mut command = Command::new(env!("CARGO_BIN_EXE_bigiris"));
+    command.env("LC_ALL", "C");
+    command
+}
 fn run(dir: &Path, args: &[&str]) -> Output {
-    Command::new(env!("CARGO_BIN_EXE_bigiris")).current_dir(dir).args(args).output().unwrap()
+    bigiris().current_dir(dir).args(args).output().unwrap()
 }
 fn fixture(dir: &Path, name: &str) {
     image::RgbImage::from_pixel(32, 24, image::Rgb([30, 70, 120])).save(dir.join(name)).unwrap();
@@ -22,6 +29,58 @@ fn self_test_and_help_exit_successfully() {
     let dir = tempfile::tempdir().unwrap();
     success(run(dir.path(), &["--self-test"]));
     success(run(dir.path(), &["--help"]));
+}
+/// `LC_ALL` value of an installed English UTF-8 locale, if `locale -a` lists one.
+fn english_locale() -> Option<&'static str> {
+    let listed = Command::new("locale").arg("-a").output().ok()?;
+    String::from_utf8_lossy(&listed.stdout)
+        .lines()
+        .any(|name| name.eq_ignore_ascii_case("en_US.utf8") || name == "en_US.UTF-8")
+        .then_some("en_US.UTF-8")
+}
+#[test]
+fn messages_follow_the_user_locale() {
+    let Some(english) = english_locale() else {
+        // allow-noisy-log: a skipped check says so in the test output.
+        eprintln!("skipped: no en_US.UTF-8 locale installed (see `locale -a`)");
+        return;
+    };
+    let dir = tempfile::tempdir().unwrap();
+    let locale_dir = dir.path().join("locale");
+    let catalog = locale_dir.join("en/LC_MESSAGES/bigiris.mo");
+    std::fs::create_dir_all(catalog.parent().unwrap()).unwrap();
+    let source = concat!(env!("CARGO_MANIFEST_DIR"), "/../../data/po/en.po");
+    let compiled = Command::new("msgfmt")
+        .arg("-o")
+        .arg(&catalog)
+        .arg(source)
+        .status()
+        .expect("msgfmt from gettext, a build dependency");
+    assert!(compiled.success(), "msgfmt {source}");
+    let in_locale = |lc_all: &str, args: &[&str]| {
+        Command::new(env!("CARGO_BIN_EXE_bigiris"))
+            .current_dir(dir.path())
+            .env("BIGIRIS_LOCALE_DIR", &locale_dir)
+            .env("LC_ALL", lc_all)
+            .env("LANGUAGE", "en")
+            .args(args)
+            .output()
+            .unwrap()
+    };
+    let bogus_target = ["convert", "--to", "bogus", "missing.png"];
+
+    let help = String::from_utf8_lossy(&in_locale(english, &["--help"]).stdout).into_owned();
+    assert!(help.contains("Fast image viewer and converter for Linux"), "{help}");
+    assert!(help.contains("partial failure"), "{help}");
+    let failure = in_locale(english, &bogus_target);
+    let error = String::from_utf8_lossy(&failure.stderr);
+    assert!(error.contains("invalid target format"), "{error}");
+
+    let help = String::from_utf8_lossy(&in_locale("C", &["--help"]).stdout).into_owned();
+    assert!(help.contains("Visualizador rápido e conversor de imagens para Linux"), "{help}");
+    let failure = in_locale("C", &bogus_target);
+    let error = String::from_utf8_lossy(&failure.stderr);
+    assert!(error.contains("formato de destino inválido"), "{error}");
 }
 #[test]
 fn conversion_transform_and_animation_commands_produce_readable_outputs() {
@@ -90,7 +149,7 @@ fn notify_reports_failures_only_when_asked() {
     std::fs::set_permissions(&stub, std::fs::Permissions::from_mode(0o755)).unwrap();
     let path = format!("{}:{}", bin.display(), std::env::var("PATH").unwrap_or_default());
     let failing = |notify: bool| {
-        let mut command = Command::new(env!("CARGO_BIN_EXE_bigiris"));
+        let mut command = bigiris();
         command.current_dir(dir.path()).env("PATH", &path);
         if notify {
             command.arg("--notify");
@@ -125,6 +184,7 @@ fn low_memory_refuses_ai_before_loading_and_preserves_inputs() {
         .args(["--as=536870912", "--core=0", "--"])
         .arg(env!("CARGO_BIN_EXE_bigiris"))
         .args(["remove-bg", "source.png"])
+        .env("LC_ALL", "C")
         .env("BIGIRIS_BIREFNET_WEIGHTS", fake_weights(dir.path()))
         .current_dir(dir.path())
         .output()
@@ -301,7 +361,7 @@ fn ai_commands_skip_existing_outputs_without_loading_the_model() {
         (vec!["denoise", "source.png"], "BIGIRIS_SCUNET_WEIGHTS"),
     ] {
         // Loading the fake weights would fail the file: a skip must not.
-        let output = Command::new(env!("CARGO_BIN_EXE_bigiris"))
+        let output = bigiris()
             .args(&args)
             .env(var, &fake)
             .current_dir(dir.path())
@@ -334,7 +394,7 @@ fn ai_commands_name_the_missing_package_before_any_work() {
             "realesrgan-native",
         ),
     ] {
-        let output = Command::new(env!("CARGO_BIN_EXE_bigiris"))
+        let output = bigiris()
             .args(&args)
             .env(var, &absent)
             .current_dir(dir.path())
@@ -358,7 +418,7 @@ fn upscale_falls_back_to_lanczos_without_real_esrgan() {
     }
     let dir = tempfile::tempdir().unwrap();
     sized_fixture(dir.path(), "a.png", 16, 12);
-    let output = Command::new(env!("CARGO_BIN_EXE_bigiris"))
+    let output = bigiris()
         .args(["upscale", "--factor", "3", "a.png"])
         .env("BIGIRIS_REALESRGAN_WEIGHTS", dir.path().join("absent.weights"))
         .current_dir(dir.path())
@@ -391,7 +451,7 @@ fn inpaint_refuses_empty_masks_and_reports_size_mismatches() {
         .save(dir.path().join("small.png"))
         .unwrap();
     let inpaint = |mask: &str| {
-        Command::new(env!("CARGO_BIN_EXE_bigiris"))
+        bigiris()
             .args(["inpaint", "--mask", mask, "a.png"])
             .env("BIGIRIS_LAMA_WEIGHTS", &fake)
             .current_dir(dir.path())
@@ -570,7 +630,7 @@ exit 0
 "#;
 
 fn to_pdf(dir: &Path, bin: &Path, mode: &str, args: &[&str]) -> Output {
-    Command::new(env!("CARGO_BIN_EXE_bigiris"))
+    bigiris()
         .arg("to-pdf")
         .args(args)
         .env("PATH", bin)

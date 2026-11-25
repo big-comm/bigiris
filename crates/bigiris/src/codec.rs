@@ -2,6 +2,7 @@
 //! Confine untrusted codecs to a short-lived, resource-limited process.
 //! The parent accepts only a validated, bounded raw-pixel protocol.
 use bigimage_core::{backend, BigImageError, Format, Metadata, PreviewSession};
+use gettextrs::gettext;
 use image::{ColorType, DynamicImage, GenericImageView, ImageBuffer, ImageError, ImageResult};
 use std::cell::RefCell;
 use std::io::{Read, Seek, SeekFrom, Write};
@@ -117,7 +118,7 @@ pub(crate) fn installed_executable() -> std::io::Result<(PathBuf, bool)> {
     replaced.map(|path| (path, true)).ok_or_else(|| {
         std::io::Error::new(
             std::io::ErrorKind::NotFound,
-            "o executável do BigIris foi removido; reinicie o BigIris",
+            gettext("o executável do BigIris foi removido; reinicie o BigIris"),
         )
     })
 }
@@ -327,14 +328,14 @@ fn wait_child(
     .ok();
     loop {
         if cancellable && cancelled() {
-            return Err(invalid("operação cancelada"));
+            return Err(invalid(gettext("operação cancelada")));
         }
         if let Some(status) = child.try_wait()? {
             return Ok(status);
         }
         let now = Instant::now();
         if now >= deadline {
-            return Err(invalid("codec excedeu o limite de tempo"));
+            return Err(invalid(gettext("codec excedeu o limite de tempo")));
         }
         let slice = (deadline - now).min(Duration::from_millis(50));
         match &pidfd {
@@ -389,7 +390,9 @@ pub(crate) fn sanitize_text(text: &str) -> String {
 }
 
 /// Appended to worker failures when the executable was replaced on disk.
-const RESTART_HINT: &str = " (o BigIris foi atualizado; reinicie-o)";
+fn restart_hint() -> String {
+    format!(" ({})", gettext("o BigIris foi atualizado; reinicie-o"))
+}
 
 /// Identity a worker must match: the protocol magic, the crate version and
 /// the build id from `build.rs`. The version alone never changes between
@@ -409,7 +412,7 @@ fn run<T>(
     let mut replaced = false;
     execute(path, mode, &mut replaced).and_then(parse).map_err(|error| {
         if replaced && !cancelled() {
-            invalid(format!("{error}{RESTART_HINT}"))
+            invalid(format!("{error}{}", restart_hint()))
         } else {
             error
         }
@@ -419,7 +422,7 @@ fn run<T>(
 /// `replaced` reports whether failures still need the restart hint.
 fn execute(path: &Path, mode: &str, replaced: &mut bool) -> ImageResult<std::fs::File> {
     if cancelled() {
-        return Err(invalid("operação cancelada"));
+        return Err(invalid(gettext("operação cancelada")));
     }
     let input = std::fs::OpenOptions::new()
         .read(true)
@@ -427,7 +430,7 @@ fn execute(path: &Path, mode: &str, replaced: &mut bool) -> ImageResult<std::fs:
         .open(path)?;
     let info = input.metadata()?;
     if !info.is_file() || info.len() > MAX_INPUT {
-        return Err(invalid("entrada não regular ou acima de 1 GiB"));
+        return Err(invalid(gettext("entrada não regular ou acima de 1 GiB")));
     }
     let extension = path
         .extension()
@@ -512,7 +515,10 @@ fn execute(path: &Path, mode: &str, replaced: &mut bool) -> ImageResult<std::fs:
         .stdout(Stdio::from(output.try_clone()?))
         .stderr(Stdio::piped());
     let child = command.spawn().map_err(|error| {
-        invalid(format!("sandbox indisponível: instale bubblewrap e util-linux; {error}"))
+        invalid(crate::with_error(
+            &gettext("sandbox indisponível: instale bubblewrap e util-linux; {error}"),
+            error,
+        ))
     })?;
     drop(input);
     let mut child = ChildGuard(child);
@@ -520,15 +526,20 @@ fn execute(path: &Path, mode: &str, replaced: &mut bool) -> ImageResult<std::fs:
     let status = wait_child(&mut child.0, Instant::now() + budget, true)?;
     if !status.success() {
         // Both messages below already carry the restart advice.
-        let hint = if std::mem::take(replaced) { RESTART_HINT } else { "" };
+        let hint = if std::mem::take(replaced) { restart_hint() } else { String::new() };
         if status.code() == Some(VERSION_MISMATCH) {
-            return Err(invalid("o BigIris foi atualizado enquanto estava aberto; reinicie-o"));
+            return Err(invalid(gettext(
+                "o BigIris foi atualizado enquanto estava aberto; reinicie-o",
+            )));
         }
         let details = diagnostics
             .and_then(|rx| rx.recv_timeout(Duration::from_secs(2)).ok())
             .unwrap_or_default();
         let details = sanitize_text(String::from_utf8_lossy(&details).trim());
-        return Err(invalid(format!("codec isolado recusou a imagem ({status}){hint}: {details}")));
+        return Err(invalid(crate::fill(
+            &gettext("codec isolado recusou a imagem ({status}){hint}: {details}"),
+            &[("status", &status.to_string()), ("hint", &hint), ("details", &details)],
+        )));
     }
     let mut output = output;
     output.seek(SeekFrom::Start(0))?;
@@ -1101,7 +1112,7 @@ mod tests {
             return;
         };
         let message = result.unwrap_err().to_string();
-        assert!(message.contains("protocolo") && message.ends_with(RESTART_HINT), "{message}");
+        assert!(message.contains("protocolo") && message.ends_with(&restart_hint()), "{message}");
         // A worker that already explains the upgrade is not hinted twice.
         let Some(result) = with_worker("exit 86", DEADLINE, || {
             TEST_EXECUTABLE.with(|slot| slot.borrow_mut().as_mut().unwrap().2 = true);
@@ -1110,7 +1121,7 @@ mod tests {
             return;
         };
         let message = result.unwrap_err().to_string();
-        assert!(message.contains("reinicie") && !message.ends_with(RESTART_HINT), "{message}");
+        assert!(message.contains("reinicie") && !message.ends_with(&restart_hint()), "{message}");
     }
 
     #[test]

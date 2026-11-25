@@ -315,7 +315,10 @@ documento no LibreOffice; ao estourar, o processo e seus filhos são encerrados
 e nenhum PDF parcial fica para trás. Saídas que colidiriam entre si no mesmo
 comando são recusadas antes de qualquer gravação. Com `--notify` (usado pelos
 menus de contexto, que não mostram o terminal), uma falha também aparece numa
-notificação do desktop, pelo `notify-send` do pacote `libnotify`.
+notificação do desktop, pelo `notify-send` do pacote `libnotify`. As
+mensagens, a notificação e o `--help` seguem o idioma do sistema; os prefixos
+de status `ok`, `skip`, `err` e `info` não mudam, para que scripts possam
+lê-los.
 
 ### Códigos de saída
 

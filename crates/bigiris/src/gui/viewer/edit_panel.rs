@@ -1717,11 +1717,12 @@ pub(in crate::gui) fn save_copy(state: &Rc<RefCell<ViewerState>>, target: PathBu
         return;
     };
     let options = save_as_options(format, quality);
-    {
+    let spinner = {
         let mut s = state.borrow_mut();
         s.saving = true;
-        s.loading_spinner.set_visible(true);
-    }
+        s.loading_spinner.clone()
+    };
+    spinner.set_visible(true);
     sync_edit_actions(state);
     let worker_target = target.clone();
     let job =
@@ -1731,11 +1732,12 @@ pub(in crate::gui) fn save_copy(state: &Rc<RefCell<ViewerState>>, target: PathBu
         let result =
             job.await.unwrap_or_else(|_| Err(SaveFailure::Other("save worker panicked".into())));
         let Some(state) = weak.upgrade() else { return };
-        {
+        let spinner = {
             let mut s = state.borrow_mut();
             s.saving = false;
-            s.loading_spinner.set_visible(false);
-        }
+            s.loading_spinner.clone()
+        };
+        spinner.set_visible(false);
         sync_edit_actions(&state);
         match result {
             Ok(dropped) => {

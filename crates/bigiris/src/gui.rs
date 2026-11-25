@@ -1602,12 +1602,15 @@ fn schedule_centre_film_strip(state: &Rc<RefCell<ViewerState>>) {
 /// button's computed bounds (allocation() was deprecated in GTK 4.12).
 /// Returns false while the strip is not allocated yet.
 fn centre_film_strip(state: &Rc<RefCell<ViewerState>>) -> bool {
-    let s = state.borrow();
-    let Some(btn) = s.idx.checked_sub(s.film_strip_start).and_then(|i| s.film_strip_buttons.get(i))
-    else {
-        return false;
+    let (btn, strip) = {
+        let s = state.borrow();
+        let Some(btn) =
+            s.idx.checked_sub(s.film_strip_start).and_then(|i| s.film_strip_buttons.get(i))
+        else {
+            return false;
+        };
+        (btn.clone(), s.film_strip_scroll.clone())
     };
-    let strip = &s.film_strip_scroll;
     let viewport_w = strip.width() as f64;
     // compute_bounds returns coords in the parent (the HBox inside the
     // scroll's viewport); that's what hadjustment speaks.
@@ -1698,9 +1701,12 @@ fn osd_text(state: &Rc<RefCell<ViewerState>>) -> String {
 /// Sync the OSD label to the current file/zoom without touching visibility.
 fn refresh_osd(state: &Rc<RefCell<ViewerState>>) {
     let text = osd_text(state);
-    let s = state.borrow();
-    s.osd_label.set_label(&text);
-    s.osd_revealer.set_visible(!text.is_empty());
+    let revealer = {
+        let s = state.borrow();
+        s.osd_label.set_label(&text);
+        s.osd_revealer.clone()
+    };
+    revealer.set_visible(!text.is_empty());
 }
 
 /// Pointer moved — route to the appropriate zone. Called on every motion
@@ -1739,10 +1745,8 @@ fn on_pointer_motion(state: &Rc<RefCell<ViewerState>>, y: f64) {
 
 /// Slide the header bar into view and (re)arm its hide timer.
 fn reveal_top(state: &Rc<RefCell<ViewerState>>) {
-    {
-        let s = state.borrow();
-        s.toolbar_view.set_reveal_top_bars(true);
-    }
+    let toolbar_view = state.borrow().toolbar_view.clone();
+    toolbar_view.set_reveal_top_bars(true);
     cancel_top_hide(state);
     if state.borrow().ui_pinned || !state.borrow().autohide_ui {
         return;
@@ -1760,14 +1764,17 @@ fn reveal_top(state: &Rc<RefCell<ViewerState>>) {
 }
 
 fn hide_top(state: &Rc<RefCell<ViewerState>>) {
-    let mut s = state.borrow_mut();
-    s.top_hide_source = None;
-    let Some(window) = s.window_weak.upgrade() else { return };
-    let keyboard_in_header = gtk::prelude::GtkWindowExt::focus(&window).is_some_and(|widget| {
-        !widget.is_ancestor(&s.scroller) && !widget.is_ancestor(&s.film_strip_scroll)
-    });
+    let (keyboard_in_header, toolbar_view) = {
+        let mut s = state.borrow_mut();
+        s.top_hide_source = None;
+        let Some(window) = s.window_weak.upgrade() else { return };
+        let keyboard_in_header = gtk::prelude::GtkWindowExt::focus(&window).is_some_and(|widget| {
+            !widget.is_ancestor(&s.scroller) && !widget.is_ancestor(&s.film_strip_scroll)
+        });
+        (keyboard_in_header, s.toolbar_view.clone())
+    };
     if !keyboard_in_header && !adw::StyleManager::default().is_high_contrast() {
-        s.toolbar_view.set_reveal_top_bars(false);
+        toolbar_view.set_reveal_top_bars(false);
     }
 }
 
@@ -1780,15 +1787,15 @@ fn cancel_top_hide(state: &Rc<RefCell<ViewerState>>) {
 /// Slide the film strip into view (skips the motion when files < 2) and
 /// (re)arm its hide timer.
 fn reveal_bottom(state: &Rc<RefCell<ViewerState>>) {
-    let first_reveal = {
+    let strip = {
         let s = state.borrow();
         if s.files.len() < 2 || s.crop.is_some() {
             return;
         }
-        let hidden = !s.strip_revealer.reveals_child();
-        s.strip_revealer.set_reveal_child(true);
-        hidden
+        s.strip_revealer.clone()
     };
+    let first_reveal = !strip.reveals_child();
+    strip.set_reveal_child(true);
     // A faixa nasce rolada no começo. Como o visualizador agora pode abrir
     // no meio da pasta (clique num arquivo qualquer), a miniatura ativa
     // ficaria fora de vista na primeira vez que o strip aparece. Recentrar
@@ -1820,12 +1827,15 @@ fn hide_bottom(state: &Rc<RefCell<ViewerState>>) {
     // The F key hides the strip directly: drop the pending timer too, or it
     // would outlive a window closed right after and touch freed state.
     cancel_bottom_hide(state);
-    let s = state.borrow();
-    let Some(window) = s.window_weak.upgrade() else { return };
-    let keyboard_in_strip = gtk::prelude::GtkWindowExt::focus(&window)
-        .is_some_and(|widget| widget.is_ancestor(&s.film_strip_scroll));
+    let (keyboard_in_strip, strip) = {
+        let s = state.borrow();
+        let Some(window) = s.window_weak.upgrade() else { return };
+        let keyboard_in_strip = gtk::prelude::GtkWindowExt::focus(&window)
+            .is_some_and(|widget| widget.is_ancestor(&s.film_strip_scroll));
+        (keyboard_in_strip, s.strip_revealer.clone())
+    };
     if !keyboard_in_strip && !adw::StyleManager::default().is_high_contrast() {
-        s.strip_revealer.set_reveal_child(false);
+        strip.set_reveal_child(false);
     }
 }
 
@@ -1844,13 +1854,14 @@ fn pulse_osd(state: &Rc<RefCell<ViewerState>>) {
 
 /// [`pulse_osd`] for `millis`, for notices that take longer to read.
 fn pulse_osd_for(state: &Rc<RefCell<ViewerState>>, millis: u64) {
-    {
+    let revealer = {
         let s = state.borrow();
         if s.osd_label.label().is_empty() {
             return;
         }
-        s.osd_revealer.set_reveal_child(true);
-    }
+        s.osd_revealer.clone()
+    };
+    revealer.set_reveal_child(true);
     cancel_osd_hide(state);
     if state.borrow().ui_pinned {
         return;
@@ -1866,9 +1877,12 @@ fn pulse_osd_for(state: &Rc<RefCell<ViewerState>>, millis: u64) {
 }
 
 fn hide_osd(state: &Rc<RefCell<ViewerState>>) {
-    let mut s = state.borrow_mut();
-    s.osd_hide_source = None;
-    s.osd_revealer.set_reveal_child(false);
+    let revealer = {
+        let mut s = state.borrow_mut();
+        s.osd_hide_source = None;
+        s.osd_revealer.clone()
+    };
+    revealer.set_reveal_child(false);
 }
 
 fn cancel_osd_hide(state: &Rc<RefCell<ViewerState>>) {
@@ -1944,31 +1958,34 @@ fn toggle_ui_pin(state: &Rc<RefCell<ViewerState>>) {
         cancel_bottom_hide(state);
         cancel_osd_hide(state);
         cancel_cursor_hide(state);
+    }
+    let (toolbar_view, strip, osd, window, has_strip, has_osd, autohide) = {
         let s = state.borrow();
-        s.toolbar_view.set_reveal_top_bars(true);
-        if s.files.len() >= 2 {
-            s.strip_revealer.set_reveal_child(true);
+        (
+            s.toolbar_view.clone(),
+            s.strip_revealer.clone(),
+            s.osd_revealer.clone(),
+            s.window().clone(),
+            s.files.len() >= 2,
+            !s.osd_label.label().is_empty(),
+            s.autohide_ui,
+        )
+    };
+    if pinned || !autohide {
+        toolbar_view.set_reveal_top_bars(true);
+        if has_strip {
+            strip.set_reveal_child(true);
         }
-        if !s.osd_label.label().is_empty() {
-            s.osd_revealer.set_reveal_child(true);
+        if pinned && has_osd {
+            osd.set_reveal_child(true);
         }
-        s.window().set_cursor(None);
+        window.set_cursor(None);
     } else {
-        let s = state.borrow();
-        if !s.autohide_ui {
-            s.toolbar_view.set_reveal_top_bars(true);
-            if s.files.len() >= 2 {
-                s.strip_revealer.set_reveal_child(true);
-            }
-            s.window().set_cursor(None);
-            return;
-        }
         // Collapse back to the clean default. Upcoming motion events will
         // re-reveal edges on demand.
-        s.toolbar_view.set_reveal_top_bars(false);
-        s.strip_revealer.set_reveal_child(false);
-        s.osd_revealer.set_reveal_child(false);
-        drop(s);
+        toolbar_view.set_reveal_top_bars(false);
+        strip.set_reveal_child(false);
+        osd.set_reveal_child(false);
         schedule_cursor_hide(state);
     }
 }
@@ -2229,15 +2246,12 @@ fn toggle_slideshow(state: &Rc<RefCell<ViewerState>>) {
 /// o OSD pra confirmar visualmente — o quadrante superior-direito é
 /// discreto e sem o pulso o user pode não perceber que ligou.
 fn toggle_histogram(state: &Rc<RefCell<ViewerState>>) {
-    let now_visible = {
-        let s = state.borrow();
-        let v = !s.histogram_area.is_visible();
-        s.histogram_area.set_visible(v);
-        if v {
-            s.histogram_area.queue_draw();
-        }
-        v
-    };
+    let area = state.borrow().histogram_area.clone();
+    let now_visible = !area.is_visible();
+    area.set_visible(now_visible);
+    if now_visible {
+        area.queue_draw();
+    }
     {
         let s = state.borrow();
         s.osd_label.set_text(&if now_visible {
@@ -2974,12 +2988,22 @@ fn show_cached_frame(state: &Rc<RefCell<ViewerState>>, path: &Path) -> bool {
         s.current_ready = true;
         show_frame(&mut s, frame.texture, frame.natural, frame.histogram, Some(path));
     }
+    show_page(state, "picture");
     schedule_prefetch(state);
     true
 }
 
+/// Switch the central stack to `page` (`picture`, `error` or `empty`).
+/// Takes the state rather than a borrow: a page switch moves widgets under
+/// the pointer, whose crossing handlers borrow the state synchronously.
+fn show_page(state: &Rc<RefCell<ViewerState>>, page: &str) {
+    let stack = state.borrow().stack.clone();
+    stack.set_visible_child_name(page);
+}
+
 /// `clean` names the file when `texture` holds its unedited pixels; edited
-/// previews pass `None` so the film strip never shows unsaved edits.
+/// previews pass `None` so the film strip never shows unsaved edits. The
+/// caller shows the `picture` page with [`show_page`] once its borrow ends.
 fn show_frame(
     s: &mut ViewerState,
     texture: gdk::Texture,
@@ -2994,7 +3018,6 @@ fn show_frame(
         paint_current_thumb(s, &texture);
     }
     s.texture = Some(texture);
-    s.stack.set_visible_child_name("picture");
     apply_zoom(s);
     s.zoom_level.set_label(&zoom_percent_label(s));
     s.histogram_area.queue_draw();
@@ -3062,6 +3085,7 @@ fn schedule_prefetch(state: &Rc<RefCell<ViewerState>>) {
 }
 
 fn apply_prefetched_frame(state: &Rc<RefCell<ViewerState>>, frame: DecodedFrame) {
+    let mut shown = false;
     let fallback = {
         let mut s = state.borrow_mut();
         s.prefetching = None;
@@ -3091,6 +3115,7 @@ fn apply_prefetched_frame(state: &Rc<RefCell<ViewerState>>, frame: DecodedFrame)
                         s.awaiting_prefetch = false;
                         s.current_ready = true;
                         show_frame(&mut s, texture, (w, h), histogram, Some(&frame.path));
+                        shown = true;
                     }
                 }
                 None
@@ -3108,7 +3133,12 @@ fn apply_prefetched_frame(state: &Rc<RefCell<ViewerState>>, frame: DecodedFrame)
     };
     match fallback {
         Some(path) => request_frame(state, path, Vec::new()),
-        None => schedule_prefetch(state),
+        None => {
+            if shown {
+                show_page(state, "picture");
+            }
+            schedule_prefetch(state);
+        }
     }
     viewer::edit_panel::refresh(state);
 }
@@ -3116,7 +3146,7 @@ fn apply_prefetched_frame(state: &Rc<RefCell<ViewerState>>, frame: DecodedFrame)
 /// Splice the sibling list found in the background into a viewer that was
 /// opened with only the requested file. The visible image stays as it is.
 fn adopt_folder(state: &Rc<RefCell<ViewerState>>, mut files: Vec<PathBuf>, index: usize) {
-    {
+    let strip = {
         let mut s = state.borrow_mut();
         if files.len() < 2 || s.files.len() != 1 || index >= files.len() {
             return;
@@ -3126,10 +3156,11 @@ fn adopt_folder(state: &Rc<RefCell<ViewerState>>, mut files: Vec<PathBuf>, index
         files[index] = s.files[0].clone();
         s.files = Rc::new(files);
         s.idx = index;
-        if app_settings().is_none_or(|settings| settings.boolean("filmstrip-visible")) {
-            s.strip_revealer.set_visible(true);
-            s.strip_revealer.set_can_target(true);
-        }
+        s.strip_revealer.clone()
+    };
+    if app_settings().is_none_or(|settings| settings.boolean("filmstrip-visible")) {
+        strip.set_visible(true);
+        strip.set_can_target(true);
     }
     let window = state.borrow().window();
     for name in ["previous", "next"] {
@@ -3174,10 +3205,14 @@ fn apply_decoded_frame(state: &Rc<RefCell<ViewerState>>, frame: DecodedFrame) {
         return;
     }
 
-    let mut s = state.borrow_mut();
-    if !s.saving {
-        s.loading_spinner.set_visible(false);
+    let spinner = {
+        let s = state.borrow();
+        (!s.saving).then(|| s.loading_spinner.clone())
+    };
+    if let Some(spinner) = spinner {
+        spinner.set_visible(false);
     }
+    let mut s = state.borrow_mut();
     if !s.first_frame_shown {
         s.first_frame_shown = true;
         if let Some(begin) = s.deferred_thumbnails.take() {
@@ -3204,6 +3239,7 @@ fn apply_decoded_frame(state: &Rc<RefCell<ViewerState>>, frame: DecodedFrame) {
             let clean = (!frame.edited).then_some(frame.path.as_path());
             show_frame(&mut s, texture, (w, h), histogram, clean);
             drop(s);
+            show_page(state, "picture");
         }
         Err(error) => {
             tracing::error!(path = ?frame.path, %error, "falha ao carregar imagem");
@@ -3215,9 +3251,9 @@ fn apply_decoded_frame(state: &Rc<RefCell<ViewerState>>, frame: DecodedFrame) {
                 |name| name.to_string_lossy().into_owned(),
             );
             s.error_page.set_description(Some(&glib::markup_escape_text(&name)));
-            s.stack.set_visible_child_name("error");
             s.zoom_level.set_label(&zoom_percent_label(&s));
             drop(s);
+            show_page(state, "error");
         }
     }
     schedule_prefetch(state);
@@ -3274,7 +3310,8 @@ fn build_header_menu_button(state: &Rc<RefCell<ViewerState>>) -> gtk::MenuButton
             };
             if b.is_active() {
                 cancel_top_hide(&state);
-                state.borrow().toolbar_view.set_reveal_top_bars(true);
+                let toolbar_view = state.borrow().toolbar_view.clone();
+                toolbar_view.set_reveal_top_bars(true);
             } else {
                 reveal_top(&state);
             }
@@ -3934,12 +3971,13 @@ fn remove_current_file(state: &Rc<RefCell<ViewerState>>, path: &Path) {
         return;
     }
     if remaining < 2 {
-        let s = state.borrow();
-        s.strip_revealer.set_reveal_child(false);
-        s.strip_revealer.set_visible(false);
-        s.strip_revealer.set_can_target(false);
-        let window = s.window();
-        drop(s);
+        let (strip, window) = {
+            let s = state.borrow();
+            (s.strip_revealer.clone(), s.window())
+        };
+        strip.set_reveal_child(false);
+        strip.set_visible(false);
+        strip.set_can_target(false);
         for name in ["previous", "next"] {
             if let Some(action) = window.lookup_action(name).and_downcast::<gio::SimpleAction>() {
                 action.set_enabled(false);

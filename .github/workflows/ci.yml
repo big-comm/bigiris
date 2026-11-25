@@ -331,7 +331,9 @@ jobs:
         shell: bash
         run: |
           namcap bigiris-*.pkg.tar | tee namcap.log
-          ! grep ' E: ' namcap.log
+          # namcap wants one file per uncommon license; THIRD_PARTY_LICENSES
+          # holds all of their texts in one file.
+          ! grep ' E: ' namcap.log | grep -v ' E: Uncommon license identifiers '
 
   nautilus:
     name: Nautilus extension contracts

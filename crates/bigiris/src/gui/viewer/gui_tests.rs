@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-//! Viewer behaviour that needs a display: film strip, wheel routing,
+//! Viewer behavior that needs a display: film strip, wheel routing,
 //! properties, trash, Esc and the external tools. Run alone, under a
 //! nested or virtual compositor:
 //! `GSETTINGS_BACKEND=memory cargo test -p bigiris --features "gui ai"
@@ -122,7 +122,7 @@ fn viewer_review_fixes() {
             on_pointer_motion(&state, height - 5.0);
             settle(&context, 10);
         }
-        assert_eq!(adjustment.value(), manual, "motion recentred the film strip");
+        assert_eq!(adjustment.value(), manual, "motion recentered the film strip");
     }
 
     // Finding 11: motion re-arms the cursor deadline without new sources.
@@ -182,7 +182,7 @@ fn viewer_review_fixes() {
     gtk::prelude::WidgetExt::activate_action(&window, "win.remove-bg", None).unwrap();
     assert_eq!(
         state.borrow().osd_label.text(),
-        gettext("Salve ou desfaça as alterações antes de usar esta ferramenta")
+        gettext("Save or undo your changes before using this tool")
     );
     undo_edit(&state);
 
@@ -216,10 +216,7 @@ fn viewer_review_fixes() {
         settle(&context, 300);
         let error = window.visible_dialog().and_downcast::<adw::AlertDialog>();
         let error = error.expect("trash failure was not shown");
-        assert_eq!(
-            error.heading().as_deref(),
-            Some(gettext("Não foi possível mover para a lixeira").as_str())
-        );
+        assert_eq!(error.heading().as_deref(), Some(gettext("Could not move to trash").as_str()));
         error.close();
         settle(&context, 300);
         let mut list = state.borrow().files.as_ref().clone();
@@ -411,7 +408,7 @@ fn viewer_second_review_fixes() {
         );
         assert_eq!(s.shown_path.as_ref(), Some(&png));
         // Nothing was dropped: the plain confirmation, no metadata notice.
-        assert_eq!(s.osd_label.label().as_str(), gettext("Salvo"));
+        assert_eq!(s.osd_label.label().as_str(), gettext("Saved"));
     }
     assert_eq!(current_thumb_width(&state), Some(32), "cell kept the pre-save thumbnail");
     wait(&context, "prefetch after save", &|| {
@@ -438,7 +435,7 @@ fn viewer_second_review_fixes() {
     answer(&window, "save");
     wait(&context, "save failure", &|| !state.borrow().saving && window.visible_dialog().is_some());
     let failure = window.visible_dialog().and_downcast::<adw::AlertDialog>().unwrap();
-    assert_eq!(failure.heading().as_deref(), Some(gettext("Não foi possível salvar").as_str()));
+    assert_eq!(failure.heading().as_deref(), Some(gettext("Could not save").as_str()));
     assert_eq!(failure.body(), SaveFailure::NotStatic.message());
     drop(failure);
     answer(&window, "discard");
@@ -451,7 +448,7 @@ fn viewer_second_review_fixes() {
     drop(window);
     wait(&context, "second viewer released", &|| witness.upgrade().is_none());
 
-    // A save that cannot keep the source EXIF says so instead of "Salvo":
+    // A save that cannot keep the source EXIF says so instead of "Saved":
     // JPEG pixels with EXIF under a `.bmp` name are written back as BMP.
     let bmp = dir.path().join("c-camera.bmp");
     {
@@ -545,7 +542,7 @@ fn viewer_inline_crop() {
     let context = glib::MainContext::default();
     let dir = tempfile::tempdir().unwrap();
 
-    // 400 × 300 with four coloured quadrants, so a crop shows which part
+    // 400 × 300 with four colored quadrants, so a crop shows which part
     // of the image it kept.
     let photo = dir.path().join("a.png");
     image::RgbImage::from_fn(400, 300, |x, y| match (x < 200, y < 150) {
@@ -632,7 +629,7 @@ fn viewer_inline_crop() {
     assert!(window.is_visible(), "Esc closed the window instead of leaving crop");
     assert!(action_enabled(&window, "next"), "actions not restored after cancel");
 
-    // Drag the bottom-right handle to the centre: keep the red quadrant.
+    // Drag the bottom-right handle to the center: keep the red quadrant.
     gtk::prelude::WidgetExt::activate_action(&window, "win.crop", None).unwrap();
     settle(&context, 100);
     drag_selection(&state, (400.0, 300.0), (-200.0, -150.0));
@@ -677,7 +674,7 @@ fn viewer_inline_crop() {
         s.current_ready && s.natural == (100, 100)
     });
 
-    // A fixed ratio: square, largest centred box of the current image.
+    // A fixed ratio: square, largest centered box of the current image.
     gtk::prelude::WidgetExt::activate_action(&window, "win.crop", None).unwrap();
     settle(&context, 100);
     let aspect = state.borrow().crop_ui.aspect_dropdown().clone();
@@ -721,8 +718,8 @@ fn viewer_inline_crop() {
     settle(&context, 100);
 }
 
-/// A malformed embedded colour profile opens the photo, through the real
-/// sandboxed codec, and the viewer says the colours may be off.
+/// A malformed embedded color profile opens the photo, through the real
+/// sandboxed codec, and the viewer says the colors may be off.
 #[test]
 #[ignore = "requires a graphical display; run alone with GSETTINGS_BACKEND=memory"]
 fn viewer_broken_profile_notice() {
@@ -756,8 +753,7 @@ fn viewer_broken_profile_notice() {
     let state = witness.upgrade().unwrap();
     wait(&context, "photo shown", &|| state.borrow().texture.is_some());
     assert_eq!(texture_pixel(&state, 0, 0)[..3], [10, 128, 250]);
-    let notice =
-        gettext("O perfil de cor desta imagem está corrompido; as cores podem estar imprecisas");
+    let notice = gettext("This image's color profile is corrupted; colors may be inaccurate");
     wait(&context, "profile notice", &|| state.borrow().osd_label.text() == notice);
 
     window.destroy();

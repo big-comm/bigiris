@@ -797,7 +797,7 @@ fn build_window_preloaded(
     // broken file never leaves a silent black window.
     let error_page = adw::StatusPage::builder()
         .icon_name("image-missing-symbolic")
-        .title(gettext("Não foi possível abrir a imagem"))
+        .title(gettext("Could not open the image"))
         .build();
     stack.add_named(&error_page, Some("error"));
 
@@ -916,7 +916,7 @@ fn build_window_preloaded(
         .visible(false)
         .build();
     loading_spinner.add_css_class("viewer-loading");
-    let heavy_cancel = gtk::Button::with_label(&gettext("Cancelar"));
+    let heavy_cancel = gtk::Button::with_label(&gettext("Cancel"));
     heavy_cancel.set_halign(gtk::Align::Center);
     let heavy_render = gtk::Box::builder()
         .orientation(gtk::Orientation::Vertical)
@@ -928,7 +928,7 @@ fn build_window_preloaded(
         .build();
     heavy_render.add_css_class("viewer-loading");
     heavy_render.append(&adw::Spinner::new());
-    heavy_render.append(&gtk::Label::new(Some(&gettext("Recalculando a edição…"))));
+    heavy_render.append(&gtk::Label::new(Some(&gettext("Recomputing the edit…"))));
     heavy_render.append(&heavy_cancel);
 
     let overlay = gtk::Overlay::new();
@@ -1076,7 +1076,7 @@ fn build_window_preloaded(
         let state = state.clone();
         window.connect_close_request(move |window| {
             if state.borrow().saving {
-                state.borrow().osd_label.set_text(&gettext("Aguarde o salvamento terminar"));
+                state.borrow().osd_label.set_text(&gettext("Wait for saving to finish"));
                 pulse_osd(&state);
                 return glib::Propagation::Stop;
             }
@@ -1090,11 +1090,11 @@ fn build_window_preloaded(
                 return glib::Propagation::Stop;
             }
             let alert = adw::AlertDialog::builder()
-                .heading(gettext("Descartar alterações?"))
-                .body(gettext("A imagem tem edições que ainda não foram salvas."))
+                .heading(gettext("Discard changes?"))
+                .body(gettext("The image has unsaved changes."))
                 .build();
-            alert.add_response("cancel", &gettext("Continuar editando"));
-            alert.add_response("discard", &gettext("Descartar"));
+            alert.add_response("cancel", &gettext("Continue editing"));
+            alert.add_response("discard", &gettext("Discard"));
             alert.set_response_appearance("discard", adw::ResponseAppearance::Destructive);
             alert.set_default_response(Some("cancel"));
             alert.set_close_response("cancel");
@@ -1164,8 +1164,8 @@ fn build_window_preloaded(
     navigation.add_css_class("linked");
     navigation.set_visible(has_files);
     for (icon, tooltip, action) in [
-        ("go-previous-symbolic", gettext("Imagem anterior"), "win.previous"),
-        ("go-next-symbolic", gettext("Próxima imagem"), "win.next"),
+        ("go-previous-symbolic", gettext("Previous image"), "win.previous"),
+        ("go-next-symbolic", gettext("Next image"), "win.next"),
     ] {
         let button = gtk::Button::from_icon_name(icon);
         button.set_tooltip_text(Some(&tooltip));
@@ -1181,23 +1181,23 @@ fn build_window_preloaded(
         .child(
             &adw::ButtonContent::builder()
                 .icon_name("document-edit-symbolic")
-                .label(gettext("Editar"))
+                .label(gettext("Edit"))
                 .build(),
         )
-        .tooltip_text(gettext("Editar (E)"))
+        .tooltip_text(gettext("Edit (E)"))
         .action_name("win.edit-panel")
         .visible(has_files)
         .build();
     header.pack_end(&edit_btn);
 
     let info_btn = gtk::Button::from_icon_name("dialog-information-symbolic");
-    info_btn.set_tooltip_text(Some(&gettext("Propriedades da imagem (Ctrl+I)")));
+    info_btn.set_tooltip_text(Some(&gettext("Image properties (Ctrl+I)")));
     info_btn.set_action_name(Some("win.info"));
     info_btn.set_visible(has_files);
     header.pack_end(&info_btn);
 
     let fullscreen_btn = gtk::Button::from_icon_name("view-fullscreen-symbolic");
-    fullscreen_btn.set_tooltip_text(Some(&gettext("Tela cheia (F11)")));
+    fullscreen_btn.set_tooltip_text(Some(&gettext("Fullscreen (F11)")));
     fullscreen_btn.set_action_name(Some("win.fullscreen"));
     fullscreen_btn.set_visible(has_files);
     header.pack_end(&fullscreen_btn);
@@ -1206,12 +1206,12 @@ fn build_window_preloaded(
     zoom_group.add_css_class("linked");
     zoom_group.set_visible(has_files);
     let zoom_out_btn = gtk::Button::from_icon_name("zoom-out-symbolic");
-    zoom_out_btn.set_tooltip_text(Some(&gettext("Afastar")));
+    zoom_out_btn.set_tooltip_text(Some(&gettext("Zoom out")));
     zoom_out_btn.set_action_name(Some("win.zoom-out"));
     zoom_group.append(&zoom_out_btn);
     let zoom_menu = gio::Menu::new();
-    zoom_menu.append(Some(&gettext("Ajustar à janela")), Some("win.zoom-fit"));
-    for (label, scale) in [(gettext("Tamanho real (100%)"), 1.0), ("200%".to_string(), 2.0)] {
+    zoom_menu.append(Some(&gettext("Fit to window")), Some("win.zoom-fit"));
+    for (label, scale) in [(gettext("Actual size (100%)"), 1.0), ("200%".to_string(), 2.0)] {
         let item = gio::MenuItem::new(Some(&label), None);
         item.set_action_and_target_value(Some("win.zoom-to"), Some(&scale.to_variant()));
         zoom_menu.append_item(&item);
@@ -1224,7 +1224,7 @@ fn build_window_preloaded(
         .build();
     zoom_group.append(&zoom_btn);
     let zoom_in_btn = gtk::Button::from_icon_name("zoom-in-symbolic");
-    zoom_in_btn.set_tooltip_text(Some(&gettext("Aproximar")));
+    zoom_in_btn.set_tooltip_text(Some(&gettext("Zoom in")));
     zoom_in_btn.set_action_name(Some("win.zoom-in"));
     zoom_group.append(&zoom_in_btn);
     header.pack_end(&zoom_group);
@@ -2311,7 +2311,7 @@ fn toggle_slideshow(state: &Rc<RefCell<ViewerState>>) {
             id.remove();
         }
         let s = state.borrow();
-        s.osd_label.set_text(&gettext("Slideshow: pausado"));
+        s.osd_label.set_text(&gettext("Slideshow: paused"));
         drop(s);
         pulse_osd(state);
         return;
@@ -2339,7 +2339,7 @@ fn toggle_slideshow(state: &Rc<RefCell<ViewerState>>) {
     state.borrow_mut().slideshow_source = Some(id);
     let s = state.borrow();
     s.osd_label.set_text(
-        &gettext("Slideshow: a cada {interval} s").replace("{interval}", &interval.to_string()),
+        &gettext("Slideshow: every {interval} s").replace("{interval}", &interval.to_string()),
     );
     drop(s);
     pulse_osd(state);
@@ -2358,9 +2358,9 @@ fn toggle_histogram(state: &Rc<RefCell<ViewerState>>) {
     {
         let s = state.borrow();
         s.osd_label.set_text(&if now_visible {
-            gettext("Histograma ligado")
+            gettext("Histogram on")
         } else {
-            gettext("Histograma desligado")
+            gettext("Histogram off")
         });
     }
     pulse_osd(state);
@@ -2483,7 +2483,7 @@ fn cancel_heavy_render(state: &Rc<RefCell<ViewerState>>) -> bool {
     refresh_title(state);
     sync_edit_actions(state);
     viewer::edit_panel::refresh(state);
-    state.borrow().osd_label.set_text(&gettext("Cancelado"));
+    state.borrow().osd_label.set_text(&gettext("Canceled"));
     pulse_osd(state);
     true
 }
@@ -2594,20 +2594,20 @@ pub(in crate::gui) fn ai_error_text(error: &bigimage_ai::AiError) -> String {
     match error {
         AiError::Disabled => no_ai_build_message(),
         AiError::Missing { model, package, .. } => missing_model_message(model, package),
-        AiError::Cancelled => gettext("Cancelado"),
-        other => fill(&gettext("Falha na IA: {error}"), &[("error", &other.to_string())]),
+        AiError::Cancelled => gettext("Canceled"),
+        other => fill(&gettext("AI failed: {error}"), &[("error", &other.to_string())]),
     }
 }
 
 /// This build has no AI engines.
 pub(in crate::gui) fn no_ai_build_message() -> String {
-    gettext("Esta build não inclui IA. Recompile com `cargo build --features ai` (requer glslc, do pacote shaderc).")
+    gettext("This build does not include AI. Rebuild with `cargo build --features ai` (requires glslc, from the shaderc package).")
 }
 
 /// A model's weights package is not installed.
 pub(in crate::gui) fn missing_model_message(model: &str, package: &str) -> String {
     fill(
-        &gettext("{model} não está instalado. Instale com: sudo pacman -S {package}"),
+        &gettext("{model} is not installed. Install it with: sudo pacman -S {package}"),
         &[("model", model), ("package", package)],
     )
 }
@@ -2621,7 +2621,7 @@ pub(in crate::gui) fn model_unavailable(model: &bigimage_ai::ModelInfo) -> Optio
             Some(missing_model_message(model.name, model.package))
         }
         bigimage_ai::Availability::Unreadable { path, error } => Some(fill(
-            &gettext("Não foi possível ler {path}: {error}"),
+            &gettext("Could not read {path}: {error}"),
             &[("path", &path.display().to_string()), ("error", &error)],
         )),
     }
@@ -2781,20 +2781,19 @@ fn save_edits(state: &Rc<RefCell<ViewerState>>) {
         .map(|s| matches!(s.to_ascii_lowercase().as_str(), "jpg" | "jpeg"))
         .unwrap_or(false);
     let mut body = if is_jpeg {
-        format!("\"{name}\"\n\n{}", gettext("O arquivo será sobrescrito. JPEG é recodificado a cada gravação; isso pode reduzir a qualidade."))
+        format!("\"{name}\"\n\n{}", gettext("The file will be overwritten. JPEG is re-encoded every time it is saved; this may reduce quality."))
     } else {
-        format!("\"{name}\"\n\n{}", gettext("O arquivo será sobrescrito."))
+        format!("\"{name}\"\n\n{}", gettext("The file will be overwritten."))
     };
     let keeps_metadata = save_format(&path)
         .is_some_and(|format| bigimage_core::metadata::preserved_by(format).is_complete());
     if !keeps_metadata {
         body.push_str("\n\n");
-        body.push_str(&gettext("Este formato não guarda todos os metadados da foto (data, câmera, perfil de cor); o que ele não suportar será removido ou convertido."));
+        body.push_str(&gettext("This format does not keep all of the photo's metadata (date, camera, color profile); anything it does not support will be removed or converted."));
     }
-    let alert =
-        adw::AlertDialog::builder().heading(gettext("Salvar alterações?")).body(body).build();
-    alert.add_response("cancel", &gettext("Cancelar"));
-    alert.add_response("save", &gettext("Salvar"));
+    let alert = adw::AlertDialog::builder().heading(gettext("Save changes?")).body(body).build();
+    alert.add_response("cancel", &gettext("Cancel"));
+    alert.add_response("save", &gettext("Save"));
     alert.set_response_appearance("save", adw::ResponseAppearance::Suggested);
     alert.set_default_response(Some("save"));
     alert.set_close_response("cancel");
@@ -2854,7 +2853,7 @@ fn save_edits(state: &Rc<RefCell<ViewerState>>) {
                             pulse_osd_for(&state, OSD_NOTICE_MS);
                         }
                         None => {
-                            state.borrow().osd_label.set_text(&gettext("Salvo"));
+                            state.borrow().osd_label.set_text(&gettext("Saved"));
                             pulse_osd(&state);
                         }
                     }
@@ -2936,11 +2935,11 @@ impl SaveFailure {
 
     fn message(&self) -> String {
         match self {
-            Self::NotStatic => gettext("Este arquivo é animado, tem várias páginas ou não pôde ser verificado. Girar ou espelhar e salvar descartaria os outros quadros, então ele não foi alterado."),
-            Self::NoEncoder => gettext("O BigIris não sabe gravar este formato. As alterações não podem ser salvas no próprio arquivo."),
-            Self::PermissionDenied => gettext("Sem permissão para alterar este arquivo ou a pasta dele."),
+            Self::NotStatic => gettext("This file is animated, has multiple pages or could not be checked. Rotating or flipping and saving would discard the other frames, so it was not changed."),
+            Self::NoEncoder => gettext("BigIris cannot write this format. The changes cannot be saved to the file itself."),
+            Self::PermissionDenied => gettext("No permission to modify this file or its folder."),
             Self::Other(detail) => fill(
-                &gettext("O arquivo não foi alterado. Detalhes: {detail}"),
+                &gettext("The file was not changed. Details: {detail}"),
                 &[("detail", detail)],
             ),
         }
@@ -2952,11 +2951,11 @@ impl SaveFailure {
 fn present_save_failure(state: &Rc<RefCell<ViewerState>>, failure: &SaveFailure) {
     let window = state.borrow().window();
     let alert = adw::AlertDialog::builder()
-        .heading(gettext("Não foi possível salvar"))
+        .heading(gettext("Could not save"))
         .body(failure.message())
         .build();
-    alert.add_response("keep", &gettext("Manter alterações"));
-    alert.add_response("discard", &gettext("Descartar alterações"));
+    alert.add_response("keep", &gettext("Keep changes"));
+    alert.add_response("discard", &gettext("Discard changes"));
     alert.set_response_appearance("discard", adw::ResponseAppearance::Destructive);
     alert.set_default_response(Some("keep"));
     alert.set_close_response("keep");
@@ -3046,14 +3045,14 @@ fn metadata_loss_notice(dropped: &[bigimage_core::MetadataLoss]) -> Option<Strin
     let mut reasons: Vec<String> = Vec::new();
     for loss in dropped {
         let reason = match loss {
-            MetadataLoss::ExifUnsupported => gettext("o formato não guarda EXIF"),
-            MetadataLoss::ExifTooLarge => gettext("EXIF grande demais para JPEG"),
-            MetadataLoss::ExifInvalid => gettext("EXIF inválido"),
+            MetadataLoss::ExifUnsupported => gettext("the format does not store EXIF"),
+            MetadataLoss::ExifTooLarge => gettext("EXIF too large for JPEG"),
+            MetadataLoss::ExifInvalid => gettext("invalid EXIF"),
             MetadataLoss::IccUnsupported
             | MetadataLoss::IccTooLarge
-            | MetadataLoss::IccMismatched => gettext("perfil de cor convertido para sRGB"),
-            MetadataLoss::IccDiscarded => gettext("perfil de cor inválido ignorado"),
-            _ => gettext("metadados não suportados"),
+            | MetadataLoss::IccMismatched => gettext("color profile converted to sRGB"),
+            MetadataLoss::IccDiscarded => gettext("invalid color profile ignored"),
+            _ => gettext("unsupported metadata"),
         };
         if !reasons.contains(&reason) {
             reasons.push(reason);
@@ -3063,7 +3062,7 @@ fn metadata_loss_notice(dropped: &[bigimage_core::MetadataLoss]) -> Option<Strin
         return None;
     }
     Some(fill(
-        &gettext("Salvo. Alguns metadados não puderam ser mantidos: {list}"),
+        &gettext("Saved. Some metadata could not be kept: {list}"),
         &[("list", &reasons.join("; "))],
     ))
 }
@@ -3166,9 +3165,7 @@ fn show_cached_frame(state: &Rc<RefCell<ViewerState>>, path: &Path) -> bool {
 /// Tell the user the shown file's colour profile is broken and was ignored.
 fn notice_ignored_profile(state: &Rc<RefCell<ViewerState>>) {
     let osd = state.borrow().osd_label.clone();
-    osd.set_text(&gettext(
-        "O perfil de cor desta imagem está corrompido; as cores podem estar imprecisas",
-    ));
+    osd.set_text(&gettext("This image's color profile is corrupted; colors may be inaccurate"));
     pulse_osd_for(state, OSD_NOTICE_MS);
 }
 
@@ -3364,7 +3361,7 @@ fn can_leave_current(state: &Rc<RefCell<ViewerState>>) -> bool {
     if state.borrow().pending_ops.is_empty() {
         return true;
     }
-    state.borrow().osd_label.set_text(&gettext("Salve ou desfaça as alterações antes de navegar"));
+    state.borrow().osd_label.set_text(&gettext("Save or undo changes before navigating"));
     pulse_osd(state);
     false
 }
@@ -3457,35 +3454,35 @@ fn build_header_menu_button(state: &Rc<RefCell<ViewerState>>) -> gtk::MenuButton
     let menu = gio::Menu::new();
     let has_images = !state.borrow().files.is_empty();
     let files = gio::Menu::new();
-    files.append(Some(&gettext("Abrir imagens…")), Some("win.open"));
-    files.append(Some(&gettext("Colar arquivos de imagem")), Some("win.paste"));
+    files.append(Some(&gettext("Open images…")), Some("win.open"));
+    files.append(Some(&gettext("Paste image files")), Some("win.paste"));
     if has_images {
-        files.append(Some(&gettext("Copiar imagem")), Some("win.copy"));
-        files.append(Some(&gettext("Imprimir…")), Some("win.print"));
+        files.append(Some(&gettext("Copy image")), Some("win.copy"));
+        files.append(Some(&gettext("Print…")), Some("win.print"));
     } else {
-        files.append(Some(&gettext("Processar uma pasta…")), Some("win.batch-folder"));
+        files.append(Some(&gettext("Process a folder…")), Some("win.batch-folder"));
     }
     menu.append_section(None, &files);
     if has_images {
         // Every edit lives in the side panel; the menu only opens it.
         let edit = gio::Menu::new();
-        edit.append(Some(&gettext("Editar imagem")), Some("win.edit-panel"));
-        edit.append(Some(&gettext("Desfazer")), Some("win.undo"));
-        edit.append(Some(&gettext("Refazer")), Some("win.redo"));
+        edit.append(Some(&gettext("Edit image")), Some("win.edit-panel"));
+        edit.append(Some(&gettext("Undo")), Some("win.undo"));
+        edit.append(Some(&gettext("Redo")), Some("win.redo"));
         menu.append_section(None, &edit);
         let changes = gio::Menu::new();
-        changes.append(Some(&gettext("Salvar alterações")), Some("win.save-edits"));
-        changes.append(Some(&gettext("Mover para a lixeira")), Some("win.trash"));
+        changes.append(Some(&gettext("Save changes")), Some("win.save-edits"));
+        changes.append(Some(&gettext("Move to trash")), Some("win.trash"));
         menu.append_section(None, &changes);
     }
     let help = gio::Menu::new();
-    help.append(Some(&gettext("Atalhos do teclado")), Some("win.shortcuts"));
-    help.append(Some(&gettext("Sobre o BigIris")), Some("app.about"));
+    help.append(Some(&gettext("Keyboard shortcuts")), Some("win.shortcuts"));
+    help.append(Some(&gettext("About BigIris")), Some("app.about"));
     menu.append_section(None, &help);
 
     let btn = gtk::MenuButton::new();
     btn.set_icon_name("open-menu-symbolic");
-    btn.set_tooltip_text(Some(&gettext("Menu principal")));
+    btn.set_tooltip_text(Some(&gettext("Main menu")));
     btn.set_menu_model(Some(&menu));
     // Fixa a header enquanto o popover está aberto — senão o timer de
     // auto-hide do ToolbarView dispara com o cursor já dentro do popover
@@ -3833,9 +3830,9 @@ fn path_for_external_tool(state: &Rc<RefCell<ViewerState>>) -> Option<PathBuf> {
             return None;
         }
         if s.saving {
-            gettext("Aguarde o salvamento terminar")
+            gettext("Wait for saving to finish")
         } else if !s.pending_ops.is_empty() {
-            gettext("Salve ou desfaça as alterações antes de usar esta ferramenta")
+            gettext("Save or undo your changes before using this tool")
         } else {
             return Some(s.files[s.idx].clone());
         }
@@ -3851,13 +3848,13 @@ fn path_for_external_tool(state: &Rc<RefCell<ViewerState>>) -> Option<PathBuf> {
 /// é Rc<Vec<_>> imutável).
 fn open_file_chooser(window: &adw::ApplicationWindow) {
     let filter = gtk::FileFilter::new();
-    filter.set_name(Some(&gettext("Imagens")));
+    filter.set_name(Some(&gettext("Images")));
     filter.add_mime_type("image/*");
     let filters = gio::ListStore::new::<gtk::FileFilter>();
     filters.append(&filter);
 
     let dialog = gtk::FileDialog::builder()
-        .title(gettext("Abrir imagens"))
+        .title(gettext("Open images"))
         .modal(true)
         .filters(&filters)
         .build();
@@ -3899,7 +3896,7 @@ fn refuse_while_loading(state: &Rc<RefCell<ViewerState>>) -> bool {
     if state.borrow().current_ready {
         return false;
     }
-    state.borrow().osd_label.set_text(&gettext("Aguarde a imagem terminar de carregar"));
+    state.borrow().osd_label.set_text(&gettext("Wait for the image to finish loading"));
     pulse_osd(state);
     true
 }
@@ -3924,7 +3921,7 @@ fn print_current(state: &Rc<RefCell<ViewerState>>) {
     if let Some(texture) = edited {
         match cairo_surface_from_texture(&texture) {
             Some(surface) => present_print_dialog(&window, &path, surface),
-            None => show_print_error(&window, &gettext("Não foi possível preparar a página")),
+            None => show_print_error(&window, &gettext("Could not prepare the page")),
         }
         return;
     }
@@ -3946,7 +3943,7 @@ fn print_current(state: &Rc<RefCell<ViewerState>>) {
     });
     let weak = window.downgrade();
     glib::MainContext::default().spawn_local(async move {
-        let result = job.await.unwrap_or_else(|_| Err(gettext("O preparo da impressão falhou")));
+        let result = job.await.unwrap_or_else(|_| Err(gettext("Print preparation failed")));
         let Some(window) = weak.upgrade() else { return };
         if !window.is_visible() {
             return;
@@ -3964,7 +3961,7 @@ fn print_current(state: &Rc<RefCell<ViewerState>>) {
                 ) {
                     present_print_dialog(&window, &path, surface);
                 } else {
-                    show_print_error(&window, &gettext("Não foi possível preparar a página"));
+                    show_print_error(&window, &gettext("Could not prepare the page"));
                 }
             }
             Err(error) => show_print_error(&window, &error),
@@ -4002,11 +3999,9 @@ fn premultiply_for_cairo(mut rgba: Vec<u8>) -> Vec<u8> {
 }
 
 fn show_print_error(window: &adw::ApplicationWindow, error: &str) {
-    let dialog = adw::AlertDialog::builder()
-        .heading(gettext("Não foi possível imprimir"))
-        .body(error)
-        .build();
-    dialog.add_response("close", &gettext("Fechar"));
+    let dialog =
+        adw::AlertDialog::builder().heading(gettext("Could not print")).body(error).build();
+    dialog.add_response("close", &gettext("Close"));
     dialog.present(Some(window));
 }
 
@@ -4104,16 +4099,14 @@ fn trash_current(state: &Rc<RefCell<ViewerState>>) {
         .map(|n| n.to_string_lossy().into_owned())
         .unwrap_or_else(|| path.display().to_string());
     let alert = adw::AlertDialog::builder()
-        .heading(gettext("Mover para a lixeira?"))
+        .heading(gettext("Move to trash?"))
         .body(format!(
             "\"{name}\"\n\n{}",
-            gettext(
-                "O arquivo será movido para a lixeira do sistema. Você pode restaurá-lo depois."
-            )
+            gettext("The file will be moved to the trash. You can restore it later.")
         ))
         .build();
-    alert.add_response("cancel", &gettext("Cancelar"));
-    alert.add_response("trash", &gettext("Mover"));
+    alert.add_response("cancel", &gettext("Cancel"));
+    alert.add_response("trash", &gettext("Move"));
     alert.set_response_appearance("trash", adw::ResponseAppearance::Destructive);
     alert.set_default_response(Some("cancel"));
     alert.set_close_response("cancel");
@@ -4135,10 +4128,10 @@ fn trash_current(state: &Rc<RefCell<ViewerState>>) {
                 tracing::warn!(?path, %error, "trash falhou");
                 let window = state.borrow().window();
                 let alert = adw::AlertDialog::builder()
-                    .heading(gettext("Não foi possível mover para a lixeira"))
+                    .heading(gettext("Could not move to trash"))
                     .body(format!("\"{name}\"\n\n{}", error.message()))
                     .build();
-                alert.add_response("close", &gettext("Fechar"));
+                alert.add_response("close", &gettext("Close"));
                 alert.present(Some(&window));
             }
         }
@@ -4197,67 +4190,67 @@ fn present_shortcuts_dialog(parent: &adw::ApplicationWindow) {
     parent.set_cursor(None);
     let shortcuts: [(String, Vec<(&str, String)>); 6] = [
         (
-            gettext("Navegação"),
+            gettext("Navigation"),
             vec![
-                ("Left Right", gettext("Anterior / próximo")),
-                ("Home End", gettext("Primeiro / último")),
-                ("space", gettext("Slideshow (auto-avanço)")),
+                ("Left Right", gettext("Previous / next")),
+                ("Home End", gettext("First / last")),
+                ("space", gettext("Slideshow (auto-advance)")),
             ],
         ),
         (
             gettext("Zoom"),
             vec![
-                ("plus minus", gettext("Aproximar / afastar")),
-                ("0", gettext("Ajustar à janela")),
-                ("1", gettext("Tamanho real (100%)")),
-                ("scroll_wheel", gettext("Zoom contínuo")),
+                ("plus minus", gettext("Zoom in / out")),
+                ("0", gettext("Fit to window")),
+                ("1", gettext("Actual size (100%)")),
+                ("scroll_wheel", gettext("Continuous zoom")),
             ],
         ),
         (
-            gettext("Janela"),
+            gettext("Window"),
             vec![
-                ("F11", gettext("Tela cheia")),
-                ("T", gettext("Modo teatro")),
-                ("F", gettext("Fita de miniaturas")),
-                ("G", gettext("Histograma RGB")),
-                ("H", gettext("Fixar barras visíveis")),
-                ("Escape", gettext("Sair da tela cheia ou fechar")),
+                ("F11", gettext("Fullscreen")),
+                ("T", gettext("Theater mode")),
+                ("F", gettext("Thumbnail strip")),
+                ("G", gettext("RGB histogram")),
+                ("H", gettext("Keep controls visible")),
+                ("Escape", gettext("Leave fullscreen or close")),
             ],
         ),
         (
-            gettext("Edição"),
+            gettext("Editing"),
             vec![
-                ("<ctrl>Z", gettext("Desfazer")),
-                ("<ctrl><shift>Z", gettext("Refazer")),
-                ("R", gettext("Girar à direita")),
-                ("<Shift>R", gettext("Girar à esquerda")),
-                ("<ctrl>R", gettext("Recortar…")),
-                ("Left Right Up Down", gettext("Recorte: mover a seleção")),
+                ("<ctrl>Z", gettext("Undo")),
+                ("<ctrl><shift>Z", gettext("Redo")),
+                ("R", gettext("Rotate right")),
+                ("<Shift>R", gettext("Rotate left")),
+                ("<ctrl>R", gettext("Crop…")),
+                ("Left Right Up Down", gettext("Crop: move the selection")),
                 (
                     "<shift>Left <shift>Right <shift>Up <shift>Down",
-                    gettext("Recorte: redimensionar a seleção"),
+                    gettext("Crop: resize the selection"),
                 ),
-                ("<ctrl>B", gettext("Remover fundo (IA)…")),
-                ("<ctrl>U", gettext("Aumentar resolução…")),
-                ("<ctrl>S", gettext("Salvar alterações")),
-                ("E", gettext("Painel de edição")),
-                ("backslash", gettext("Ver original (segure)")),
+                ("<ctrl>B", gettext("Remove background (AI)…")),
+                ("<ctrl>U", gettext("Upscale…")),
+                ("<ctrl>S", gettext("Save changes")),
+                ("E", gettext("Editing panel")),
+                ("backslash", gettext("View original (hold)")),
             ],
         ),
         (
-            gettext("Arquivo"),
+            gettext("File"),
             vec![
-                ("<ctrl>O", gettext("Abrir imagens")),
-                ("<ctrl>C", gettext("Copiar imagem")),
-                ("<ctrl>V", gettext("Colar arquivos de imagem")),
-                ("<ctrl>P", gettext("Imprimir")),
-                ("<ctrl>I", gettext("Propriedades")),
-                ("Delete", gettext("Mover para a lixeira")),
+                ("<ctrl>O", gettext("Open images")),
+                ("<ctrl>C", gettext("Copy image")),
+                ("<ctrl>V", gettext("Paste image files")),
+                ("<ctrl>P", gettext("Print")),
+                ("<ctrl>I", gettext("Properties")),
+                ("Delete", gettext("Move to trash")),
             ],
         ),
         (
-            gettext("Ajuda"),
-            vec![("<ctrl>question", gettext("Este diálogo")), ("F1", gettext("Sobre"))],
+            gettext("Help"),
+            vec![("<ctrl>question", gettext("This dialog")), ("F1", gettext("About"))],
         ),
     ];
     // One scrolling page with a group per category, like GNOME's own
@@ -4267,7 +4260,7 @@ fn present_shortcuts_dialog(parent: &adw::ApplicationWindow) {
         let group = adw::PreferencesGroup::builder().title(name).build();
         for (accel, desc) in entries {
             let key_text = if accel == "scroll_wheel" {
-                gettext("Roda do mouse")
+                gettext("Mouse wheel")
             } else {
                 accel
                     .split_whitespace()
@@ -4295,7 +4288,7 @@ fn present_shortcuts_dialog(parent: &adw::ApplicationWindow) {
     layout.add_top_bar(&adw::HeaderBar::new());
     layout.set_content(Some(&page));
     let dialog = adw::Dialog::builder()
-        .title(gettext("Atalhos de teclado"))
+        .title(gettext("Keyboard shortcuts"))
         .content_width(440)
         .content_height(520)
         .child(&layout)
@@ -4321,7 +4314,7 @@ fn present_about_dialog(parent: &adw::ApplicationWindow) -> adw::AboutDialog {
         .designers(vec!["BigCommunity Team".to_string()])
         .translator_credits("BigCommunity Team")
         .comments(gettext(
-            "Visualizador e conversor de imagens para Linux. Rápido, acessível por teclado e integrado ao gerenciador de arquivos.",
+            "Image viewer and converter for Linux. Fast, keyboard accessible and integrated with your file manager.",
         ))
         .build();
     // About has navigable pages; its own native window keeps credits usable
@@ -4354,12 +4347,11 @@ fn build_dashboard(window: &adw::ApplicationWindow) -> gtk::Widget {
         compact.add_setter(&icon, "pixel-size", Some(&64.to_value()));
         window.add_breakpoint(compact);
     }
-    let title = gtk::Label::new(Some(&gettext("Abra suas imagens")));
+    let title = gtk::Label::new(Some(&gettext("Open your images")));
     title.add_css_class("title-1");
     title.set_wrap(true);
     content.append(&title);
-    let hint =
-        gtk::Label::new(Some(&gettext("Arraste imagens para cá ou cole arquivos com Ctrl+V.")));
+    let hint = gtk::Label::new(Some(&gettext("Drop images here or paste files with Ctrl+V.")));
     hint.add_css_class("dim-label");
     hint.set_wrap(true);
     hint.set_justify(gtk::Justification::Center);
@@ -4368,7 +4360,7 @@ fn build_dashboard(window: &adw::ApplicationWindow) -> gtk::Widget {
     let actions = gtk::Box::new(gtk::Orientation::Vertical, 10);
     actions.set_margin_top(12);
     let open_btn = gtk::Button::builder()
-        .label(gettext("Abrir imagens…"))
+        .label(gettext("Open images…"))
         .css_classes(["pill", "suggested-action"])
         .build();
     {
@@ -4380,7 +4372,7 @@ fn build_dashboard(window: &adw::ApplicationWindow) -> gtk::Widget {
         });
     }
     actions.append(&open_btn);
-    let folder_btn = gtk::Button::builder().label(gettext("Processar uma pasta…")).build();
+    let folder_btn = gtk::Button::builder().label(gettext("Process a folder…")).build();
     {
         let window = window.downgrade();
         folder_btn.connect_clicked(move |_| {
@@ -4402,7 +4394,7 @@ fn build_dashboard(window: &adw::ApplicationWindow) -> gtk::Widget {
 
 fn open_batch_folder_dialog(window: &adw::ApplicationWindow) {
     let dialog = gtk::FileDialog::builder()
-        .title(gettext("Selecionar pasta com imagens"))
+        .title(gettext("Select a folder with images"))
         .modal(true)
         .build();
     let parent = window.clone();
@@ -4421,11 +4413,10 @@ fn open_batch_folder_dialog(window: &adw::ApplicationWindow) {
 /// processo com esses arquivos para reusar a lógica de carregamento do
 /// CLI. Simples e previsível — evita duplicar o pipeline de load in-place.
 fn open_files_dialog(window: &adw::ApplicationWindow) {
-    let dialog =
-        gtk::FileDialog::builder().title(gettext("Selecionar imagens")).modal(true).build();
+    let dialog = gtk::FileDialog::builder().title(gettext("Select images")).modal(true).build();
     // Filtro de imagens: tudo que o nosso decoder aguenta.
     let filter = gtk::FileFilter::new();
-    filter.set_name(Some(&gettext("Imagens")));
+    filter.set_name(Some(&gettext("Images")));
     for mime in [
         "image/jpeg",
         "image/png",
@@ -4469,7 +4460,7 @@ fn refresh_title(state: &Rc<RefCell<ViewerState>>) {
         .unwrap_or_else(|| path.display().to_string());
     // `•` à esquerda sinaliza edições pendentes. Convenção Loupe/TextEditor.
     let name = if s.pending_ops.is_empty() { base_name } else { format!("• {base_name}") };
-    let subtitle = gettext("{current} de {total}")
+    let subtitle = gettext("{current} of {total}")
         .replace("{current}", &(s.idx + 1).to_string())
         .replace("{total}", &s.files.len().to_string());
     s.title.set_title(&name);
@@ -4696,8 +4687,8 @@ mod anchor_tests {
         .unwrap();
         assert_eq!(
             notice,
-            "Salvo. Alguns metadados não puderam ser mantidos: \
-             perfil de cor convertido para sRGB; EXIF grande demais para JPEG"
+            "Saved. Some metadata could not be kept: \
+             color profile converted to sRGB; EXIF too large for JPEG"
         );
     }
 
@@ -5419,7 +5410,7 @@ mod lifecycle_tests {
             window.width(),
             window.height()
         );
-        for text in [gettext("Abrir imagens…"), gettext("Processar uma pasta…")] {
+        for text in [gettext("Open images…"), gettext("Process a folder…")] {
             let button = find_widget(&window, &mut |widget| {
                 widget
                     .clone()
@@ -5548,16 +5539,12 @@ mod lifecycle_tests {
         if std::env::var_os("BIGIRIS_LOCALE_DIR").is_some() {
             let language = std::env::var("LANGUAGE").unwrap_or_default();
             let expected = match language.as_str() {
-                "en" => "Open images…",
+                "pt_BR" => "Abrir imagens…",
                 "fr" => "Ouvrir des images…",
                 "he" => "פתיחת תמונות…",
-                _ => panic!("localized GUI probe expects en, fr or he"),
+                _ => panic!("localized GUI probe expects pt_BR, fr or he"),
             };
-            assert_eq!(
-                gettext("Abrir imagens…"),
-                expected,
-                "GUI did not load the requested catalog"
-            );
+            assert_eq!(gettext("Open images…"), expected, "GUI did not load the requested catalog");
         }
         if let Ok(scheme) = std::env::var("BIGIRIS_TEST_COLOR_SCHEME") {
             let scheme = match scheme.as_str() {

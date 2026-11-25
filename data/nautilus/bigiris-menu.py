@@ -122,7 +122,7 @@ class BigIrisMenuProvider(GObject.GObject, Nautilus.MenuProvider):
         top = Nautilus.MenuItem(
             name="BigIrisExtension::Top",
             label=_TOP_LABEL,
-            tip=_("Operações BigIris"),
+            tip=_("BigIris actions"),
             icon=_TOP_ICON,
         )
         top.set_submenu(top_menu)
@@ -147,8 +147,8 @@ class BigIrisMenuProvider(GObject.GObject, Nautilus.MenuProvider):
             return []
         item = Nautilus.MenuItem(
             name="BigIrisExtension::BatchFolder",
-            label=_("BigIris: Processar esta pasta…"),
-            tip=_("Converter imagens da pasta com o Prisma"),
+            label=_("BigIris: Process this folder…"),
+            tip=_("Convert folder images with Prisma"),
             icon=folder_action[6],
         )
         item.connect("activate", self._run_action, list(folder_action[5]), list(paths))

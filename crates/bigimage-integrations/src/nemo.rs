@@ -82,7 +82,7 @@ mod tests {
     fn render_sub_actions_carry_hierarchy_prefix() {
         let a = ACTIONS.iter().find(|a| a.id == "convert-png").unwrap();
         let text = render(a);
-        assert!(text.contains("Name=BigIris ▸ Converter ▸ PNG"));
+        assert!(text.contains("Name=BigIris ▸ Convert ▸ PNG"));
         assert!(text.contains("Mimetypes=image/*;"));
     }
 
@@ -103,7 +103,7 @@ mod tests {
     fn render_top_level_actions_suffix_owner() {
         let a = ACTIONS.iter().find(|a| a.id == "view").unwrap();
         let text = render(a);
-        assert!(text.contains("Name=Visualizar em BigIris (BigIris)"));
+        assert!(text.contains("Name=View in BigIris (BigIris)"));
     }
 
     #[test]

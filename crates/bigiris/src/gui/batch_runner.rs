@@ -79,7 +79,7 @@ pub(super) fn format_size_delta(bytes_in: u64, bytes_out: u64) -> String {
     let ratio = (bytes_out as f64) / (bytes_in as f64);
     let pct = (ratio - 1.0) * 100.0;
     if pct.abs() < 0.5 {
-        gettext("≈ mesmo tamanho")
+        gettext("≈ same size")
     } else if pct < 0.0 {
         format!("−{:.0}%", pct.abs())
     } else {
@@ -157,7 +157,7 @@ pub(super) fn arm_auto_close(window: &adw::ApplicationWindow, seconds: u32) {
 /// Summary counts. The catalog validator has no plural support, so a single
 /// message with named placeholders keeps the counts translatable.
 pub(super) fn format_counts(ok: usize, skip: usize, fail: usize) -> String {
-    gettext("{written} gravado(s), {skipped} ignorado(s), {failed} falha(s)")
+    gettext("written: {written}, skipped: {skipped}, failed: {failed}")
         .replace("{written}", &ok.to_string())
         .replace("{skipped}", &skip.to_string())
         .replace("{failed}", &fail.to_string())
@@ -186,7 +186,7 @@ pub(super) fn finish_dialog(
     // bytes_out, so the comparison is fair only when ok > 0).
     let counts = format_counts(ok, skip, fail);
     let timing = format_duration(elapsed);
-    let mut msg = gettext("Concluído em {time} · {counts}")
+    let mut msg = gettext("Finished in {time} · {counts}")
         .replace("{time}", &timing)
         .replace("{counts}", &counts);
     if ok > 0 && bytes_in > 0 && bytes_out > 0 {
@@ -195,7 +195,7 @@ pub(super) fn finish_dialog(
         let avg_out = bytes_out / (ok as u64).max(1);
         msg.push('\n');
         msg.push_str(
-            &gettext("{before} → {after} ({delta}) · média por arquivo {average_before} → {average_after}")
+            &gettext("{before} → {after} ({delta}) · average per file {average_before} → {average_after}")
                 .replace("{before}", &format_size(bytes_in))
                 .replace("{after}", &format_size(bytes_out))
                 .replace("{delta}", &delta)
@@ -217,7 +217,7 @@ pub(super) fn finish_dialog(
 /// The worker pool vanished without its summary: say so and let the user
 /// retry instead of leaving Apply disabled forever.
 fn abort_dialog(status: &gtk::Label, apply_btn: &gtk::Button) {
-    status.set_text(&gettext("O processamento terminou inesperadamente. Tente novamente."));
+    status.set_text(&gettext("Processing ended unexpectedly. Please try again."));
     apply_btn.set_sensitive(true);
 }
 
@@ -316,7 +316,7 @@ where
                     Ok(worker) => tally.add(worker),
                     Err(_) => tally.add(Tally {
                         fail: 1,
-                        first_err: Some(gettext("um worker terminou inesperadamente")),
+                        first_err: Some(gettext("a worker ended unexpectedly")),
                         ..Tally::default()
                     }),
                 }
@@ -396,7 +396,7 @@ where
             crate::codec::with_cancel(queue.cancelled.clone(), || work(path))
         }))
         .unwrap_or_else(|_| {
-            Err(bigimage_core::BigImageError::Other(gettext("falha inesperada no worker")))
+            Err(bigimage_core::BigImageError::Other(gettext("unexpected worker failure")))
         });
         match result {
             Ok(ConvertOutcome::Written { output }) => {
@@ -538,7 +538,7 @@ mod worker_tests {
 
     #[test]
     fn counts_fill_every_placeholder() {
-        assert_eq!(format_counts(1, 0, 2), "1 gravado(s), 0 ignorado(s), 2 falha(s)");
+        assert_eq!(format_counts(1, 0, 2), "written: 1, skipped: 0, failed: 2");
     }
 
     #[test]

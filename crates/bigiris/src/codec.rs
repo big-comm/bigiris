@@ -118,7 +118,7 @@ pub(crate) fn installed_executable() -> std::io::Result<(PathBuf, bool)> {
     replaced.map(|path| (path, true)).ok_or_else(|| {
         std::io::Error::new(
             std::io::ErrorKind::NotFound,
-            gettext("o executável do BigIris foi removido; reinicie o BigIris"),
+            gettext("the BigIris executable was removed; restart BigIris"),
         )
     })
 }
@@ -328,14 +328,14 @@ fn wait_child(
     .ok();
     loop {
         if cancellable && cancelled() {
-            return Err(invalid(gettext("operação cancelada")));
+            return Err(invalid(gettext("operation canceled")));
         }
         if let Some(status) = child.try_wait()? {
             return Ok(status);
         }
         let now = Instant::now();
         if now >= deadline {
-            return Err(invalid(gettext("codec excedeu o limite de tempo")));
+            return Err(invalid(gettext("the codec exceeded its time limit")));
         }
         let slice = (deadline - now).min(Duration::from_millis(50));
         match &pidfd {
@@ -391,7 +391,7 @@ pub(crate) fn sanitize_text(text: &str) -> String {
 
 /// Appended to worker failures when the executable was replaced on disk.
 fn restart_hint() -> String {
-    format!(" ({})", gettext("o BigIris foi atualizado; reinicie-o"))
+    format!(" ({})", gettext("BigIris was updated; restart it"))
 }
 
 /// Identity a worker must match: the protocol magic, the crate version and
@@ -422,7 +422,7 @@ fn run<T>(
 /// `replaced` reports whether failures still need the restart hint.
 fn execute(path: &Path, mode: &str, replaced: &mut bool) -> ImageResult<std::fs::File> {
     if cancelled() {
-        return Err(invalid(gettext("operação cancelada")));
+        return Err(invalid(gettext("operation canceled")));
     }
     let input = std::fs::OpenOptions::new()
         .read(true)
@@ -430,7 +430,7 @@ fn execute(path: &Path, mode: &str, replaced: &mut bool) -> ImageResult<std::fs:
         .open(path)?;
     let info = input.metadata()?;
     if !info.is_file() || info.len() > MAX_INPUT {
-        return Err(invalid(gettext("entrada não regular ou acima de 1 GiB")));
+        return Err(invalid(gettext("not a regular file, or larger than 1 GiB")));
     }
     let extension = path
         .extension()
@@ -516,7 +516,7 @@ fn execute(path: &Path, mode: &str, replaced: &mut bool) -> ImageResult<std::fs:
         .stderr(Stdio::piped());
     let child = command.spawn().map_err(|error| {
         invalid(crate::with_error(
-            &gettext("sandbox indisponível: instale bubblewrap e util-linux; {error}"),
+            &gettext("sandbox unavailable: install bubblewrap and util-linux; {error}"),
             error,
         ))
     })?;
@@ -528,16 +528,14 @@ fn execute(path: &Path, mode: &str, replaced: &mut bool) -> ImageResult<std::fs:
         // Both messages below already carry the restart advice.
         let hint = if std::mem::take(replaced) { restart_hint() } else { String::new() };
         if status.code() == Some(VERSION_MISMATCH) {
-            return Err(invalid(gettext(
-                "o BigIris foi atualizado enquanto estava aberto; reinicie-o",
-            )));
+            return Err(invalid(gettext("BigIris was updated while it was open; restart it")));
         }
         let details = diagnostics
             .and_then(|rx| rx.recv_timeout(Duration::from_secs(2)).ok())
             .unwrap_or_default();
         let details = sanitize_text(String::from_utf8_lossy(&details).trim());
         return Err(invalid(crate::fill(
-            &gettext("codec isolado recusou a imagem ({status}){hint}: {details}"),
+            &gettext("the isolated codec rejected the image ({status}){hint}: {details}"),
             &[("status", &status.to_string()), ("hint", &hint), ("details", &details)],
         )));
     }
@@ -1126,7 +1124,7 @@ mod tests {
             return;
         };
         let message = result.unwrap_err().to_string();
-        assert!(message.contains("reinicie") && !message.ends_with(&restart_hint()), "{message}");
+        assert!(message.contains("restart") && !message.ends_with(&restart_hint()), "{message}");
     }
 
     #[test]
@@ -1396,7 +1394,7 @@ mod tests {
         else {
             return;
         };
-        assert!(result.unwrap_err().to_string().contains("limite"));
+        assert!(result.unwrap_err().to_string().contains("time limit"));
         assert!(started.elapsed() < Duration::from_secs(10));
 
         let flag = Arc::new(AtomicBool::new(false));
@@ -1407,7 +1405,7 @@ mod tests {
         });
         let started = Instant::now();
         let result = with_worker(script, DEADLINE, || with_cancel(flag, || decode(file.path())));
-        assert!(result.unwrap().unwrap_err().to_string().contains("cancelada"));
+        assert!(result.unwrap().unwrap_err().to_string().contains("canceled"));
         assert!(started.elapsed() < Duration::from_secs(10));
         // --die-with-parent tears the sandbox down with bwrap.
         let deadline = Instant::now() + Duration::from_secs(5);

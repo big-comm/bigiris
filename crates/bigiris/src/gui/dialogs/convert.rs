@@ -17,7 +17,7 @@ pub(in crate::gui) fn build_convert_dialog(
         .application(app)
         .default_width(880)
         .default_height(500)
-        .title(gettext("Converter imagens — Prisma"))
+        .title(gettext("Convert images — Prisma"))
         .build();
     prepare_dialog(&window, files, fill_convert_dialog);
     window
@@ -29,27 +29,27 @@ fn fill_convert_dialog(
     preview_session: Option<Rc<PreviewSession>>,
 ) -> adw::ApplicationWindow {
     let header = adw::HeaderBar::new();
-    let title = adw::WindowTitle::new(&gettext("Converter"), "Prisma");
+    let title = adw::WindowTitle::new(&gettext("Convert"), "Prisma");
     header.set_title_widget(Some(&title));
 
     let format_row = format_row();
 
     let overwrite_row = overwrite_row();
 
-    let files_row = selection_row(&gettext("Arquivos selecionados"), &files);
+    let files_row = selection_row(&gettext("Selected files"), &files);
 
     let encode = EncodeControls::new();
     encode.bind(&window, &format_row);
 
     // ── Conversão group ───────────────────────────────────────────────
-    let conv_group = adw::PreferencesGroup::builder().title(gettext("Conversão")).build();
+    let conv_group = adw::PreferencesGroup::builder().title(gettext("Conversion")).build();
     conv_group.add(&files_row);
     conv_group.add(&format_row);
     conv_group.add(&encode.target);
     conv_group.add(&encode.advanced);
 
     // ── Destino group: overwrite policy + optional output folder ──────
-    let dest_group = adw::PreferencesGroup::builder().title(gettext("Destino")).build();
+    let dest_group = adw::PreferencesGroup::builder().title(gettext("Destination")).build();
     dest_group.add(&overwrite_row);
 
     // Pasta de saída picker (mirror do Batch dialog) — None = mesma
@@ -57,8 +57,8 @@ fn fill_convert_dialog(
     let output_dir: Rc<RefCell<Option<PathBuf>>> = Rc::new(RefCell::new(None));
     let folder_row = adw::ActionRow::builder()
         .use_markup(false)
-        .title(gettext("Pasta de saída"))
-        .subtitle(gettext("Mesma pasta do arquivo de origem"))
+        .title(gettext("Output folder"))
+        .subtitle(gettext("Same folder as the source file"))
         .activatable(true)
         .build();
     let folder_icon = gtk::Image::from_icon_name("folder-open-symbolic");
@@ -66,7 +66,7 @@ fn fill_convert_dialog(
     folder_row.add_suffix(&folder_icon);
     let clear_folder_btn = gtk::Button::builder()
         .icon_name("edit-clear-symbolic")
-        .tooltip_text(gettext("Usar a mesma pasta do arquivo de origem"))
+        .tooltip_text(gettext("Use the source file folder"))
         .css_classes(["flat"])
         .valign(gtk::Align::Center)
         .visible(false)
@@ -76,13 +76,13 @@ fn fill_convert_dialog(
 
     let status = status_label();
 
-    let (cancel_btn, apply_btn, actions) = action_buttons(&gettext("Converter"));
+    let (cancel_btn, apply_btn, actions) = action_buttons(&gettext("Convert"));
 
     // Smart prompt: if the source image has an alpha channel and the user
     // picks JPEG, warn that transparency will be flattened.
     let alpha_banner = adw::Banner::builder()
         .title(gettext(
-            "Esta imagem tem transparência — JPEG perde o canal alfa. Considere PNG ou WebP.",
+            "This image has transparency — JPEG drops the alpha channel. Consider PNG or WebP.",
         ))
         .revealed(false)
         .build();
@@ -103,7 +103,7 @@ fn fill_convert_dialog(
     // Smart prompt: LGPD / privacidade — se a imagem tem coordenadas GPS
     // no EXIF, avisa que o upload pode vazar a localização.
     let gps_banner = adw::Banner::builder()
-        .title(gettext("Esta imagem contém GPS (localização) no EXIF. Atenção ao compartilhar publicamente — nosso pipeline remove o EXIF automaticamente no re-encode."))
+        .title(gettext("This image contains GPS (location) data in its EXIF. Be careful when sharing it publicly — our pipeline strips EXIF automatically when re-encoding."))
         .revealed(false)
         .build();
     gps_banner.add_css_class("warning");
@@ -145,7 +145,7 @@ fn fill_convert_dialog(
         let clear_btn = clear_folder_btn.clone();
         dialog_signal!(window, clear_folder_btn, connect_clicked, move |_| {
             *output_dir.borrow_mut() = None;
-            folder_row.set_subtitle(&gettext("Mesma pasta do arquivo de origem"));
+            folder_row.set_subtitle(&gettext("Same folder as the source file"));
             clear_btn.set_visible(false);
         });
     }
@@ -190,13 +190,13 @@ fn fill_convert_dialog(
             let out_dir_snapshot = output_dir.borrow().clone();
 
             apply_btn.set_sensitive(false);
-            status.set_text(&gettext("Convertendo…"));
+            status.set_text(&gettext("Converting…"));
 
             let work_files: Vec<PathBuf> = (*files).clone();
             run_batch_async(
                 work_files,
                 move |f| convert_file_to(f, out_dir_snapshot.as_deref(), fmt, &opts, policy),
-                gettext("Convertendo"),
+                gettext("Converting"),
                 status.clone(),
                 apply_btn.clone(),
                 window.clone(),

@@ -176,8 +176,8 @@ mod tests {
         assert_eq!(text.matches("X-KDE-Submenu=").count(), 1);
         assert!(text.contains("X-KDE-Submenu=BigIris\n"));
         assert!(text.contains("[Desktop Action bigiris02ConvertPng]"));
-        assert!(text.contains("Name=Converter ▸ PNG\n"));
-        assert!(text.contains("Name[en]=Convert ▸ PNG\n"));
+        assert!(text.contains("Name=Convert ▸ PNG\n"));
+        assert!(text.contains("Name[pt_BR]=Converter ▸ PNG\n"));
         assert!(text.contains("Exec=bigiris --notify convert --to png --overwrite skip %F"));
     }
 

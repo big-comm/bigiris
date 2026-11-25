@@ -43,7 +43,7 @@ pub(in crate::gui) const CONVERT_FORMATS: &[(&str, Format)] = &[
     (n_("TIFF"), Format::Tiff),
     (n_("BMP"), Format::Bmp),
     (n_("GIF"), Format::Gif),
-    (n_("ICO (até 256 × 256)"), Format::Ico),
+    (n_("ICO (up to 256 × 256)"), Format::Ico),
     (n_("PNM (Netpbm)"), Format::Pnm),
     (n_("TGA"), Format::Tga),
     (n_("QOI"), Format::Qoi),
@@ -53,9 +53,9 @@ pub(in crate::gui) const CONVERT_FORMATS: &[(&str, Format)] = &[
 
 /// "Qualidade" choices: the visual target each encoder searches for.
 const TARGET_CHOICES: &[(&str, bigimage_core::QualityTarget)] = &[
-    (n_("Máxima qualidade"), bigimage_core::QualityTarget::Maximum),
-    (n_("Equilibrado"), bigimage_core::QualityTarget::Balanced),
-    (n_("Menor arquivo"), bigimage_core::QualityTarget::Smallest),
+    (n_("Maximum quality"), bigimage_core::QualityTarget::Maximum),
+    (n_("Balanced"), bigimage_core::QualityTarget::Balanced),
+    (n_("Smallest file"), bigimage_core::QualityTarget::Smallest),
 ];
 
 /// Encoder controls shared by the convert and batch dialogs: the
@@ -74,30 +74,32 @@ impl EncodeControls {
         let names: Vec<&str> = TARGET_CHOICES.iter().map(|(n, _)| *n).collect();
         let target = adw::ComboRow::builder()
             .use_markup(false)
-            .title(gettext("Qualidade"))
-            .subtitle(gettext("O menor arquivo que mantém essa qualidade visual"))
+            .title(gettext("Quality"))
+            .subtitle(gettext("The smallest file that keeps this visual quality"))
             .model(&translated_strings(&names))
             .selected(1)
             .build();
         let fixed = adw::SwitchRow::builder()
             .use_markup(false)
-            .title(gettext("Qualidade fixa"))
-            .subtitle(gettext("Usa o valor abaixo sem busca automática (JPEG, WebP e AVIF)"))
+            .title(gettext("Fixed quality"))
+            .subtitle(gettext(
+                "Uses the value below without automatic search (JPEG, WebP and AVIF)",
+            ))
             .active(false)
             .build();
         let quality = adw::SpinRow::with_range(1.0, 100.0, 1.0);
-        quality.set_title(&gettext("Qualidade (JPEG/WebP/AVIF)"));
-        quality.set_subtitle(&gettext("1 menor qualidade · 85 equilíbrio · 100 maior qualidade"));
+        quality.set_title(&gettext("Quality (JPEG/WebP/AVIF)"));
+        quality.set_subtitle(&gettext("1 lower quality · 85 balanced · 100 higher quality"));
         quality.set_value(85.0);
         let optimize = adw::SwitchRow::builder()
             .use_markup(false)
-            .title(gettext("Otimizar tamanho"))
-            .subtitle(gettext("PNG com compressão máxima; AVIF mais lento; arquivo menor"))
+            .title(gettext("Optimize size"))
+            .subtitle(gettext("PNG with maximum compression; AVIF slower; smaller file"))
             .active(false)
             .build();
         let advanced = adw::ExpanderRow::builder()
-            .title(gettext("Avançado"))
-            .subtitle(gettext("Otimização do encoder"))
+            .title(gettext("Advanced"))
+            .subtitle(gettext("Encoder optimization"))
             .build();
         advanced.add_row(&fixed);
         advanced.add_row(&quality);
@@ -139,9 +141,9 @@ impl EncodeControls {
 
 /// Overwrite choices shared by convert and resize dialogs.
 const OVERWRITE_CHOICES: &[(&str, OverwritePolicy)] = &[
-    (n_("Pular se já existir"), OverwritePolicy::Skip),
-    (n_("Sobrescrever o arquivo"), OverwritePolicy::Replace),
-    (n_("Incrementar (_1, _2, …)"), OverwritePolicy::Increment),
+    (n_("Skip existing files"), OverwritePolicy::Skip),
+    (n_("Overwrite the file"), OverwritePolicy::Replace),
+    (n_("Add a suffix (_1, _2, …)"), OverwritePolicy::Increment),
 ];
 
 /// Run a Prisma dialog as its own GApplication instance. NON_UNIQUE: each
@@ -162,7 +164,7 @@ fn format_row() -> adw::ComboRow {
     let names: Vec<&str> = CONVERT_FORMATS.iter().map(|(n, _)| *n).collect();
     adw::ComboRow::builder()
         .use_markup(false)
-        .title(gettext("Formato de destino"))
+        .title(gettext("Target format"))
         .model(&translated_strings(&names))
         .build()
 }
@@ -173,11 +175,11 @@ fn selected_format(row: &adw::ComboRow) -> Format {
 
 /// "Formato de destino" combo whose first entry keeps the source format.
 fn target_format_row() -> adw::ComboRow {
-    let mut names = vec![n_("Manter o formato original")];
+    let mut names = vec![n_("Keep the original format")];
     names.extend(CONVERT_FORMATS.iter().map(|(n, _)| *n));
     adw::ComboRow::builder()
         .use_markup(false)
-        .title(gettext("Formato de destino"))
+        .title(gettext("Target format"))
         .model(&translated_strings(&names))
         .build()
 }
@@ -195,7 +197,7 @@ fn overwrite_row() -> adw::ComboRow {
     let names: Vec<&str> = OVERWRITE_CHOICES.iter().map(|(n, _)| *n).collect();
     adw::ComboRow::builder()
         .use_markup(false)
-        .title(gettext("Se o arquivo de saída existir"))
+        .title(gettext("If the output file exists"))
         .model(&translated_strings(&names))
         .build()
 }
@@ -223,7 +225,7 @@ fn status_label() -> gtk::Label {
 
 /// End-aligned Cancel + suggested `apply_label` buttons.
 fn action_buttons(apply_label: &str) -> (gtk::Button, gtk::Button, gtk::Box) {
-    let cancel_btn = gtk::Button::with_label(&gettext("Cancelar"));
+    let cancel_btn = gtk::Button::with_label(&gettext("Cancel"));
     let apply_btn = gtk::Button::builder().label(apply_label).build();
     apply_btn.add_css_class("suggested-action");
     apply_btn.add_css_class("pill");
@@ -255,7 +257,7 @@ fn files_subtitle(files: &[PathBuf]) -> String {
         // No plural forms: the catalog validator rejects msgid_plural, so
         // the wording avoids a counted noun. {first} is a file name.
         fill(
-            &gettext("{first} e mais {count}"),
+            &gettext("{first} and {count} more"),
             &[("first", &first), ("count", &others.to_string())],
         )
     }
@@ -270,7 +272,7 @@ fn pick_output_folder(
     clear_btn: &gtk::Button,
 ) {
     let dialog =
-        gtk::FileDialog::builder().title(gettext("Escolher pasta de saída")).modal(true).build();
+        gtk::FileDialog::builder().title(gettext("Choose output folder")).modal(true).build();
     let parent = window.clone();
     let output_dir = output_dir.clone();
     let row = row.clone();
@@ -328,8 +330,8 @@ mod fill_tests {
         let one = vec![PathBuf::from("/x/{count}.png")];
         assert_eq!(files_subtitle(&one), "{count}.png");
         let three = vec![one[0].clone(), PathBuf::from("b.png"), PathBuf::from("c.png")];
-        assert_eq!(files_subtitle(&three), "{count}.png e mais 2");
-        assert_eq!(files_subtitle(&three[..2]), "{count}.png e mais 1");
+        assert_eq!(files_subtitle(&three), "{count}.png and 2 more");
+        assert_eq!(files_subtitle(&three[..2]), "{count}.png and 1 more");
     }
 }
 

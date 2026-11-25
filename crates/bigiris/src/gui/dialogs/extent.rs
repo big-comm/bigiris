@@ -13,24 +13,24 @@ const EXTENT_RATIO_PRESETS: &[(&str, (u32, u32))] = &[
     (n_("Instagram feed (4:5)"), (4, 5)),
     (n_("Stories / Shorts (9:16)"), (9, 16)),
     (n_("Widescreen (16:9)"), (16, 9)),
-    (n_("Personalizado…"), (0, 0)),
+    (n_("Custom…"), (0, 0)),
 ];
 
 /// Background-colour presets for the "Letterbox" dialog. The first entry
 /// is the default. `Custom` (last) reveals the hex entry.
 const EXTENT_BG_PRESETS: &[(&str, [u8; 4])] = &[
-    (n_("Preto suave (#0d0e12)"), [0x0d, 0x0e, 0x12, 0xFF]),
-    (n_("Preto puro (#000000)"), [0, 0, 0, 0xFF]),
-    (n_("Branco (#ffffff)"), [0xFF, 0xFF, 0xFF, 0xFF]),
-    (n_("Transparente"), [0, 0, 0, 0]),
-    (n_("Personalizada (hex)"), [0, 0, 0, 0xFF]),
+    (n_("Soft black (#0d0e12)"), [0x0d, 0x0e, 0x12, 0xFF]),
+    (n_("Pure black (#000000)"), [0, 0, 0, 0xFF]),
+    (n_("White (#ffffff)"), [0xFF, 0xFF, 0xFF, 0xFF]),
+    (n_("Transparent"), [0, 0, 0, 0]),
+    (n_("Custom (hex)"), [0, 0, 0, 0xFF]),
 ];
 
 /// Gravity choices exposed in the Prisma dialog. Limited to centre +
 /// vertical pinning because horizontal letterbox use cases are rarer in
 /// social-media workflows; the CLI exposes all nine for completeness.
 const EXTENT_GRAVITIES: &[(&str, Gravity)] =
-    &[(n_("Centro"), Gravity::Center), (n_("Topo"), Gravity::North), (n_("Base"), Gravity::South)];
+    &[(n_("Center"), Gravity::Center), (n_("Top"), Gravity::North), (n_("Bottom"), Gravity::South)];
 
 /// Run the "Letterbox" modal. Returns GTK's exit code.
 pub fn run_extent_dialog(files: Vec<PathBuf>) -> i32 {
@@ -60,7 +60,7 @@ fn fill_extent_dialog(
     let header = adw::HeaderBar::new();
     header.set_title_widget(Some(&adw::WindowTitle::new(
         &gettext("Letterbox"),
-        &gettext("Prisma · sem corte"),
+        &gettext("Prisma · no cropping"),
     )));
 
     let content_h = gtk::Box::builder()
@@ -82,36 +82,36 @@ fn fill_extent_dialog(
 
     let intro = gtk::Label::builder()
         .label(gettext(
-            "Estende a tela em volta da imagem para encaixá-la num formato fixo (post de YouTube, feed do Instagram, Stories…) sem cortar nenhum pixel. A imagem original é centralizada e o resto é preenchido com a cor escolhida.",
+            "Extends the canvas around the image to fit a fixed format (YouTube posts, Instagram feeds, Stories…) without cropping any pixels. The original image is centered and the remaining area is filled with the selected color.",
         ))
         .wrap(true)
         .xalign(0.0)
         .build();
     intro.add_css_class("dim-label");
 
-    let files_row = selection_row(&gettext("Arquivos selecionados"), &files);
+    let files_row = selection_row(&gettext("Selected files"), &files);
 
     let natural_row = adw::ActionRow::builder()
         .use_markup(false)
-        .title(gettext("Tamanho original"))
-        .subtitle(format!("{} × {} px ({})", natural.0, natural.1, gettext("Primeiro arquivo")))
+        .title(gettext("Original size"))
+        .subtitle(format!("{} × {} px ({})", natural.0, natural.1, gettext("First file")))
         .build();
 
     // Aspect preset combo.
     let ratio_names: Vec<&str> = EXTENT_RATIO_PRESETS.iter().map(|(n, _)| *n).collect();
     let ratio_row = adw::ComboRow::builder()
         .use_markup(false)
-        .title(gettext("Proporção alvo"))
+        .title(gettext("Target aspect ratio"))
         .model(&translated_strings(&ratio_names))
         .build();
 
     // Custom W:H entries — visible only when the "Personalizado…" preset is
     // selected. Defaults to 1:1 so switching back and forth feels stable.
     let custom_w_spin = adw::SpinRow::with_range(1.0, 99.0, 1.0);
-    custom_w_spin.set_title(&gettext("Razão W"));
+    custom_w_spin.set_title(&gettext("Width ratio"));
     custom_w_spin.set_value(1.0);
     let custom_h_spin = adw::SpinRow::with_range(1.0, 99.0, 1.0);
-    custom_h_spin.set_title(&gettext("Razão H"));
+    custom_h_spin.set_title(&gettext("Height ratio"));
     custom_h_spin.set_value(1.0);
     custom_w_spin.set_visible(false);
     custom_h_spin.set_visible(false);
@@ -121,7 +121,7 @@ fn fill_extent_dialog(
     let bg_names: Vec<&str> = EXTENT_BG_PRESETS.iter().map(|(n, _)| *n).collect();
     let bg_row = adw::ComboRow::builder()
         .use_markup(false)
-        .title(gettext("Cor de fundo"))
+        .title(gettext("Background color"))
         .model(&translated_strings(&bg_names))
         .build();
 
@@ -135,13 +135,13 @@ fn fill_extent_dialog(
     let gravity_names: Vec<&str> = EXTENT_GRAVITIES.iter().map(|(n, _)| *n).collect();
     let gravity_row = adw::ComboRow::builder()
         .use_markup(false)
-        .title(gettext("Posição da imagem"))
+        .title(gettext("Image position"))
         .model(&translated_strings(&gravity_names))
         .build();
 
     let predicted_row = adw::ActionRow::builder()
         .use_markup(false)
-        .title(gettext("Destino previsto"))
+        .title(gettext("Predicted destination"))
         .subtitle("—")
         .build();
 
@@ -168,7 +168,7 @@ fn fill_extent_dialog(
     let status = status_label();
     form_col.append(&status);
 
-    let (cancel_btn, apply_btn, actions) = action_buttons(&gettext("Estender"));
+    let (cancel_btn, apply_btn, actions) = action_buttons(&gettext("Extend"));
     form_col.append(&actions);
 
     content_h.append(&form_col);
@@ -321,13 +321,13 @@ fn fill_extent_dialog(
             let policy = selected_overwrite(&overwrite_row);
 
             apply_btn.set_sensitive(false);
-            status.set_text(&gettext("Estendendo…"));
+            status.set_text(&gettext("Extending…"));
 
             let work_files: Vec<PathBuf> = (*files).clone();
             run_batch_async(
                 work_files,
                 move |f| extent_file(f, opts, target, policy),
-                gettext("Estendendo"),
+                gettext("Extending"),
                 status.clone(),
                 apply_btn.clone(),
                 window.clone(),

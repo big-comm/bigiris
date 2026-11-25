@@ -41,31 +41,31 @@ use gettextrs::gettext;
 #[command(
     name = "bigiris",
     version,
-    about = gettext("Visualizador rápido e conversor de imagens para Linux"),
+    about = gettext("Fast image viewer and converter for Linux"),
     long_about = None,
-    after_help = gettext("Códigos de saída:\n  0  sucesso (inclui arquivos ignorados por já existirem)\n  1  uso inválido ou erro fatal antes de processar (nada foi gravado)\n  2  falha parcial: um ou mais arquivos não puderam ser processados"),
+    after_help = gettext("Exit codes:\n  0  success (includes files skipped because they already exist)\n  1  invalid usage or fatal error before processing (nothing was written)\n  2  partial failure: one or more files could not be processed"),
 )]
 struct Cli {
     #[arg(
         long,
         value_name = "NAME",
-        help = gettext("Abrir apenas um diálogo modal específico (usado por service menus)")
+        help = gettext("Open only one specific modal dialog (used by service menus)")
     )]
     dialog: Option<Dialog>,
 
-    #[arg(long, help = gettext("Rodar smoke-test e sair (usado em CI e pós-install)"))]
+    #[arg(long, help = gettext("Run a smoke test and exit (used in CI and after installation)"))]
     self_test: bool,
 
     #[arg(
         long,
         global = true,
-        help = gettext("Avisar falhas numa notificação do desktop (usado pelos menus de contexto, que não mostram o terminal)")
+        help = gettext("Report failures in a desktop notification (used by context menus, which do not show the terminal)")
     )]
     notify: bool,
 
     #[arg(
         value_name = "FILE",
-        help = gettext("Arquivos a abrir no visualizador (quando sem subcomando)")
+        help = gettext("Files to open in the viewer (when there is no subcommand)")
     )]
     files: Vec<PathBuf>,
 
@@ -95,11 +95,11 @@ enum Dialog {
 #[value(rename_all = "kebab-case")]
 enum OverwriteArg {
     #[default]
-    #[value(help = gettext("Não sobrescreve o arquivo existente (default)"))]
+    #[value(help = gettext("Does not overwrite the existing file (default)"))]
     Skip,
-    #[value(help = gettext("Sobrescreve o arquivo existente"))]
+    #[value(help = gettext("Overwrites the existing file"))]
     Replace,
-    #[value(help = gettext("Gera nome incrementado (foo_1.png, foo_2.png, ...)"))]
+    #[value(help = gettext("Generates an incremented name (foo_1.png, foo_2.png, ...)"))]
     Increment,
 }
 
@@ -141,17 +141,17 @@ impl From<FilterArg> for Filter {
 struct ResizeModeArgs {
     #[arg(
         long = "max-edge",
-        help = gettext("Aresta máxima em pixels (preserva aspecto; no-op se a imagem já é menor)")
+        help = gettext("Maximum edge length in pixels (keeps the aspect ratio; no-op if the image is already smaller)")
     )]
     max_edge: Option<u32>,
-    #[arg(long, help = gettext("Escala percentual (ex: 50 para metade; 200 para o dobro)"))]
+    #[arg(long, help = gettext("Percentage scale (e.g. 50 for half; 200 for double)"))]
     percent: Option<f32>,
-    #[arg(long, value_name = "WxH", help = gettext("Dimensão exata WxH (ignora aspecto)"))]
+    #[arg(long, value_name = "WxH", help = gettext("Exact WxH size (ignores the aspect ratio)"))]
     exact: Option<WxH>,
     #[arg(
         long,
         value_name = "WxH",
-        help = gettext("Encaixa dentro da caixa WxH preservando aspecto")
+        help = gettext("Fits inside the WxH box, keeping the aspect ratio")
     )]
     fit: Option<WxH>,
 }
@@ -181,14 +181,14 @@ impl std::str::FromStr for WxH {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let (w, h) = s.split_once(['x', 'X']).ok_or_else(|| {
             fill(
-                &gettext("esperado formato WxH (ex. 1920x1080), recebido: {value}"),
+                &gettext("expected the WxH format (e.g. 1920x1080), got: {value}"),
                 &[("value", &format!("{s:?}"))],
             )
         })?;
         let width: u32 =
-            w.parse().map_err(|e| with_error(&gettext("largura inválida: {error}"), e))?;
+            w.parse().map_err(|e| with_error(&gettext("invalid width: {error}"), e))?;
         let height: u32 =
-            h.parse().map_err(|e| with_error(&gettext("altura inválida: {error}"), e))?;
+            h.parse().map_err(|e| with_error(&gettext("invalid height: {error}"), e))?;
         Ok(WxH { width, height })
     }
 }
@@ -244,21 +244,19 @@ impl std::str::FromStr for CropGeom {
         let malformed = |template: String| fill(&template, &[("value", &quoted)]);
         let (wh, rest) = s
             .split_once('+')
-            .ok_or_else(|| malformed(gettext("esperado WxH+X+Y, recebido: {value}")))?;
+            .ok_or_else(|| malformed(gettext("expected WxH+X+Y, got: {value}")))?;
         let (x, y) = rest
             .split_once('+')
-            .ok_or_else(|| malformed(gettext("faltou o offset Y em {value}")))?;
+            .ok_or_else(|| malformed(gettext("missing the Y offset in {value}")))?;
         let (w, h) = wh
             .split_once(['x', 'X'])
-            .ok_or_else(|| malformed(gettext("faltou largura/altura em {value}")))?;
+            .ok_or_else(|| malformed(gettext("missing width/height in {value}")))?;
         let width: u32 =
-            w.parse().map_err(|e| with_error(&gettext("largura inválida: {error}"), e))?;
+            w.parse().map_err(|e| with_error(&gettext("invalid width: {error}"), e))?;
         let height: u32 =
-            h.parse().map_err(|e| with_error(&gettext("altura inválida: {error}"), e))?;
-        let x: u32 =
-            x.parse().map_err(|e| with_error(&gettext("offset X inválido: {error}"), e))?;
-        let y: u32 =
-            y.parse().map_err(|e| with_error(&gettext("offset Y inválido: {error}"), e))?;
+            h.parse().map_err(|e| with_error(&gettext("invalid height: {error}"), e))?;
+        let x: u32 = x.parse().map_err(|e| with_error(&gettext("invalid X offset: {error}"), e))?;
+        let y: u32 = y.parse().map_err(|e| with_error(&gettext("invalid Y offset: {error}"), e))?;
         Ok(CropGeom { rect: CropRect::new(x, y, width, height) })
     }
 }
@@ -278,15 +276,15 @@ impl std::str::FromStr for Aspect {
         let trimmed = s.trim();
         let quoted = format!("{s:?}");
         let (a, b) = trimmed.split_once(':').ok_or_else(|| {
-            fill(&gettext("esperado W:H (ex. 1:1, 9:16), recebido: {value}"), &[("value", &quoted)])
+            fill(&gettext("expected W:H (e.g. 1:1, 9:16), got: {value}"), &[("value", &quoted)])
         })?;
         let w: u32 =
-            a.trim().parse().map_err(|e| with_error(&gettext("razão W inválida: {error}"), e))?;
+            a.trim().parse().map_err(|e| with_error(&gettext("invalid W ratio: {error}"), e))?;
         let h: u32 =
-            b.trim().parse().map_err(|e| with_error(&gettext("razão H inválida: {error}"), e))?;
+            b.trim().parse().map_err(|e| with_error(&gettext("invalid H ratio: {error}"), e))?;
         if w == 0 || h == 0 {
             return Err(fill(
-                &gettext("razão com componente zero não faz sentido: {value}"),
+                &gettext("a ratio with a zero component makes no sense: {value}"),
                 &[("value", &quoted)],
             ));
         }
@@ -329,12 +327,12 @@ impl From<GravityArg> for Gravity {
 #[derive(Args, Debug, Clone)]
 #[group(required = true, multiple = false)]
 struct ExtentSizeArgs {
-    #[arg(long, value_name = "WxH", help = gettext("Tamanho exato do canvas em pixels (WxH)"))]
+    #[arg(long, value_name = "WxH", help = gettext("Exact canvas size in pixels (WxH)"))]
     size: Option<WxH>,
     #[arg(
         long,
         value_name = "W:H",
-        help = gettext("Razão alvo (W:H). O canvas é estendido o mínimo necessário para caber a imagem nessa proporção")
+        help = gettext("Target ratio (W:H). The canvas is extended as little as needed to fit the image in that ratio")
     )]
     aspect: Option<Aspect>,
 }
@@ -351,11 +349,11 @@ impl ExtentSizeArgs {
 
 #[derive(Subcommand, Debug)]
 enum Command {
-    #[command(about = gettext("Converter arquivos (headless)"))]
+    #[command(about = gettext("Convert files (headless)"))]
     Convert {
         #[arg(
             long,
-            help = gettext("Formato de destino: png, jpg, webp, avif, tiff, bmp, gif, ico, pnm/ppm/pgm/pbm, tga, qoi, hdr, exr")
+            help = gettext("Target format: png, jpg, webp, avif, tiff, bmp, gif, ico, pnm/ppm/pgm/pbm, tga, qoi, hdr, exr")
         )]
         to: String,
         #[arg(
@@ -363,30 +361,30 @@ enum Command {
             value_name = "MODO",
             default_value = "equilibrado",
             value_parser = parse_target,
-            help = gettext("Qualidade visual buscada: maxima, equilibrado ou menor (também max, balanced, small). Cada formato procura o menor arquivo que mantém essa qualidade (SSIMULACRA2 85 / 80 / 70)")
+            help = gettext("Visual quality to aim for: maxima, equilibrado or menor (also max, balanced, small). Each format looks for the smallest file that keeps this quality (SSIMULACRA2 85 / 80 / 70)")
         )]
         target: QualityTarget,
         #[arg(
             long,
             value_parser = clap::value_parser!(u8).range(1..=100),
-            help = gettext("Qualidade fixa 1..100 para JPEG/WebP/AVIF, sem busca (ignora --target). Em WebP, 100 grava sem perdas")
+            help = gettext("Fixed quality 1..100 for JPEG/WebP/AVIF, without searching (ignores --target). In WebP, 100 writes losslessly")
         )]
         quality: Option<u8>,
-        #[arg(long, help = gettext("Aceito por compatibilidade: o JPEG já é sempre progressivo"))]
+        #[arg(long, help = gettext("Accepted for compatibility: JPEG is always progressive"))]
         progressive: bool,
-        #[arg(long, help = gettext("Compressão mais lenta e menor, sem perdas a mais: PNG e AVIF"))]
+        #[arg(long, help = gettext("Slower compression and smaller files, with no extra loss: PNG and AVIF"))]
         optimize: bool,
         #[arg(
             long = "overwrite",
             value_enum,
             default_value_t = OverwriteArg::Skip,
-            help = gettext("Política quando o arquivo de saída já existe")
+            help = gettext("What to do when the output file already exists")
         )]
         overwrite: OverwriteArg,
-        #[arg(value_name = "FILE", required = true, help = gettext("Arquivos de entrada"))]
+        #[arg(value_name = "FILE", required = true, help = gettext("Input files"))]
         files: Vec<PathBuf>,
     },
-    #[command(about = gettext("Redimensionar arquivos (headless). Exatamente um modo entre --max-edge / --percent / --exact / --fit é obrigatório"))]
+    #[command(about = gettext("Resize files (headless). Exactly one mode among --max-edge / --percent / --exact / --fit is required"))]
     Resize {
         #[command(flatten)]
         mode: ResizeModeArgs,
@@ -394,267 +392,267 @@ enum Command {
             long,
             value_enum,
             default_value_t = FilterArg::Lanczos3,
-            help = gettext("Kernel de interpolação (default: lanczos3)")
+            help = gettext("Interpolation kernel (default: lanczos3)")
         )]
         filter: FilterArg,
-        #[arg(long, help = gettext("Formato de destino (opcional; mantém o formato original se omitido)"))]
+        #[arg(long, help = gettext("Target format (optional; keeps the original format if omitted)"))]
         to: Option<String>,
         #[arg(
             long,
             value_name = "MODO",
             default_value = "equilibrado",
             value_parser = parse_target,
-            help = gettext("Qualidade visual buscada: maxima, equilibrado ou menor (também max, balanced, small)")
+            help = gettext("Visual quality to aim for: maxima, equilibrado or menor (also max, balanced, small)")
         )]
         target: QualityTarget,
         #[arg(
             long,
             value_parser = clap::value_parser!(u8).range(1..=100),
-            help = gettext("Qualidade fixa 1..100 para JPEG/WebP/AVIF, sem busca (ignora --target)")
+            help = gettext("Fixed quality 1..100 for JPEG/WebP/AVIF, without searching (ignores --target)")
         )]
         quality: Option<u8>,
-        #[arg(long, help = gettext("Aceito por compatibilidade: o JPEG já é sempre progressivo"))]
+        #[arg(long, help = gettext("Accepted for compatibility: JPEG is always progressive"))]
         progressive: bool,
-        #[arg(long, help = gettext("Compressão mais lenta e menor, sem perdas a mais: PNG e AVIF"))]
+        #[arg(long, help = gettext("Slower compression and smaller files, with no extra loss: PNG and AVIF"))]
         optimize: bool,
         #[arg(
             long = "overwrite",
             value_enum,
             default_value_t = OverwriteArg::Skip,
-            help = gettext("Política quando o arquivo de saída já existe")
+            help = gettext("What to do when the output file already exists")
         )]
         overwrite: OverwriteArg,
         #[arg(value_name = "FILE", required = true)]
         files: Vec<PathBuf>,
     },
-    #[command(about = gettext("Girar arquivos (headless). Rotações cardinais via pipeline de re-encode; `--auto` lê o tag EXIF Orientation e aplica a rotação certa"))]
+    #[command(about = gettext("Rotate files (headless). Right-angle rotations through a re-encode pipeline; `--auto` reads the EXIF Orientation tag and applies the right rotation"))]
     Rotate {
         #[arg(
             long,
             value_enum,
             conflicts_with = "auto",
-            help = gettext("Graus cardinais: 90 | 180 | 270")
+            help = gettext("Rotation in degrees: 90 | 180 | 270")
         )]
         degrees: Option<RotationArg>,
         #[arg(
             long,
             conflicts_with = "degrees",
-            help = gettext("Auto-orientar via EXIF (tag Orientation)")
+            help = gettext("Auto-orient from EXIF (Orientation tag)")
         )]
         auto: bool,
-        #[arg(long, help = gettext("Formato de destino (opcional; mantém o formato original se omitido)"))]
+        #[arg(long, help = gettext("Target format (optional; keeps the original format if omitted)"))]
         to: Option<String>,
         #[arg(
             long = "overwrite",
             value_enum,
             default_value_t = OverwriteArg::Skip,
-            help = gettext("Política quando o arquivo de saída já existe")
+            help = gettext("What to do when the output file already exists")
         )]
         overwrite: OverwriteArg,
         #[arg(value_name = "FILE", required = true)]
         files: Vec<PathBuf>,
     },
-    #[command(about = gettext("Espelhar arquivos na horizontal ou vertical (headless)"))]
+    #[command(about = gettext("Mirror files horizontally or vertically (headless)"))]
     Flip {
-        #[arg(long, value_enum, help = gettext("Eixo: horizontal | vertical"))]
+        #[arg(long, value_enum, help = gettext("Axis: horizontal | vertical"))]
         axis: FlipAxisArg,
-        #[arg(long, help = gettext("Formato de destino (opcional)"))]
+        #[arg(long, help = gettext("Target format (optional)"))]
         to: Option<String>,
         #[arg(long = "overwrite", value_enum, default_value_t = OverwriteArg::Skip)]
         overwrite: OverwriteArg,
         #[arg(value_name = "FILE", required = true)]
         files: Vec<PathBuf>,
     },
-    #[command(about = gettext("Recortar retângulo das imagens (headless). Use --rect WxH+X+Y ao estilo ImageMagick"))]
+    #[command(about = gettext("Crop a rectangle from images (headless). Use --rect WxH+X+Y, ImageMagick style"))]
     Crop {
         #[arg(
             long,
-            help = gettext("Geometria do recorte no formato WxH+X+Y (ex: 800x600+100+50)")
+            help = gettext("Crop geometry in the WxH+X+Y format (e.g. 800x600+100+50)")
         )]
         rect: CropGeom,
-        #[arg(long, help = gettext("Formato de destino (opcional)"))]
+        #[arg(long, help = gettext("Target format (optional)"))]
         to: Option<String>,
         #[arg(long = "overwrite", value_enum, default_value_t = OverwriteArg::Skip)]
         overwrite: OverwriteArg,
         #[arg(value_name = "FILE", required = true)]
         files: Vec<PathBuf>,
     },
-    #[command(about = gettext("Estender a tela em volta da imagem (letterbox). Exatamente um modo entre --size e --aspect é obrigatório. O canvas é preenchido com --bg e a imagem original é posicionada por --gravity"))]
+    #[command(about = gettext("Extend the canvas around the image (letterbox). Exactly one mode among --size and --aspect is required. The canvas is filled with --bg and the original image is placed by --gravity"))]
     Extent {
         #[command(flatten)]
         size: ExtentSizeArgs,
         #[arg(
             long,
             default_value = "#000000",
-            help = gettext("Cor de fundo em hexadecimal (#RRGGBB ou #RRGGBBAA)")
+            help = gettext("Background color in hexadecimal (#RRGGBB or #RRGGBBAA)")
         )]
         bg: String,
         #[arg(
             long,
             value_enum,
             default_value_t = GravityArg::Center,
-            help = gettext("Posição da imagem original no canvas estendido")
+            help = gettext("Position of the original image on the extended canvas")
         )]
         gravity: GravityArg,
-        #[arg(long, help = gettext("Formato de destino (opcional)"))]
+        #[arg(long, help = gettext("Target format (optional)"))]
         to: Option<String>,
         #[arg(long = "overwrite", value_enum, default_value_t = OverwriteArg::Skip)]
         overwrite: OverwriteArg,
         #[arg(value_name = "FILE", required = true)]
         files: Vec<PathBuf>,
     },
-    #[command(about = gettext("Ajustar cor/tom (brilho, contraste, saturação, gamma)"))]
+    #[command(about = gettext("Adjust color/tone (brightness, contrast, saturation, gamma)"))]
     Adjust {
         #[arg(
             long,
             default_value_t = 0,
             allow_negative_numbers = true,
-            help = gettext("Brilho -100..100 (0 = sem mudança)")
+            help = gettext("Brightness -100..100 (0 = no change)")
         )]
         brightness: i32,
         #[arg(
             long,
             default_value_t = 0.0,
             allow_negative_numbers = true,
-            help = gettext("Contraste -100..100 (0 = sem mudança)")
+            help = gettext("Contrast -100..100 (0 = no change)")
         )]
         contrast: f32,
         #[arg(
             long,
             default_value_t = 0.0,
             allow_negative_numbers = true,
-            help = gettext("Saturação -100..100 (-100 = cinza, 0 = sem mudança)")
+            help = gettext("Saturation -100..100 (-100 = gray, 0 = no change)")
         )]
         saturation: f32,
         #[arg(
             long,
             default_value_t = 1.0,
-            help = gettext("Gamma 0.1..10.0 (< 1 clareia midtones, > 1 escurece)")
+            help = gettext("Gamma 0.1..10.0 (< 1 brightens midtones, > 1 darkens)")
         )]
         gamma: f32,
-        #[arg(long, help = gettext("Formato de destino (opcional)"))]
+        #[arg(long, help = gettext("Target format (optional)"))]
         to: Option<String>,
         #[arg(long = "overwrite", value_enum, default_value_t = OverwriteArg::Skip)]
         overwrite: OverwriteArg,
         #[arg(value_name = "FILE", required = true)]
         files: Vec<PathBuf>,
     },
-    #[command(about = gettext("Remover fundo usando IA local (BiRefNet-lite, pacote birefnet-native). Grava `<nome>_nobg.png` (PNG com alfa) ao lado de cada imagem"))]
+    #[command(about = gettext("Remove the background with local AI (BiRefNet-lite, birefnet-native package). Writes `<name>_nobg.png` (PNG with alpha) next to each image"))]
     RemoveBg {
         #[arg(
             long,
             value_enum,
             default_value_t = ModelArg::BirefnetLite,
-            help = gettext("Modelo de segmentação")
+            help = gettext("Segmentation model")
         )]
         model: ModelArg,
         #[arg(
             long = "overwrite",
             value_enum,
             default_value_t = OverwriteArg::Skip,
-            help = gettext("Política quando `<nome>_nobg.png` já existe")
+            help = gettext("What to do when `<name>_nobg.png` already exists")
         )]
         overwrite: OverwriteArg,
         #[arg(value_name = "FILE", required = true)]
         files: Vec<PathBuf>,
     },
-    #[command(about = gettext("Aumentar resolução por 2, 3 ou 4. Com o pacote realesrgan-native usa IA (Real-ESRGAN); sem ele, Lanczos3. Grava `<nome>_<pct>pct.<ext>`"))]
+    #[command(about = gettext("Increase resolution by 2, 3 or 4. With the realesrgan-native package it uses AI (Real-ESRGAN); without it, Lanczos3. Writes `<name>_<pct>pct.<ext>`"))]
     Upscale {
-        #[arg(long, default_value_t = 2, help = gettext("Fator inteiro (2, 3 ou 4)"))]
+        #[arg(long, default_value_t = 2, help = gettext("Integer factor (2, 3 or 4)"))]
         factor: u8,
         #[arg(
             long,
             value_enum,
             default_value_t = UpscaleEngineArg::Auto,
-            help = gettext("Motor: auto (Real-ESRGAN se instalado, senão Lanczos3), realesrgan (falha se ausente) ou lanczos")
+            help = gettext("Engine: auto (Real-ESRGAN if installed, otherwise Lanczos3), realesrgan (fails if missing) or lanczos")
         )]
         engine: UpscaleEngineArg,
         #[arg(
             long,
             default_value_t,
             value_enum,
-            help = gettext("Política de sobrescrita do arquivo de saída")
+            help = gettext("Overwrite policy for the output file")
         )]
         overwrite: OverwriteArg,
         #[arg(value_name = "FILE", required = true)]
         files: Vec<PathBuf>,
     },
-    #[command(about = gettext("Remover ruído e artefatos de compressão com IA local (SCUNet, pacote scunet-native). Grava `<nome>_denoised.<ext>`"))]
+    #[command(about = gettext("Remove noise and compression artifacts with local AI (SCUNet, scunet-native package). Writes `<name>_denoised.<ext>`"))]
     Denoise {
         #[arg(
             long,
             default_value_t,
             value_enum,
-            help = gettext("Política de sobrescrita do arquivo de saída")
+            help = gettext("Overwrite policy for the output file")
         )]
         overwrite: OverwriteArg,
         #[arg(value_name = "FILE", required = true)]
         files: Vec<PathBuf>,
     },
-    #[command(about = gettext("Apagar objetos: preenche a área marcada na máscara com IA local (LaMa, pacote lama-native). Grava `<nome>_inpaint.<ext>`"))]
+    #[command(about = gettext("Erase objects: fills the area marked in the mask with local AI (LaMa, lama-native package). Writes `<name>_inpaint.<ext>`"))]
     Inpaint {
         #[arg(
             long,
             value_name = "MASK",
-            help = gettext("Máscara do mesmo tamanho da imagem: branco = preencher, preto = manter (áreas transparentes são mantidas)")
+            help = gettext("Mask the same size as the image: white = fill, black = keep (transparent areas are kept)")
         )]
         mask: PathBuf,
         #[arg(
             long,
             default_value_t,
             value_enum,
-            help = gettext("Política de sobrescrita do arquivo de saída")
+            help = gettext("Overwrite policy for the output file")
         )]
         overwrite: OverwriteArg,
         #[arg(value_name = "FILE", required = true)]
         files: Vec<PathBuf>,
     },
-    #[command(about = gettext("Criar GIF animado a partir de uma sequência de imagens (headless)"))]
+    #[command(about = gettext("Create an animated GIF from a sequence of images (headless)"))]
     Animate {
-        #[arg(long, short = 'o', help = gettext("Arquivo de saída (.gif)"))]
+        #[arg(long, short = 'o', help = gettext("Output file (.gif)"))]
         output: PathBuf,
         #[arg(
             long,
             default_value_t = 100,
-            help = gettext("Atraso entre quadros em milissegundos (100 ≈ 10 fps)")
+            help = gettext("Delay between frames in milliseconds (100 ≈ 10 fps)")
         )]
         delay: u32,
         #[arg(
             long,
             default_value_t = 0,
-            help = gettext("Número de repetições: 0 = infinito (default), 1+ = fixo")
+            help = gettext("Number of repetitions: 0 = infinite (default), 1+ = fixed")
         )]
         loop_count: u16,
         #[arg(
             long,
             default_value_t = 10,
-            help = gettext("Velocidade do encoder 1..30 (maior = mais rápido, pior paleta)")
+            help = gettext("Encoder speed 1..30 (higher = faster, worse palette)")
         )]
         speed: i32,
         #[arg(
             long,
             default_value_t,
             value_enum,
-            help = gettext("Política de sobrescrita do arquivo de saída")
+            help = gettext("Overwrite policy for the output file")
         )]
         overwrite: OverwriteArg,
-        #[arg(value_name = "FRAME", required = true, help = gettext("Quadros em ordem (mínimo 1)"))]
+        #[arg(value_name = "FRAME", required = true, help = gettext("Frames in order (at least 1)"))]
         frames: Vec<PathBuf>,
     },
-    #[command(about = gettext("Processar arquivos ou pastas em paralelo a partir de um perfil TOML"))]
+    #[command(about = gettext("Process files or folders in parallel from a TOML profile"))]
     Batch {
-        #[arg(long, help = gettext("Arquivo de perfil .toml"))]
+        #[arg(long, help = gettext("Profile file (.toml)"))]
         profile: PathBuf,
         #[arg(value_name = "FILE", required = true)]
         files: Vec<PathBuf>,
     },
-    #[command(about = gettext("Instalar integrações com gerenciadores de arquivos"))]
+    #[command(about = gettext("Install file manager integrations"))]
     InstallIntegrations {
-        #[arg(long, conflicts_with = "system", help = gettext("Instalar em ~/.local/share (default)"))]
+        #[arg(long, conflicts_with = "system", help = gettext("Install in ~/.local/share (default)"))]
         user: bool,
         #[arg(
             long,
-            help = gettext("Instalar em /usr/share (requer root; normalmente feito pelo pacote)")
+            help = gettext("Install in /usr/share (requires root; usually done by the package)")
         )]
         system: bool,
         #[arg(
@@ -662,26 +660,26 @@ enum Command {
             value_name = "PATH",
             requires = "system",
             conflicts_with = "user",
-            help = gettext("Prefixo DESTDIR para empacotamento (ex: $pkgdir no PKGBUILD). Só faz sentido combinado com --system")
+            help = gettext("DESTDIR prefix for packaging (e.g. $pkgdir in the PKGBUILD). Only makes sense together with --system")
         )]
         destdir: Option<PathBuf>,
     },
-    #[command(about = gettext("Remover integrações previamente instaladas"))]
+    #[command(about = gettext("Remove previously installed integrations"))]
     UninstallIntegrations,
-    #[command(about = gettext("Converter documentos (ODT, DOCX, TXT, MD, RTF, XLSX, PPTX, etc.) para PDF via LibreOffice headless. Saída gravada ao lado do arquivo de origem"))]
+    #[command(about = gettext("Convert documents (ODT, DOCX, TXT, MD, RTF, XLSX, PPTX, etc.) to PDF with headless LibreOffice. The output is written next to the source file"))]
     ToPdf {
         #[arg(
             long = "overwrite",
             value_enum,
             default_value_t = OverwriteArg::Skip,
-            help = gettext("Política quando `<nome>.pdf` já existe")
+            help = gettext("What to do when `<name>.pdf` already exists")
         )]
         overwrite: OverwriteArg,
         #[arg(
             long,
             default_value_t = 120,
             value_parser = clap::value_parser!(u64).range(1..=3600),
-            help = gettext("Tempo máximo por documento, em segundos")
+            help = gettext("Maximum time per document, in seconds")
         )]
         timeout: u64,
         #[arg(value_name = "FILE", required = true)]
@@ -694,7 +692,7 @@ enum Command {
 #[value(rename_all = "kebab-case")]
 enum ModelArg {
     #[default]
-    #[value(help = gettext("BiRefNet-lite (único modelo disponível)"))]
+    #[value(help = gettext("BiRefNet-lite (the only model available)"))]
     BirefnetLite,
 }
 
@@ -702,15 +700,15 @@ enum ModelArg {
 #[value(rename_all = "kebab-case")]
 enum UpscaleEngineArg {
     #[default]
-    #[value(help = gettext("Real-ESRGAN quando o pacote realesrgan-native está instalado, senão Lanczos3"))]
+    #[value(help = gettext("Real-ESRGAN when the realesrgan-native package is installed, otherwise Lanczos3"))]
     Auto,
     #[value(
         alias = "ai",
         alias = "real-esrgan",
-        help = gettext("IA Real-ESRGAN (requer realesrgan-native)")
+        help = gettext("Real-ESRGAN AI (requires realesrgan-native)")
     )]
     Realesrgan,
-    #[value(alias = "lanczos3", alias = "cpu", help = gettext("Reamostragem Lanczos3 (sem IA)"))]
+    #[value(alias = "lanczos3", alias = "cpu", help = gettext("Lanczos3 resampling (no AI)"))]
     Lanczos,
 }
 
@@ -792,7 +790,7 @@ fn main() -> color_eyre::Result<()> {
                 let rotation: Rotation = degrees
                     .ok_or_else(|| {
                         color_eyre::eyre::eyre!(gettext(
-                            "rotate: use --degrees 90|180|270 ou --auto"
+                            "rotate: use --degrees 90|180|270 or --auto"
                         ))
                     })?
                     .into();
@@ -864,7 +862,7 @@ fn notify_failure(message: &str) {
     }
     let shown = codec::close_inherited_descriptors(&mut std::process::Command::new("notify-send"))
         .args(["--app-name=BigIris", "--icon=com.biglinux.Iris", "--"])
-        .arg(gettext("BigIris: a operação falhou"))
+        .arg(gettext("BigIris: the operation failed"))
         .arg(message)
         .stdin(std::process::Stdio::null())
         .stdout(std::process::Stdio::null())
@@ -877,9 +875,7 @@ fn notify_failure(message: &str) {
 
 /// End a run in which some files failed (exit status 2).
 fn exit_partial() -> ! {
-    notify_failure(&gettext(
-        "Alguns arquivos não foram processados; veja os detalhes no terminal.",
-    ));
+    notify_failure(&gettext("Some files were not processed; see the details in the terminal."));
     std::process::exit(EXIT_PARTIAL)
 }
 
@@ -954,7 +950,7 @@ fn self_test() -> color_eyre::Result<()> {
 fn parse_target(value: &str) -> Result<QualityTarget, String> {
     QualityTarget::parse(value).ok_or_else(|| {
         fill(
-            &gettext("alvo de qualidade inválido: {value}; use maxima, equilibrado ou menor"),
+            &gettext("invalid quality target: {value}; use maxima, equilibrado or menor"),
             &[("value", &format!("{value:?}"))],
         )
     })
@@ -967,7 +963,7 @@ fn run_convert(
     files: &[PathBuf],
 ) -> color_eyre::Result<()> {
     let target = Format::parse(to).map_err(|e| {
-        color_eyre::eyre::eyre!(with_error(&gettext("formato de destino inválido: {error}"), e))
+        color_eyre::eyre::eyre!(with_error(&gettext("invalid target format: {error}"), e))
     })?;
     tracing::info!(?target, ?opts, ?policy, count = files.len(), "convert");
     run_per_file(files, "convert", Naming::image(Some(target), policy), |f| {
@@ -977,7 +973,7 @@ fn run_convert(
             println!(
                 "info {}: {}",
                 f.display(),
-                gettext("o original já era menor; copiado sem recompressão")
+                gettext("the original was already smaller; copied without recompression")
             );
         }
         Ok(report.outcome)
@@ -1035,7 +1031,7 @@ fn run_extent(
 ) -> color_eyre::Result<()> {
     let target = parse_optional_target(to)?;
     let background = bigimage_core::parse_hex_color(bg)
-        .map_err(|e| color_eyre::eyre::eyre!(with_error(&gettext("--bg inválido: {error}"), e)))?;
+        .map_err(|e| color_eyre::eyre::eyre!(with_error(&gettext("invalid --bg: {error}"), e)))?;
     let opts = ExtentOptions { size, background, gravity };
     tracing::info!(?opts, ?target, ?policy, count = files.len(), "extent");
     let naming = Naming {
@@ -1061,7 +1057,7 @@ fn run_adjust(
 fn parse_optional_target(to: Option<&str>) -> color_eyre::Result<Option<Format>> {
     match to {
         Some(s) => Ok(Some(Format::parse(s).map_err(|e| {
-            color_eyre::eyre::eyre!(with_error(&gettext("formato de destino inválido: {error}"), e))
+            color_eyre::eyre::eyre!(with_error(&gettext("invalid target format: {error}"), e))
         })?)),
         None => Ok(None),
     }
@@ -1167,7 +1163,7 @@ fn plan_outputs(files: &[PathBuf], naming: Naming) -> color_eyre::Result<Vec<Vec
         && naming.policy != OverwritePolicy::Increment
         && !naming.per_image_suffix
     {
-        let mut message = gettext("várias entradas gravariam o mesmo arquivo de saída:");
+        let mut message = gettext("several inputs would write the same output file:");
         for group in collisions {
             let names: Vec<_> = group.iter().map(|path| path.display().to_string()).collect();
             message.push_str("\n  ");
@@ -1175,7 +1171,7 @@ fn plan_outputs(files: &[PathBuf], naming: Naming) -> color_eyre::Result<Vec<Vec
         }
         message.push('\n');
         message.push_str(&gettext(
-            "Renomeie as entradas, processe-as separadamente ou use a política increment.",
+            "Rename the inputs, process them separately or use the increment policy.",
         ));
         return Err(color_eyre::eyre::eyre!(codec::sanitize_text(&message)));
     }
@@ -1227,7 +1223,7 @@ where
                     "err {}: {}",
                     f.display(),
                     fill(
-                        &gettext("substituiu a saída de outra entrada: {path}"),
+                        &gettext("replaced the output of another input: {path}"),
                         &[("path", &output)]
                     )
                 );
@@ -1262,18 +1258,18 @@ fn note_ignored_profile(input: &Path) {
     eprintln!(
         "info {}: {}",
         input.display(),
-        gettext("o perfil de cor está corrompido; as cores foram tratadas como sRGB")
+        gettext("the color profile is corrupted; colors were treated as sRGB")
     );
 }
 
 fn exists_note(output: &Path) -> String {
-    fill(&gettext("já existe: {path}"), &[("path", &output.display().to_string())])
+    fill(&gettext("already exists: {path}"), &[("path", &output.display().to_string())])
 }
 
 /// Closing line of a command that processed several files.
 fn tally(operation: &str, written: usize, skipped: usize, failed: usize) -> String {
     fill(
-        &gettext("{operation}: {written} gravado(s), {skipped} ignorado(s), {failed} falha(s)"),
+        &gettext("{operation}: {written} written, {skipped} skipped, {failed} failed"),
         &[
             ("operation", operation),
             ("written", &written.to_string()),
@@ -1366,7 +1362,9 @@ fn require_model(model: &bigimage_ai::ModelInfo) -> color_eyre::Result<()> {
             Err(color_eyre::eyre::eyre!("{}", bigimage_ai::AiError::Disabled))
         }
         bigimage_ai::Availability::Missing { path } => Err(color_eyre::eyre::eyre!(fill(
-            &gettext("{model} não está instalado ({path} não existe). Instale com: {command}"),
+            &gettext(
+                "{model} is not installed ({path} does not exist). Install it with: {command}"
+            ),
             &[
                 ("model", model.name),
                 ("path", &path.display().to_string()),
@@ -1375,7 +1373,7 @@ fn require_model(model: &bigimage_ai::ModelInfo) -> color_eyre::Result<()> {
         ))),
         bigimage_ai::Availability::Unreadable { path, error } => {
             Err(color_eyre::eyre::eyre!(fill(
-                &gettext("não foi possível ler os pesos de {model} em {path}: {error}"),
+                &gettext("could not read the {model} weights at {path}: {error}"),
                 &[
                     ("model", model.name),
                     ("path", &path.display().to_string()),
@@ -1408,7 +1406,7 @@ fn run_upscale(
     use bigimage_ai::upscale::Method;
     if !(2..=4).contains(&factor) {
         return Err(color_eyre::eyre::eyre!(fill(
-            &gettext("fator inválido: {factor}. Use 2, 3 ou 4."),
+            &gettext("invalid factor: {factor}. Use 2, 3 or 4."),
             &[("factor", &factor.to_string())],
         )));
     }
@@ -1424,9 +1422,7 @@ fn run_upscale(
                 eprintln!(
                     "upscale: {}",
                     fill(
-                        &gettext(
-                            "Real-ESRGAN indisponível; usando Lanczos3. Para usar IA: {command}"
-                        ),
+                        &gettext("Real-ESRGAN unavailable; using Lanczos3. To use AI: {command}"),
                         &[("command", &bigimage_ai::upscale::MODEL.install_command())],
                     )
                 );
@@ -1485,7 +1481,7 @@ fn run_inpaint(mask: &Path, policy: OverwritePolicy, files: &[PathBuf]) -> color
     require_model(&bigimage_ai::inpaint::MODEL)?;
     let mask_error = |e: &dyn std::fmt::Display| {
         color_eyre::eyre::eyre!(fill(
-            &gettext("máscara {path}: {error}"),
+            &gettext("mask {path}: {error}"),
             &[
                 ("path", &codec::sanitize_text(&mask.display().to_string())),
                 ("error", &codec::sanitize_text(&e.to_string())),
@@ -1496,9 +1492,7 @@ fn run_inpaint(mask: &Path, policy: OverwritePolicy, files: &[PathBuf]) -> color
     let mask_image = bigimage_core::open_image(mask).map_err(|e| mask_error(&e))?;
     let mask_image = bigimage_ai::inpaint::mask_from_image(&mask_image);
     if bigimage_ai::inpaint::plans(&mask_image).map_err(|e| mask_error(&e))?.is_empty() {
-        return Err(mask_error(&gettext(
-            "não marca nenhuma área (pinte de branco o que deve ser apagado)",
-        )));
+        return Err(mask_error(&gettext("marks no area (paint the areas to erase white)")));
     }
     tracing::info!(?mask, ?policy, count = files.len(), "inpaint");
     let opts = retouch_options();
@@ -1532,8 +1526,7 @@ fn run_animate(
     tracing::info!(?output, ?opts, ?policy, frames = frames.len(), "animate");
     match bigimage_core::make_gif_with_policy(frames, output, opts, policy) {
         Ok(ConvertOutcome::Written { output }) => {
-            let count =
-                fill(&gettext("{count} quadro(s)"), &[("count", &frames.len().to_string())]);
+            let count = fill(&gettext("{count} frame(s)"), &[("count", &frames.len().to_string())]);
             println!("ok  {count} -> {}", output.display());
             Ok(())
         }
@@ -1572,7 +1565,7 @@ fn default_batch_overwrite() -> String {
 
 fn unreadable(path: &Path, error: &std::io::Error) -> color_eyre::Report {
     color_eyre::eyre::eyre!(fill(
-        &gettext("não foi possível ler {path}: {error}"),
+        &gettext("could not read {path}: {error}"),
         &[("path", &path.display().to_string()), ("error", &error.to_string())],
     ))
 }
@@ -1603,13 +1596,13 @@ fn run_batch(profile: &std::path::Path, inputs: &[PathBuf]) -> color_eyre::Resul
 
     let text = std::fs::read_to_string(profile).map_err(|e| unreadable(profile, &e))?;
     let profile: BatchProfile = toml::from_str(&text).map_err(|e| {
-        color_eyre::eyre::eyre!(with_error(&gettext("perfil TOML inválido: {error}"), e))
+        color_eyre::eyre::eyre!(with_error(&gettext("invalid TOML profile: {error}"), e))
     })?;
     if profile.quality.is_some_and(|quality| !(1..=100).contains(&quality)) {
-        return Err(color_eyre::eyre::eyre!(gettext("quality deve estar entre 1 e 100")));
+        return Err(color_eyre::eyre::eyre!(gettext("quality must be between 1 and 100")));
     }
     let format = Format::parse(&profile.format).map_err(|e| {
-        color_eyre::eyre::eyre!(with_error(&gettext("formato do perfil inválido: {error}"), e))
+        color_eyre::eyre::eyre!(with_error(&gettext("invalid profile format: {error}"), e))
     })?;
     let target = match profile.target.as_deref() {
         None => QualityTarget::default(),
@@ -1621,7 +1614,7 @@ fn run_batch(profile: &std::path::Path, inputs: &[PathBuf]) -> color_eyre::Resul
         "increment" => OverwritePolicy::Increment,
         other => {
             return Err(color_eyre::eyre::eyre!(fill(
-                &gettext("overwrite inválido: {value}; use skip, replace ou increment"),
+                &gettext("invalid overwrite: {value}; use skip, replace or increment"),
                 &[("value", &format!("{other:?}"))],
             )));
         }
@@ -1629,7 +1622,7 @@ fn run_batch(profile: &std::path::Path, inputs: &[PathBuf]) -> color_eyre::Resul
     if let Some(dir) = &profile.output_dir {
         std::fs::create_dir_all(dir).map_err(|e| {
             color_eyre::eyre::eyre!(fill(
-                &gettext("não foi possível criar {path}: {error}"),
+                &gettext("could not create {path}: {error}"),
                 &[("path", &dir.display().to_string()), ("error", &e.to_string())],
             ))
         })?;
@@ -1638,7 +1631,7 @@ fn run_batch(profile: &std::path::Path, inputs: &[PathBuf]) -> color_eyre::Resul
     let mut files = batch_files(inputs)?;
     files.sort();
     if files.is_empty() {
-        return Err(color_eyre::eyre::eyre!(gettext("nenhuma imagem encontrada para o lote")));
+        return Err(color_eyre::eyre::eyre!(gettext("no images found for the batch")));
     }
     let naming = Naming {
         output_dir: profile.output_dir.as_deref(),
@@ -1725,7 +1718,7 @@ fn run_batch(profile: &std::path::Path, inputs: &[PathBuf]) -> color_eyre::Resul
     for worker in workers {
         if worker.join().is_err() {
             failed += 1;
-            eprintln!("erro: {}", gettext("um worker terminou inesperadamente"));
+            eprintln!("erro: {}", gettext("a worker ended unexpectedly"));
         }
     }
     println!("{}", tally("batch", ok, skipped, failed));
@@ -1750,7 +1743,7 @@ fn run_to_pdf(
     // estiver instalado evita vomitar o mesmo erro N vezes.
     let soffice_path = which_soffice().ok_or_else(|| {
         color_eyre::eyre::eyre!(gettext(
-            "LibreOffice (`soffice`) não encontrado no PATH. Instale `libreoffice-fresh` (recomendado) ou `libreoffice-still` (ex.: `sudo pacman -S libreoffice-fresh`)."
+            "LibreOffice (`soffice`) not found in PATH. Install `libreoffice-fresh` (recommended) or `libreoffice-still` (e.g. `sudo pacman -S libreoffice-fresh`)."
         ))
     })?;
     let naming =
@@ -1802,10 +1795,10 @@ fn to_pdf_one(
     // matching how the outputs were planned.
     let file = std::path::absolute(file).map_err(|e| eyre!("{e}"))?;
     if !file.is_file() {
-        return Err(eyre!(gettext("não é um arquivo regular")));
+        return Err(eyre!(gettext("not a regular file")));
     }
     let dir = file.parent().unwrap_or(Path::new("/"));
-    let stem = file.file_stem().ok_or_else(|| eyre!(gettext("nome de arquivo inválido")))?;
+    let stem = file.file_stem().ok_or_else(|| eyre!(gettext("invalid file name")))?;
     let mut name = stem.to_os_string();
     name.push(".pdf");
     let destination = dir.join(&name);
@@ -1826,7 +1819,7 @@ fn to_pdf_one(
         // soffice forks soffice.bin; a group lets the timeout reach both.
         .process_group(0)
         .spawn()
-        .map_err(|e| eyre!(with_error(&gettext("falha ao invocar soffice: {error}"), e)))?;
+        .map_err(|e| eyre!(with_error(&gettext("could not run soffice: {error}"), e)))?;
     let deadline = std::time::Instant::now() + timeout;
     let status = loop {
         if let Some(status) = child.try_wait()? {
@@ -1837,7 +1830,7 @@ fn to_pdf_one(
             let _ = rustix::process::kill_process_group(group, rustix::process::Signal::KILL);
             let _ = child.wait();
             return Err(eyre!(fill(
-                &gettext("soffice excedeu o limite de {seconds} s"),
+                &gettext("soffice exceeded the {seconds} s limit"),
                 &[("seconds", &timeout.as_secs().to_string())],
             )));
         }
@@ -1850,7 +1843,7 @@ fn to_pdf_one(
         std::fs::symlink_metadata(&produced).is_ok_and(|meta| meta.is_file() && meta.len() > 0);
     if !produced_pdf {
         return Err(eyre!(fill(
-            &gettext("soffice não gerou o PDF ({status})"),
+            &gettext("soffice did not produce the PDF ({status})"),
             &[("status", &status.to_string())],
         )));
     }
@@ -1893,7 +1886,7 @@ fn publish_file(
         }
     }
     Err(color_eyre::eyre::eyre!(fill(
-        &gettext("muitos arquivos com o mesmo nome: {path}"),
+        &gettext("too many files with the same name: {path}"),
         &[("path", &destination.display().to_string())],
     )))
 }
@@ -1936,14 +1929,14 @@ fn run_install(user: bool, system: bool, destdir: Option<PathBuf>) -> color_eyre
             let scope = resolve_scope(user, system);
             tracing::info!(?scope, "install-integrations");
             bigimage_integrations::install(scope).map_err(|e| {
-                color_eyre::eyre::eyre!(with_error(&gettext("a instalação falhou: {error}"), e))
+                color_eyre::eyre::eyre!(with_error(&gettext("installation failed: {error}"), e))
             })?
         }
     };
     print_install_report(
         &report,
-        &gettext("instalado"),
-        &gettext("instalado no total: {files} arquivo(s) em {managers} gerenciador(es)"),
+        &gettext("installed"),
+        &gettext("installed in total: {files} file(s) in {managers} file manager(s)"),
     );
     if report.is_success() {
         Ok(())
@@ -1958,13 +1951,12 @@ fn run_uninstall() -> color_eyre::Result<()> {
     // it via `makepkg` / `.install` hooks.
     let scope = bigimage_integrations::Scope::User;
     tracing::info!(?scope, "uninstall-integrations");
-    let report = bigimage_integrations::uninstall(scope).map_err(|e| {
-        color_eyre::eyre::eyre!(with_error(&gettext("a remoção falhou: {error}"), e))
-    })?;
+    let report = bigimage_integrations::uninstall(scope)
+        .map_err(|e| color_eyre::eyre::eyre!(with_error(&gettext("removal failed: {error}"), e)))?;
     print_install_report(
         &report,
-        &gettext("removido"),
-        &gettext("removido no total: {files} arquivo(s) em {managers} gerenciador(es)"),
+        &gettext("removed"),
+        &gettext("removed in total: {files} file(s) in {managers} file manager(s)"),
     );
     if report.is_success() {
         Ok(())
@@ -1987,27 +1979,24 @@ fn resolve_scope(user: bool, system: bool) -> bigimage_integrations::Scope {
 fn print_install_report(report: &bigimage_integrations::Report, done: &str, summary: &str) {
     for outcome in &report.outcomes {
         let status = if outcome.error.is_some() {
-            gettext("FALHA")
+            gettext("FAILED")
         } else if outcome.packaged {
             // The package ships it system-wide: nothing personal was written
             // and stale copies from earlier user installs were removed.
             // Without this it read "sem alterações", as if install were a no-op.
-            gettext("fornecido pelo pacote")
+            gettext("provided by the package")
         } else if outcome.files.is_empty() {
             if outcome.detected {
-                gettext("sem alterações")
+                gettext("unchanged")
             } else {
-                gettext("ignorado")
+                gettext("skipped")
             }
         } else {
             done.to_owned()
         };
-        let detected =
-            if outcome.detected { gettext("detectado") } else { gettext("ausente no PATH") };
-        let files = fill(
-            &gettext("{count} arquivo(s)"),
-            &[("count", &format!("{:>2}", outcome.files.len()))],
-        );
+        let detected = if outcome.detected { gettext("detected") } else { gettext("not in PATH") };
+        let files =
+            fill(&gettext("{count} file(s)"), &[("count", &format!("{:>2}", outcome.files.len()))]);
         println!("  {:<22}  [{status}]  {files}  ({detected})", outcome.fm.display_name());
         if let Some(err) = &outcome.error {
             eprintln!("    -> {err}");
@@ -2032,19 +2021,19 @@ fn dispatch_gui(dialog: Option<Dialog>, files: &[PathBuf]) -> color_eyre::Result
             eprintln!(
                 "{}",
                 fill(
-                    &gettext("aviso: build atual sem feature `gui`. Diálogo '{dialog}' ignorado (recompile com --features gui)."),
+                    &gettext("warning: this build lacks the `gui` feature. Dialog '{dialog}' ignored (rebuild with --features gui)."),
                     &[("dialog", &format!("{d:?}"))],
                 )
             );
         } else if files.is_empty() {
             eprintln!(
                 "{}",
-                gettext("aviso: build atual sem feature `gui`. Visualizador indisponível (recompile com --features gui).")
+                gettext("warning: this build lacks the `gui` feature. Viewer unavailable (rebuild with --features gui).")
             );
         } else {
             eprintln!(
                 "{}",
-                gettext("aviso: build atual sem feature `gui`. Visualizador indisponível; arquivos recebidos:")
+                gettext("warning: this build lacks the `gui` feature. Viewer unavailable; files received:")
             );
             for f in files {
                 eprintln!("  - {}", f.display());

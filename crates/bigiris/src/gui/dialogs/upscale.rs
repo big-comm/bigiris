@@ -23,7 +23,7 @@ pub(in crate::gui) fn build_upscale_dialog(
         .application(app)
         .default_width(820)
         .default_height(500)
-        .title(gettext("Aumentar resolução — Prisma"))
+        .title(gettext("Upscale — Prisma"))
         .build();
     prepare_dialog(&window, files, fill_upscale_dialog);
     window
@@ -37,7 +37,7 @@ fn fill_upscale_dialog(
     let ai_unavailable = model_unavailable(&bigimage_ai::upscale::MODEL);
     let header = adw::HeaderBar::new();
     let title = adw::WindowTitle::new(
-        &gettext("Aumentar resolução"),
+        &gettext("Upscale"),
         if ai_unavailable.is_none() { "Prisma · Real-ESRGAN" } else { "Prisma · Lanczos3" },
     );
     header.set_title_widget(Some(&title));
@@ -62,7 +62,7 @@ fn fill_upscale_dialog(
     // Real-ESRGAN when its package is installed; the row says what to
     // install otherwise and Lanczos3 runs instead.
     let engine_row = adw::SwitchRow::builder()
-        .title(gettext("Usar IA (Real-ESRGAN)"))
+        .title(gettext("Use AI (Real-ESRGAN)"))
         .subtitle(ai_unavailable.clone().unwrap_or_else(engine_subtitle))
         .active(ai_unavailable.is_none())
         .sensitive(ai_unavailable.is_none())
@@ -85,28 +85,28 @@ fn fill_upscale_dialog(
         window.connect_unrealize(move |_| loaded.close());
     }
 
-    let files_row = selection_row(&gettext("Arquivos selecionados"), &files);
+    let files_row = selection_row(&gettext("Selected files"), &files);
 
     let natural_row = adw::ActionRow::builder()
         .use_markup(false)
-        .title(gettext("Tamanho original"))
+        .title(gettext("Original size"))
         .subtitle(if natural == (0, 0) {
             "—".to_string()
         } else {
-            format!("{} × {} px ({})", natural.0, natural.1, gettext("Primeiro arquivo"))
+            format!("{} × {} px ({})", natural.0, natural.1, gettext("First file"))
         })
         .build();
 
     let factor_names: Vec<&str> = UPSCALE_FACTORS.iter().map(|(n, _)| *n).collect();
     let factor_row = adw::ComboRow::builder()
         .use_markup(false)
-        .title(gettext("Fator"))
+        .title(gettext("Factor"))
         .model(&translated_strings(&factor_names))
         .build();
 
     let predicted_row = adw::ActionRow::builder()
         .use_markup(false)
-        .title(gettext("Destino previsto"))
+        .title(gettext("Predicted destination"))
         .subtitle("—")
         .build();
     {
@@ -115,7 +115,7 @@ fn fill_upscale_dialog(
         let refresh_prediction = move || {
             let f = UPSCALE_FACTORS[factor_row_c.selected() as usize].1;
             let sub = if natural == (0, 0) {
-                fill(&gettext("× {factor} (tamanho indisponível)"), &[("factor", &f.to_string())])
+                fill(&gettext("× {factor} (size unavailable)"), &[("factor", &f.to_string())])
             } else {
                 let w = (natural.0 as u64) * (f as u64);
                 let h = (natural.1 as u64) * (f as u64);
@@ -145,7 +145,7 @@ fn fill_upscale_dialog(
     let status = status_label();
     form_col.append(&status);
 
-    let (cancel_btn, apply_btn, actions) = action_buttons(&gettext("Aumentar"));
+    let (cancel_btn, apply_btn, actions) = action_buttons(&gettext("Upscale"));
     form_col.append(&actions);
 
     content_h.append(&form_col);
@@ -198,7 +198,7 @@ fn fill_upscale_dialog(
             let policy = selected_overwrite(&overwrite_row);
 
             apply_btn.set_sensitive(false);
-            status.set_text(&gettext("Aumentando…"));
+            status.set_text(&gettext("Upscaling…"));
 
             let work_files: Vec<PathBuf> = (*files).clone();
             let mode = ResizeMode::Percent(f32::from(factor) * 100.0);
@@ -237,7 +237,7 @@ fn fill_upscale_dialog(
                         .map_err(|e| bigimage_core::BigImageError::Other(ai_error_text(&e)))
                     })
                 },
-                gettext("Aumentando"),
+                gettext("Upscaling"),
                 status.clone(),
                 apply_btn.clone(),
                 window.clone(),
@@ -251,8 +251,8 @@ fn fill_upscale_dialog(
 /// Engine row subtitle: where Real-ESRGAN runs once it has loaded.
 fn engine_subtitle() -> String {
     match bigimage_ai::upscale::device() {
-        Some(device) => fill(&gettext("Roda em: {device}"), &[("device", &device.to_string())]),
-        None => gettext("Detalhes mais nítidos que Lanczos3; roda no seu computador"),
+        Some(device) => fill(&gettext("Runs on: {device}"), &[("device", &device.to_string())]),
+        None => gettext("Sharper details than Lanczos3; runs on your computer"),
     }
 }
 

@@ -317,7 +317,7 @@ pub(in crate::gui) fn to_pixels(rect: Rect, natural: (u32, u32)) -> (u32, u32, u
 /// Aspect presets: label and width / height (`None` = free; the
 /// "Original" entry is resolved against the image when chosen).
 const PRESETS: [(&str, Option<(f64, f64)>); 9] = [
-    ("Livre", None),
+    ("Free", None),
     ("Original", None),
     ("1:1", Some((1.0, 1.0))),
     ("4:3", Some((4.0, 3.0))),
@@ -378,21 +378,20 @@ pub(in crate::gui) fn build() -> CropUi {
     let labels: Vec<String> = PRESETS
         .iter()
         .map(|(label, _)| match *label {
-            "Livre" => gettext("Livre"),
+            "Free" => gettext("Free"),
             "Original" => gettext("Original"),
             ratio => ratio.to_string(),
         })
         .collect();
     let label_refs: Vec<&str> = labels.iter().map(String::as_str).collect();
     let aspect = gtk::DropDown::from_strings(&label_refs);
-    aspect.set_tooltip_text(Some(&gettext("Proporção")));
+    aspect.set_tooltip_text(Some(&gettext("Aspect ratio")));
     let size_label = gtk::Label::new(None);
     size_label.add_css_class("numeric");
     size_label.set_width_chars(13);
     let cancel =
-        gtk::Button::builder().label(gettext("Cancelar")).action_name("win.crop-cancel").build();
-    let apply =
-        gtk::Button::builder().label(gettext("Recortar")).action_name("win.crop-apply").build();
+        gtk::Button::builder().label(gettext("Cancel")).action_name("win.crop-cancel").build();
+    let apply = gtk::Button::builder().label(gettext("Crop")).action_name("win.crop-apply").build();
     apply.add_css_class("suggested-action");
     let row = gtk::Box::builder()
         .orientation(gtk::Orientation::Horizontal)
@@ -403,7 +402,7 @@ pub(in crate::gui) fn build() -> CropUi {
         .margin_end(8)
         .build();
     row.append(&aspect);
-    row.append(&name_drop_down(&aspect, &gettext("Proporção")));
+    row.append(&name_drop_down(&aspect, &gettext("Aspect ratio")));
     row.append(&size_label);
     row.append(&cancel);
     row.append(&apply);
@@ -621,7 +620,7 @@ pub(in crate::gui) fn enter(state: &Rc<RefCell<ViewerState>>) {
             return;
         }
         if s.saving {
-            Some(gettext("Aguarde o salvamento terminar"))
+            Some(gettext("Wait for saving to finish"))
         } else if !s.current_ready {
             return;
         } else {
@@ -679,7 +678,7 @@ pub(in crate::gui) fn enter(state: &Rc<RefCell<ViewerState>>) {
     bar.set_visible(true);
     bar.set_reveal_child(true);
     osd_label.set_text(&gettext(
-        "Arraste nos cantos para redimensionar · dentro do recorte para mover · fora dele para uma nova seleção.",
+        "Drag the corners to resize · inside the crop to move · outside it for a new selection.",
     ));
     cancel_cursor_hide(state);
     state.borrow().window().set_cursor(None);

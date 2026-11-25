@@ -22,16 +22,16 @@ pub(in crate::gui) fn build_rotate_dialog(
         .application(app)
         .default_width(440)
         .default_height(340)
-        .title(gettext("Girar imagens — Prisma"))
+        .title(gettext("Rotate images — Prisma"))
         .build();
 
     let header = adw::HeaderBar::new();
-    header.set_title_widget(Some(&adw::WindowTitle::new(&gettext("Girar"), "Prisma")));
+    header.set_title_widget(Some(&adw::WindowTitle::new(&gettext("Rotate"), "Prisma")));
 
-    let rotations = [n_("90° (horário)"), n_("180°"), n_("270° (anti-horário)")];
+    let rotations = [n_("90° (clockwise)"), n_("180°"), n_("270° (counterclockwise)")];
     let rotation_row = adw::ComboRow::builder()
         .use_markup(false)
-        .title(gettext("Rotação"))
+        .title(gettext("Rotation"))
         .model(&translated_strings(&rotations))
         .build();
 
@@ -39,7 +39,7 @@ pub(in crate::gui) fn build_rotate_dialog(
 
     let overwrite_row = overwrite_row();
 
-    let files_row = selection_row(&gettext("Arquivos selecionados"), &files);
+    let files_row = selection_row(&gettext("Selected files"), &files);
 
     let group = adw::PreferencesGroup::new();
     group.add(&files_row);
@@ -49,7 +49,7 @@ pub(in crate::gui) fn build_rotate_dialog(
 
     let status = status_label();
 
-    let (cancel_btn, apply_btn, actions) = action_buttons(&gettext("Girar"));
+    let (cancel_btn, apply_btn, actions) = action_buttons(&gettext("Rotate"));
 
     let content = gtk::Box::builder()
         .orientation(gtk::Orientation::Vertical)
@@ -88,13 +88,13 @@ pub(in crate::gui) fn build_rotate_dialog(
             let policy = selected_overwrite(&overwrite_row);
 
             apply_btn.set_sensitive(false);
-            status.set_text(&gettext("Girando…"));
+            status.set_text(&gettext("Rotating…"));
 
             let work_files: Vec<PathBuf> = (*files).clone();
             run_batch_async(
                 work_files,
                 move |f| rotate_file(f, rotation, target, policy),
-                gettext("Girando"),
+                gettext("Rotating"),
                 status.clone(),
                 apply_btn.clone(),
                 window.clone(),

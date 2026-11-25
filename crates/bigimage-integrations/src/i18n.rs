@@ -59,24 +59,24 @@ mod tests {
     use super::*;
     #[test]
     fn unknown_locale_falls_back_without_changing_commands() {
-        assert_eq!(lookup("xx", "Converter"), "Converter");
-        assert_eq!(lookup("en", "unknown"), "unknown");
+        assert_eq!(lookup("xx", "Convert"), "Convert");
+        assert_eq!(lookup("pt_BR", "unknown"), "unknown");
     }
     #[test]
     fn desktop_values_escape_line_breaks() {
         let text = localized("Name", |_| "one\ntwo\\three".to_owned());
-        assert_eq!(text.lines().count(), 30);
-        assert!(text.contains("Name[en]=one\\ntwo\\\\three\n"));
+        assert_eq!(text.lines().count(), 29);
+        assert!(text.contains("Name[pt_BR]=one\\ntwo\\\\three\n"));
     }
     #[test]
     fn known_locales_have_translated_folder_actions() {
-        assert_eq!(lookup("en", "Processar esta pasta…"), "Process this folder…");
-        assert_ne!(lookup("de", "Processar esta pasta…"), "Processar esta pasta…");
+        assert_eq!(lookup("pt_BR", "Process this folder…"), "Processar esta pasta…");
+        assert_ne!(lookup("de", "Process this folder…"), "Process this folder…");
     }
     #[test]
     fn norwegian_uses_bokmal_code() {
         // nb_NO locales look up `nb`; a `no` key is never read.
-        assert_ne!(lookup("nb", "Processar esta pasta…"), "Processar esta pasta…");
+        assert_ne!(lookup("nb", "Process this folder…"), "Process this folder…");
         assert!(!localized("Name", |_| String::new()).contains("Name[no]="));
     }
 }

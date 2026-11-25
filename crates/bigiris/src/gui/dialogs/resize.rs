@@ -5,11 +5,11 @@ use super::*;
 
 /// Interpolation filters for the resize dialog.
 const RESIZE_FILTERS: &[(&str, Filter)] = &[
-    (n_("Lanczos3 (padrão)"), Filter::Lanczos3),
+    (n_("Lanczos3 (default)"), Filter::Lanczos3),
     (n_("Mitchell"), Filter::Mitchell),
     (n_("CatmullRom"), Filter::CatmullRom),
     (n_("Bilinear"), Filter::Bilinear),
-    (n_("Nearest (sem anti-aliasing)"), Filter::Nearest),
+    (n_("Nearest (no anti-aliasing)"), Filter::Nearest),
 ];
 
 /// Run the "Redimensionar" modal.
@@ -26,7 +26,7 @@ pub(in crate::gui) fn build_resize_dialog(
         .application(app)
         .default_width(900)
         .default_height(640)
-        .title(gettext("Redimensionar imagens — Prisma"))
+        .title(gettext("Resize images — Prisma"))
         .build();
     prepare_dialog(&window, files, fill_resize_dialog);
     window
@@ -38,47 +38,43 @@ fn fill_resize_dialog(
     preview_session: Option<Rc<PreviewSession>>,
 ) -> adw::ApplicationWindow {
     let header = adw::HeaderBar::new();
-    let title = adw::WindowTitle::new(&gettext("Redimensionar"), "Prisma");
+    let title = adw::WindowTitle::new(&gettext("Resize"), "Prisma");
     header.set_title_widget(Some(&title));
 
     // ---- Mode selector ------------------------------------------------------
 
-    let mode_names = [
-        n_("Aresta máxima"),
-        n_("Escala (%)"),
-        n_("Dimensão exata (WxH)"),
-        n_("Encaixar em (WxH)"),
-    ];
+    let mode_names =
+        [n_("Max edge"), n_("Scale (%)"), n_("Exact size (WxH)"), n_("Fit within (WxH)")];
     let mode_row = adw::ComboRow::builder()
         .use_markup(false)
-        .title(gettext("Modo"))
+        .title(gettext("Mode"))
         .model(&translated_strings(&mode_names))
         .build();
 
     // Per-mode parameter pages live inside a Stack; switching the combo swaps
     // the page. Each page owns its own SpinRows so we can read values back.
     let max_edge_spin = adw::SpinRow::with_range(1.0, 16384.0, 1.0);
-    max_edge_spin.set_title(&gettext("Aresta máxima"));
-    max_edge_spin.set_subtitle(&gettext("pixels (lado maior)"));
+    max_edge_spin.set_title(&gettext("Max edge"));
+    max_edge_spin.set_subtitle(&gettext("pixels (longest edge)"));
     max_edge_spin.set_value(1920.0);
 
     let percent_spin = adw::SpinRow::with_range(1.0, 1000.0, 1.0);
-    percent_spin.set_title(&gettext("Porcentagem"));
-    percent_spin.set_subtitle(&gettext("100 = tamanho original"));
+    percent_spin.set_title(&gettext("Percent"));
+    percent_spin.set_subtitle(&gettext("100 = original size"));
     percent_spin.set_value(50.0);
 
     let exact_w = adw::SpinRow::with_range(1.0, 16384.0, 1.0);
-    exact_w.set_title(&gettext("Largura"));
+    exact_w.set_title(&gettext("Width"));
     exact_w.set_value(1920.0);
     let exact_h = adw::SpinRow::with_range(1.0, 16384.0, 1.0);
-    exact_h.set_title(&gettext("Altura"));
+    exact_h.set_title(&gettext("Height"));
     exact_h.set_value(1080.0);
 
     let fit_w = adw::SpinRow::with_range(1.0, 16384.0, 1.0);
-    fit_w.set_title(&gettext("Largura máxima"));
+    fit_w.set_title(&gettext("Max width"));
     fit_w.set_value(1920.0);
     let fit_h = adw::SpinRow::with_range(1.0, 16384.0, 1.0);
-    fit_h.set_title(&gettext("Altura máxima"));
+    fit_h.set_title(&gettext("Max height"));
     fit_h.set_value(1080.0);
 
     let page_max_edge = adw::PreferencesGroup::new();
@@ -117,7 +113,7 @@ fn fill_resize_dialog(
     let filter_names: Vec<&str> = RESIZE_FILTERS.iter().map(|(n, _)| *n).collect();
     let filter_row = adw::ComboRow::builder()
         .use_markup(false)
-        .title(gettext("Kernel de interpolação"))
+        .title(gettext("Interpolation kernel"))
         .model(&translated_strings(&filter_names))
         .build();
 
@@ -125,23 +121,22 @@ fn fill_resize_dialog(
 
     let overwrite_row = overwrite_row();
 
-    let files_row = selection_row(&gettext("Arquivos selecionados"), &files);
+    let files_row = selection_row(&gettext("Selected files"), &files);
 
     let group_files = adw::PreferencesGroup::new();
     group_files.add(&files_row);
 
-    let group_mode =
-        adw::PreferencesGroup::builder().title(gettext("Modo de redimensionamento")).build();
+    let group_mode = adw::PreferencesGroup::builder().title(gettext("Resize mode")).build();
     group_mode.add(&mode_row);
 
-    let group_options = adw::PreferencesGroup::builder().title(gettext("Opções")).build();
+    let group_options = adw::PreferencesGroup::builder().title(gettext("Options")).build();
     group_options.add(&filter_row);
     group_options.add(&target_row);
     group_options.add(&overwrite_row);
 
     let status = status_label();
 
-    let (cancel_btn, apply_btn, actions) = action_buttons(&gettext("Redimensionar"));
+    let (cancel_btn, apply_btn, actions) = action_buttons(&gettext("Resize"));
 
     let content = gtk::Box::builder()
         .orientation(gtk::Orientation::Vertical)
@@ -287,13 +282,13 @@ fn fill_resize_dialog(
             let opts = EncodeOptions::default();
 
             apply_btn.set_sensitive(false);
-            status.set_text(&gettext("Redimensionando…"));
+            status.set_text(&gettext("Resizing…"));
 
             let work_files: Vec<PathBuf> = (*files).clone();
             run_batch_async(
                 work_files,
                 move |f| resize_file(f, mode, filter, target, &opts, policy),
-                gettext("Redimensionando"),
+                gettext("Resizing"),
                 status.clone(),
                 apply_btn.clone(),
                 window.clone(),
@@ -366,7 +361,7 @@ mod apply_tests {
 
         let window = build_resize_dialog(&app, Rc::new(vec![source.clone()]));
         window.present();
-        let label = gettext("Redimensionar");
+        let label = gettext("Resize");
         pump("resize form", 30, &|| find_apply(window.upcast_ref(), &label).is_some());
         // Wait for a frame painted with the form, so GTK and the GL driver
         // have opened everything they open on first draw.
@@ -387,7 +382,7 @@ mod apply_tests {
         // During the run Apply waits and Cancel stays usable: it closes the
         // dialog, which cancels the run.
         let cancel = apply.prev_sibling().and_downcast::<gtk::Button>().unwrap();
-        assert_eq!(cancel.label().as_deref(), Some(gettext("Cancelar").as_str()));
+        assert_eq!(cancel.label().as_deref(), Some(gettext("Cancel").as_str()));
         assert!(!apply.is_sensitive() && cancel.is_sensitive());
 
         let written = || {

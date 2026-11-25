@@ -28,7 +28,7 @@ pub(in crate::gui) fn build_compare_dialog(
         .application(app)
         .default_width(1200)
         .default_height(720)
-        .title(gettext("Comparar imagens — Íris"))
+        .title(gettext("Compare images — Íris"))
         .build();
 
     let left_path = &files[0];
@@ -40,9 +40,9 @@ pub(in crate::gui) fn build_compare_dialog(
     let right_name =
         right_path.file_name().map(|s| s.to_string_lossy().into_owned()).unwrap_or_default();
     let title = adw::WindowTitle::new(
-        &gettext("Comparar imagens"),
+        &gettext("Compare images"),
         &fill(
-            &gettext("Antes: {before}  ·  Depois: {after}"),
+            &gettext("Before: {before}  ·  After: {after}"),
             &[("before", &left_name), ("after", &right_name)],
         ),
     );
@@ -66,7 +66,7 @@ pub(in crate::gui) fn build_compare_dialog(
         .build();
 
     let hint = gtk::Label::builder()
-        .label(gettext("Arraste o divisor para comparar · Esc fecha"))
+        .label(gettext("Drag the divider to compare · Esc to close"))
         .xalign(0.5)
         .margin_top(6)
         .margin_bottom(6)
@@ -153,8 +153,7 @@ fn make_compare_side(path: &Path, window: &adw::ApplicationWindow) -> gtk::Box {
     glib::MainContext::default().spawn_local(async move {
         // A decoder that died without an answer must not leave the spinner
         // turning forever.
-        let result =
-            job.await.unwrap_or_else(|_| Err(gettext("Não foi possível abrir esta imagem")));
+        let result = job.await.unwrap_or_else(|_| Err(gettext("Could not open this image")));
         if weak_window.upgrade().is_none_or(|w| !w.is_visible()) {
             return;
         }

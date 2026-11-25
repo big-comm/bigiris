@@ -49,7 +49,7 @@ class TranslationContracts(unittest.TestCase):
 
     def test_exact_community_locale_inventory(self):
         self.assertEqual(translations.languages(), translations.LANGUAGES)
-        self.assertEqual(len(translations.languages()), 30)
+        self.assertEqual(len(translations.languages()), 29)
         self.assertIn('pt_BR', translations.languages())
 
 if __name__ == '__main__':

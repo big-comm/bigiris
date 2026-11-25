@@ -29,7 +29,7 @@ pub(super) fn build_preview_column(session: &PreviewSession) -> (gtk::Picture, g
     picture.set_paintable(Some(&initial));
 
     let heading = gtk::Label::builder()
-        .label(format!("<b>{}</b>", glib::markup_escape_text(&gettext("Pré-visualização"))))
+        .label(format!("<b>{}</b>", glib::markup_escape_text(&gettext("Preview"))))
         .use_markup(true)
         .xalign(0.0)
         .build();
@@ -226,8 +226,8 @@ pub(super) fn prepare_dialog(
     let loading = gtk::Box::new(gtk::Orientation::Vertical, 16);
     loading.set_valign(gtk::Align::Center);
     loading.append(&spinner);
-    loading.append(&gtk::Label::new(Some(&gettext("Preparando pré-visualização…"))));
-    let cancel_button = gtk::Button::with_label(&gettext("Cancelar"));
+    loading.append(&gtk::Label::new(Some(&gettext("Preparing preview…"))));
+    let cancel_button = gtk::Button::with_label(&gettext("Cancel"));
     cancel_button.set_halign(gtk::Align::Center);
     let weak_window = window.downgrade();
     cancel_button.connect_clicked(move |_| {
@@ -247,7 +247,7 @@ pub(super) fn prepare_dialog(
     let job = gio::spawn_blocking(move || {
         crate::codec::with_cancel(cancel, || {
             input
-                .ok_or_else(|| gettext("Nenhuma imagem selecionada"))
+                .ok_or_else(|| gettext("No image selected"))
                 .and_then(|path| PreviewSession::open(path).map_err(|e| e.to_string()))
         })
     });
@@ -264,7 +264,7 @@ pub(super) fn prepare_dialog(
             }
             Ok(Err(error)) => {
                 let page = adw::StatusPage::builder()
-                    .title(gettext("Não foi possível abrir a imagem"))
+                    .title(gettext("Could not open the image"))
                     .description(error)
                     .icon_name("dialog-error-symbolic")
                     .build();
@@ -272,7 +272,7 @@ pub(super) fn prepare_dialog(
             }
             Err(_) => {
                 window.set_content(Some(&gtk::Label::new(Some(&gettext(
-                    "A preparação foi interrompida",
+                    "Preparation was interrupted",
                 )))));
             }
         }

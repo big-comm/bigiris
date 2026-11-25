@@ -17,16 +17,16 @@ pub(in crate::gui) fn build_flip_dialog(
         .application(app)
         .default_width(440)
         .default_height(340)
-        .title(gettext("Espelhar imagens — Prisma"))
+        .title(gettext("Flip images — Prisma"))
         .build();
 
     let header = adw::HeaderBar::new();
-    header.set_title_widget(Some(&adw::WindowTitle::new(&gettext("Espelhar"), "Prisma")));
+    header.set_title_widget(Some(&adw::WindowTitle::new(&gettext("Flip"), "Prisma")));
 
-    let axes = [n_("Horizontal (esquerda ↔ direita)"), n_("Vertical (cima ↔ baixo)")];
+    let axes = [n_("Horizontal (left ↔ right)"), n_("Vertical (top ↔ bottom)")];
     let axis_row = adw::ComboRow::builder()
         .use_markup(false)
-        .title(gettext("Eixo"))
+        .title(gettext("Axis"))
         .model(&translated_strings(&axes))
         .build();
 
@@ -34,7 +34,7 @@ pub(in crate::gui) fn build_flip_dialog(
 
     let overwrite_row = overwrite_row();
 
-    let files_row = selection_row(&gettext("Arquivos selecionados"), &files);
+    let files_row = selection_row(&gettext("Selected files"), &files);
 
     let group = adw::PreferencesGroup::new();
     group.add(&files_row);
@@ -44,7 +44,7 @@ pub(in crate::gui) fn build_flip_dialog(
 
     let status = status_label();
 
-    let (cancel_btn, apply_btn, actions) = action_buttons(&gettext("Espelhar"));
+    let (cancel_btn, apply_btn, actions) = action_buttons(&gettext("Flip"));
 
     let content = gtk::Box::builder()
         .orientation(gtk::Orientation::Vertical)
@@ -82,13 +82,13 @@ pub(in crate::gui) fn build_flip_dialog(
             let policy = selected_overwrite(&overwrite_row);
 
             apply_btn.set_sensitive(false);
-            status.set_text(&gettext("Espelhando…"));
+            status.set_text(&gettext("Flipping…"));
 
             let work_files: Vec<PathBuf> = (*files).clone();
             run_batch_async(
                 work_files,
                 move |f| flip_file(f, axis, target, policy),
-                gettext("Espelhando"),
+                gettext("Flipping"),
                 status.clone(),
                 apply_btn.clone(),
                 window.clone(),

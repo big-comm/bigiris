@@ -81,10 +81,11 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           persist-credentials: false
-      - name: install libdav1d-dev
+      - name: install system packages
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends libdav1d-dev pkg-config bubblewrap util-linux gettext locales
+          sudo localedef -i pt_BR -f UTF-8 pt_BR.UTF-8
       - name: prepare distro Bubblewrap policy and verify isolation
         run: bash .github/scripts/prepare-sandbox.sh
       - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # master (2026-10-16)
@@ -129,8 +130,9 @@ jobs:
           python3 scripts/translations.py compile --destdir "$PWD/target/quality/locale"
           sudo localedef -i fr_FR -f UTF-8 fr_FR.UTF-8
           sudo localedef -i he_IL -f UTF-8 he_IL.UTF-8
-          for language in en fr he; do
-            session_locale=en_US.UTF-8
+          sudo localedef -i pt_BR -f UTF-8 pt_BR.UTF-8
+          for language in pt_BR fr he; do
+            session_locale=pt_BR.UTF-8
             if [ "$language" = fr ]; then session_locale=fr_FR.UTF-8; fi
             if [ "$language" = he ]; then session_locale=he_IL.UTF-8; fi
             xvfb-run -a dbus-run-session -- env \

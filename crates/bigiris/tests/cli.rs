@@ -3,7 +3,7 @@
 use std::path::Path;
 use std::process::{Command, Output};
 
-/// The executable in the C locale, so messages are the Portuguese source text
+/// The executable in the C locale, so messages are the English source text
 /// whatever locale the test runner has.
 fn bigiris() -> Command {
     let mut command = Command::new(env!("CARGO_BIN_EXE_bigiris"));
@@ -30,26 +30,26 @@ fn self_test_and_help_exit_successfully() {
     success(run(dir.path(), &["--self-test"]));
     success(run(dir.path(), &["--help"]));
 }
-/// `LC_ALL` value of an installed English UTF-8 locale, if `locale -a` lists one.
-fn english_locale() -> Option<&'static str> {
+/// `LC_ALL` value of an installed Brazilian Portuguese UTF-8 locale, if `locale -a` lists one.
+fn brazilian_locale() -> Option<&'static str> {
     let listed = Command::new("locale").arg("-a").output().ok()?;
     String::from_utf8_lossy(&listed.stdout)
         .lines()
-        .any(|name| name.eq_ignore_ascii_case("en_US.utf8") || name == "en_US.UTF-8")
-        .then_some("en_US.UTF-8")
+        .any(|name| name.eq_ignore_ascii_case("pt_BR.utf8") || name == "pt_BR.UTF-8")
+        .then_some("pt_BR.UTF-8")
 }
 #[test]
 fn messages_follow_the_user_locale() {
-    let Some(english) = english_locale() else {
+    let Some(brazilian) = brazilian_locale() else {
         // allow-noisy-log: a skipped check says so in the test output.
-        eprintln!("skipped: no en_US.UTF-8 locale installed (see `locale -a`)");
+        eprintln!("skipped: no pt_BR.UTF-8 locale installed (see `locale -a`)");
         return;
     };
     let dir = tempfile::tempdir().unwrap();
     let locale_dir = dir.path().join("locale");
-    let catalog = locale_dir.join("en/LC_MESSAGES/bigiris.mo");
+    let catalog = locale_dir.join("pt_BR/LC_MESSAGES/bigiris.mo");
     std::fs::create_dir_all(catalog.parent().unwrap()).unwrap();
-    let source = concat!(env!("CARGO_MANIFEST_DIR"), "/../../data/po/en.po");
+    let source = concat!(env!("CARGO_MANIFEST_DIR"), "/../../data/po/pt_BR.po");
     let compiled = Command::new("msgfmt")
         .arg("-o")
         .arg(&catalog)
@@ -62,31 +62,31 @@ fn messages_follow_the_user_locale() {
             .current_dir(dir.path())
             .env("BIGIRIS_LOCALE_DIR", &locale_dir)
             .env("LC_ALL", lc_all)
-            .env("LANGUAGE", "en")
+            .env("LANGUAGE", "pt_BR")
             .args(args)
             .output()
             .unwrap()
     };
     let bogus_target = ["convert", "--to", "bogus", "missing.png"];
 
-    let help = String::from_utf8_lossy(&in_locale(english, &["--help"]).stdout).into_owned();
-    assert!(help.contains("Fast image viewer and converter for Linux"), "{help}");
-    assert!(help.contains("partial failure"), "{help}");
-    let failure = in_locale(english, &bogus_target);
-    let error = String::from_utf8_lossy(&failure.stderr);
-    assert!(error.contains("invalid target format"), "{error}");
-
-    let help = String::from_utf8_lossy(&in_locale("C", &["--help"]).stdout).into_owned();
+    let help = String::from_utf8_lossy(&in_locale(brazilian, &["--help"]).stdout).into_owned();
     assert!(help.contains("Visualizador rápido e conversor de imagens para Linux"), "{help}");
-    let failure = in_locale("C", &bogus_target);
+    assert!(help.contains("falha parcial"), "{help}");
+    let failure = in_locale(brazilian, &bogus_target);
     let error = String::from_utf8_lossy(&failure.stderr);
     assert!(error.contains("formato de destino inválido"), "{error}");
+
+    let help = String::from_utf8_lossy(&in_locale("C", &["--help"]).stdout).into_owned();
+    assert!(help.contains("Fast image viewer and converter for Linux"), "{help}");
+    let failure = in_locale("C", &bogus_target);
+    let error = String::from_utf8_lossy(&failure.stderr);
+    assert!(error.contains("invalid target format"), "{error}");
 }
 #[test]
 fn conversion_transform_and_animation_commands_produce_readable_outputs() {
     let dir = tempfile::tempdir().unwrap();
-    fixture(dir.path(), "imagem com espaço ç.png");
-    let file = "imagem com espaço ç.png";
+    fixture(dir.path(), "photo with space ç.png");
+    let file = "photo with space ç.png";
     for args in [
         vec!["convert", "--to", "jpeg", file],
         vec!["resize", "--max-edge", "16", file],
@@ -104,11 +104,11 @@ fn conversion_transform_and_animation_commands_produce_readable_outputs() {
         assert!(bigimage_core::open_image(&path).is_ok(), "unreadable output: {}", path.display());
     }
     assert_eq!(
-        image::image_dimensions(dir.path().join("imagem com espaço ç_16.png")).unwrap(),
+        image::image_dimensions(dir.path().join("photo with space ç_16.png")).unwrap(),
         (16, 12)
     );
     assert_eq!(
-        image::image_dimensions(dir.path().join("imagem com espaço ç_rot90.png")).unwrap(),
+        image::image_dimensions(dir.path().join("photo with space ç_rot90.png")).unwrap(),
         (24, 32)
     );
 }
@@ -161,7 +161,7 @@ fn notify_reports_failures_only_when_asked() {
     assert!(!record.exists(), "notified without --notify");
     assert!(!failing(true).status.success());
     let shown = std::fs::read_to_string(&record).expect("no notification with --notify");
-    assert!(shown.contains("BigIris: a operação falhou"), "{shown}");
+    assert!(shown.contains("BigIris: the operation failed"), "{shown}");
     assert!(shown.contains("bogus"), "the notification should name the error: {shown}");
 }
 
@@ -275,7 +275,7 @@ fn exit_codes_follow_one_convention() {
     // 0: help, and the documented convention is part of it.
     let help = run(dir.path(), &["--help"]);
     assert_eq!(help.status.code(), Some(0));
-    assert!(String::from_utf8_lossy(&help.stdout).contains("falha parcial"));
+    assert!(String::from_utf8_lossy(&help.stdout).contains("partial failure"));
 }
 
 #[test]
@@ -452,7 +452,7 @@ fn inpaint_refuses_empty_masks_and_reports_size_mismatches() {
     };
     let output = inpaint("empty.png");
     assert_eq!(output.status.code(), Some(1));
-    assert!(String::from_utf8_lossy(&output.stderr).contains("nenhuma área"));
+    assert!(String::from_utf8_lossy(&output.stderr).contains("marks no area"));
     let output = inpaint("small.png");
     assert_eq!(output.status.code(), Some(2));
     assert!(String::from_utf8_lossy(&output.stderr).contains("máscara tem 10×10"));
@@ -855,9 +855,9 @@ fn broken_profile_converts_with_note() {
         run(dir.path(), &["convert", "--to", "png", "--overwrite", "increment", "broken.png"]);
     let stderr = String::from_utf8_lossy(&output.stderr).into_owned();
     assert!(output.status.success(), "{stderr}");
-    assert!(stderr.contains("info broken.png: o perfil de cor está corrompido"), "{stderr}");
+    assert!(stderr.contains("info broken.png: the color profile is corrupted"), "{stderr}");
     let plain = dir.path().join("plain.png");
     pixels.save(&plain).unwrap();
     let output = run(dir.path(), &["convert", "--to", "jpg", "plain.png"]);
-    assert!(!String::from_utf8_lossy(&output.stderr).contains("perfil de cor"));
+    assert!(!String::from_utf8_lossy(&output.stderr).contains("color profile"));
 }

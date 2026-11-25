@@ -43,9 +43,9 @@ pub(in crate::gui) enum SaveQuality {
 }
 
 const SAVE_QUALITIES: [(SaveQuality, &str); 3] = [
-    (SaveQuality::Max, n_("Máxima qualidade")),
-    (SaveQuality::Balanced, n_("Equilibrado")),
-    (SaveQuality::Smallest, n_("Menor arquivo")),
+    (SaveQuality::Max, n_("Maximum quality")),
+    (SaveQuality::Balanced, n_("Balanced")),
+    (SaveQuality::Smallest, n_("Smallest file")),
 ];
 
 /// Encoder options for "Salvar como…": the smallest file that keeps the
@@ -215,7 +215,7 @@ fn slider(title: &str, min: f64, max: f64, step: f64, neutral: f64) -> (gtk::Box
     let value = gtk::Label::builder().xalign(1.0).width_chars(6).build();
     value.add_css_class("numeric");
     value.add_css_class("dim-label");
-    let reset_label = fill(&gettext("Restaurar {setting}"), &[("setting", title)]);
+    let reset_label = fill(&gettext("Reset {setting}"), &[("setting", title)]);
     let reset = gtk::Button::from_icon_name("edit-undo-symbolic");
     reset.add_css_class("flat");
     reset.add_css_class("circular");
@@ -270,9 +270,7 @@ fn ai_note_text() -> Option<String> {
         .collect();
     if !bigimage_ai::upscale::availability().is_ready() {
         notes.push(fill(
-            &gettext(
-                "Aumentar resolução usa Lanczos3. Para IA (Real-ESRGAN): sudo pacman -S {package}",
-            ),
+            &gettext("Upscale uses Lanczos3. For AI (Real-ESRGAN): sudo pacman -S {package}"),
             &[("package", bigimage_ai::upscale::MODEL.package)],
         ));
     }
@@ -285,7 +283,7 @@ fn tool_tooltip(what: String, device: Option<bigimage_ai::Device>) -> String {
         Some(device) => {
             format!(
                 "{what}\n{}",
-                fill(&gettext("Roda em: {device}"), &[("device", &device.to_string())])
+                fill(&gettext("Runs on: {device}"), &[("device", &device.to_string())])
             )
         }
         None => what,
@@ -302,71 +300,71 @@ pub(in crate::gui) fn build() -> EditPanelUi {
         .margin_end(14)
         .build();
 
-    let title = gtk::Label::builder().label(gettext("Editar")).xalign(0.0).hexpand(true).build();
+    let title = gtk::Label::builder().label(gettext("Edit")).xalign(0.0).hexpand(true).build();
     title.add_css_class("title-4");
     let close = gtk::Button::from_icon_name("window-close-symbolic");
     close.add_css_class("flat");
     close.add_css_class("circular");
-    close.set_tooltip_text(Some(&gettext("Fechar (Esc)")));
-    close.update_property(&[gtk::accessible::Property::Label(&gettext("Fechar"))]);
+    close.set_tooltip_text(Some(&gettext("Close (Esc)")));
+    close.update_property(&[gtk::accessible::Property::Label(&gettext("Close"))]);
     close.set_action_name(Some("win.edit-panel"));
     let head = gtk::Box::new(gtk::Orientation::Horizontal, 6);
     head.append(&title);
     head.append(&close);
 
-    let original = gtk::ToggleButton::with_label(&gettext("Ver original"));
-    original.set_tooltip_text(Some(&gettext("Mostra a imagem sem as edições (segure \\)")));
+    let original = gtk::ToggleButton::with_label(&gettext("View original"));
+    original.set_tooltip_text(Some(&gettext("Shows the image without the edits (hold \\)")));
 
     // Transformar
-    let transform = section(&gettext("Transformar"));
+    let transform = section(&gettext("Transform"));
     let buttons = gtk::Box::new(gtk::Orientation::Horizontal, 6);
     buttons.set_homogeneous(true);
     for (icon, tooltip, action) in [
-        ("object-rotate-left-symbolic", gettext("Girar à esquerda"), "win.rotate-ccw"),
-        ("object-rotate-right-symbolic", gettext("Girar à direita"), "win.rotate-cw"),
-        ("object-flip-horizontal-symbolic", gettext("Espelhar horizontal"), "win.flip-h"),
-        ("object-flip-vertical-symbolic", gettext("Espelhar vertical"), "win.flip-v"),
+        ("object-rotate-left-symbolic", gettext("Rotate left"), "win.rotate-ccw"),
+        ("object-rotate-right-symbolic", gettext("Rotate right"), "win.rotate-cw"),
+        ("object-flip-horizontal-symbolic", gettext("Flip horizontal"), "win.flip-h"),
+        ("object-flip-vertical-symbolic", gettext("Flip vertical"), "win.flip-v"),
     ] {
         buttons.append(&icon_button(icon, &tooltip, action));
     }
     transform.append(&buttons);
-    let (straighten_row, straighten) = slider(&gettext("Endireitar"), -45.0, 45.0, 0.1, 0.0);
+    let (straighten_row, straighten) = slider(&gettext("Straighten"), -45.0, 45.0, 0.1, 0.0);
     straighten.scale.set_digits(1);
     straighten.scale.set_tooltip_text(Some(&gettext(
-        "Gira a foto e recorta as bordas vazias para alinhar o horizonte",
+        "Rotates the photo and crops the empty edges to level the horizon",
     )));
     transform.append(&straighten_row);
     let crop = gtk::Button::builder()
-        .label(gettext("Recortar"))
-        .tooltip_text(gettext("Recortar na própria imagem (Ctrl+R)"))
+        .label(gettext("Crop"))
+        .tooltip_text(gettext("Crop in place (Ctrl+R)"))
         .action_name("win.crop")
         .build();
     transform.append(&crop);
 
     // Ajustes
-    let adjust = section(&gettext("Ajustes"));
-    let (brightness_row, brightness) = slider(&gettext("Brilho"), -100.0, 100.0, 1.0, 0.0);
-    let (contrast_row, contrast) = slider(&gettext("Contraste"), -100.0, 100.0, 1.0, 0.0);
-    let (saturation_row, saturation) = slider(&gettext("Saturação"), -100.0, 100.0, 1.0, 0.0);
-    let (gamma_row, gamma) = slider(&gettext("Gama"), 0.1, 3.0, 0.01, 1.0);
+    let adjust = section(&gettext("Adjustments"));
+    let (brightness_row, brightness) = slider(&gettext("Brightness"), -100.0, 100.0, 1.0, 0.0);
+    let (contrast_row, contrast) = slider(&gettext("Contrast"), -100.0, 100.0, 1.0, 0.0);
+    let (saturation_row, saturation) = slider(&gettext("Saturation"), -100.0, 100.0, 1.0, 0.0);
+    let (gamma_row, gamma) = slider(&gettext("Gamma"), 0.1, 3.0, 0.01, 1.0);
     gamma.scale.set_digits(2);
     for row in [&brightness_row, &contrast_row, &saturation_row, &gamma_row] {
         adjust.append(row);
     }
-    let reset_all = gtk::Button::with_label(&gettext("Restaurar ajustes"));
+    let reset_all = gtk::Button::with_label(&gettext("Reset adjustments"));
     adjust.append(&reset_all);
 
     // Tamanho
-    let size = section(&gettext("Tamanho"));
-    let width = size_spin(&gettext("Largura (px)"));
-    let height = size_spin(&gettext("Altura (px)"));
+    let size = section(&gettext("Size"));
+    let width = size_spin(&gettext("Width (px)"));
+    let height = size_spin(&gettext("Height (px)"));
     let lock = gtk::ToggleButton::builder()
         .icon_name("changes-prevent-symbolic")
         .active(true)
-        .tooltip_text(gettext("Manter proporção"))
+        .tooltip_text(gettext("Keep aspect ratio"))
         .build();
     lock.add_css_class("flat");
-    lock.update_property(&[gtk::accessible::Property::Label(&gettext("Manter proporção"))]);
+    lock.update_property(&[gtk::accessible::Property::Label(&gettext("Keep aspect ratio"))]);
     let dims = gtk::Box::new(gtk::Orientation::Horizontal, 4);
     dims.append(&width);
     dims.append(&lock);
@@ -375,10 +373,10 @@ pub(in crate::gui) fn build() -> EditPanelUi {
     let percent = gtk::SpinButton::with_range(1.0, 1000.0, 1.0);
     percent.set_numeric(true);
     percent.set_value(100.0);
-    percent.set_tooltip_text(Some(&gettext("Escala (%)")));
-    percent.update_property(&[gtk::accessible::Property::Label(&gettext("Escala (%)"))]);
+    percent.set_tooltip_text(Some(&gettext("Scale (%)")));
+    percent.update_property(&[gtk::accessible::Property::Label(&gettext("Scale (%)"))]);
     let percent_label = gtk::Label::builder().label("%").build();
-    let resize_apply = gtk::Button::with_label(&gettext("Aplicar"));
+    let resize_apply = gtk::Button::with_label(&gettext("Apply"));
     resize_apply.add_css_class("suggested-action");
     resize_apply.set_hexpand(true);
     let scale_row = gtk::Box::new(gtk::Orientation::Horizontal, 4);
@@ -388,20 +386,20 @@ pub(in crate::gui) fn build() -> EditPanelUi {
     size.append(&scale_row);
 
     // Ferramentas
-    let tools = section(&gettext("Ferramentas"));
-    let remove_bg = gtk::Button::with_label(&gettext("Remover fundo (IA)"));
+    let tools = section(&gettext("Tools"));
+    let remove_bg = gtk::Button::with_label(&gettext("Remove background (AI)"));
     tools.append(&remove_bg);
-    let denoise = gtk::Button::with_label(&gettext("Remover ruído (IA)"));
+    let denoise = gtk::Button::with_label(&gettext("Remove noise (AI)"));
     tools.append(&denoise);
     let factor_names: Vec<&str> = UPSCALE_FACTORS.iter().map(|(name, _)| *name).collect();
     let factor = gtk::DropDown::builder().model(&translated_strings(&factor_names)).build();
-    factor.set_tooltip_text(Some(&gettext("Fator")));
-    let upscale = gtk::Button::with_label(&gettext("Aumentar resolução"));
+    factor.set_tooltip_text(Some(&gettext("Factor")));
+    let upscale = gtk::Button::with_label(&gettext("Upscale"));
     upscale.set_hexpand(true);
     let upscale_row = gtk::Box::new(gtk::Orientation::Horizontal, 6);
     upscale_row.append(&upscale);
     upscale_row.append(&factor);
-    upscale_row.append(&name_drop_down(&factor, &gettext("Fator")));
+    upscale_row.append(&name_drop_down(&factor, &gettext("Factor")));
     tools.append(&upscale_row);
     let ai_note = gtk::Label::builder().wrap(true).xalign(0.0).visible(false).build();
     ai_note.add_css_class("dim-label");
@@ -409,8 +407,8 @@ pub(in crate::gui) fn build() -> EditPanelUi {
     tools.append(&ai_note);
     let tool_progress = gtk::ProgressBar::builder().show_text(true).hexpand(true).build();
     let tool_cancel = gtk::Button::from_icon_name("process-stop-symbolic");
-    tool_cancel.set_tooltip_text(Some(&gettext("Cancelar")));
-    tool_cancel.update_property(&[gtk::accessible::Property::Label(&gettext("Cancelar"))]);
+    tool_cancel.set_tooltip_text(Some(&gettext("Cancel")));
+    tool_cancel.update_property(&[gtk::accessible::Property::Label(&gettext("Cancel"))]);
     tool_cancel.add_css_class("flat");
     let tool_box = gtk::Box::new(gtk::Orientation::Horizontal, 6);
     tool_box.set_visible(false);
@@ -422,14 +420,14 @@ pub(in crate::gui) fn build() -> EditPanelUi {
     tools.append(&tool_status);
 
     // Salvar
-    let save = section(&gettext("Salvar"));
+    let save = section(&gettext("Save"));
     let save_button = gtk::Button::builder()
-        .label(gettext("Salvar"))
-        .tooltip_text(gettext("Salvar alterações (Ctrl+S)"))
+        .label(gettext("Save"))
+        .tooltip_text(gettext("Save changes (Ctrl+S)"))
         .action_name("win.save-edits")
         .build();
     save_button.add_css_class("suggested-action");
-    let save_as = gtk::Button::with_label(&gettext("Salvar como…"));
+    let save_as = gtk::Button::with_label(&gettext("Save as…"));
     let save_buttons = gtk::Box::new(gtk::Orientation::Horizontal, 6);
     save_buttons.set_homogeneous(true);
     save_buttons.append(&save_button);
@@ -438,9 +436,9 @@ pub(in crate::gui) fn build() -> EditPanelUi {
     let quality_names: Vec<&str> = SAVE_QUALITIES.iter().map(|(_, name)| *name).collect();
     let quality = gtk::DropDown::builder().model(&translated_strings(&quality_names)).build();
     quality.set_selected(1);
-    quality.set_tooltip_text(Some(&gettext("Qualidade ao salvar como")));
+    quality.set_tooltip_text(Some(&gettext("Quality for Save as")));
     save.append(&quality);
-    save.append(&name_drop_down(&quality, &gettext("Qualidade ao salvar como")));
+    save.append(&name_drop_down(&quality, &gettext("Quality for Save as")));
 
     content.append(&head);
     content.append(&original);
@@ -1035,20 +1033,20 @@ fn sync_ai_tools(ui: &Handles, usable: bool, ai: AiTools) {
     ui.denoise.set_sensitive(usable && denoise.is_none());
     ui.remove_bg.set_tooltip_text(Some(&remove_bg.unwrap_or_else(|| {
         tool_tooltip(
-            gettext("Recorta o objeto principal com BiRefNet-lite, no seu computador"),
+            gettext("Cuts out the main subject with BiRefNet-lite, on your computer"),
             bigimage_ai::background::device(),
         )
     })));
     ui.denoise.set_tooltip_text(Some(&denoise.unwrap_or_else(|| {
         tool_tooltip(
-            gettext("Limpa ruído e artefatos de compressão com SCUNet, no seu computador"),
+            gettext("Cleans up noise and compression artifacts with SCUNet, on your computer"),
             bigimage_ai::denoise::device(),
         )
     })));
     let upscale = if upscale_ready {
-        tool_tooltip(gettext("Real-ESRGAN (IA), no seu computador"), bigimage_ai::upscale::device())
+        tool_tooltip(gettext("Real-ESRGAN (AI), on your computer"), bigimage_ai::upscale::device())
     } else {
-        gettext("Lanczos3 (sem IA)")
+        gettext("Lanczos3 (no AI)")
     };
     ui.upscale.set_tooltip_text(Some(&upscale));
     ui.ai_note.set_visible(note.is_some());
@@ -1531,7 +1529,7 @@ fn apply_resize(state: &Rc<RefCell<ViewerState>>) {
     // image as is and leave an edit that does nothing.
     if !bigimage_core::within_limits(w, h, 4) {
         let message = fill(
-            &gettext("{width}×{height} passa do limite de processamento"),
+            &gettext("{width}×{height} exceeds the processing limit"),
             &[("width", &w.to_string()), ("height", &h.to_string())],
         );
         let osd = state.borrow().osd_label.clone();
@@ -1575,7 +1573,7 @@ pub(in crate::gui) fn run_tool(state: &Rc<RefCell<ViewerState>>, op: EditOp) {
     };
     ui.tool_status.set_visible(false);
     ui.tool_progress.set_fraction(0.0);
-    ui.tool_progress.set_text(Some(&gettext("Preparando…")));
+    ui.tool_progress.set_text(Some(&gettext("Preparing…")));
     ui.tool_box.set_visible(true);
     sync_edit_actions(state);
 
@@ -1649,7 +1647,7 @@ pub(in crate::gui) fn run_tool(state: &Rc<RefCell<ViewerState>>, op: EditOp) {
         sync_sensitivity(&state);
         let result = match snapshot() {
             ToolProgress::Done(result) => result,
-            _ => Err(gettext("O processamento terminou inesperadamente. Tente novamente.")),
+            _ => Err(gettext("Processing ended unexpectedly. Please try again.")),
         };
         match result {
             Ok(()) => {
@@ -1675,7 +1673,7 @@ fn show_tool_progress(bar: &gtk::ProgressBar, progress: &ToolProgress, op: EditO
         ToolProgress::Preparing | ToolProgress::Done(_) => bar.pulse(),
         ToolProgress::Loading => {
             bar.pulse();
-            bar.set_text(Some(&gettext("Carregando o modelo…")));
+            bar.set_text(Some(&gettext("Loading the model…")));
         }
         ToolProgress::Running(share) => {
             // Single-step models report 0 until they finish.
@@ -1685,9 +1683,9 @@ fn show_tool_progress(bar: &gtk::ProgressBar, progress: &ToolProgress, op: EditO
                 bar.pulse();
             }
             bar.set_text(Some(&match op {
-                EditOp::RemoveBackground => gettext("Removendo o fundo…"),
-                EditOp::Denoise => gettext("Removendo ruído…"),
-                _ => gettext("Aumentando…"),
+                EditOp::RemoveBackground => gettext("Removing background…"),
+                EditOp::Denoise => gettext("Removing noise…"),
+                _ => gettext("Upscaling…"),
             }));
         }
     }
@@ -1709,7 +1707,7 @@ pub(in crate::gui) fn cancel_tool(state: &Rc<RefCell<ViewerState>>) {
     job.cancel.store(true, Ordering::Release);
     let ui = handles(&state.borrow());
     ui.tool_box.set_visible(false);
-    ui.tool_status.set_text(&gettext("Cancelado"));
+    ui.tool_status.set_text(&gettext("Canceled"));
     ui.tool_status.set_visible(true);
     sync_edit_actions(state);
 }
@@ -1726,9 +1724,9 @@ fn choose_save_as(state: &Rc<RefCell<ViewerState>>) {
     };
     let stem = path.file_stem().map_or_else(|| "imagem".into(), |s| s.to_string_lossy());
     let extension = save_format(&path).map_or("png", |format| format.extension());
-    let name = fill(&gettext("{name}-editada"), &[("name", &stem)]);
+    let name = fill(&gettext("{name}-edited"), &[("name", &stem)]);
     let dialog = gtk::FileDialog::builder()
-        .title(gettext("Salvar como"))
+        .title(gettext("Save as"))
         .modal(true)
         .initial_name(format!("{name}.{extension}"))
         .build();
@@ -1759,7 +1757,7 @@ pub(in crate::gui) fn save_copy(state: &Rc<RefCell<ViewerState>>, target: PathBu
         _ => a == b,
     };
     if same(&source, &target) {
-        state.borrow().osd_label.set_text(&gettext("Para alterar o próprio arquivo, use Salvar."));
+        state.borrow().osd_label.set_text(&gettext("To change the file itself, use Save."));
         pulse_osd_for(state, OSD_NOTICE_MS);
         return;
     }
@@ -1798,7 +1796,7 @@ pub(in crate::gui) fn save_copy(state: &Rc<RefCell<ViewerState>>, target: PathBu
                     |n| n.to_string_lossy().into_owned(),
                 );
                 let notice = metadata_loss_notice(&dropped)
-                    .unwrap_or_else(|| fill(&gettext("Cópia salva: {name}"), &[("name", &name)]));
+                    .unwrap_or_else(|| fill(&gettext("Copy saved: {name}"), &[("name", &name)]));
                 state.borrow().osd_label.set_text(&notice);
                 pulse_osd_for(&state, OSD_NOTICE_MS);
             }
@@ -1837,14 +1835,13 @@ pub(in crate::gui) fn write_copy(
 fn present_copy_failure(state: &Rc<RefCell<ViewerState>>, failure: &SaveFailure) {
     let window = state.borrow().window();
     let body = match failure {
-        SaveFailure::NoEncoder => gettext(
-            "O BigIris não sabe gravar este formato. Use, por exemplo, .png, .jpg ou .webp.",
-        ),
+        SaveFailure::NoEncoder => {
+            gettext("BigIris cannot write this format. Use, for example, .png, .jpg or .webp.")
+        }
         other => other.message(),
     };
-    let alert =
-        adw::AlertDialog::builder().heading(gettext("Não foi possível salvar")).body(body).build();
-    alert.add_response("close", &gettext("Fechar"));
+    let alert = adw::AlertDialog::builder().heading(gettext("Could not save")).body(body).build();
+    alert.add_response("close", &gettext("Close"));
     alert.present(Some(&window));
 }
 

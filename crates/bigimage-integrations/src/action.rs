@@ -72,43 +72,43 @@ const DOC_MIME: &[&str] = &[
 
 /// Submenu: convert to another format.
 pub const SUB_CONVERT: Submenu =
-    Submenu { id: "convert", label: n_("Converter"), icon: "document-save-as-symbolic" };
+    Submenu { id: "convert", label: n_("Convert"), icon: "document-save-as-symbolic" };
 
 /// Submenu: resize to a preset.
 pub const SUB_RESIZE: Submenu =
-    Submenu { id: "resize", label: n_("Redimensionar"), icon: "view-fullscreen-symbolic" };
+    Submenu { id: "resize", label: n_("Resize"), icon: "view-fullscreen-symbolic" };
 
 /// Submenu: cardinal rotation.
 pub const SUB_ROTATE: Submenu =
-    Submenu { id: "rotate", label: n_("Girar"), icon: "object-rotate-right-symbolic" };
+    Submenu { id: "rotate", label: n_("Rotate"), icon: "object-rotate-right-symbolic" };
 
 /// Submenu: mirror horizontally/vertically.
 pub const SUB_FLIP: Submenu =
-    Submenu { id: "flip", label: n_("Espelhar"), icon: "object-flip-horizontal-symbolic" };
+    Submenu { id: "flip", label: n_("Flip"), icon: "object-flip-horizontal-symbolic" };
 
 /// Submenu: tone / colour adjustments.
 pub const SUB_ADJUST: Submenu =
-    Submenu { id: "adjust", label: n_("Ajustar cores"), icon: "image-adjust-symbolic" };
+    Submenu { id: "adjust", label: n_("Adjust colors"), icon: "image-adjust-symbolic" };
 
 /// Submenu: social/web presets (1-clique: resize + quality + progressive).
 /// Label sem `/` para nao colidir com separador de path quando a Nautilus
 /// scripts tree cria a pasta do submenu.
 pub const SUB_WEB: Submenu =
-    Submenu { id: "web", label: n_("Para web"), icon: "applications-internet-symbolic" };
+    Submenu { id: "web", label: n_("For the web"), icon: "applications-internet-symbolic" };
 
 /// Submenu: inspecao / limpeza de metadados (EXIF, IPTC, XMP).
 pub const SUB_METADATA: Submenu =
-    Submenu { id: "metadata", label: n_("Metadados"), icon: "dialog-information-symbolic" };
+    Submenu { id: "metadata", label: n_("Metadata"), icon: "dialog-information-symbolic" };
 
 /// Submenu: utilidades criativas (GIF animado, comparar, composicao).
 pub const SUB_UTILS: Submenu =
-    Submenu { id: "utils", label: n_("Utilidades"), icon: "applications-graphics-symbolic" };
+    Submenu { id: "utils", label: n_("Utilities"), icon: "applications-graphics-symbolic" };
 
 /// Submenu: IA local (background removal, upscale, denoise).
 /// Requer build com feature `ai`; cada ferramenta precisa do seu pacote de
 /// pesos (`birefnet-native`, `realesrgan-native`, ...).
 pub const SUB_AI: Submenu =
-    Submenu { id: "ai", label: n_("IA"), icon: "applications-science-symbolic" };
+    Submenu { id: "ai", label: n_("AI"), icon: "applications-science-symbolic" };
 
 /// Submenu: converter documento → PDF via LibreOffice. Só aparece quando
 /// a seleção bate em [`DOC_MIME`] — em imagens o usuário usa Convert ▸.
@@ -131,7 +131,7 @@ pub const ACTIONS: &[Action] = &[
     Action {
         id: "view",
         submenu: None,
-        label: n_("Visualizar em BigIris"),
+        label: n_("View in BigIris"),
         command: "bigiris %F",
         icon: "com.biglinux.Iris",
         mime_types: IMAGE_MIME,
@@ -139,7 +139,7 @@ pub const ACTIONS: &[Action] = &[
     Action {
         id: "batch-folder",
         submenu: None,
-        label: n_("Processar esta pasta…"),
+        label: n_("Process this folder…"),
         command: "bigiris --dialog=batch %F",
         icon: "folder-pictures-symbolic",
         mime_types: DIRECTORY_MIME,
@@ -191,7 +191,7 @@ pub const ACTIONS: &[Action] = &[
     Action {
         id: "convert-custom",
         submenu: Some(SUB_CONVERT),
-        label: n_("Mais opções…"),
+        label: n_("More options…"),
         command: "bigiris --dialog=convert %F",
         icon: "document-edit-symbolic",
         mime_types: IMAGE_MIME,
@@ -240,7 +240,7 @@ pub const ACTIONS: &[Action] = &[
     Action {
         id: "resize-custom",
         submenu: Some(SUB_RESIZE),
-        label: n_("Mais opções…"),
+        label: n_("More options…"),
         command: "bigiris --dialog=resize %F",
         icon: "document-edit-symbolic",
         mime_types: IMAGE_MIME,
@@ -273,7 +273,7 @@ pub const ACTIONS: &[Action] = &[
     Action {
         id: "rotate-auto-exif",
         submenu: Some(SUB_ROTATE),
-        label: n_("Automático (EXIF)"),
+        label: n_("Automatic (EXIF)"),
         command: "bigiris --notify rotate --auto --overwrite increment %F",
         icon: "object-rotate-right-symbolic",
         mime_types: IMAGE_MIME,
@@ -281,7 +281,7 @@ pub const ACTIONS: &[Action] = &[
     Action {
         id: "rotate-custom",
         submenu: Some(SUB_ROTATE),
-        label: n_("Mais opções…"),
+        label: n_("More options…"),
         command: "bigiris --dialog=rotate %F",
         icon: "document-edit-symbolic",
         mime_types: IMAGE_MIME,
@@ -306,7 +306,7 @@ pub const ACTIONS: &[Action] = &[
     Action {
         id: "flip-custom",
         submenu: Some(SUB_FLIP),
-        label: n_("Mais opções…"),
+        label: n_("More options…"),
         command: "bigiris --dialog=flip %F",
         icon: "document-edit-symbolic",
         mime_types: IMAGE_MIME,
@@ -315,7 +315,7 @@ pub const ACTIONS: &[Action] = &[
     Action {
         id: "adjust-brightness-plus",
         submenu: Some(SUB_ADJUST),
-        label: n_("+ Brilho (+10)"),
+        label: n_("+ Brightness (+10)"),
         command: "bigiris --notify adjust --brightness 10 %F",
         icon: "display-brightness-symbolic",
         mime_types: IMAGE_MIME,
@@ -323,7 +323,7 @@ pub const ACTIONS: &[Action] = &[
     Action {
         id: "adjust-brightness-minus",
         submenu: Some(SUB_ADJUST),
-        label: n_("− Brilho (-10)"),
+        label: n_("− Brightness (-10)"),
         command: "bigiris --notify adjust --brightness -10 %F",
         icon: "display-brightness-symbolic",
         mime_types: IMAGE_MIME,
@@ -331,7 +331,7 @@ pub const ACTIONS: &[Action] = &[
     Action {
         id: "adjust-contrast-plus",
         submenu: Some(SUB_ADJUST),
-        label: n_("+ Contraste (+20)"),
+        label: n_("+ Contrast (+20)"),
         command: "bigiris --notify adjust --contrast 20 %F",
         icon: "display-brightness-symbolic",
         mime_types: IMAGE_MIME,
@@ -339,7 +339,7 @@ pub const ACTIONS: &[Action] = &[
     Action {
         id: "adjust-bw",
         submenu: Some(SUB_ADJUST),
-        label: n_("Preto e branco"),
+        label: n_("Black and white"),
         command: "bigiris --notify adjust --saturation -100 %F",
         icon: "color-pick-symbolic",
         mime_types: IMAGE_MIME,
@@ -347,7 +347,7 @@ pub const ACTIONS: &[Action] = &[
     Action {
         id: "adjust-vivid",
         submenu: Some(SUB_ADJUST),
-        label: n_("Cores vivas (+40)"),
+        label: n_("Vivid colors (+40)"),
         command: "bigiris --notify adjust --saturation 40 %F",
         icon: "color-pick-symbolic",
         mime_types: IMAGE_MIME,
@@ -355,7 +355,7 @@ pub const ACTIONS: &[Action] = &[
     Action {
         id: "adjust-custom",
         submenu: Some(SUB_ADJUST),
-        label: n_("Mais opções…"),
+        label: n_("More options…"),
         command: "bigiris --dialog=adjust %F",
         icon: "document-edit-symbolic",
         mime_types: IMAGE_MIME,
@@ -415,7 +415,7 @@ pub const ACTIONS: &[Action] = &[
     Action {
         id: "web-optimize-png",
         submenu: Some(SUB_WEB),
-        label: n_("Otimizar PNG (compressão máxima)"),
+        label: n_("Optimize PNG (maximum compression)"),
         command:
             "bigiris --notify convert --to png --target maxima --optimize --overwrite replace %F",
         icon: "applications-internet-symbolic",
@@ -452,7 +452,7 @@ pub const ACTIONS: &[Action] = &[
     Action {
         id: "web-letterbox-custom",
         submenu: Some(SUB_WEB),
-        label: n_("Letterbox personalizado…"),
+        label: n_("Custom letterbox…"),
         command: "bigiris --dialog=extent %F",
         icon: "applications-internet-symbolic",
         mime_types: IMAGE_MIME,
@@ -461,7 +461,7 @@ pub const ACTIONS: &[Action] = &[
     Action {
         id: "metadata-view",
         submenu: Some(SUB_METADATA),
-        label: n_("Ver metadados…"),
+        label: n_("View metadata…"),
         command: "bigiris --dialog=metadata %F",
         icon: "dialog-information-symbolic",
         mime_types: IMAGE_MIME,
@@ -469,7 +469,7 @@ pub const ACTIONS: &[Action] = &[
     Action {
         id: "metadata-strip-all",
         submenu: Some(SUB_METADATA),
-        label: n_("Remover tudo (re-encode limpo)"),
+        label: n_("Remove all metadata (clean re-encode)"),
         // Nosso pipeline de convert ja re-encoda sem EXIF/IPTC/XMP,
         // entao "strip tudo" e um convert para o mesmo formato.
         command: "bigiris --dialog=convert %F",
@@ -480,7 +480,7 @@ pub const ACTIONS: &[Action] = &[
     Action {
         id: "utils-batch",
         submenu: Some(SUB_UTILS),
-        label: n_("Converter em lote (Prisma)…"),
+        label: n_("Batch convert (Prisma)…"),
         command: "bigiris --dialog=batch %F",
         icon: "document-save-as-symbolic",
         mime_types: IMAGE_MIME,
@@ -488,7 +488,7 @@ pub const ACTIONS: &[Action] = &[
     Action {
         id: "utils-animate-gif",
         submenu: Some(SUB_UTILS),
-        label: n_("Criar GIF animado…"),
+        label: n_("Create animated GIF…"),
         command: "bigiris --dialog=animate %F",
         icon: "video-x-generic-symbolic",
         mime_types: IMAGE_MIME,
@@ -496,7 +496,7 @@ pub const ACTIONS: &[Action] = &[
     Action {
         id: "utils-compare",
         submenu: Some(SUB_UTILS),
-        label: n_("Comparar 2 imagens…"),
+        label: n_("Compare 2 images…"),
         command: "bigiris --dialog=compare %F",
         icon: "view-dual-symbolic",
         mime_types: IMAGE_MIME,
@@ -505,7 +505,7 @@ pub const ACTIONS: &[Action] = &[
     Action {
         id: "ai-remove-bg",
         submenu: Some(SUB_AI),
-        label: n_("Remover fundo (BiRefNet)"),
+        label: n_("Remove background (BiRefNet)"),
         // Dispara o diálogo GUI com barra de progresso + compare ao fim.
         // Headless puro (`bigiris remove-bg`) fica só na CLI.
         command: "bigiris --dialog=remove-bg %F",
@@ -515,7 +515,7 @@ pub const ACTIONS: &[Action] = &[
     Action {
         id: "ai-upscale",
         submenu: Some(SUB_AI),
-        label: n_("Aumentar resolução…"),
+        label: n_("Upscale…"),
         // Same dialog as the viewer's edit panel: Real-ESRGAN when
         // `realesrgan-native` is installed, Lanczos3 otherwise.
         command: "bigiris --dialog=upscale %F",
@@ -526,7 +526,7 @@ pub const ACTIONS: &[Action] = &[
     Action {
         id: "pdf-convert",
         submenu: Some(SUB_PDF),
-        label: n_("Converter para PDF (LibreOffice)"),
+        label: n_("Convert to PDF (LibreOffice)"),
         command: "bigiris --notify to-pdf %F",
         icon: "application-pdf-symbolic",
         mime_types: DOC_MIME,

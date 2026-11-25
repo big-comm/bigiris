@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: bigiris 0.1.0\n"
 "Report-Msgid-Bugs-To: https://github.com/big-comm/bigiris/issues\n"
-"POT-Creation-Date: 2026-11-25 16:16-0300\n"
+"POT-Creation-Date: 2026-11-25 16:19-0300\n"
 "PO-Revision-Date: 2026-10-14 01:35-0300\n"
 "Last-Translator: BigCommunity Team\n"
 "Language-Team: BigCommunity Team\n"
@@ -50,16 +50,16 @@ msgstr "το BigIris ενημερώθηκε ενώ ήταν ανοιχτό· ε�
 msgid "codec isolado recusou a imagem ({status}){hint}: {details}"
 msgstr "ο απομονωμένος codec απέρριψε την εικόνα ({status}){hint}: {details}"
 
-#: crates/bigiris/src/gui.rs:758
+#: crates/bigiris/src/gui.rs:765
 msgid "BigIris"
 msgstr "BigIris"
 
-#: crates/bigiris/src/gui.rs:793 crates/bigiris/src/gui/previews.rs:257
+#: crates/bigiris/src/gui.rs:800 crates/bigiris/src/gui/previews.rs:257
 msgid "Não foi possível abrir a imagem"
 msgstr "Δεν ήταν δυνατό το άνοιγμα της εικόνας"
 
-#: crates/bigiris/src/gui.rs:912 crates/bigiris/src/gui.rs:2789
-#: crates/bigiris/src/gui.rs:4086 crates/bigiris/src/gui/dialogs/animate.rs:184
+#: crates/bigiris/src/gui.rs:919 crates/bigiris/src/gui.rs:2796
+#: crates/bigiris/src/gui.rs:4115 crates/bigiris/src/gui/dialogs/animate.rs:184
 #: crates/bigiris/src/gui/dialogs/batch.rs:122
 #: crates/bigiris/src/gui/dialogs/batch.rs:255
 #: crates/bigiris/src/gui/dialogs/batch.rs:349
@@ -73,103 +73,103 @@ msgstr "Δεν ήταν δυνατό το άνοιγμα της εικόνας"
 msgid "Cancelar"
 msgstr "Ακύρωση"
 
-#: crates/bigiris/src/gui.rs:924
+#: crates/bigiris/src/gui.rs:931
 msgid "Recalculando a edição…"
 msgstr "Επανυπολογισμός της επεξεργασίας…"
 
-#: crates/bigiris/src/gui.rs:1072 crates/bigiris/src/gui.rs:3807
+#: crates/bigiris/src/gui.rs:1079 crates/bigiris/src/gui.rs:3836
 #: crates/bigiris/src/gui/viewer/crop.rs:624
 msgid "Aguarde o salvamento terminar"
 msgstr "Περιμένετε να ολοκληρωθεί η αποθήκευση"
 
-#: crates/bigiris/src/gui.rs:1086
+#: crates/bigiris/src/gui.rs:1093
 msgid "Descartar alterações?"
 msgstr "Να απορριφθούν οι αλλαγές;"
 
-#: crates/bigiris/src/gui.rs:1087
+#: crates/bigiris/src/gui.rs:1094
 msgid "A imagem tem edições que ainda não foram salvas."
 msgstr "Η εικόνα έχει μη αποθηκευμένες αλλαγές."
 
-#: crates/bigiris/src/gui.rs:1089
+#: crates/bigiris/src/gui.rs:1096
 msgid "Continuar editando"
 msgstr "Συνέχεια επεξεργασίας"
 
-#: crates/bigiris/src/gui.rs:1090
+#: crates/bigiris/src/gui.rs:1097
 msgid "Descartar"
 msgstr "Απόρριψη"
 
-#: crates/bigiris/src/gui.rs:1160
+#: crates/bigiris/src/gui.rs:1167
 msgid "Imagem anterior"
 msgstr "Προηγούμενη εικόνα"
 
-#: crates/bigiris/src/gui.rs:1161
+#: crates/bigiris/src/gui.rs:1168
 msgid "Próxima imagem"
 msgstr "Επόμενη εικόνα"
 
-#: crates/bigiris/src/gui.rs:1177
+#: crates/bigiris/src/gui.rs:1184
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:305
 msgid "Editar"
 msgstr "Επεξεργασία"
 
-#: crates/bigiris/src/gui.rs:1180
+#: crates/bigiris/src/gui.rs:1187
 msgid "Editar (E)"
 msgstr "Επεξεργασία (E)"
 
-#: crates/bigiris/src/gui.rs:1187
+#: crates/bigiris/src/gui.rs:1194
 msgid "Propriedades da imagem (Ctrl+I)"
 msgstr "Ιδιότητες εικόνας (Ctrl+I)"
 
-#: crates/bigiris/src/gui.rs:1193
+#: crates/bigiris/src/gui.rs:1200
 msgid "Tela cheia (F11)"
 msgstr "Πλήρης οθόνη (F11)"
 
-#: crates/bigiris/src/gui.rs:1202
+#: crates/bigiris/src/gui.rs:1209
 msgid "Afastar"
 msgstr "Σμίκρυνση"
 
-#: crates/bigiris/src/gui.rs:1206 crates/bigiris/src/gui.rs:4182
+#: crates/bigiris/src/gui.rs:1213 crates/bigiris/src/gui.rs:4211
 msgid "Ajustar à janela"
 msgstr "Προσαρμογή στο παράθυρο"
 
-#: crates/bigiris/src/gui.rs:1207 crates/bigiris/src/gui.rs:4183
+#: crates/bigiris/src/gui.rs:1214 crates/bigiris/src/gui.rs:4212
 msgid "Tamanho real (100%)"
 msgstr "Πραγματικό μέγεθος (100%)"
 
-#: crates/bigiris/src/gui.rs:1216 crates/bigiris/src/gui.rs:4179
+#: crates/bigiris/src/gui.rs:1223 crates/bigiris/src/gui.rs:4208
 msgid "Zoom"
 msgstr "Ζουμ"
 
-#: crates/bigiris/src/gui.rs:1220
+#: crates/bigiris/src/gui.rs:1227
 msgid "Aproximar"
 msgstr "Μεγέθυνση"
 
-#: crates/bigiris/src/gui.rs:2307
+#: crates/bigiris/src/gui.rs:2314
 msgid "Slideshow: pausado"
 msgstr "Προβολή διαφανειών: σε παύση"
 
-#: crates/bigiris/src/gui.rs:2335
+#: crates/bigiris/src/gui.rs:2342
 msgid "Slideshow: a cada {interval} s"
 msgstr "Προβολή διαφανειών: κάθε {interval} s"
 
-#: crates/bigiris/src/gui.rs:2354
+#: crates/bigiris/src/gui.rs:2361
 msgid "Histograma ligado"
 msgstr "Ιστόγραμμα ενεργό"
 
-#: crates/bigiris/src/gui.rs:2356
+#: crates/bigiris/src/gui.rs:2363
 msgid "Histograma desligado"
 msgstr "Ιστόγραμμα ανενεργό"
 
-#: crates/bigiris/src/gui.rs:2479 crates/bigiris/src/gui.rs:2590
+#: crates/bigiris/src/gui.rs:2486 crates/bigiris/src/gui.rs:2597
 #: crates/bigiris/src/gui/dialogs/batch.rs:341
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:1712
 msgid "Cancelado"
 msgstr "Ακυρώθηκε"
 
-#: crates/bigiris/src/gui.rs:2591
+#: crates/bigiris/src/gui.rs:2598
 msgid "Falha na IA: {error}"
 msgstr "Σφάλμα ΤΝ: {error}"
 
-#: crates/bigiris/src/gui.rs:2597
+#: crates/bigiris/src/gui.rs:2604
 msgid ""
 "Esta build não inclui IA. Recompile com `cargo build --features ai` (requer "
 "glslc, do pacote shaderc)."
@@ -177,17 +177,17 @@ msgstr ""
 "Αυτή η έκδοση δεν περιλαμβάνει ΤΝ. Κάντε νέα μεταγλώττιση με `cargo build --"
 "features ai` (απαιτεί glslc, από το πακέτο shaderc)."
 
-#: crates/bigiris/src/gui.rs:2603
+#: crates/bigiris/src/gui.rs:2610
 msgid "{model} não está instalado. Instale com: sudo pacman -S {package}"
 msgstr ""
 "Το {model} δεν είναι εγκατεστημένο. Εγκαταστήστε το με: sudo pacman -S "
 "{package}"
 
-#: crates/bigiris/src/gui.rs:2617
+#: crates/bigiris/src/gui.rs:2624
 msgid "Não foi possível ler {path}: {error}"
 msgstr "Δεν ήταν δυνατή η ανάγνωση του {path}: {error}"
 
-#: crates/bigiris/src/gui.rs:2777
+#: crates/bigiris/src/gui.rs:2784
 msgid ""
 "O arquivo será sobrescrito. JPEG é recodificado a cada gravação; isso pode "
 "reduzir a qualidade."
@@ -195,11 +195,11 @@ msgstr ""
 "Το αρχείο θα αντικατασταθεί. Το JPEG επανακωδικοποιείται σε κάθε αποθήκευση· "
 "αυτό μπορεί να μειώσει την ποιότητα."
 
-#: crates/bigiris/src/gui.rs:2779
+#: crates/bigiris/src/gui.rs:2786
 msgid "O arquivo será sobrescrito."
 msgstr "Το αρχείο θα αντικατασταθεί."
 
-#: crates/bigiris/src/gui.rs:2785
+#: crates/bigiris/src/gui.rs:2792
 msgid ""
 "Este formato não guarda todos os metadados da foto (data, câmera, perfil de "
 "cor); o que ele não suportar será removido ou convertido."
@@ -207,21 +207,21 @@ msgstr ""
 "Αυτή η μορφή δεν διατηρεί όλα τα μεταδεδομένα της φωτογραφίας (ημερομηνία, "
 "κάμερα, προφίλ χρώματος)· ό,τι δεν υποστηρίζει θα αφαιρεθεί ή θα μετατραπεί."
 
-#: crates/bigiris/src/gui.rs:2788
+#: crates/bigiris/src/gui.rs:2795
 msgid "Salvar alterações?"
 msgstr "Αποθήκευση των αλλαγών;"
 
-#: crates/bigiris/src/gui.rs:2790
+#: crates/bigiris/src/gui.rs:2797
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:425
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:427
 msgid "Salvar"
 msgstr "Αποθήκευση"
 
-#: crates/bigiris/src/gui.rs:2850
+#: crates/bigiris/src/gui.rs:2857
 msgid "Salvo"
 msgstr "Αποθηκεύτηκε"
 
-#: crates/bigiris/src/gui.rs:2931
+#: crates/bigiris/src/gui.rs:2939
 msgid ""
 "Este arquivo é animado, tem várias páginas ou não pôde ser verificado. Girar "
 "ou espelhar e salvar descartaria os outros quadros, então ele não foi "
@@ -231,7 +231,7 @@ msgstr ""
 "ελεγχθεί. Η περιστροφή ή ο κατοπτρισμός και η αποθήκευση θα απέρριπταν τα "
 "υπόλοιπα καρέ, οπότε δεν τροποποιήθηκε."
 
-#: crates/bigiris/src/gui.rs:2932
+#: crates/bigiris/src/gui.rs:2940
 msgid ""
 "O BigIris não sabe gravar este formato. As alterações não podem ser salvas "
 "no próprio arquivo."
@@ -239,146 +239,153 @@ msgstr ""
 "Το BigIris δεν μπορεί να γράψει αυτή τη μορφή. Οι αλλαγές δεν μπορούν να "
 "αποθηκευτούν στο ίδιο το αρχείο."
 
-#: crates/bigiris/src/gui.rs:2933
+#: crates/bigiris/src/gui.rs:2941
 msgid "Sem permissão para alterar este arquivo ou a pasta dele."
 msgstr "Δεν υπάρχει δικαίωμα τροποποίησης αυτού του αρχείου ή του φακέλου του."
 
-#: crates/bigiris/src/gui.rs:2935
+#: crates/bigiris/src/gui.rs:2943
 msgid "O arquivo não foi alterado. Detalhes: {detail}"
 msgstr "Το αρχείο δεν τροποποιήθηκε. Λεπτομέρειες: {detail}"
 
-#: crates/bigiris/src/gui.rs:2947
+#: crates/bigiris/src/gui.rs:2955
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:1846
 msgid "Não foi possível salvar"
 msgstr "Δεν ήταν δυνατή η αποθήκευση"
 
-#: crates/bigiris/src/gui.rs:2950
+#: crates/bigiris/src/gui.rs:2958
 msgid "Manter alterações"
 msgstr "Διατήρηση αλλαγών"
 
-#: crates/bigiris/src/gui.rs:2951
+#: crates/bigiris/src/gui.rs:2959
 msgid "Descartar alterações"
 msgstr "Απόρριψη αλλαγών"
 
-#: crates/bigiris/src/gui.rs:3041
+#: crates/bigiris/src/gui.rs:3049
 msgid "o formato não guarda EXIF"
 msgstr "η μορφή δεν αποθηκεύει EXIF"
 
-#: crates/bigiris/src/gui.rs:3042
+#: crates/bigiris/src/gui.rs:3050
 msgid "EXIF grande demais para JPEG"
 msgstr "EXIF πολύ μεγάλο για JPEG"
 
-#: crates/bigiris/src/gui.rs:3043
+#: crates/bigiris/src/gui.rs:3051
 msgid "EXIF inválido"
 msgstr "μη έγκυρο EXIF"
 
-#: crates/bigiris/src/gui.rs:3046
+#: crates/bigiris/src/gui.rs:3054
 msgid "perfil de cor convertido para sRGB"
 msgstr "το προφίλ χρώματος μετατράπηκε σε sRGB"
 
-#: crates/bigiris/src/gui.rs:3047
+#: crates/bigiris/src/gui.rs:3055
 msgid "perfil de cor inválido ignorado"
 msgstr "αγνοήθηκε μη έγκυρο προφίλ χρώματος"
 
-#: crates/bigiris/src/gui.rs:3048
+#: crates/bigiris/src/gui.rs:3056
 msgid "metadados não suportados"
 msgstr "μη υποστηριζόμενα μεταδεδομένα"
 
-#: crates/bigiris/src/gui.rs:3058
+#: crates/bigiris/src/gui.rs:3066
 msgid "Salvo. Alguns metadados não puderam ser mantidos: {list}"
 msgstr ""
 "Αποθηκεύτηκε. Ορισμένα μεταδεδομένα δεν ήταν δυνατό να διατηρηθούν: {list}"
 
-#: crates/bigiris/src/gui.rs:3342
+#: crates/bigiris/src/gui.rs:3170
+msgid ""
+"O perfil de cor desta imagem está corrompido; as cores podem estar imprecisas"
+msgstr ""
+"Το προφίλ χρωμάτων αυτής της εικόνας είναι κατεστραμμένο· τα χρώματα μπορεί "
+"να μην είναι ακριβή"
+
+#: crates/bigiris/src/gui.rs:3367
 msgid "Salve ou desfaça as alterações antes de navegar"
 msgstr "Αποθηκεύστε ή αναιρέστε τις αλλαγές πριν από την πλοήγηση"
 
-#: crates/bigiris/src/gui.rs:3431 crates/bigiris/src/gui.rs:4342
-#: crates/bigiris/src/gui.rs:5393 crates/bigiris/src/gui.rs:5528
+#: crates/bigiris/src/gui.rs:3460 crates/bigiris/src/gui.rs:4371
+#: crates/bigiris/src/gui.rs:5422 crates/bigiris/src/gui.rs:5557
 msgid "Abrir imagens…"
 msgstr "Άνοιγμα εικόνων…"
 
-#: crates/bigiris/src/gui.rs:3432 crates/bigiris/src/gui.rs:4223
+#: crates/bigiris/src/gui.rs:3461 crates/bigiris/src/gui.rs:4252
 msgid "Colar arquivos de imagem"
 msgstr "Επικόλληση αρχείων εικόνας"
 
-#: crates/bigiris/src/gui.rs:3434 crates/bigiris/src/gui.rs:4222
+#: crates/bigiris/src/gui.rs:3463 crates/bigiris/src/gui.rs:4251
 msgid "Copiar imagem"
 msgstr "Αντιγραφή εικόνας"
 
-#: crates/bigiris/src/gui.rs:3435
+#: crates/bigiris/src/gui.rs:3464
 msgid "Imprimir…"
 msgstr "Εκτύπωση…"
 
-#: crates/bigiris/src/gui.rs:3437 crates/bigiris/src/gui.rs:4354
-#: crates/bigiris/src/gui.rs:5393
+#: crates/bigiris/src/gui.rs:3466 crates/bigiris/src/gui.rs:4383
+#: crates/bigiris/src/gui.rs:5422
 msgid "Processar uma pasta…"
 msgstr "Επεξεργασία φακέλου…"
 
-#: crates/bigiris/src/gui.rs:3443
+#: crates/bigiris/src/gui.rs:3472
 msgid "Editar imagem"
 msgstr "Επεξεργασία εικόνας"
 
-#: crates/bigiris/src/gui.rs:3444 crates/bigiris/src/gui.rs:4201
+#: crates/bigiris/src/gui.rs:3473 crates/bigiris/src/gui.rs:4230
 msgid "Desfazer"
 msgstr "Αναίρεση"
 
-#: crates/bigiris/src/gui.rs:3445 crates/bigiris/src/gui.rs:4202
+#: crates/bigiris/src/gui.rs:3474 crates/bigiris/src/gui.rs:4231
 msgid "Refazer"
 msgstr "Επανάληψη"
 
-#: crates/bigiris/src/gui.rs:3448 crates/bigiris/src/gui.rs:4213
+#: crates/bigiris/src/gui.rs:3477 crates/bigiris/src/gui.rs:4242
 msgid "Salvar alterações"
 msgstr "Αποθήκευση αλλαγών"
 
-#: crates/bigiris/src/gui.rs:3449 crates/bigiris/src/gui.rs:4226
+#: crates/bigiris/src/gui.rs:3478 crates/bigiris/src/gui.rs:4255
 msgid "Mover para a lixeira"
 msgstr "Μετακίνηση στα απορρίμματα"
 
-#: crates/bigiris/src/gui.rs:3453
+#: crates/bigiris/src/gui.rs:3482
 msgid "Atalhos do teclado"
 msgstr "Συντομεύσεις πληκτρολογίου"
 
-#: crates/bigiris/src/gui.rs:3454
+#: crates/bigiris/src/gui.rs:3483
 msgid "Sobre o BigIris"
 msgstr "Σχετικά με το BigIris"
 
-#: crates/bigiris/src/gui.rs:3459
+#: crates/bigiris/src/gui.rs:3488
 msgid "Menu principal"
 msgstr "Κύριο μενού"
 
-#: crates/bigiris/src/gui.rs:3809
+#: crates/bigiris/src/gui.rs:3838
 msgid "Salve ou desfaça as alterações antes de usar esta ferramenta"
 msgstr ""
 "Αποθηκεύστε ή αναιρέστε τις αλλαγές πριν χρησιμοποιήσετε αυτό το εργαλείο"
 
-#: crates/bigiris/src/gui.rs:3825 crates/bigiris/src/gui.rs:4399
+#: crates/bigiris/src/gui.rs:3854 crates/bigiris/src/gui.rs:4428
 #: crates/bigiris/src/gui/dialogs/batch.rs:389
 #: crates/bigiris/src/gui/dialogs/remove_bg.rs:121
 msgid "Imagens"
 msgstr "Εικόνες"
 
-#: crates/bigiris/src/gui.rs:3831 crates/bigiris/src/gui.rs:4221
+#: crates/bigiris/src/gui.rs:3860 crates/bigiris/src/gui.rs:4250
 msgid "Abrir imagens"
 msgstr "Άνοιγμα εικόνων"
 
-#: crates/bigiris/src/gui.rs:3873
+#: crates/bigiris/src/gui.rs:3902
 msgid "Aguarde a imagem terminar de carregar"
 msgstr "Περιμένετε να ολοκληρωθεί η φόρτωση της εικόνας"
 
-#: crates/bigiris/src/gui.rs:3898 crates/bigiris/src/gui.rs:3938
+#: crates/bigiris/src/gui.rs:3927 crates/bigiris/src/gui.rs:3967
 msgid "Não foi possível preparar a página"
 msgstr "Δεν ήταν δυνατή η προετοιμασία της σελίδας"
 
-#: crates/bigiris/src/gui.rs:3920
+#: crates/bigiris/src/gui.rs:3949
 msgid "O preparo da impressão falhou"
 msgstr "Η προετοιμασία της εκτύπωσης απέτυχε"
 
-#: crates/bigiris/src/gui.rs:3977
+#: crates/bigiris/src/gui.rs:4006
 msgid "Não foi possível imprimir"
 msgstr "Δεν ήταν δυνατή η εκτύπωση"
 
-#: crates/bigiris/src/gui.rs:3980 crates/bigiris/src/gui.rs:4112
+#: crates/bigiris/src/gui.rs:4009 crates/bigiris/src/gui.rs:4141
 #: crates/bigiris/src/gui/dialogs/animate.rs:53
 #: crates/bigiris/src/gui/dialogs/batch.rs:347
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:311
@@ -390,11 +397,11 @@ msgstr "Δεν ήταν δυνατή η εκτύπωση"
 msgid "Fechar"
 msgstr "Κλείσιμο"
 
-#: crates/bigiris/src/gui.rs:4078
+#: crates/bigiris/src/gui.rs:4107
 msgid "Mover para a lixeira?"
 msgstr "Μετακίνηση στα απορρίμματα;"
 
-#: crates/bigiris/src/gui.rs:4082
+#: crates/bigiris/src/gui.rs:4111
 msgid ""
 "O arquivo será movido para a lixeira do sistema. Você pode restaurá-lo "
 "depois."
@@ -402,145 +409,145 @@ msgstr ""
 "Το αρχείο θα μετακινηθεί στα απορρίμματα του συστήματος. Μπορείτε να το "
 "επαναφέρετε αργότερα."
 
-#: crates/bigiris/src/gui.rs:4087
+#: crates/bigiris/src/gui.rs:4116
 msgid "Mover"
 msgstr "Μετακίνηση"
 
-#: crates/bigiris/src/gui.rs:4109
+#: crates/bigiris/src/gui.rs:4138
 msgid "Não foi possível mover para a lixeira"
 msgstr "Δεν ήταν δυνατή η μετακίνηση στα απορρίμματα"
 
-#: crates/bigiris/src/gui.rs:4171
+#: crates/bigiris/src/gui.rs:4200
 msgid "Navegação"
 msgstr "Πλοήγηση"
 
-#: crates/bigiris/src/gui.rs:4173
+#: crates/bigiris/src/gui.rs:4202
 msgid "Anterior / próximo"
 msgstr "Προηγούμενη / επόμενη"
 
-#: crates/bigiris/src/gui.rs:4174
+#: crates/bigiris/src/gui.rs:4203
 msgid "Primeiro / último"
 msgstr "Πρώτη / τελευταία"
 
-#: crates/bigiris/src/gui.rs:4175
+#: crates/bigiris/src/gui.rs:4204
 msgid "Slideshow (auto-avanço)"
 msgstr "Προβολή διαφανειών (αυτόματη προώθηση)"
 
-#: crates/bigiris/src/gui.rs:4181
+#: crates/bigiris/src/gui.rs:4210
 msgid "Aproximar / afastar"
 msgstr "Μεγέθυνση / σμίκρυνση"
 
-#: crates/bigiris/src/gui.rs:4184
+#: crates/bigiris/src/gui.rs:4213
 msgid "Zoom contínuo"
 msgstr "Συνεχές ζουμ"
 
-#: crates/bigiris/src/gui.rs:4188
+#: crates/bigiris/src/gui.rs:4217
 msgid "Janela"
 msgstr "Παράθυρο"
 
-#: crates/bigiris/src/gui.rs:4190
+#: crates/bigiris/src/gui.rs:4219
 msgid "Tela cheia"
 msgstr "Πλήρης οθόνη"
 
-#: crates/bigiris/src/gui.rs:4191
+#: crates/bigiris/src/gui.rs:4220
 msgid "Modo teatro"
 msgstr "Λειτουργία θεάτρου"
 
-#: crates/bigiris/src/gui.rs:4192
+#: crates/bigiris/src/gui.rs:4221
 msgid "Fita de miniaturas"
 msgstr "Λωρίδα μικρογραφιών"
 
-#: crates/bigiris/src/gui.rs:4193
+#: crates/bigiris/src/gui.rs:4222
 msgid "Histograma RGB"
 msgstr "Ιστόγραμμα RGB"
 
-#: crates/bigiris/src/gui.rs:4194
+#: crates/bigiris/src/gui.rs:4223
 msgid "Fixar barras visíveis"
 msgstr "Μόνιμη εμφάνιση γραμμών"
 
-#: crates/bigiris/src/gui.rs:4195
+#: crates/bigiris/src/gui.rs:4224
 msgid "Sair da tela cheia ou fechar"
 msgstr "Έξοδος από πλήρη οθόνη ή κλείσιμο"
 
-#: crates/bigiris/src/gui.rs:4199
+#: crates/bigiris/src/gui.rs:4228
 msgid "Edição"
 msgstr "Επεξεργασία"
 
-#: crates/bigiris/src/gui.rs:4203
+#: crates/bigiris/src/gui.rs:4232
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:326
 msgid "Girar à direita"
 msgstr "Περιστροφή δεξιά"
 
-#: crates/bigiris/src/gui.rs:4204
+#: crates/bigiris/src/gui.rs:4233
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:325
 msgid "Girar à esquerda"
 msgstr "Περιστροφή αριστερά"
 
-#: crates/bigiris/src/gui.rs:4205
+#: crates/bigiris/src/gui.rs:4234
 msgid "Recortar…"
 msgstr "Περικοπή…"
 
-#: crates/bigiris/src/gui.rs:4206
+#: crates/bigiris/src/gui.rs:4235
 msgid "Recorte: mover a seleção"
 msgstr "Περικοπή: μετακίνηση της επιλογής"
 
-#: crates/bigiris/src/gui.rs:4209
+#: crates/bigiris/src/gui.rs:4238
 msgid "Recorte: redimensionar a seleção"
 msgstr "Περικοπή: αλλαγή μεγέθους της επιλογής"
 
-#: crates/bigiris/src/gui.rs:4211
+#: crates/bigiris/src/gui.rs:4240
 msgid "Remover fundo (IA)…"
 msgstr "Αφαίρεση φόντου (ΤΝ)…"
 
-#: crates/bigiris/src/gui.rs:4212
+#: crates/bigiris/src/gui.rs:4241
 #: crates/bigimage-integrations/src/action.rs:518
 msgid "Aumentar resolução…"
 msgstr "Αύξηση ανάλυσης…"
 
-#: crates/bigiris/src/gui.rs:4214
+#: crates/bigiris/src/gui.rs:4243
 msgid "Painel de edição"
 msgstr "Πλαίσιο επεξεργασίας"
 
-#: crates/bigiris/src/gui.rs:4215
+#: crates/bigiris/src/gui.rs:4244
 msgid "Ver original (segure)"
 msgstr "Προβολή πρωτοτύπου (κρατήστε πατημένο)"
 
-#: crates/bigiris/src/gui.rs:4219
+#: crates/bigiris/src/gui.rs:4248
 #: crates/bigiris/src/gui/dialogs/properties.rs:120
 msgid "Arquivo"
 msgstr "Αρχείο"
 
-#: crates/bigiris/src/gui.rs:4224
+#: crates/bigiris/src/gui.rs:4253
 msgid "Imprimir"
 msgstr "Εκτύπωση"
 
-#: crates/bigiris/src/gui.rs:4225
+#: crates/bigiris/src/gui.rs:4254
 #: crates/bigiris/src/gui/dialogs/properties.rs:38
 #: crates/bigiris/src/gui/dialogs/properties.rs:80
 msgid "Propriedades"
 msgstr "Ιδιότητες"
 
-#: crates/bigiris/src/gui.rs:4230
+#: crates/bigiris/src/gui.rs:4259
 msgid "Ajuda"
 msgstr "Βοήθεια"
 
-#: crates/bigiris/src/gui.rs:4231
+#: crates/bigiris/src/gui.rs:4260
 msgid "Este diálogo"
 msgstr "Αυτό το παράθυρο διαλόγου"
 
-#: crates/bigiris/src/gui.rs:4231
+#: crates/bigiris/src/gui.rs:4260
 msgid "Sobre"
 msgstr "Περί"
 
-#: crates/bigiris/src/gui.rs:4241
+#: crates/bigiris/src/gui.rs:4270
 msgid "Roda do mouse"
 msgstr "Τροχός του ποντικιού"
 
-#: crates/bigiris/src/gui.rs:4269
+#: crates/bigiris/src/gui.rs:4298
 msgid "Atalhos de teclado"
 msgstr "Συντομεύσεις πληκτρολογίου"
 
-#: crates/bigiris/src/gui.rs:4295
+#: crates/bigiris/src/gui.rs:4324
 msgid ""
 "Visualizador e conversor de imagens para Linux. Rápido, acessível por "
 "teclado e integrado ao gerenciador de arquivos."
@@ -548,23 +555,23 @@ msgstr ""
 "Πρόγραμμα προβολής και μετατροπής εικόνων για Linux. Γρήγορο, προσβάσιμο από "
 "το πληκτρολόγιο και ενσωματωμένο στη διαχείριση αρχείων."
 
-#: crates/bigiris/src/gui.rs:4328
+#: crates/bigiris/src/gui.rs:4357
 msgid "Abra suas imagens"
 msgstr "Ανοίξτε τις εικόνες σας"
 
-#: crates/bigiris/src/gui.rs:4333
+#: crates/bigiris/src/gui.rs:4362
 msgid "Arraste imagens para cá ou cole arquivos com Ctrl+V."
 msgstr "Σύρετε εικόνες εδώ ή επικολλήστε αρχεία με Ctrl+V."
 
-#: crates/bigiris/src/gui.rs:4376
+#: crates/bigiris/src/gui.rs:4405
 msgid "Selecionar pasta com imagens"
 msgstr "Επιλογή φακέλου με εικόνες"
 
-#: crates/bigiris/src/gui.rs:4396
+#: crates/bigiris/src/gui.rs:4425
 msgid "Selecionar imagens"
 msgstr "Επιλογή εικόνων"
 
-#: crates/bigiris/src/gui.rs:4443
+#: crates/bigiris/src/gui.rs:4472
 msgid "{current} de {total}"
 msgstr "{current} από {total}"
 
@@ -595,7 +602,7 @@ msgstr ""
 msgid "O processamento terminou inesperadamente. Tente novamente."
 msgstr "Η επεξεργασία τερματίστηκε απροσδόκητα. Δοκιμάστε ξανά."
 
-#: crates/bigiris/src/gui/batch_runner.rs:319 crates/bigiris/src/main.rs:1703
+#: crates/bigiris/src/gui/batch_runner.rs:319 crates/bigiris/src/main.rs:1721
 msgid "um worker terminou inesperadamente"
 msgstr "ένα νήμα επεξεργασίας τερματίστηκε απροσδόκητα"
 
@@ -2372,82 +2379,87 @@ msgstr ""
 "Μετονομάστε τις εισόδους, επεξεργαστείτε τες χωριστά ή χρησιμοποιήστε την "
 "πολιτική increment."
 
-#: crates/bigiris/src/main.rs:1226
+#: crates/bigiris/src/main.rs:1230
 msgid "substituiu a saída de outra entrada: {path}"
 msgstr "αντικατέστησε την έξοδο άλλης εισόδου: {path}"
 
-#: crates/bigiris/src/main.rs:1256
+#: crates/bigiris/src/main.rs:1265
+msgid "o perfil de cor está corrompido; as cores foram tratadas como sRGB"
+msgstr ""
+"το προφίλ χρωμάτων είναι κατεστραμμένο· τα χρώματα αντιμετωπίστηκαν ως sRGB"
+
+#: crates/bigiris/src/main.rs:1270
 msgid "já existe: {path}"
 msgstr "υπάρχει ήδη: {path}"
 
-#: crates/bigiris/src/main.rs:1262
+#: crates/bigiris/src/main.rs:1276
 msgid ""
 "{operation}: {written} gravado(s), {skipped} ignorado(s), {failed} falha(s)"
 msgstr ""
 "{operation}: γράφτηκαν: {written}, παραλείφθηκαν: {skipped}, απέτυχαν: "
 "{failed}"
 
-#: crates/bigiris/src/main.rs:1355
+#: crates/bigiris/src/main.rs:1369
 msgid "{model} não está instalado ({path} não existe). Instale com: {command}"
 msgstr ""
 "το {model} δεν είναι εγκατεστημένο (το {path} δεν υπάρχει). Εγκαταστήστε με: "
 "{command}"
 
-#: crates/bigiris/src/main.rs:1364
+#: crates/bigiris/src/main.rs:1378
 msgid "não foi possível ler os pesos de {model} em {path}: {error}"
 msgstr "δεν ήταν δυνατή η ανάγνωση των βαρών του {model} στο {path}: {error}"
 
-#: crates/bigiris/src/main.rs:1397
+#: crates/bigiris/src/main.rs:1411
 msgid "fator inválido: {factor}. Use 2, 3 ou 4."
 msgstr "μη έγκυρος συντελεστής: {factor}. Χρησιμοποιήστε 2, 3 ή 4."
 
-#: crates/bigiris/src/main.rs:1414
+#: crates/bigiris/src/main.rs:1428
 msgid "Real-ESRGAN indisponível; usando Lanczos3. Para usar IA: {command}"
 msgstr ""
 "το Real-ESRGAN δεν είναι διαθέσιμο· χρησιμοποιείται Lanczos3. Για χρήση ΤΝ: "
 "{command}"
 
-#: crates/bigiris/src/main.rs:1474
+#: crates/bigiris/src/main.rs:1488
 msgid "máscara {path}: {error}"
 msgstr "μάσκα {path}: {error}"
 
-#: crates/bigiris/src/main.rs:1486
+#: crates/bigiris/src/main.rs:1500
 msgid "não marca nenhuma área (pinte de branco o que deve ser apagado)"
 msgstr "δεν σημειώνει καμία περιοχή (βάψτε λευκό ό,τι πρέπει να διαγραφεί)"
 
-#: crates/bigiris/src/main.rs:1522
+#: crates/bigiris/src/main.rs:1536
 msgid "{count} quadro(s)"
 msgstr "καρέ: {count}"
 
-#: crates/bigiris/src/main.rs:1565
+#: crates/bigiris/src/main.rs:1579
 msgid "não foi possível ler {path}: {error}"
 msgstr "δεν ήταν δυνατή η ανάγνωση του {path}: {error}"
 
-#: crates/bigiris/src/main.rs:1571
+#: crates/bigiris/src/main.rs:1585
 msgid "perfil TOML inválido: {error}"
 msgstr "μη έγκυρο προφίλ TOML: {error}"
 
-#: crates/bigiris/src/main.rs:1574
+#: crates/bigiris/src/main.rs:1588
 msgid "quality deve estar entre 1 e 100"
 msgstr "το quality πρέπει να είναι μεταξύ 1 και 100"
 
-#: crates/bigiris/src/main.rs:1577
+#: crates/bigiris/src/main.rs:1591
 msgid "formato do perfil inválido: {error}"
 msgstr "μη έγκυρη μορφή προφίλ: {error}"
 
-#: crates/bigiris/src/main.rs:1589
+#: crates/bigiris/src/main.rs:1603
 msgid "overwrite inválido: {value}; use skip, replace ou increment"
 msgstr "μη έγκυρο overwrite: {value}· χρησιμοποιήστε skip, replace ή increment"
 
-#: crates/bigiris/src/main.rs:1597
+#: crates/bigiris/src/main.rs:1611
 msgid "não foi possível criar {path}: {error}"
 msgstr "δεν ήταν δυνατή η δημιουργία του {path}: {error}"
 
-#: crates/bigiris/src/main.rs:1620
+#: crates/bigiris/src/main.rs:1634
 msgid "nenhuma imagem encontrada para o lote"
 msgstr "δεν βρέθηκε καμία εικόνα για τη μαζική επεξεργασία"
 
-#: crates/bigiris/src/main.rs:1728
+#: crates/bigiris/src/main.rs:1746
 msgid ""
 "LibreOffice (`soffice`) não encontrado no PATH. Instale `libreoffice-fresh` "
 "(recomendado) ou `libreoffice-still` (ex.: `sudo pacman -S libreoffice-"
@@ -2457,83 +2469,83 @@ msgstr ""
 "`libreoffice-fresh` (συνιστάται) ή το `libreoffice-still` (π.χ. `sudo pacman "
 "-S libreoffice-fresh`)."
 
-#: crates/bigiris/src/main.rs:1780
+#: crates/bigiris/src/main.rs:1798
 msgid "não é um arquivo regular"
 msgstr "δεν είναι κανονικό αρχείο"
 
-#: crates/bigiris/src/main.rs:1783
+#: crates/bigiris/src/main.rs:1801
 msgid "nome de arquivo inválido"
 msgstr "μη έγκυρο όνομα αρχείου"
 
-#: crates/bigiris/src/main.rs:1804
+#: crates/bigiris/src/main.rs:1822
 msgid "falha ao invocar soffice: {error}"
 msgstr "αποτυχία κλήσης του soffice: {error}"
 
-#: crates/bigiris/src/main.rs:1815
+#: crates/bigiris/src/main.rs:1833
 msgid "soffice excedeu o limite de {seconds} s"
 msgstr "το soffice ξεπέρασε το όριο των {seconds} s"
 
-#: crates/bigiris/src/main.rs:1828
+#: crates/bigiris/src/main.rs:1846
 msgid "soffice não gerou o PDF ({status})"
 msgstr "το soffice δεν δημιούργησε το PDF ({status})"
 
-#: crates/bigiris/src/main.rs:1871
+#: crates/bigiris/src/main.rs:1889
 msgid "muitos arquivos com o mesmo nome: {path}"
 msgstr "πάρα πολλά αρχεία με το ίδιο όνομα: {path}"
 
-#: crates/bigiris/src/main.rs:1914
+#: crates/bigiris/src/main.rs:1932
 msgid "a instalação falhou: {error}"
 msgstr "η εγκατάσταση απέτυχε: {error}"
 
-#: crates/bigiris/src/main.rs:1920
+#: crates/bigiris/src/main.rs:1938
 msgid "instalado"
 msgstr "εγκαταστάθηκε"
 
-#: crates/bigiris/src/main.rs:1921
+#: crates/bigiris/src/main.rs:1939
 msgid "instalado no total: {files} arquivo(s) em {managers} gerenciador(es)"
 msgstr "εγκαταστάθηκαν συνολικά: αρχεία: {files}, διαχειριστές: {managers}"
 
-#: crates/bigiris/src/main.rs:1937
+#: crates/bigiris/src/main.rs:1955
 msgid "a remoção falhou: {error}"
 msgstr "η αφαίρεση απέτυχε: {error}"
 
-#: crates/bigiris/src/main.rs:1941
+#: crates/bigiris/src/main.rs:1959
 msgid "removido"
 msgstr "αφαιρέθηκε"
 
-#: crates/bigiris/src/main.rs:1942
+#: crates/bigiris/src/main.rs:1960
 msgid "removido no total: {files} arquivo(s) em {managers} gerenciador(es)"
 msgstr "αφαιρέθηκαν συνολικά: αρχεία: {files}, διαχειριστές: {managers}"
 
-#: crates/bigiris/src/main.rs:1965
+#: crates/bigiris/src/main.rs:1983
 msgid "FALHA"
 msgstr "ΑΠΟΤΥΧΙΑ"
 
-#: crates/bigiris/src/main.rs:1970
+#: crates/bigiris/src/main.rs:1988
 msgid "fornecido pelo pacote"
 msgstr "παρέχεται από το πακέτο"
 
-#: crates/bigiris/src/main.rs:1973
+#: crates/bigiris/src/main.rs:1991
 msgid "sem alterações"
 msgstr "χωρίς αλλαγές"
 
-#: crates/bigiris/src/main.rs:1975
+#: crates/bigiris/src/main.rs:1993
 msgid "ignorado"
 msgstr "παραλείφθηκε"
 
-#: crates/bigiris/src/main.rs:1981
+#: crates/bigiris/src/main.rs:1999
 msgid "detectado"
 msgstr "εντοπίστηκε"
 
-#: crates/bigiris/src/main.rs:1981
+#: crates/bigiris/src/main.rs:1999
 msgid "ausente no PATH"
 msgstr "δεν βρέθηκε στο PATH"
 
-#: crates/bigiris/src/main.rs:1983
+#: crates/bigiris/src/main.rs:2001
 msgid "{count} arquivo(s)"
 msgstr "αρχεία: {count}"
 
-#: crates/bigiris/src/main.rs:2010
+#: crates/bigiris/src/main.rs:2028
 msgid ""
 "aviso: build atual sem feature `gui`. Diálogo '{dialog}' ignorado (recompile "
 "com --features gui)."
@@ -2541,7 +2553,7 @@ msgstr ""
 "προειδοποίηση: η τρέχουσα έκδοση δεν έχει το feature `gui`. Ο διάλογος "
 "'{dialog}' αγνοήθηκε (μεταγλωττίστε ξανά με --features gui)."
 
-#: crates/bigiris/src/main.rs:2017
+#: crates/bigiris/src/main.rs:2035
 msgid ""
 "aviso: build atual sem feature `gui`. Visualizador indisponível (recompile "
 "com --features gui)."
@@ -2549,7 +2561,7 @@ msgstr ""
 "προειδοποίηση: η τρέχουσα έκδοση δεν έχει το feature `gui`. Το πρόγραμμα "
 "προβολής δεν είναι διαθέσιμο (μεταγλωττίστε ξανά με --features gui)."
 
-#: crates/bigiris/src/main.rs:2022
+#: crates/bigiris/src/main.rs:2040
 msgid ""
 "aviso: build atual sem feature `gui`. Visualizador indisponível; arquivos "
 "recebidos:"

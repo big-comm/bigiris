@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: bigiris 0.1.0\n"
 "Report-Msgid-Bugs-To: https://github.com/big-comm/bigiris/issues\n"
-"POT-Creation-Date: 2026-11-25 16:16-0300\n"
+"POT-Creation-Date: 2026-11-25 16:19-0300\n"
 "PO-Revision-Date: 2026-10-14 01:36-0300\n"
 "Last-Translator: BigCommunity Team\n"
 "Language-Team: BigCommunity Team\n"
@@ -50,16 +50,16 @@ msgstr "実行中に BigIris が更新されました。再起動してくださ
 msgid "codec isolado recusou a imagem ({status}){hint}: {details}"
 msgstr "隔離されたコーデックが画像を拒否しました ({status}){hint}: {details}"
 
-#: crates/bigiris/src/gui.rs:758
+#: crates/bigiris/src/gui.rs:765
 msgid "BigIris"
 msgstr "BigIris"
 
-#: crates/bigiris/src/gui.rs:793 crates/bigiris/src/gui/previews.rs:257
+#: crates/bigiris/src/gui.rs:800 crates/bigiris/src/gui/previews.rs:257
 msgid "Não foi possível abrir a imagem"
 msgstr "画像を開けませんでした"
 
-#: crates/bigiris/src/gui.rs:912 crates/bigiris/src/gui.rs:2789
-#: crates/bigiris/src/gui.rs:4086 crates/bigiris/src/gui/dialogs/animate.rs:184
+#: crates/bigiris/src/gui.rs:919 crates/bigiris/src/gui.rs:2796
+#: crates/bigiris/src/gui.rs:4115 crates/bigiris/src/gui/dialogs/animate.rs:184
 #: crates/bigiris/src/gui/dialogs/batch.rs:122
 #: crates/bigiris/src/gui/dialogs/batch.rs:255
 #: crates/bigiris/src/gui/dialogs/batch.rs:349
@@ -73,103 +73,103 @@ msgstr "画像を開けませんでした"
 msgid "Cancelar"
 msgstr "キャンセル"
 
-#: crates/bigiris/src/gui.rs:924
+#: crates/bigiris/src/gui.rs:931
 msgid "Recalculando a edição…"
 msgstr "編集を再計算しています…"
 
-#: crates/bigiris/src/gui.rs:1072 crates/bigiris/src/gui.rs:3807
+#: crates/bigiris/src/gui.rs:1079 crates/bigiris/src/gui.rs:3836
 #: crates/bigiris/src/gui/viewer/crop.rs:624
 msgid "Aguarde o salvamento terminar"
 msgstr "保存が完了するまでお待ちください"
 
-#: crates/bigiris/src/gui.rs:1086
+#: crates/bigiris/src/gui.rs:1093
 msgid "Descartar alterações?"
 msgstr "変更を破棄しますか？"
 
-#: crates/bigiris/src/gui.rs:1087
+#: crates/bigiris/src/gui.rs:1094
 msgid "A imagem tem edições que ainda não foram salvas."
 msgstr "この画像には保存されていない編集があります。"
 
-#: crates/bigiris/src/gui.rs:1089
+#: crates/bigiris/src/gui.rs:1096
 msgid "Continuar editando"
 msgstr "編集を続ける"
 
-#: crates/bigiris/src/gui.rs:1090
+#: crates/bigiris/src/gui.rs:1097
 msgid "Descartar"
 msgstr "破棄"
 
-#: crates/bigiris/src/gui.rs:1160
+#: crates/bigiris/src/gui.rs:1167
 msgid "Imagem anterior"
 msgstr "前の画像"
 
-#: crates/bigiris/src/gui.rs:1161
+#: crates/bigiris/src/gui.rs:1168
 msgid "Próxima imagem"
 msgstr "次の画像"
 
-#: crates/bigiris/src/gui.rs:1177
+#: crates/bigiris/src/gui.rs:1184
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:305
 msgid "Editar"
 msgstr "編集"
 
-#: crates/bigiris/src/gui.rs:1180
+#: crates/bigiris/src/gui.rs:1187
 msgid "Editar (E)"
 msgstr "編集 (E)"
 
-#: crates/bigiris/src/gui.rs:1187
+#: crates/bigiris/src/gui.rs:1194
 msgid "Propriedades da imagem (Ctrl+I)"
 msgstr "画像のプロパティ (Ctrl+I)"
 
-#: crates/bigiris/src/gui.rs:1193
+#: crates/bigiris/src/gui.rs:1200
 msgid "Tela cheia (F11)"
 msgstr "全画面 (F11)"
 
-#: crates/bigiris/src/gui.rs:1202
+#: crates/bigiris/src/gui.rs:1209
 msgid "Afastar"
 msgstr "縮小"
 
-#: crates/bigiris/src/gui.rs:1206 crates/bigiris/src/gui.rs:4182
+#: crates/bigiris/src/gui.rs:1213 crates/bigiris/src/gui.rs:4211
 msgid "Ajustar à janela"
 msgstr "ウィンドウに合わせる"
 
-#: crates/bigiris/src/gui.rs:1207 crates/bigiris/src/gui.rs:4183
+#: crates/bigiris/src/gui.rs:1214 crates/bigiris/src/gui.rs:4212
 msgid "Tamanho real (100%)"
 msgstr "実際のサイズ (100%)"
 
-#: crates/bigiris/src/gui.rs:1216 crates/bigiris/src/gui.rs:4179
+#: crates/bigiris/src/gui.rs:1223 crates/bigiris/src/gui.rs:4208
 msgid "Zoom"
 msgstr "ズーム"
 
-#: crates/bigiris/src/gui.rs:1220
+#: crates/bigiris/src/gui.rs:1227
 msgid "Aproximar"
 msgstr "拡大"
 
-#: crates/bigiris/src/gui.rs:2307
+#: crates/bigiris/src/gui.rs:2314
 msgid "Slideshow: pausado"
 msgstr "スライドショー: 一時停止中"
 
-#: crates/bigiris/src/gui.rs:2335
+#: crates/bigiris/src/gui.rs:2342
 msgid "Slideshow: a cada {interval} s"
 msgstr "スライドショー: {interval} 秒ごと"
 
-#: crates/bigiris/src/gui.rs:2354
+#: crates/bigiris/src/gui.rs:2361
 msgid "Histograma ligado"
 msgstr "ヒストグラム オン"
 
-#: crates/bigiris/src/gui.rs:2356
+#: crates/bigiris/src/gui.rs:2363
 msgid "Histograma desligado"
 msgstr "ヒストグラム オフ"
 
-#: crates/bigiris/src/gui.rs:2479 crates/bigiris/src/gui.rs:2590
+#: crates/bigiris/src/gui.rs:2486 crates/bigiris/src/gui.rs:2597
 #: crates/bigiris/src/gui/dialogs/batch.rs:341
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:1712
 msgid "Cancelado"
 msgstr "キャンセルしました"
 
-#: crates/bigiris/src/gui.rs:2591
+#: crates/bigiris/src/gui.rs:2598
 msgid "Falha na IA: {error}"
 msgstr "AI の処理に失敗しました: {error}"
 
-#: crates/bigiris/src/gui.rs:2597
+#: crates/bigiris/src/gui.rs:2604
 msgid ""
 "Esta build não inclui IA. Recompile com `cargo build --features ai` (requer "
 "glslc, do pacote shaderc)."
@@ -177,17 +177,17 @@ msgstr ""
 "このビルドには AI が含まれていません。`cargo build --features ai` で再ビルド"
 "してください (shaderc パッケージの glslc が必要です)。"
 
-#: crates/bigiris/src/gui.rs:2603
+#: crates/bigiris/src/gui.rs:2610
 msgid "{model} não está instalado. Instale com: sudo pacman -S {package}"
 msgstr ""
 "{model} がインストールされていません。次のコマンドでインストールしてくださ"
 "い: sudo pacman -S {package}"
 
-#: crates/bigiris/src/gui.rs:2617
+#: crates/bigiris/src/gui.rs:2624
 msgid "Não foi possível ler {path}: {error}"
 msgstr "{path} を読み込めませんでした: {error}"
 
-#: crates/bigiris/src/gui.rs:2777
+#: crates/bigiris/src/gui.rs:2784
 msgid ""
 "O arquivo será sobrescrito. JPEG é recodificado a cada gravação; isso pode "
 "reduzir a qualidade."
@@ -195,11 +195,11 @@ msgstr ""
 "ファイルは上書きされます。JPEG は保存のたびに再エンコードされるため、画質が低"
 "下することがあります。"
 
-#: crates/bigiris/src/gui.rs:2779
+#: crates/bigiris/src/gui.rs:2786
 msgid "O arquivo será sobrescrito."
 msgstr "ファイルは上書きされます。"
 
-#: crates/bigiris/src/gui.rs:2785
+#: crates/bigiris/src/gui.rs:2792
 msgid ""
 "Este formato não guarda todos os metadados da foto (data, câmera, perfil de "
 "cor); o que ele não suportar será removido ou convertido."
@@ -207,21 +207,21 @@ msgstr ""
 "この形式では写真のメタデータ（日付、カメラ、カラープロファイル）をすべて保持"
 "できません。サポートされない情報は削除または変換されます。"
 
-#: crates/bigiris/src/gui.rs:2788
+#: crates/bigiris/src/gui.rs:2795
 msgid "Salvar alterações?"
 msgstr "変更を保存しますか？"
 
-#: crates/bigiris/src/gui.rs:2790
+#: crates/bigiris/src/gui.rs:2797
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:425
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:427
 msgid "Salvar"
 msgstr "保存"
 
-#: crates/bigiris/src/gui.rs:2850
+#: crates/bigiris/src/gui.rs:2857
 msgid "Salvo"
 msgstr "保存しました"
 
-#: crates/bigiris/src/gui.rs:2931
+#: crates/bigiris/src/gui.rs:2939
 msgid ""
 "Este arquivo é animado, tem várias páginas ou não pôde ser verificado. Girar "
 "ou espelhar e salvar descartaria os outros quadros, então ele não foi "
@@ -230,7 +230,7 @@ msgstr ""
 "このファイルはアニメーション、複数ページ、または確認できない形式です。回転や"
 "反転をして保存すると他のフレームが失われるため、変更していません。"
 
-#: crates/bigiris/src/gui.rs:2932
+#: crates/bigiris/src/gui.rs:2940
 msgid ""
 "O BigIris não sabe gravar este formato. As alterações não podem ser salvas "
 "no próprio arquivo."
@@ -238,144 +238,150 @@ msgstr ""
 "BigIris はこの形式で書き込めません。変更を元のファイルに保存することはできま"
 "せん。"
 
-#: crates/bigiris/src/gui.rs:2933
+#: crates/bigiris/src/gui.rs:2941
 msgid "Sem permissão para alterar este arquivo ou a pasta dele."
 msgstr "このファイルまたはそのフォルダーを変更する権限がありません。"
 
-#: crates/bigiris/src/gui.rs:2935
+#: crates/bigiris/src/gui.rs:2943
 msgid "O arquivo não foi alterado. Detalhes: {detail}"
 msgstr "ファイルは変更されていません。詳細: {detail}"
 
-#: crates/bigiris/src/gui.rs:2947
+#: crates/bigiris/src/gui.rs:2955
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:1846
 msgid "Não foi possível salvar"
 msgstr "保存できませんでした"
 
-#: crates/bigiris/src/gui.rs:2950
+#: crates/bigiris/src/gui.rs:2958
 msgid "Manter alterações"
 msgstr "変更を保持"
 
-#: crates/bigiris/src/gui.rs:2951
+#: crates/bigiris/src/gui.rs:2959
 msgid "Descartar alterações"
 msgstr "変更を破棄"
 
-#: crates/bigiris/src/gui.rs:3041
+#: crates/bigiris/src/gui.rs:3049
 msgid "o formato não guarda EXIF"
 msgstr "この形式は EXIF を保持しません"
 
-#: crates/bigiris/src/gui.rs:3042
+#: crates/bigiris/src/gui.rs:3050
 msgid "EXIF grande demais para JPEG"
 msgstr "EXIF が JPEG には大きすぎます"
 
-#: crates/bigiris/src/gui.rs:3043
+#: crates/bigiris/src/gui.rs:3051
 msgid "EXIF inválido"
 msgstr "無効な EXIF"
 
-#: crates/bigiris/src/gui.rs:3046
+#: crates/bigiris/src/gui.rs:3054
 msgid "perfil de cor convertido para sRGB"
 msgstr "カラープロファイルを sRGB に変換"
 
-#: crates/bigiris/src/gui.rs:3047
+#: crates/bigiris/src/gui.rs:3055
 msgid "perfil de cor inválido ignorado"
 msgstr "無効なカラープロファイルを無視"
 
-#: crates/bigiris/src/gui.rs:3048
+#: crates/bigiris/src/gui.rs:3056
 msgid "metadados não suportados"
 msgstr "サポートされていないメタデータ"
 
-#: crates/bigiris/src/gui.rs:3058
+#: crates/bigiris/src/gui.rs:3066
 msgid "Salvo. Alguns metadados não puderam ser mantidos: {list}"
 msgstr "保存しました。一部のメタデータは保持できませんでした: {list}"
 
-#: crates/bigiris/src/gui.rs:3342
+#: crates/bigiris/src/gui.rs:3170
+msgid ""
+"O perfil de cor desta imagem está corrompido; as cores podem estar imprecisas"
+msgstr ""
+"この画像のカラープロファイルは破損しています。色が正確でない可能性があります"
+
+#: crates/bigiris/src/gui.rs:3367
 msgid "Salve ou desfaça as alterações antes de navegar"
 msgstr "画像を移動する前に、変更を保存するか元に戻してください"
 
-#: crates/bigiris/src/gui.rs:3431 crates/bigiris/src/gui.rs:4342
-#: crates/bigiris/src/gui.rs:5393 crates/bigiris/src/gui.rs:5528
+#: crates/bigiris/src/gui.rs:3460 crates/bigiris/src/gui.rs:4371
+#: crates/bigiris/src/gui.rs:5422 crates/bigiris/src/gui.rs:5557
 msgid "Abrir imagens…"
 msgstr "画像を開く…"
 
-#: crates/bigiris/src/gui.rs:3432 crates/bigiris/src/gui.rs:4223
+#: crates/bigiris/src/gui.rs:3461 crates/bigiris/src/gui.rs:4252
 msgid "Colar arquivos de imagem"
 msgstr "画像ファイルを貼り付け"
 
-#: crates/bigiris/src/gui.rs:3434 crates/bigiris/src/gui.rs:4222
+#: crates/bigiris/src/gui.rs:3463 crates/bigiris/src/gui.rs:4251
 msgid "Copiar imagem"
 msgstr "画像をコピー"
 
-#: crates/bigiris/src/gui.rs:3435
+#: crates/bigiris/src/gui.rs:3464
 msgid "Imprimir…"
 msgstr "印刷…"
 
-#: crates/bigiris/src/gui.rs:3437 crates/bigiris/src/gui.rs:4354
-#: crates/bigiris/src/gui.rs:5393
+#: crates/bigiris/src/gui.rs:3466 crates/bigiris/src/gui.rs:4383
+#: crates/bigiris/src/gui.rs:5422
 msgid "Processar uma pasta…"
 msgstr "フォルダーを処理…"
 
-#: crates/bigiris/src/gui.rs:3443
+#: crates/bigiris/src/gui.rs:3472
 msgid "Editar imagem"
 msgstr "画像を編集"
 
-#: crates/bigiris/src/gui.rs:3444 crates/bigiris/src/gui.rs:4201
+#: crates/bigiris/src/gui.rs:3473 crates/bigiris/src/gui.rs:4230
 msgid "Desfazer"
 msgstr "元に戻す"
 
-#: crates/bigiris/src/gui.rs:3445 crates/bigiris/src/gui.rs:4202
+#: crates/bigiris/src/gui.rs:3474 crates/bigiris/src/gui.rs:4231
 msgid "Refazer"
 msgstr "やり直す"
 
-#: crates/bigiris/src/gui.rs:3448 crates/bigiris/src/gui.rs:4213
+#: crates/bigiris/src/gui.rs:3477 crates/bigiris/src/gui.rs:4242
 msgid "Salvar alterações"
 msgstr "変更を保存"
 
-#: crates/bigiris/src/gui.rs:3449 crates/bigiris/src/gui.rs:4226
+#: crates/bigiris/src/gui.rs:3478 crates/bigiris/src/gui.rs:4255
 msgid "Mover para a lixeira"
 msgstr "ごみ箱に移動"
 
-#: crates/bigiris/src/gui.rs:3453
+#: crates/bigiris/src/gui.rs:3482
 msgid "Atalhos do teclado"
 msgstr "キーボードショートカット"
 
-#: crates/bigiris/src/gui.rs:3454
+#: crates/bigiris/src/gui.rs:3483
 msgid "Sobre o BigIris"
 msgstr "BigIris について"
 
-#: crates/bigiris/src/gui.rs:3459
+#: crates/bigiris/src/gui.rs:3488
 msgid "Menu principal"
 msgstr "メインメニュー"
 
-#: crates/bigiris/src/gui.rs:3809
+#: crates/bigiris/src/gui.rs:3838
 msgid "Salve ou desfaça as alterações antes de usar esta ferramenta"
 msgstr "このツールを使う前に変更を保存するか元に戻してください"
 
-#: crates/bigiris/src/gui.rs:3825 crates/bigiris/src/gui.rs:4399
+#: crates/bigiris/src/gui.rs:3854 crates/bigiris/src/gui.rs:4428
 #: crates/bigiris/src/gui/dialogs/batch.rs:389
 #: crates/bigiris/src/gui/dialogs/remove_bg.rs:121
 msgid "Imagens"
 msgstr "画像"
 
-#: crates/bigiris/src/gui.rs:3831 crates/bigiris/src/gui.rs:4221
+#: crates/bigiris/src/gui.rs:3860 crates/bigiris/src/gui.rs:4250
 msgid "Abrir imagens"
 msgstr "画像を開く"
 
-#: crates/bigiris/src/gui.rs:3873
+#: crates/bigiris/src/gui.rs:3902
 msgid "Aguarde a imagem terminar de carregar"
 msgstr "画像の読み込みが終わるまでお待ちください"
 
-#: crates/bigiris/src/gui.rs:3898 crates/bigiris/src/gui.rs:3938
+#: crates/bigiris/src/gui.rs:3927 crates/bigiris/src/gui.rs:3967
 msgid "Não foi possível preparar a página"
 msgstr "ページを準備できませんでした"
 
-#: crates/bigiris/src/gui.rs:3920
+#: crates/bigiris/src/gui.rs:3949
 msgid "O preparo da impressão falhou"
 msgstr "印刷の準備に失敗しました"
 
-#: crates/bigiris/src/gui.rs:3977
+#: crates/bigiris/src/gui.rs:4006
 msgid "Não foi possível imprimir"
 msgstr "印刷できませんでした"
 
-#: crates/bigiris/src/gui.rs:3980 crates/bigiris/src/gui.rs:4112
+#: crates/bigiris/src/gui.rs:4009 crates/bigiris/src/gui.rs:4141
 #: crates/bigiris/src/gui/dialogs/animate.rs:53
 #: crates/bigiris/src/gui/dialogs/batch.rs:347
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:311
@@ -387,155 +393,155 @@ msgstr "印刷できませんでした"
 msgid "Fechar"
 msgstr "閉じる"
 
-#: crates/bigiris/src/gui.rs:4078
+#: crates/bigiris/src/gui.rs:4107
 msgid "Mover para a lixeira?"
 msgstr "ごみ箱に移動しますか？"
 
-#: crates/bigiris/src/gui.rs:4082
+#: crates/bigiris/src/gui.rs:4111
 msgid ""
 "O arquivo será movido para a lixeira do sistema. Você pode restaurá-lo "
 "depois."
 msgstr "ファイルはごみ箱に移動されます。後で復元できます。"
 
-#: crates/bigiris/src/gui.rs:4087
+#: crates/bigiris/src/gui.rs:4116
 msgid "Mover"
 msgstr "移動"
 
-#: crates/bigiris/src/gui.rs:4109
+#: crates/bigiris/src/gui.rs:4138
 msgid "Não foi possível mover para a lixeira"
 msgstr "ごみ箱に移動できませんでした"
 
-#: crates/bigiris/src/gui.rs:4171
+#: crates/bigiris/src/gui.rs:4200
 msgid "Navegação"
 msgstr "ナビゲーション"
 
-#: crates/bigiris/src/gui.rs:4173
+#: crates/bigiris/src/gui.rs:4202
 msgid "Anterior / próximo"
 msgstr "前 / 次"
 
-#: crates/bigiris/src/gui.rs:4174
+#: crates/bigiris/src/gui.rs:4203
 msgid "Primeiro / último"
 msgstr "最初 / 最後"
 
-#: crates/bigiris/src/gui.rs:4175
+#: crates/bigiris/src/gui.rs:4204
 msgid "Slideshow (auto-avanço)"
 msgstr "スライドショー (自動送り)"
 
-#: crates/bigiris/src/gui.rs:4181
+#: crates/bigiris/src/gui.rs:4210
 msgid "Aproximar / afastar"
 msgstr "拡大 / 縮小"
 
-#: crates/bigiris/src/gui.rs:4184
+#: crates/bigiris/src/gui.rs:4213
 msgid "Zoom contínuo"
 msgstr "連続ズーム"
 
-#: crates/bigiris/src/gui.rs:4188
+#: crates/bigiris/src/gui.rs:4217
 msgid "Janela"
 msgstr "ウィンドウ"
 
-#: crates/bigiris/src/gui.rs:4190
+#: crates/bigiris/src/gui.rs:4219
 msgid "Tela cheia"
 msgstr "全画面"
 
-#: crates/bigiris/src/gui.rs:4191
+#: crates/bigiris/src/gui.rs:4220
 msgid "Modo teatro"
 msgstr "シアターモード"
 
-#: crates/bigiris/src/gui.rs:4192
+#: crates/bigiris/src/gui.rs:4221
 msgid "Fita de miniaturas"
 msgstr "サムネイルバー"
 
-#: crates/bigiris/src/gui.rs:4193
+#: crates/bigiris/src/gui.rs:4222
 msgid "Histograma RGB"
 msgstr "RGB ヒストグラム"
 
-#: crates/bigiris/src/gui.rs:4194
+#: crates/bigiris/src/gui.rs:4223
 msgid "Fixar barras visíveis"
 msgstr "コントロールを常に表示"
 
-#: crates/bigiris/src/gui.rs:4195
+#: crates/bigiris/src/gui.rs:4224
 msgid "Sair da tela cheia ou fechar"
 msgstr "全画面を終了、または閉じる"
 
-#: crates/bigiris/src/gui.rs:4199
+#: crates/bigiris/src/gui.rs:4228
 msgid "Edição"
 msgstr "編集"
 
-#: crates/bigiris/src/gui.rs:4203
+#: crates/bigiris/src/gui.rs:4232
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:326
 msgid "Girar à direita"
 msgstr "右に回転"
 
-#: crates/bigiris/src/gui.rs:4204
+#: crates/bigiris/src/gui.rs:4233
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:325
 msgid "Girar à esquerda"
 msgstr "左に回転"
 
-#: crates/bigiris/src/gui.rs:4205
+#: crates/bigiris/src/gui.rs:4234
 msgid "Recortar…"
 msgstr "切り抜き…"
 
-#: crates/bigiris/src/gui.rs:4206
+#: crates/bigiris/src/gui.rs:4235
 msgid "Recorte: mover a seleção"
 msgstr "切り抜き: 選択範囲を移動"
 
-#: crates/bigiris/src/gui.rs:4209
+#: crates/bigiris/src/gui.rs:4238
 msgid "Recorte: redimensionar a seleção"
 msgstr "切り抜き: 選択範囲のサイズを変更"
 
-#: crates/bigiris/src/gui.rs:4211
+#: crates/bigiris/src/gui.rs:4240
 msgid "Remover fundo (IA)…"
 msgstr "背景を除去 (AI)…"
 
-#: crates/bigiris/src/gui.rs:4212
+#: crates/bigiris/src/gui.rs:4241
 #: crates/bigimage-integrations/src/action.rs:518
 msgid "Aumentar resolução…"
 msgstr "高解像度化…"
 
-#: crates/bigiris/src/gui.rs:4214
+#: crates/bigiris/src/gui.rs:4243
 msgid "Painel de edição"
 msgstr "編集パネル"
 
-#: crates/bigiris/src/gui.rs:4215
+#: crates/bigiris/src/gui.rs:4244
 msgid "Ver original (segure)"
 msgstr "元画像を表示 (押し続ける)"
 
-#: crates/bigiris/src/gui.rs:4219
+#: crates/bigiris/src/gui.rs:4248
 #: crates/bigiris/src/gui/dialogs/properties.rs:120
 msgid "Arquivo"
 msgstr "ファイル"
 
-#: crates/bigiris/src/gui.rs:4224
+#: crates/bigiris/src/gui.rs:4253
 msgid "Imprimir"
 msgstr "印刷"
 
-#: crates/bigiris/src/gui.rs:4225
+#: crates/bigiris/src/gui.rs:4254
 #: crates/bigiris/src/gui/dialogs/properties.rs:38
 #: crates/bigiris/src/gui/dialogs/properties.rs:80
 msgid "Propriedades"
 msgstr "プロパティ"
 
-#: crates/bigiris/src/gui.rs:4230
+#: crates/bigiris/src/gui.rs:4259
 msgid "Ajuda"
 msgstr "ヘルプ"
 
-#: crates/bigiris/src/gui.rs:4231
+#: crates/bigiris/src/gui.rs:4260
 msgid "Este diálogo"
 msgstr "このダイアログ"
 
-#: crates/bigiris/src/gui.rs:4231
+#: crates/bigiris/src/gui.rs:4260
 msgid "Sobre"
 msgstr "このアプリについて"
 
-#: crates/bigiris/src/gui.rs:4241
+#: crates/bigiris/src/gui.rs:4270
 msgid "Roda do mouse"
 msgstr "マウスホイール"
 
-#: crates/bigiris/src/gui.rs:4269
+#: crates/bigiris/src/gui.rs:4298
 msgid "Atalhos de teclado"
 msgstr "キーボードショートカット"
 
-#: crates/bigiris/src/gui.rs:4295
+#: crates/bigiris/src/gui.rs:4324
 msgid ""
 "Visualizador e conversor de imagens para Linux. Rápido, acessível por "
 "teclado e integrado ao gerenciador de arquivos."
@@ -543,23 +549,23 @@ msgstr ""
 "Linux 向けの画像ビューアー兼コンバーター。高速で、キーボードだけで操作でき、"
 "ファイルマネージャーと統合されています。"
 
-#: crates/bigiris/src/gui.rs:4328
+#: crates/bigiris/src/gui.rs:4357
 msgid "Abra suas imagens"
 msgstr "画像を開く"
 
-#: crates/bigiris/src/gui.rs:4333
+#: crates/bigiris/src/gui.rs:4362
 msgid "Arraste imagens para cá ou cole arquivos com Ctrl+V."
 msgstr "ここに画像をドロップするか、Ctrl+V でファイルを貼り付けてください。"
 
-#: crates/bigiris/src/gui.rs:4376
+#: crates/bigiris/src/gui.rs:4405
 msgid "Selecionar pasta com imagens"
 msgstr "画像のあるフォルダーを選択"
 
-#: crates/bigiris/src/gui.rs:4396
+#: crates/bigiris/src/gui.rs:4425
 msgid "Selecionar imagens"
 msgstr "画像を選択"
 
-#: crates/bigiris/src/gui.rs:4443
+#: crates/bigiris/src/gui.rs:4472
 msgid "{current} de {total}"
 msgstr "{current} / {total}"
 
@@ -590,7 +596,7 @@ msgstr ""
 msgid "O processamento terminou inesperadamente. Tente novamente."
 msgstr "処理が予期せず終了しました。もう一度お試しください。"
 
-#: crates/bigiris/src/gui/batch_runner.rs:319 crates/bigiris/src/main.rs:1703
+#: crates/bigiris/src/gui/batch_runner.rs:319 crates/bigiris/src/main.rs:1721
 msgid "um worker terminou inesperadamente"
 msgstr "ワーカーが予期せず終了しました"
 
@@ -2344,82 +2350,86 @@ msgstr ""
 "入力の名前を変更するか、個別に処理するか、increment ポリシーを使用してくださ"
 "い。"
 
-#: crates/bigiris/src/main.rs:1226
+#: crates/bigiris/src/main.rs:1230
 msgid "substituiu a saída de outra entrada: {path}"
 msgstr "別の入力の出力を置き換えました: {path}"
 
-#: crates/bigiris/src/main.rs:1256
+#: crates/bigiris/src/main.rs:1265
+msgid "o perfil de cor está corrompido; as cores foram tratadas como sRGB"
+msgstr "カラープロファイルが破損しています。色は sRGB として扱われました"
+
+#: crates/bigiris/src/main.rs:1270
 msgid "já existe: {path}"
 msgstr "既に存在します: {path}"
 
-#: crates/bigiris/src/main.rs:1262
+#: crates/bigiris/src/main.rs:1276
 msgid ""
 "{operation}: {written} gravado(s), {skipped} ignorado(s), {failed} falha(s)"
 msgstr "{operation}: 書き込み {written}、スキップ {skipped}、失敗 {failed}"
 
-#: crates/bigiris/src/main.rs:1355
+#: crates/bigiris/src/main.rs:1369
 msgid "{model} não está instalado ({path} não existe). Instale com: {command}"
 msgstr ""
 "{model} がインストールされていません ({path} が存在しません)。次のコマンドで"
 "インストールしてください: {command}"
 
-#: crates/bigiris/src/main.rs:1364
+#: crates/bigiris/src/main.rs:1378
 msgid "não foi possível ler os pesos de {model} em {path}: {error}"
 msgstr "{path} から {model} の重みを読み込めませんでした: {error}"
 
-#: crates/bigiris/src/main.rs:1397
+#: crates/bigiris/src/main.rs:1411
 msgid "fator inválido: {factor}. Use 2, 3 ou 4."
 msgstr "無効な倍率: {factor}。2、3、4 のいずれかを指定してください。"
 
-#: crates/bigiris/src/main.rs:1414
+#: crates/bigiris/src/main.rs:1428
 msgid "Real-ESRGAN indisponível; usando Lanczos3. Para usar IA: {command}"
 msgstr ""
 "Real-ESRGAN を利用できないため、Lanczos3 を使用します。AI を使うには: "
 "{command}"
 
-#: crates/bigiris/src/main.rs:1474
+#: crates/bigiris/src/main.rs:1488
 msgid "máscara {path}: {error}"
 msgstr "マスク {path}: {error}"
 
-#: crates/bigiris/src/main.rs:1486
+#: crates/bigiris/src/main.rs:1500
 msgid "não marca nenhuma área (pinte de branco o que deve ser apagado)"
 msgstr "領域が指定されていません (消去する部分を白で塗ってください)"
 
-#: crates/bigiris/src/main.rs:1522
+#: crates/bigiris/src/main.rs:1536
 msgid "{count} quadro(s)"
 msgstr "{count} フレーム"
 
-#: crates/bigiris/src/main.rs:1565
+#: crates/bigiris/src/main.rs:1579
 msgid "não foi possível ler {path}: {error}"
 msgstr "{path} を読み込めませんでした: {error}"
 
-#: crates/bigiris/src/main.rs:1571
+#: crates/bigiris/src/main.rs:1585
 msgid "perfil TOML inválido: {error}"
 msgstr "無効な TOML プロファイル: {error}"
 
-#: crates/bigiris/src/main.rs:1574
+#: crates/bigiris/src/main.rs:1588
 msgid "quality deve estar entre 1 e 100"
 msgstr "quality は 1 から 100 の範囲で指定してください"
 
-#: crates/bigiris/src/main.rs:1577
+#: crates/bigiris/src/main.rs:1591
 msgid "formato do perfil inválido: {error}"
 msgstr "プロファイルの形式が無効です: {error}"
 
-#: crates/bigiris/src/main.rs:1589
+#: crates/bigiris/src/main.rs:1603
 msgid "overwrite inválido: {value}; use skip, replace ou increment"
 msgstr ""
 "無効な overwrite: {value}。skip、replace、increment のいずれかを指定してくだ"
 "さい"
 
-#: crates/bigiris/src/main.rs:1597
+#: crates/bigiris/src/main.rs:1611
 msgid "não foi possível criar {path}: {error}"
 msgstr "{path} を作成できませんでした: {error}"
 
-#: crates/bigiris/src/main.rs:1620
+#: crates/bigiris/src/main.rs:1634
 msgid "nenhuma imagem encontrada para o lote"
 msgstr "一括処理する画像が見つかりません"
 
-#: crates/bigiris/src/main.rs:1728
+#: crates/bigiris/src/main.rs:1746
 msgid ""
 "LibreOffice (`soffice`) não encontrado no PATH. Instale `libreoffice-fresh` "
 "(recomendado) ou `libreoffice-still` (ex.: `sudo pacman -S libreoffice-"
@@ -2429,84 +2439,84 @@ msgstr ""
 "または `libreoffice-still` をインストールしてください (例: `sudo pacman -S "
 "libreoffice-fresh`)。"
 
-#: crates/bigiris/src/main.rs:1780
+#: crates/bigiris/src/main.rs:1798
 msgid "não é um arquivo regular"
 msgstr "通常ファイルではありません"
 
-#: crates/bigiris/src/main.rs:1783
+#: crates/bigiris/src/main.rs:1801
 msgid "nome de arquivo inválido"
 msgstr "無効なファイル名"
 
-#: crates/bigiris/src/main.rs:1804
+#: crates/bigiris/src/main.rs:1822
 msgid "falha ao invocar soffice: {error}"
 msgstr "soffice の起動に失敗しました: {error}"
 
-#: crates/bigiris/src/main.rs:1815
+#: crates/bigiris/src/main.rs:1833
 msgid "soffice excedeu o limite de {seconds} s"
 msgstr "soffice が制限時間 {seconds} 秒を超えました"
 
-#: crates/bigiris/src/main.rs:1828
+#: crates/bigiris/src/main.rs:1846
 msgid "soffice não gerou o PDF ({status})"
 msgstr "soffice が PDF を生成しませんでした ({status})"
 
-#: crates/bigiris/src/main.rs:1871
+#: crates/bigiris/src/main.rs:1889
 msgid "muitos arquivos com o mesmo nome: {path}"
 msgstr "同じ名前のファイルが多すぎます: {path}"
 
-#: crates/bigiris/src/main.rs:1914
+#: crates/bigiris/src/main.rs:1932
 msgid "a instalação falhou: {error}"
 msgstr "インストールに失敗しました: {error}"
 
-#: crates/bigiris/src/main.rs:1920
+#: crates/bigiris/src/main.rs:1938
 msgid "instalado"
 msgstr "インストール済み"
 
-#: crates/bigiris/src/main.rs:1921
+#: crates/bigiris/src/main.rs:1939
 msgid "instalado no total: {files} arquivo(s) em {managers} gerenciador(es)"
 msgstr ""
 "インストール合計: {managers} 個のファイルマネージャーに {files} 個のファイル"
 
-#: crates/bigiris/src/main.rs:1937
+#: crates/bigiris/src/main.rs:1955
 msgid "a remoção falhou: {error}"
 msgstr "削除に失敗しました: {error}"
 
-#: crates/bigiris/src/main.rs:1941
+#: crates/bigiris/src/main.rs:1959
 msgid "removido"
 msgstr "削除済み"
 
-#: crates/bigiris/src/main.rs:1942
+#: crates/bigiris/src/main.rs:1960
 msgid "removido no total: {files} arquivo(s) em {managers} gerenciador(es)"
 msgstr "削除合計: {managers} 個のファイルマネージャーから {files} 個のファイル"
 
-#: crates/bigiris/src/main.rs:1965
+#: crates/bigiris/src/main.rs:1983
 msgid "FALHA"
 msgstr "失敗"
 
-#: crates/bigiris/src/main.rs:1970
+#: crates/bigiris/src/main.rs:1988
 msgid "fornecido pelo pacote"
 msgstr "パッケージで提供"
 
-#: crates/bigiris/src/main.rs:1973
+#: crates/bigiris/src/main.rs:1991
 msgid "sem alterações"
 msgstr "変更なし"
 
-#: crates/bigiris/src/main.rs:1975
+#: crates/bigiris/src/main.rs:1993
 msgid "ignorado"
 msgstr "スキップ"
 
-#: crates/bigiris/src/main.rs:1981
+#: crates/bigiris/src/main.rs:1999
 msgid "detectado"
 msgstr "検出済み"
 
-#: crates/bigiris/src/main.rs:1981
+#: crates/bigiris/src/main.rs:1999
 msgid "ausente no PATH"
 msgstr "PATH にありません"
 
-#: crates/bigiris/src/main.rs:1983
+#: crates/bigiris/src/main.rs:2001
 msgid "{count} arquivo(s)"
 msgstr "{count} 個のファイル"
 
-#: crates/bigiris/src/main.rs:2010
+#: crates/bigiris/src/main.rs:2028
 msgid ""
 "aviso: build atual sem feature `gui`. Diálogo '{dialog}' ignorado (recompile "
 "com --features gui)."
@@ -2514,7 +2524,7 @@ msgstr ""
 "警告: 現在のビルドには `gui` 機能が含まれていません。ダイアログ「{dialog}」は"
 "無視されました (--features gui で再ビルドしてください)。"
 
-#: crates/bigiris/src/main.rs:2017
+#: crates/bigiris/src/main.rs:2035
 msgid ""
 "aviso: build atual sem feature `gui`. Visualizador indisponível (recompile "
 "com --features gui)."
@@ -2522,7 +2532,7 @@ msgstr ""
 "警告: 現在のビルドには `gui` 機能が含まれていません。ビューアーは利用できませ"
 "ん (--features gui で再ビルドしてください)。"
 
-#: crates/bigiris/src/main.rs:2022
+#: crates/bigiris/src/main.rs:2040
 msgid ""
 "aviso: build atual sem feature `gui`. Visualizador indisponível; arquivos "
 "recebidos:"

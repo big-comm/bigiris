@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: bigiris 0.1.0\n"
 "Report-Msgid-Bugs-To: https://github.com/big-comm/bigiris/issues\n"
-"POT-Creation-Date: 2026-11-25 16:16-0300\n"
+"POT-Creation-Date: 2026-11-25 16:19-0300\n"
 "PO-Revision-Date: 2026-10-14 01:36-0300\n"
 "Last-Translator: BigCommunity Team\n"
 "Language-Team: BigCommunity Team\n"
@@ -51,16 +51,16 @@ msgstr ""
 "de geïsoleerde codec heeft de afbeelding geweigerd ({status}){hint}: "
 "{details}"
 
-#: crates/bigiris/src/gui.rs:758
+#: crates/bigiris/src/gui.rs:765
 msgid "BigIris"
 msgstr "BigIris"
 
-#: crates/bigiris/src/gui.rs:793 crates/bigiris/src/gui/previews.rs:257
+#: crates/bigiris/src/gui.rs:800 crates/bigiris/src/gui/previews.rs:257
 msgid "Não foi possível abrir a imagem"
 msgstr "Kan de afbeelding niet openen"
 
-#: crates/bigiris/src/gui.rs:912 crates/bigiris/src/gui.rs:2789
-#: crates/bigiris/src/gui.rs:4086 crates/bigiris/src/gui/dialogs/animate.rs:184
+#: crates/bigiris/src/gui.rs:919 crates/bigiris/src/gui.rs:2796
+#: crates/bigiris/src/gui.rs:4115 crates/bigiris/src/gui/dialogs/animate.rs:184
 #: crates/bigiris/src/gui/dialogs/batch.rs:122
 #: crates/bigiris/src/gui/dialogs/batch.rs:255
 #: crates/bigiris/src/gui/dialogs/batch.rs:349
@@ -74,103 +74,103 @@ msgstr "Kan de afbeelding niet openen"
 msgid "Cancelar"
 msgstr "Annuleren"
 
-#: crates/bigiris/src/gui.rs:924
+#: crates/bigiris/src/gui.rs:931
 msgid "Recalculando a edição…"
 msgstr "Bewerking wordt opnieuw berekend…"
 
-#: crates/bigiris/src/gui.rs:1072 crates/bigiris/src/gui.rs:3807
+#: crates/bigiris/src/gui.rs:1079 crates/bigiris/src/gui.rs:3836
 #: crates/bigiris/src/gui/viewer/crop.rs:624
 msgid "Aguarde o salvamento terminar"
 msgstr "Wacht tot het opslaan is voltooid"
 
-#: crates/bigiris/src/gui.rs:1086
+#: crates/bigiris/src/gui.rs:1093
 msgid "Descartar alterações?"
 msgstr "Wijzigingen verwerpen?"
 
-#: crates/bigiris/src/gui.rs:1087
+#: crates/bigiris/src/gui.rs:1094
 msgid "A imagem tem edições que ainda não foram salvas."
 msgstr "De afbeelding bevat niet-opgeslagen wijzigingen."
 
-#: crates/bigiris/src/gui.rs:1089
+#: crates/bigiris/src/gui.rs:1096
 msgid "Continuar editando"
 msgstr "Verder bewerken"
 
-#: crates/bigiris/src/gui.rs:1090
+#: crates/bigiris/src/gui.rs:1097
 msgid "Descartar"
 msgstr "Verwerpen"
 
-#: crates/bigiris/src/gui.rs:1160
+#: crates/bigiris/src/gui.rs:1167
 msgid "Imagem anterior"
 msgstr "Vorige afbeelding"
 
-#: crates/bigiris/src/gui.rs:1161
+#: crates/bigiris/src/gui.rs:1168
 msgid "Próxima imagem"
 msgstr "Volgende afbeelding"
 
-#: crates/bigiris/src/gui.rs:1177
+#: crates/bigiris/src/gui.rs:1184
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:305
 msgid "Editar"
 msgstr "Bewerken"
 
-#: crates/bigiris/src/gui.rs:1180
+#: crates/bigiris/src/gui.rs:1187
 msgid "Editar (E)"
 msgstr "Bewerken (E)"
 
-#: crates/bigiris/src/gui.rs:1187
+#: crates/bigiris/src/gui.rs:1194
 msgid "Propriedades da imagem (Ctrl+I)"
 msgstr "Afbeeldingseigenschappen (Ctrl+I)"
 
-#: crates/bigiris/src/gui.rs:1193
+#: crates/bigiris/src/gui.rs:1200
 msgid "Tela cheia (F11)"
 msgstr "Volledig scherm (F11)"
 
-#: crates/bigiris/src/gui.rs:1202
+#: crates/bigiris/src/gui.rs:1209
 msgid "Afastar"
 msgstr "Uitzoomen"
 
-#: crates/bigiris/src/gui.rs:1206 crates/bigiris/src/gui.rs:4182
+#: crates/bigiris/src/gui.rs:1213 crates/bigiris/src/gui.rs:4211
 msgid "Ajustar à janela"
 msgstr "Aan venster aanpassen"
 
-#: crates/bigiris/src/gui.rs:1207 crates/bigiris/src/gui.rs:4183
+#: crates/bigiris/src/gui.rs:1214 crates/bigiris/src/gui.rs:4212
 msgid "Tamanho real (100%)"
 msgstr "Werkelijke grootte (100%)"
 
-#: crates/bigiris/src/gui.rs:1216 crates/bigiris/src/gui.rs:4179
+#: crates/bigiris/src/gui.rs:1223 crates/bigiris/src/gui.rs:4208
 msgid "Zoom"
 msgstr "Zoom"
 
-#: crates/bigiris/src/gui.rs:1220
+#: crates/bigiris/src/gui.rs:1227
 msgid "Aproximar"
 msgstr "Inzoomen"
 
-#: crates/bigiris/src/gui.rs:2307
+#: crates/bigiris/src/gui.rs:2314
 msgid "Slideshow: pausado"
 msgstr "Diavoorstelling: gepauzeerd"
 
-#: crates/bigiris/src/gui.rs:2335
+#: crates/bigiris/src/gui.rs:2342
 msgid "Slideshow: a cada {interval} s"
 msgstr "Diavoorstelling: elke {interval} s"
 
-#: crates/bigiris/src/gui.rs:2354
+#: crates/bigiris/src/gui.rs:2361
 msgid "Histograma ligado"
 msgstr "Histogram aan"
 
-#: crates/bigiris/src/gui.rs:2356
+#: crates/bigiris/src/gui.rs:2363
 msgid "Histograma desligado"
 msgstr "Histogram uit"
 
-#: crates/bigiris/src/gui.rs:2479 crates/bigiris/src/gui.rs:2590
+#: crates/bigiris/src/gui.rs:2486 crates/bigiris/src/gui.rs:2597
 #: crates/bigiris/src/gui/dialogs/batch.rs:341
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:1712
 msgid "Cancelado"
 msgstr "Geannuleerd"
 
-#: crates/bigiris/src/gui.rs:2591
+#: crates/bigiris/src/gui.rs:2598
 msgid "Falha na IA: {error}"
 msgstr "AI-fout: {error}"
 
-#: crates/bigiris/src/gui.rs:2597
+#: crates/bigiris/src/gui.rs:2604
 msgid ""
 "Esta build não inclui IA. Recompile com `cargo build --features ai` (requer "
 "glslc, do pacote shaderc)."
@@ -178,16 +178,16 @@ msgstr ""
 "Deze build bevat geen AI. Compileer opnieuw met `cargo build --features ai` "
 "(vereist glslc, uit het pakket shaderc)."
 
-#: crates/bigiris/src/gui.rs:2603
+#: crates/bigiris/src/gui.rs:2610
 msgid "{model} não está instalado. Instale com: sudo pacman -S {package}"
 msgstr ""
 "{model} is niet geïnstalleerd. Installeer met: sudo pacman -S {package}"
 
-#: crates/bigiris/src/gui.rs:2617
+#: crates/bigiris/src/gui.rs:2624
 msgid "Não foi possível ler {path}: {error}"
 msgstr "Kan {path} niet lezen: {error}"
 
-#: crates/bigiris/src/gui.rs:2777
+#: crates/bigiris/src/gui.rs:2784
 msgid ""
 "O arquivo será sobrescrito. JPEG é recodificado a cada gravação; isso pode "
 "reduzir a qualidade."
@@ -195,11 +195,11 @@ msgstr ""
 "Het bestand wordt overschreven. JPEG wordt bij elke keer opslaan opnieuw "
 "gecodeerd; dit kan de kwaliteit verminderen."
 
-#: crates/bigiris/src/gui.rs:2779
+#: crates/bigiris/src/gui.rs:2786
 msgid "O arquivo será sobrescrito."
 msgstr "Het bestand wordt overschreven."
 
-#: crates/bigiris/src/gui.rs:2785
+#: crates/bigiris/src/gui.rs:2792
 msgid ""
 "Este formato não guarda todos os metadados da foto (data, câmera, perfil de "
 "cor); o que ele não suportar será removido ou convertido."
@@ -207,21 +207,21 @@ msgstr ""
 "Dit formaat bewaart niet alle metadata van de foto (datum, camera, "
 "kleurprofiel); wat het niet ondersteunt, wordt verwijderd of omgezet."
 
-#: crates/bigiris/src/gui.rs:2788
+#: crates/bigiris/src/gui.rs:2795
 msgid "Salvar alterações?"
 msgstr "Wijzigingen opslaan?"
 
-#: crates/bigiris/src/gui.rs:2790
+#: crates/bigiris/src/gui.rs:2797
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:425
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:427
 msgid "Salvar"
 msgstr "Opslaan"
 
-#: crates/bigiris/src/gui.rs:2850
+#: crates/bigiris/src/gui.rs:2857
 msgid "Salvo"
 msgstr "Opgeslagen"
 
-#: crates/bigiris/src/gui.rs:2931
+#: crates/bigiris/src/gui.rs:2939
 msgid ""
 "Este arquivo é animado, tem várias páginas ou não pôde ser verificado. Girar "
 "ou espelhar e salvar descartaria os outros quadros, então ele não foi "
@@ -231,7 +231,7 @@ msgstr ""
 "gecontroleerd. Draaien of spiegelen en opslaan zou de andere frames "
 "verwijderen, dus het is niet gewijzigd."
 
-#: crates/bigiris/src/gui.rs:2932
+#: crates/bigiris/src/gui.rs:2940
 msgid ""
 "O BigIris não sabe gravar este formato. As alterações não podem ser salvas "
 "no próprio arquivo."
@@ -239,145 +239,152 @@ msgstr ""
 "BigIris kan dit formaat niet schrijven. De wijzigingen kunnen niet in het "
 "bestand zelf worden opgeslagen."
 
-#: crates/bigiris/src/gui.rs:2933
+#: crates/bigiris/src/gui.rs:2941
 msgid "Sem permissão para alterar este arquivo ou a pasta dele."
 msgstr "Geen toestemming om dit bestand of de map ervan te wijzigen."
 
-#: crates/bigiris/src/gui.rs:2935
+#: crates/bigiris/src/gui.rs:2943
 msgid "O arquivo não foi alterado. Detalhes: {detail}"
 msgstr "Het bestand is niet gewijzigd. Details: {detail}"
 
-#: crates/bigiris/src/gui.rs:2947
+#: crates/bigiris/src/gui.rs:2955
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:1846
 msgid "Não foi possível salvar"
 msgstr "Kan niet opslaan"
 
-#: crates/bigiris/src/gui.rs:2950
+#: crates/bigiris/src/gui.rs:2958
 msgid "Manter alterações"
 msgstr "Wijzigingen behouden"
 
-#: crates/bigiris/src/gui.rs:2951
+#: crates/bigiris/src/gui.rs:2959
 msgid "Descartar alterações"
 msgstr "Wijzigingen verwerpen"
 
-#: crates/bigiris/src/gui.rs:3041
+#: crates/bigiris/src/gui.rs:3049
 msgid "o formato não guarda EXIF"
 msgstr "het formaat bewaart geen EXIF"
 
-#: crates/bigiris/src/gui.rs:3042
+#: crates/bigiris/src/gui.rs:3050
 msgid "EXIF grande demais para JPEG"
 msgstr "EXIF te groot voor JPEG"
 
-#: crates/bigiris/src/gui.rs:3043
+#: crates/bigiris/src/gui.rs:3051
 msgid "EXIF inválido"
 msgstr "ongeldige EXIF"
 
-#: crates/bigiris/src/gui.rs:3046
+#: crates/bigiris/src/gui.rs:3054
 msgid "perfil de cor convertido para sRGB"
 msgstr "kleurprofiel omgezet naar sRGB"
 
-#: crates/bigiris/src/gui.rs:3047
+#: crates/bigiris/src/gui.rs:3055
 msgid "perfil de cor inválido ignorado"
 msgstr "ongeldig kleurprofiel genegeerd"
 
-#: crates/bigiris/src/gui.rs:3048
+#: crates/bigiris/src/gui.rs:3056
 msgid "metadados não suportados"
 msgstr "niet-ondersteunde metadata"
 
-#: crates/bigiris/src/gui.rs:3058
+#: crates/bigiris/src/gui.rs:3066
 msgid "Salvo. Alguns metadados não puderam ser mantidos: {list}"
 msgstr "Opgeslagen. Sommige metadata konden niet worden behouden: {list}"
 
-#: crates/bigiris/src/gui.rs:3342
+#: crates/bigiris/src/gui.rs:3170
+msgid ""
+"O perfil de cor desta imagem está corrompido; as cores podem estar imprecisas"
+msgstr ""
+"Het kleurprofiel van deze afbeelding is beschadigd; de kleuren kunnen "
+"onnauwkeurig zijn"
+
+#: crates/bigiris/src/gui.rs:3367
 msgid "Salve ou desfaça as alterações antes de navegar"
 msgstr "Wijzigingen opslaan of ongedaan maken voordat u navigeert"
 
-#: crates/bigiris/src/gui.rs:3431 crates/bigiris/src/gui.rs:4342
-#: crates/bigiris/src/gui.rs:5393 crates/bigiris/src/gui.rs:5528
+#: crates/bigiris/src/gui.rs:3460 crates/bigiris/src/gui.rs:4371
+#: crates/bigiris/src/gui.rs:5422 crates/bigiris/src/gui.rs:5557
 msgid "Abrir imagens…"
 msgstr "Afbeeldingen openen…"
 
-#: crates/bigiris/src/gui.rs:3432 crates/bigiris/src/gui.rs:4223
+#: crates/bigiris/src/gui.rs:3461 crates/bigiris/src/gui.rs:4252
 msgid "Colar arquivos de imagem"
 msgstr "Afbeeldingsbestanden plakken"
 
-#: crates/bigiris/src/gui.rs:3434 crates/bigiris/src/gui.rs:4222
+#: crates/bigiris/src/gui.rs:3463 crates/bigiris/src/gui.rs:4251
 msgid "Copiar imagem"
 msgstr "Afbeelding kopiëren"
 
-#: crates/bigiris/src/gui.rs:3435
+#: crates/bigiris/src/gui.rs:3464
 msgid "Imprimir…"
 msgstr "Afdrukken…"
 
-#: crates/bigiris/src/gui.rs:3437 crates/bigiris/src/gui.rs:4354
-#: crates/bigiris/src/gui.rs:5393
+#: crates/bigiris/src/gui.rs:3466 crates/bigiris/src/gui.rs:4383
+#: crates/bigiris/src/gui.rs:5422
 msgid "Processar uma pasta…"
 msgstr "Een map verwerken…"
 
-#: crates/bigiris/src/gui.rs:3443
+#: crates/bigiris/src/gui.rs:3472
 msgid "Editar imagem"
 msgstr "Afbeelding bewerken"
 
-#: crates/bigiris/src/gui.rs:3444 crates/bigiris/src/gui.rs:4201
+#: crates/bigiris/src/gui.rs:3473 crates/bigiris/src/gui.rs:4230
 msgid "Desfazer"
 msgstr "Ongedaan maken"
 
-#: crates/bigiris/src/gui.rs:3445 crates/bigiris/src/gui.rs:4202
+#: crates/bigiris/src/gui.rs:3474 crates/bigiris/src/gui.rs:4231
 msgid "Refazer"
 msgstr "Opnieuw"
 
-#: crates/bigiris/src/gui.rs:3448 crates/bigiris/src/gui.rs:4213
+#: crates/bigiris/src/gui.rs:3477 crates/bigiris/src/gui.rs:4242
 msgid "Salvar alterações"
 msgstr "Wijzigingen opslaan"
 
-#: crates/bigiris/src/gui.rs:3449 crates/bigiris/src/gui.rs:4226
+#: crates/bigiris/src/gui.rs:3478 crates/bigiris/src/gui.rs:4255
 msgid "Mover para a lixeira"
 msgstr "Naar prullenbak verplaatsen"
 
-#: crates/bigiris/src/gui.rs:3453
+#: crates/bigiris/src/gui.rs:3482
 msgid "Atalhos do teclado"
 msgstr "Sneltoetsen"
 
-#: crates/bigiris/src/gui.rs:3454
+#: crates/bigiris/src/gui.rs:3483
 msgid "Sobre o BigIris"
 msgstr "Over BigIris"
 
-#: crates/bigiris/src/gui.rs:3459
+#: crates/bigiris/src/gui.rs:3488
 msgid "Menu principal"
 msgstr "Hoofdmenu"
 
-#: crates/bigiris/src/gui.rs:3809
+#: crates/bigiris/src/gui.rs:3838
 msgid "Salve ou desfaça as alterações antes de usar esta ferramenta"
 msgstr ""
 "Sla de wijzigingen op of maak ze ongedaan voordat u dit hulpmiddel gebruikt"
 
-#: crates/bigiris/src/gui.rs:3825 crates/bigiris/src/gui.rs:4399
+#: crates/bigiris/src/gui.rs:3854 crates/bigiris/src/gui.rs:4428
 #: crates/bigiris/src/gui/dialogs/batch.rs:389
 #: crates/bigiris/src/gui/dialogs/remove_bg.rs:121
 msgid "Imagens"
 msgstr "Afbeeldingen"
 
-#: crates/bigiris/src/gui.rs:3831 crates/bigiris/src/gui.rs:4221
+#: crates/bigiris/src/gui.rs:3860 crates/bigiris/src/gui.rs:4250
 msgid "Abrir imagens"
 msgstr "Afbeeldingen openen"
 
-#: crates/bigiris/src/gui.rs:3873
+#: crates/bigiris/src/gui.rs:3902
 msgid "Aguarde a imagem terminar de carregar"
 msgstr "Wacht tot de afbeelding geladen is"
 
-#: crates/bigiris/src/gui.rs:3898 crates/bigiris/src/gui.rs:3938
+#: crates/bigiris/src/gui.rs:3927 crates/bigiris/src/gui.rs:3967
 msgid "Não foi possível preparar a página"
 msgstr "Kan de pagina niet voorbereiden"
 
-#: crates/bigiris/src/gui.rs:3920
+#: crates/bigiris/src/gui.rs:3949
 msgid "O preparo da impressão falhou"
 msgstr "Voorbereiden van het afdrukken is mislukt"
 
-#: crates/bigiris/src/gui.rs:3977
+#: crates/bigiris/src/gui.rs:4006
 msgid "Não foi possível imprimir"
 msgstr "Kan niet afdrukken"
 
-#: crates/bigiris/src/gui.rs:3980 crates/bigiris/src/gui.rs:4112
+#: crates/bigiris/src/gui.rs:4009 crates/bigiris/src/gui.rs:4141
 #: crates/bigiris/src/gui/dialogs/animate.rs:53
 #: crates/bigiris/src/gui/dialogs/batch.rs:347
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:311
@@ -389,156 +396,156 @@ msgstr "Kan niet afdrukken"
 msgid "Fechar"
 msgstr "Sluiten"
 
-#: crates/bigiris/src/gui.rs:4078
+#: crates/bigiris/src/gui.rs:4107
 msgid "Mover para a lixeira?"
 msgstr "Naar prullenbak verplaatsen?"
 
-#: crates/bigiris/src/gui.rs:4082
+#: crates/bigiris/src/gui.rs:4111
 msgid ""
 "O arquivo será movido para a lixeira do sistema. Você pode restaurá-lo "
 "depois."
 msgstr ""
 "Het bestand wordt naar de prullenbak verplaatst. U kunt het later herstellen."
 
-#: crates/bigiris/src/gui.rs:4087
+#: crates/bigiris/src/gui.rs:4116
 msgid "Mover"
 msgstr "Verplaatsen"
 
-#: crates/bigiris/src/gui.rs:4109
+#: crates/bigiris/src/gui.rs:4138
 msgid "Não foi possível mover para a lixeira"
 msgstr "Kan niet naar de prullenbak verplaatsen"
 
-#: crates/bigiris/src/gui.rs:4171
+#: crates/bigiris/src/gui.rs:4200
 msgid "Navegação"
 msgstr "Navigatie"
 
-#: crates/bigiris/src/gui.rs:4173
+#: crates/bigiris/src/gui.rs:4202
 msgid "Anterior / próximo"
 msgstr "Vorige / volgende"
 
-#: crates/bigiris/src/gui.rs:4174
+#: crates/bigiris/src/gui.rs:4203
 msgid "Primeiro / último"
 msgstr "Eerste / laatste"
 
-#: crates/bigiris/src/gui.rs:4175
+#: crates/bigiris/src/gui.rs:4204
 msgid "Slideshow (auto-avanço)"
 msgstr "Diavoorstelling (automatisch verder)"
 
-#: crates/bigiris/src/gui.rs:4181
+#: crates/bigiris/src/gui.rs:4210
 msgid "Aproximar / afastar"
 msgstr "In- en uitzoomen"
 
-#: crates/bigiris/src/gui.rs:4184
+#: crates/bigiris/src/gui.rs:4213
 msgid "Zoom contínuo"
 msgstr "Traploos zoomen"
 
-#: crates/bigiris/src/gui.rs:4188
+#: crates/bigiris/src/gui.rs:4217
 msgid "Janela"
 msgstr "Venster"
 
-#: crates/bigiris/src/gui.rs:4190
+#: crates/bigiris/src/gui.rs:4219
 msgid "Tela cheia"
 msgstr "Volledig scherm"
 
-#: crates/bigiris/src/gui.rs:4191
+#: crates/bigiris/src/gui.rs:4220
 msgid "Modo teatro"
 msgstr "Theatermodus"
 
-#: crates/bigiris/src/gui.rs:4192
+#: crates/bigiris/src/gui.rs:4221
 msgid "Fita de miniaturas"
 msgstr "Miniatuurstrook"
 
-#: crates/bigiris/src/gui.rs:4193
+#: crates/bigiris/src/gui.rs:4222
 msgid "Histograma RGB"
 msgstr "RGB-histogram"
 
-#: crates/bigiris/src/gui.rs:4194
+#: crates/bigiris/src/gui.rs:4223
 msgid "Fixar barras visíveis"
 msgstr "Besturingselementen zichtbaar houden"
 
-#: crates/bigiris/src/gui.rs:4195
+#: crates/bigiris/src/gui.rs:4224
 msgid "Sair da tela cheia ou fechar"
 msgstr "Volledig scherm verlaten of sluiten"
 
-#: crates/bigiris/src/gui.rs:4199
+#: crates/bigiris/src/gui.rs:4228
 msgid "Edição"
 msgstr "Bewerken"
 
-#: crates/bigiris/src/gui.rs:4203
+#: crates/bigiris/src/gui.rs:4232
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:326
 msgid "Girar à direita"
 msgstr "Rechtsom draaien"
 
-#: crates/bigiris/src/gui.rs:4204
+#: crates/bigiris/src/gui.rs:4233
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:325
 msgid "Girar à esquerda"
 msgstr "Linksom draaien"
 
-#: crates/bigiris/src/gui.rs:4205
+#: crates/bigiris/src/gui.rs:4234
 msgid "Recortar…"
 msgstr "Bijsnijden…"
 
-#: crates/bigiris/src/gui.rs:4206
+#: crates/bigiris/src/gui.rs:4235
 msgid "Recorte: mover a seleção"
 msgstr "Bijsnijden: selectie verplaatsen"
 
-#: crates/bigiris/src/gui.rs:4209
+#: crates/bigiris/src/gui.rs:4238
 msgid "Recorte: redimensionar a seleção"
 msgstr "Bijsnijden: selectie vergroten of verkleinen"
 
-#: crates/bigiris/src/gui.rs:4211
+#: crates/bigiris/src/gui.rs:4240
 msgid "Remover fundo (IA)…"
 msgstr "Achtergrond verwijderen (AI)…"
 
-#: crates/bigiris/src/gui.rs:4212
+#: crates/bigiris/src/gui.rs:4241
 #: crates/bigimage-integrations/src/action.rs:518
 msgid "Aumentar resolução…"
 msgstr "Resolutie verhogen…"
 
-#: crates/bigiris/src/gui.rs:4214
+#: crates/bigiris/src/gui.rs:4243
 msgid "Painel de edição"
 msgstr "Bewerkingspaneel"
 
-#: crates/bigiris/src/gui.rs:4215
+#: crates/bigiris/src/gui.rs:4244
 msgid "Ver original (segure)"
 msgstr "Origineel bekijken (ingedrukt houden)"
 
-#: crates/bigiris/src/gui.rs:4219
+#: crates/bigiris/src/gui.rs:4248
 #: crates/bigiris/src/gui/dialogs/properties.rs:120
 msgid "Arquivo"
 msgstr "Bestand"
 
-#: crates/bigiris/src/gui.rs:4224
+#: crates/bigiris/src/gui.rs:4253
 msgid "Imprimir"
 msgstr "Afdrukken"
 
-#: crates/bigiris/src/gui.rs:4225
+#: crates/bigiris/src/gui.rs:4254
 #: crates/bigiris/src/gui/dialogs/properties.rs:38
 #: crates/bigiris/src/gui/dialogs/properties.rs:80
 msgid "Propriedades"
 msgstr "Eigenschappen"
 
-#: crates/bigiris/src/gui.rs:4230
+#: crates/bigiris/src/gui.rs:4259
 msgid "Ajuda"
 msgstr "Help"
 
-#: crates/bigiris/src/gui.rs:4231
+#: crates/bigiris/src/gui.rs:4260
 msgid "Este diálogo"
 msgstr "Dit dialoogvenster"
 
-#: crates/bigiris/src/gui.rs:4231
+#: crates/bigiris/src/gui.rs:4260
 msgid "Sobre"
 msgstr "Info"
 
-#: crates/bigiris/src/gui.rs:4241
+#: crates/bigiris/src/gui.rs:4270
 msgid "Roda do mouse"
 msgstr "Muiswiel"
 
-#: crates/bigiris/src/gui.rs:4269
+#: crates/bigiris/src/gui.rs:4298
 msgid "Atalhos de teclado"
 msgstr "Sneltoetsen"
 
-#: crates/bigiris/src/gui.rs:4295
+#: crates/bigiris/src/gui.rs:4324
 msgid ""
 "Visualizador e conversor de imagens para Linux. Rápido, acessível por "
 "teclado e integrado ao gerenciador de arquivos."
@@ -546,23 +553,23 @@ msgstr ""
 "Afbeeldingsviewer en -converter voor Linux. Snel, toegankelijk via het "
 "toetsenbord en geïntegreerd met uw bestandsbeheerder."
 
-#: crates/bigiris/src/gui.rs:4328
+#: crates/bigiris/src/gui.rs:4357
 msgid "Abra suas imagens"
 msgstr "Open uw afbeeldingen"
 
-#: crates/bigiris/src/gui.rs:4333
+#: crates/bigiris/src/gui.rs:4362
 msgid "Arraste imagens para cá ou cole arquivos com Ctrl+V."
 msgstr "Sleep afbeeldingen hierheen of plak bestanden met Ctrl+V."
 
-#: crates/bigiris/src/gui.rs:4376
+#: crates/bigiris/src/gui.rs:4405
 msgid "Selecionar pasta com imagens"
 msgstr "Map met afbeeldingen selecteren"
 
-#: crates/bigiris/src/gui.rs:4396
+#: crates/bigiris/src/gui.rs:4425
 msgid "Selecionar imagens"
 msgstr "Afbeeldingen selecteren"
 
-#: crates/bigiris/src/gui.rs:4443
+#: crates/bigiris/src/gui.rs:4472
 msgid "{current} de {total}"
 msgstr "{current} van {total}"
 
@@ -593,7 +600,7 @@ msgstr ""
 msgid "O processamento terminou inesperadamente. Tente novamente."
 msgstr "De verwerking is onverwacht gestopt. Probeer het opnieuw."
 
-#: crates/bigiris/src/gui/batch_runner.rs:319 crates/bigiris/src/main.rs:1703
+#: crates/bigiris/src/gui/batch_runner.rs:319 crates/bigiris/src/main.rs:1721
 msgid "um worker terminou inesperadamente"
 msgstr "een worker is onverwacht gestopt"
 
@@ -2361,81 +2368,85 @@ msgstr ""
 "Hernoem de invoerbestanden, verwerk ze afzonderlijk of gebruik het beleid "
 "increment."
 
-#: crates/bigiris/src/main.rs:1226
+#: crates/bigiris/src/main.rs:1230
 msgid "substituiu a saída de outra entrada: {path}"
 msgstr "heeft de uitvoer van een andere invoer vervangen: {path}"
 
-#: crates/bigiris/src/main.rs:1256
+#: crates/bigiris/src/main.rs:1265
+msgid "o perfil de cor está corrompido; as cores foram tratadas como sRGB"
+msgstr "het kleurprofiel is beschadigd; de kleuren zijn als sRGB behandeld"
+
+#: crates/bigiris/src/main.rs:1270
 msgid "já existe: {path}"
 msgstr "bestaat al: {path}"
 
-#: crates/bigiris/src/main.rs:1262
+#: crates/bigiris/src/main.rs:1276
 msgid ""
 "{operation}: {written} gravado(s), {skipped} ignorado(s), {failed} falha(s)"
 msgstr ""
 "{operation}: geschreven: {written}, overgeslagen: {skipped}, mislukt: "
 "{failed}"
 
-#: crates/bigiris/src/main.rs:1355
+#: crates/bigiris/src/main.rs:1369
 msgid "{model} não está instalado ({path} não existe). Instale com: {command}"
 msgstr ""
 "{model} is niet geïnstalleerd ({path} bestaat niet). Installeer met: "
 "{command}"
 
-#: crates/bigiris/src/main.rs:1364
+#: crates/bigiris/src/main.rs:1378
 msgid "não foi possível ler os pesos de {model} em {path}: {error}"
 msgstr "kan de gewichten van {model} in {path} niet lezen: {error}"
 
-#: crates/bigiris/src/main.rs:1397
+#: crates/bigiris/src/main.rs:1411
 msgid "fator inválido: {factor}. Use 2, 3 ou 4."
 msgstr "ongeldige factor: {factor}. Gebruik 2, 3 of 4."
 
-#: crates/bigiris/src/main.rs:1414
+#: crates/bigiris/src/main.rs:1428
 msgid "Real-ESRGAN indisponível; usando Lanczos3. Para usar IA: {command}"
 msgstr ""
 "Real-ESRGAN niet beschikbaar; Lanczos3 wordt gebruikt. Voor AI: {command}"
 
-#: crates/bigiris/src/main.rs:1474
+#: crates/bigiris/src/main.rs:1488
 msgid "máscara {path}: {error}"
 msgstr "masker {path}: {error}"
 
-#: crates/bigiris/src/main.rs:1486
+#: crates/bigiris/src/main.rs:1500
 msgid "não marca nenhuma área (pinte de branco o que deve ser apagado)"
 msgstr "markeert geen enkel gebied (maak wit wat gewist moet worden)"
 
-#: crates/bigiris/src/main.rs:1522
+#: crates/bigiris/src/main.rs:1536
 msgid "{count} quadro(s)"
 msgstr "frames: {count}"
 
-#: crates/bigiris/src/main.rs:1565
+#: crates/bigiris/src/main.rs:1579
 msgid "não foi possível ler {path}: {error}"
 msgstr "kan {path} niet lezen: {error}"
 
-#: crates/bigiris/src/main.rs:1571
+#: crates/bigiris/src/main.rs:1585
 msgid "perfil TOML inválido: {error}"
 msgstr "ongeldig TOML-profiel: {error}"
 
-#: crates/bigiris/src/main.rs:1574
+#: crates/bigiris/src/main.rs:1588
 msgid "quality deve estar entre 1 e 100"
 msgstr "quality moet tussen 1 en 100 liggen"
 
-#: crates/bigiris/src/main.rs:1577
+#: crates/bigiris/src/main.rs:1591
 msgid "formato do perfil inválido: {error}"
 msgstr "ongeldig profielformaat: {error}"
 
-#: crates/bigiris/src/main.rs:1589
+#: crates/bigiris/src/main.rs:1603
 msgid "overwrite inválido: {value}; use skip, replace ou increment"
 msgstr "ongeldige overwrite: {value}; gebruik skip, replace of increment"
 
-#: crates/bigiris/src/main.rs:1597
+#: crates/bigiris/src/main.rs:1611
 msgid "não foi possível criar {path}: {error}"
 msgstr "kan {path} niet aanmaken: {error}"
 
-#: crates/bigiris/src/main.rs:1620
+#: crates/bigiris/src/main.rs:1634
 msgid "nenhuma imagem encontrada para o lote"
 msgstr "geen afbeeldingen gevonden voor de batch"
 
-#: crates/bigiris/src/main.rs:1728
+#: crates/bigiris/src/main.rs:1746
 msgid ""
 "LibreOffice (`soffice`) não encontrado no PATH. Instale `libreoffice-fresh` "
 "(recomendado) ou `libreoffice-still` (ex.: `sudo pacman -S libreoffice-"
@@ -2445,85 +2456,85 @@ msgstr ""
 "fresh` (aanbevolen) of `libreoffice-still` (bijv. `sudo pacman -S "
 "libreoffice-fresh`)."
 
-#: crates/bigiris/src/main.rs:1780
+#: crates/bigiris/src/main.rs:1798
 msgid "não é um arquivo regular"
 msgstr "geen gewoon bestand"
 
-#: crates/bigiris/src/main.rs:1783
+#: crates/bigiris/src/main.rs:1801
 msgid "nome de arquivo inválido"
 msgstr "ongeldige bestandsnaam"
 
-#: crates/bigiris/src/main.rs:1804
+#: crates/bigiris/src/main.rs:1822
 msgid "falha ao invocar soffice: {error}"
 msgstr "aanroepen van soffice mislukt: {error}"
 
-#: crates/bigiris/src/main.rs:1815
+#: crates/bigiris/src/main.rs:1833
 msgid "soffice excedeu o limite de {seconds} s"
 msgstr "soffice heeft de limiet van {seconds} s overschreden"
 
-#: crates/bigiris/src/main.rs:1828
+#: crates/bigiris/src/main.rs:1846
 msgid "soffice não gerou o PDF ({status})"
 msgstr "soffice heeft geen PDF gemaakt ({status})"
 
-#: crates/bigiris/src/main.rs:1871
+#: crates/bigiris/src/main.rs:1889
 msgid "muitos arquivos com o mesmo nome: {path}"
 msgstr "te veel bestanden met dezelfde naam: {path}"
 
-#: crates/bigiris/src/main.rs:1914
+#: crates/bigiris/src/main.rs:1932
 msgid "a instalação falhou: {error}"
 msgstr "installatie mislukt: {error}"
 
-#: crates/bigiris/src/main.rs:1920
+#: crates/bigiris/src/main.rs:1938
 msgid "instalado"
 msgstr "geïnstalleerd"
 
-#: crates/bigiris/src/main.rs:1921
+#: crates/bigiris/src/main.rs:1939
 msgid "instalado no total: {files} arquivo(s) em {managers} gerenciador(es)"
 msgstr ""
 "totaal geïnstalleerd: {files} bestand(en) in {managers} bestandsbeheerder(s)"
 
-#: crates/bigiris/src/main.rs:1937
+#: crates/bigiris/src/main.rs:1955
 msgid "a remoção falhou: {error}"
 msgstr "verwijderen mislukt: {error}"
 
-#: crates/bigiris/src/main.rs:1941
+#: crates/bigiris/src/main.rs:1959
 msgid "removido"
 msgstr "verwijderd"
 
-#: crates/bigiris/src/main.rs:1942
+#: crates/bigiris/src/main.rs:1960
 msgid "removido no total: {files} arquivo(s) em {managers} gerenciador(es)"
 msgstr ""
 "totaal verwijderd: {files} bestand(en) in {managers} bestandsbeheerder(s)"
 
-#: crates/bigiris/src/main.rs:1965
+#: crates/bigiris/src/main.rs:1983
 msgid "FALHA"
 msgstr "MISLUKT"
 
-#: crates/bigiris/src/main.rs:1970
+#: crates/bigiris/src/main.rs:1988
 msgid "fornecido pelo pacote"
 msgstr "geleverd door het pakket"
 
-#: crates/bigiris/src/main.rs:1973
+#: crates/bigiris/src/main.rs:1991
 msgid "sem alterações"
 msgstr "ongewijzigd"
 
-#: crates/bigiris/src/main.rs:1975
+#: crates/bigiris/src/main.rs:1993
 msgid "ignorado"
 msgstr "overgeslagen"
 
-#: crates/bigiris/src/main.rs:1981
+#: crates/bigiris/src/main.rs:1999
 msgid "detectado"
 msgstr "gedetecteerd"
 
-#: crates/bigiris/src/main.rs:1981
+#: crates/bigiris/src/main.rs:1999
 msgid "ausente no PATH"
 msgstr "niet in PATH"
 
-#: crates/bigiris/src/main.rs:1983
+#: crates/bigiris/src/main.rs:2001
 msgid "{count} arquivo(s)"
 msgstr "{count} bestand(en)"
 
-#: crates/bigiris/src/main.rs:2010
+#: crates/bigiris/src/main.rs:2028
 msgid ""
 "aviso: build atual sem feature `gui`. Diálogo '{dialog}' ignorado (recompile "
 "com --features gui)."
@@ -2531,7 +2542,7 @@ msgstr ""
 "waarschuwing: huidige build zonder feature `gui`. Dialoogvenster '{dialog}' "
 "overgeslagen (hercompileer met --features gui)."
 
-#: crates/bigiris/src/main.rs:2017
+#: crates/bigiris/src/main.rs:2035
 msgid ""
 "aviso: build atual sem feature `gui`. Visualizador indisponível (recompile "
 "com --features gui)."
@@ -2539,7 +2550,7 @@ msgstr ""
 "waarschuwing: huidige build zonder feature `gui`. Viewer niet beschikbaar "
 "(hercompileer met --features gui)."
 
-#: crates/bigiris/src/main.rs:2022
+#: crates/bigiris/src/main.rs:2040
 msgid ""
 "aviso: build atual sem feature `gui`. Visualizador indisponível; arquivos "
 "recebidos:"

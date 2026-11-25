@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: bigiris 0.1.0\n"
 "Report-Msgid-Bugs-To: https://github.com/big-comm/bigiris/issues\n"
-"POT-Creation-Date: 2026-11-25 16:16-0300\n"
+"POT-Creation-Date: 2026-11-25 16:19-0300\n"
 "PO-Revision-Date: 2026-10-14 01:36-0300\n"
 "Last-Translator: BigCommunity Team\n"
 "Language-Team: BigCommunity Team\n"
@@ -49,16 +49,16 @@ msgstr "BigIris был обновлён во время работы; перез
 msgid "codec isolado recusou a imagem ({status}){hint}: {details}"
 msgstr "изолированный кодек отклонил изображение ({status}){hint}: {details}"
 
-#: crates/bigiris/src/gui.rs:758
+#: crates/bigiris/src/gui.rs:765
 msgid "BigIris"
 msgstr "BigIris"
 
-#: crates/bigiris/src/gui.rs:793 crates/bigiris/src/gui/previews.rs:257
+#: crates/bigiris/src/gui.rs:800 crates/bigiris/src/gui/previews.rs:257
 msgid "Não foi possível abrir a imagem"
 msgstr "Не удалось открыть изображение"
 
-#: crates/bigiris/src/gui.rs:912 crates/bigiris/src/gui.rs:2789
-#: crates/bigiris/src/gui.rs:4086 crates/bigiris/src/gui/dialogs/animate.rs:184
+#: crates/bigiris/src/gui.rs:919 crates/bigiris/src/gui.rs:2796
+#: crates/bigiris/src/gui.rs:4115 crates/bigiris/src/gui/dialogs/animate.rs:184
 #: crates/bigiris/src/gui/dialogs/batch.rs:122
 #: crates/bigiris/src/gui/dialogs/batch.rs:255
 #: crates/bigiris/src/gui/dialogs/batch.rs:349
@@ -72,103 +72,103 @@ msgstr "Не удалось открыть изображение"
 msgid "Cancelar"
 msgstr "Отменить"
 
-#: crates/bigiris/src/gui.rs:924
+#: crates/bigiris/src/gui.rs:931
 msgid "Recalculando a edição…"
 msgstr "Пересчёт правки…"
 
-#: crates/bigiris/src/gui.rs:1072 crates/bigiris/src/gui.rs:3807
+#: crates/bigiris/src/gui.rs:1079 crates/bigiris/src/gui.rs:3836
 #: crates/bigiris/src/gui/viewer/crop.rs:624
 msgid "Aguarde o salvamento terminar"
 msgstr "Дождитесь завершения сохранения"
 
-#: crates/bigiris/src/gui.rs:1086
+#: crates/bigiris/src/gui.rs:1093
 msgid "Descartar alterações?"
 msgstr "Отбросить изменения?"
 
-#: crates/bigiris/src/gui.rs:1087
+#: crates/bigiris/src/gui.rs:1094
 msgid "A imagem tem edições que ainda não foram salvas."
 msgstr "Изображение содержит несохранённые изменения."
 
-#: crates/bigiris/src/gui.rs:1089
+#: crates/bigiris/src/gui.rs:1096
 msgid "Continuar editando"
 msgstr "Продолжить редактирование"
 
-#: crates/bigiris/src/gui.rs:1090
+#: crates/bigiris/src/gui.rs:1097
 msgid "Descartar"
 msgstr "Отбросить"
 
-#: crates/bigiris/src/gui.rs:1160
+#: crates/bigiris/src/gui.rs:1167
 msgid "Imagem anterior"
 msgstr "Предыдущее изображение"
 
-#: crates/bigiris/src/gui.rs:1161
+#: crates/bigiris/src/gui.rs:1168
 msgid "Próxima imagem"
 msgstr "Следующее изображение"
 
-#: crates/bigiris/src/gui.rs:1177
+#: crates/bigiris/src/gui.rs:1184
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:305
 msgid "Editar"
 msgstr "Редактировать"
 
-#: crates/bigiris/src/gui.rs:1180
+#: crates/bigiris/src/gui.rs:1187
 msgid "Editar (E)"
 msgstr "Редактировать (E)"
 
-#: crates/bigiris/src/gui.rs:1187
+#: crates/bigiris/src/gui.rs:1194
 msgid "Propriedades da imagem (Ctrl+I)"
 msgstr "Свойства изображения (Ctrl+I)"
 
-#: crates/bigiris/src/gui.rs:1193
+#: crates/bigiris/src/gui.rs:1200
 msgid "Tela cheia (F11)"
 msgstr "Полноэкранный режим (F11)"
 
-#: crates/bigiris/src/gui.rs:1202
+#: crates/bigiris/src/gui.rs:1209
 msgid "Afastar"
 msgstr "Уменьшить масштаб"
 
-#: crates/bigiris/src/gui.rs:1206 crates/bigiris/src/gui.rs:4182
+#: crates/bigiris/src/gui.rs:1213 crates/bigiris/src/gui.rs:4211
 msgid "Ajustar à janela"
 msgstr "По размеру окна"
 
-#: crates/bigiris/src/gui.rs:1207 crates/bigiris/src/gui.rs:4183
+#: crates/bigiris/src/gui.rs:1214 crates/bigiris/src/gui.rs:4212
 msgid "Tamanho real (100%)"
 msgstr "Фактический размер (100%)"
 
-#: crates/bigiris/src/gui.rs:1216 crates/bigiris/src/gui.rs:4179
+#: crates/bigiris/src/gui.rs:1223 crates/bigiris/src/gui.rs:4208
 msgid "Zoom"
 msgstr "Масштаб"
 
-#: crates/bigiris/src/gui.rs:1220
+#: crates/bigiris/src/gui.rs:1227
 msgid "Aproximar"
 msgstr "Увеличить"
 
-#: crates/bigiris/src/gui.rs:2307
+#: crates/bigiris/src/gui.rs:2314
 msgid "Slideshow: pausado"
 msgstr "Слайд-шоу: приостановлено"
 
-#: crates/bigiris/src/gui.rs:2335
+#: crates/bigiris/src/gui.rs:2342
 msgid "Slideshow: a cada {interval} s"
 msgstr "Слайд-шоу: каждые {interval} с"
 
-#: crates/bigiris/src/gui.rs:2354
+#: crates/bigiris/src/gui.rs:2361
 msgid "Histograma ligado"
 msgstr "Гистограмма включена"
 
-#: crates/bigiris/src/gui.rs:2356
+#: crates/bigiris/src/gui.rs:2363
 msgid "Histograma desligado"
 msgstr "Гистограмма выключена"
 
-#: crates/bigiris/src/gui.rs:2479 crates/bigiris/src/gui.rs:2590
+#: crates/bigiris/src/gui.rs:2486 crates/bigiris/src/gui.rs:2597
 #: crates/bigiris/src/gui/dialogs/batch.rs:341
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:1712
 msgid "Cancelado"
 msgstr "Отменено"
 
-#: crates/bigiris/src/gui.rs:2591
+#: crates/bigiris/src/gui.rs:2598
 msgid "Falha na IA: {error}"
 msgstr "Ошибка ИИ: {error}"
 
-#: crates/bigiris/src/gui.rs:2597
+#: crates/bigiris/src/gui.rs:2604
 msgid ""
 "Esta build não inclui IA. Recompile com `cargo build --features ai` (requer "
 "glslc, do pacote shaderc)."
@@ -176,15 +176,15 @@ msgstr ""
 "Эта сборка не включает ИИ. Пересоберите с помощью `cargo build --features "
 "ai` (требуется glslc из пакета shaderc)."
 
-#: crates/bigiris/src/gui.rs:2603
+#: crates/bigiris/src/gui.rs:2610
 msgid "{model} não está instalado. Instale com: sudo pacman -S {package}"
 msgstr "{model} не установлен. Установите командой: sudo pacman -S {package}"
 
-#: crates/bigiris/src/gui.rs:2617
+#: crates/bigiris/src/gui.rs:2624
 msgid "Não foi possível ler {path}: {error}"
 msgstr "Не удалось прочитать {path}: {error}"
 
-#: crates/bigiris/src/gui.rs:2777
+#: crates/bigiris/src/gui.rs:2784
 msgid ""
 "O arquivo será sobrescrito. JPEG é recodificado a cada gravação; isso pode "
 "reduzir a qualidade."
@@ -192,11 +192,11 @@ msgstr ""
 "Файл будет перезаписан. JPEG перекодируется каждый раз при сохранении; это "
 "может ухудшить качество."
 
-#: crates/bigiris/src/gui.rs:2779
+#: crates/bigiris/src/gui.rs:2786
 msgid "O arquivo será sobrescrito."
 msgstr "Файл будет перезаписан."
 
-#: crates/bigiris/src/gui.rs:2785
+#: crates/bigiris/src/gui.rs:2792
 msgid ""
 "Este formato não guarda todos os metadados da foto (data, câmera, perfil de "
 "cor); o que ele não suportar será removido ou convertido."
@@ -204,21 +204,21 @@ msgstr ""
 "Этот формат сохраняет не все метаданные фотографии (дата, камера, цветовой "
 "профиль); неподдерживаемые данные будут удалены или преобразованы."
 
-#: crates/bigiris/src/gui.rs:2788
+#: crates/bigiris/src/gui.rs:2795
 msgid "Salvar alterações?"
 msgstr "Сохранить изменения?"
 
-#: crates/bigiris/src/gui.rs:2790
+#: crates/bigiris/src/gui.rs:2797
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:425
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:427
 msgid "Salvar"
 msgstr "Сохранить"
 
-#: crates/bigiris/src/gui.rs:2850
+#: crates/bigiris/src/gui.rs:2857
 msgid "Salvo"
 msgstr "Сохранено"
 
-#: crates/bigiris/src/gui.rs:2931
+#: crates/bigiris/src/gui.rs:2939
 msgid ""
 "Este arquivo é animado, tem várias páginas ou não pôde ser verificado. Girar "
 "ou espelhar e salvar descartaria os outros quadros, então ele não foi "
@@ -228,7 +228,7 @@ msgstr ""
 "Поворот или отражение с сохранением удалили бы остальные кадры, поэтому он "
 "не был изменён."
 
-#: crates/bigiris/src/gui.rs:2932
+#: crates/bigiris/src/gui.rs:2940
 msgid ""
 "O BigIris não sabe gravar este formato. As alterações não podem ser salvas "
 "no próprio arquivo."
@@ -236,145 +236,151 @@ msgstr ""
 "BigIris не умеет записывать этот формат. Изменения нельзя сохранить в сам "
 "файл."
 
-#: crates/bigiris/src/gui.rs:2933
+#: crates/bigiris/src/gui.rs:2941
 msgid "Sem permissão para alterar este arquivo ou a pasta dele."
 msgstr "Нет прав на изменение этого файла или его папки."
 
-#: crates/bigiris/src/gui.rs:2935
+#: crates/bigiris/src/gui.rs:2943
 msgid "O arquivo não foi alterado. Detalhes: {detail}"
 msgstr "Файл не изменён. Подробности: {detail}"
 
-#: crates/bigiris/src/gui.rs:2947
+#: crates/bigiris/src/gui.rs:2955
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:1846
 msgid "Não foi possível salvar"
 msgstr "Не удалось сохранить"
 
-#: crates/bigiris/src/gui.rs:2950
+#: crates/bigiris/src/gui.rs:2958
 msgid "Manter alterações"
 msgstr "Оставить изменения"
 
-#: crates/bigiris/src/gui.rs:2951
+#: crates/bigiris/src/gui.rs:2959
 msgid "Descartar alterações"
 msgstr "Отбросить изменения"
 
-#: crates/bigiris/src/gui.rs:3041
+#: crates/bigiris/src/gui.rs:3049
 msgid "o formato não guarda EXIF"
 msgstr "формат не хранит EXIF"
 
-#: crates/bigiris/src/gui.rs:3042
+#: crates/bigiris/src/gui.rs:3050
 msgid "EXIF grande demais para JPEG"
 msgstr "EXIF слишком велик для JPEG"
 
-#: crates/bigiris/src/gui.rs:3043
+#: crates/bigiris/src/gui.rs:3051
 msgid "EXIF inválido"
 msgstr "недопустимый EXIF"
 
-#: crates/bigiris/src/gui.rs:3046
+#: crates/bigiris/src/gui.rs:3054
 msgid "perfil de cor convertido para sRGB"
 msgstr "цветовой профиль преобразован в sRGB"
 
-#: crates/bigiris/src/gui.rs:3047
+#: crates/bigiris/src/gui.rs:3055
 msgid "perfil de cor inválido ignorado"
 msgstr "недопустимый цветовой профиль пропущен"
 
-#: crates/bigiris/src/gui.rs:3048
+#: crates/bigiris/src/gui.rs:3056
 msgid "metadados não suportados"
 msgstr "неподдерживаемые метаданные"
 
-#: crates/bigiris/src/gui.rs:3058
+#: crates/bigiris/src/gui.rs:3066
 msgid "Salvo. Alguns metadados não puderam ser mantidos: {list}"
 msgstr "Сохранено. Некоторые метаданные не удалось сохранить: {list}"
 
-#: crates/bigiris/src/gui.rs:3342
+#: crates/bigiris/src/gui.rs:3170
+msgid ""
+"O perfil de cor desta imagem está corrompido; as cores podem estar imprecisas"
+msgstr ""
+"Цветовой профиль этого изображения повреждён; цвета могут быть неточными"
+
+#: crates/bigiris/src/gui.rs:3367
 msgid "Salve ou desfaça as alterações antes de navegar"
 msgstr "Сохраните или отмените изменения перед переходом"
 
-#: crates/bigiris/src/gui.rs:3431 crates/bigiris/src/gui.rs:4342
-#: crates/bigiris/src/gui.rs:5393 crates/bigiris/src/gui.rs:5528
+#: crates/bigiris/src/gui.rs:3460 crates/bigiris/src/gui.rs:4371
+#: crates/bigiris/src/gui.rs:5422 crates/bigiris/src/gui.rs:5557
 msgid "Abrir imagens…"
 msgstr "Открыть изображения…"
 
-#: crates/bigiris/src/gui.rs:3432 crates/bigiris/src/gui.rs:4223
+#: crates/bigiris/src/gui.rs:3461 crates/bigiris/src/gui.rs:4252
 msgid "Colar arquivos de imagem"
 msgstr "Вставить файлы изображений"
 
-#: crates/bigiris/src/gui.rs:3434 crates/bigiris/src/gui.rs:4222
+#: crates/bigiris/src/gui.rs:3463 crates/bigiris/src/gui.rs:4251
 msgid "Copiar imagem"
 msgstr "Копировать изображение"
 
-#: crates/bigiris/src/gui.rs:3435
+#: crates/bigiris/src/gui.rs:3464
 msgid "Imprimir…"
 msgstr "Печать…"
 
-#: crates/bigiris/src/gui.rs:3437 crates/bigiris/src/gui.rs:4354
-#: crates/bigiris/src/gui.rs:5393
+#: crates/bigiris/src/gui.rs:3466 crates/bigiris/src/gui.rs:4383
+#: crates/bigiris/src/gui.rs:5422
 msgid "Processar uma pasta…"
 msgstr "Обработать папку…"
 
-#: crates/bigiris/src/gui.rs:3443
+#: crates/bigiris/src/gui.rs:3472
 msgid "Editar imagem"
 msgstr "Редактировать изображение"
 
-#: crates/bigiris/src/gui.rs:3444 crates/bigiris/src/gui.rs:4201
+#: crates/bigiris/src/gui.rs:3473 crates/bigiris/src/gui.rs:4230
 msgid "Desfazer"
 msgstr "Отменить"
 
-#: crates/bigiris/src/gui.rs:3445 crates/bigiris/src/gui.rs:4202
+#: crates/bigiris/src/gui.rs:3474 crates/bigiris/src/gui.rs:4231
 msgid "Refazer"
 msgstr "Повторить"
 
-#: crates/bigiris/src/gui.rs:3448 crates/bigiris/src/gui.rs:4213
+#: crates/bigiris/src/gui.rs:3477 crates/bigiris/src/gui.rs:4242
 msgid "Salvar alterações"
 msgstr "Сохранить изменения"
 
-#: crates/bigiris/src/gui.rs:3449 crates/bigiris/src/gui.rs:4226
+#: crates/bigiris/src/gui.rs:3478 crates/bigiris/src/gui.rs:4255
 msgid "Mover para a lixeira"
 msgstr "Переместить в корзину"
 
-#: crates/bigiris/src/gui.rs:3453
+#: crates/bigiris/src/gui.rs:3482
 msgid "Atalhos do teclado"
 msgstr "Комбинации клавиш"
 
-#: crates/bigiris/src/gui.rs:3454
+#: crates/bigiris/src/gui.rs:3483
 msgid "Sobre o BigIris"
 msgstr "О BigIris"
 
-#: crates/bigiris/src/gui.rs:3459
+#: crates/bigiris/src/gui.rs:3488
 msgid "Menu principal"
 msgstr "Главное меню"
 
-#: crates/bigiris/src/gui.rs:3809
+#: crates/bigiris/src/gui.rs:3838
 msgid "Salve ou desfaça as alterações antes de usar esta ferramenta"
 msgstr ""
 "Сохраните или отмените изменения перед использованием этого инструмента"
 
-#: crates/bigiris/src/gui.rs:3825 crates/bigiris/src/gui.rs:4399
+#: crates/bigiris/src/gui.rs:3854 crates/bigiris/src/gui.rs:4428
 #: crates/bigiris/src/gui/dialogs/batch.rs:389
 #: crates/bigiris/src/gui/dialogs/remove_bg.rs:121
 msgid "Imagens"
 msgstr "Изображения"
 
-#: crates/bigiris/src/gui.rs:3831 crates/bigiris/src/gui.rs:4221
+#: crates/bigiris/src/gui.rs:3860 crates/bigiris/src/gui.rs:4250
 msgid "Abrir imagens"
 msgstr "Открыть изображения"
 
-#: crates/bigiris/src/gui.rs:3873
+#: crates/bigiris/src/gui.rs:3902
 msgid "Aguarde a imagem terminar de carregar"
 msgstr "Дождитесь окончания загрузки изображения"
 
-#: crates/bigiris/src/gui.rs:3898 crates/bigiris/src/gui.rs:3938
+#: crates/bigiris/src/gui.rs:3927 crates/bigiris/src/gui.rs:3967
 msgid "Não foi possível preparar a página"
 msgstr "Не удалось подготовить страницу"
 
-#: crates/bigiris/src/gui.rs:3920
+#: crates/bigiris/src/gui.rs:3949
 msgid "O preparo da impressão falhou"
 msgstr "Не удалось подготовить печать"
 
-#: crates/bigiris/src/gui.rs:3977
+#: crates/bigiris/src/gui.rs:4006
 msgid "Não foi possível imprimir"
 msgstr "Не удалось напечатать"
 
-#: crates/bigiris/src/gui.rs:3980 crates/bigiris/src/gui.rs:4112
+#: crates/bigiris/src/gui.rs:4009 crates/bigiris/src/gui.rs:4141
 #: crates/bigiris/src/gui/dialogs/animate.rs:53
 #: crates/bigiris/src/gui/dialogs/batch.rs:347
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:311
@@ -386,155 +392,155 @@ msgstr "Не удалось напечатать"
 msgid "Fechar"
 msgstr "Закрыть"
 
-#: crates/bigiris/src/gui.rs:4078
+#: crates/bigiris/src/gui.rs:4107
 msgid "Mover para a lixeira?"
 msgstr "Переместить в корзину?"
 
-#: crates/bigiris/src/gui.rs:4082
+#: crates/bigiris/src/gui.rs:4111
 msgid ""
 "O arquivo será movido para a lixeira do sistema. Você pode restaurá-lo "
 "depois."
 msgstr "Файл будет перемещён в корзину. Вы можете восстановить его позже."
 
-#: crates/bigiris/src/gui.rs:4087
+#: crates/bigiris/src/gui.rs:4116
 msgid "Mover"
 msgstr "Переместить"
 
-#: crates/bigiris/src/gui.rs:4109
+#: crates/bigiris/src/gui.rs:4138
 msgid "Não foi possível mover para a lixeira"
 msgstr "Не удалось переместить в корзину"
 
-#: crates/bigiris/src/gui.rs:4171
+#: crates/bigiris/src/gui.rs:4200
 msgid "Navegação"
 msgstr "Навигация"
 
-#: crates/bigiris/src/gui.rs:4173
+#: crates/bigiris/src/gui.rs:4202
 msgid "Anterior / próximo"
 msgstr "Предыдущий / следующий"
 
-#: crates/bigiris/src/gui.rs:4174
+#: crates/bigiris/src/gui.rs:4203
 msgid "Primeiro / último"
 msgstr "Первый / последний"
 
-#: crates/bigiris/src/gui.rs:4175
+#: crates/bigiris/src/gui.rs:4204
 msgid "Slideshow (auto-avanço)"
 msgstr "Слайд-шоу"
 
-#: crates/bigiris/src/gui.rs:4181
+#: crates/bigiris/src/gui.rs:4210
 msgid "Aproximar / afastar"
 msgstr "Увеличение / уменьшение"
 
-#: crates/bigiris/src/gui.rs:4184
+#: crates/bigiris/src/gui.rs:4213
 msgid "Zoom contínuo"
 msgstr "Плавное масштабирование"
 
-#: crates/bigiris/src/gui.rs:4188
+#: crates/bigiris/src/gui.rs:4217
 msgid "Janela"
 msgstr "Окно"
 
-#: crates/bigiris/src/gui.rs:4190
+#: crates/bigiris/src/gui.rs:4219
 msgid "Tela cheia"
 msgstr "Полноэкранный режим"
 
-#: crates/bigiris/src/gui.rs:4191
+#: crates/bigiris/src/gui.rs:4220
 msgid "Modo teatro"
 msgstr "Режим кинотеатра"
 
-#: crates/bigiris/src/gui.rs:4192
+#: crates/bigiris/src/gui.rs:4221
 msgid "Fita de miniaturas"
 msgstr "Миниатюры"
 
-#: crates/bigiris/src/gui.rs:4193
+#: crates/bigiris/src/gui.rs:4222
 msgid "Histograma RGB"
 msgstr "Гистограмма RGB"
 
-#: crates/bigiris/src/gui.rs:4194
+#: crates/bigiris/src/gui.rs:4223
 msgid "Fixar barras visíveis"
 msgstr "Не скрывать панели"
 
-#: crates/bigiris/src/gui.rs:4195
+#: crates/bigiris/src/gui.rs:4224
 msgid "Sair da tela cheia ou fechar"
 msgstr "Выйти из полноэкранного режима или закрыть"
 
-#: crates/bigiris/src/gui.rs:4199
+#: crates/bigiris/src/gui.rs:4228
 msgid "Edição"
 msgstr "Редактирование"
 
-#: crates/bigiris/src/gui.rs:4203
+#: crates/bigiris/src/gui.rs:4232
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:326
 msgid "Girar à direita"
 msgstr "Повернуть вправо"
 
-#: crates/bigiris/src/gui.rs:4204
+#: crates/bigiris/src/gui.rs:4233
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:325
 msgid "Girar à esquerda"
 msgstr "Повернуть влево"
 
-#: crates/bigiris/src/gui.rs:4205
+#: crates/bigiris/src/gui.rs:4234
 msgid "Recortar…"
 msgstr "Обрезать…"
 
-#: crates/bigiris/src/gui.rs:4206
+#: crates/bigiris/src/gui.rs:4235
 msgid "Recorte: mover a seleção"
 msgstr "Кадрирование: переместить выделение"
 
-#: crates/bigiris/src/gui.rs:4209
+#: crates/bigiris/src/gui.rs:4238
 msgid "Recorte: redimensionar a seleção"
 msgstr "Кадрирование: изменить размер выделения"
 
-#: crates/bigiris/src/gui.rs:4211
+#: crates/bigiris/src/gui.rs:4240
 msgid "Remover fundo (IA)…"
 msgstr "Удалить фон (ИИ)…"
 
-#: crates/bigiris/src/gui.rs:4212
+#: crates/bigiris/src/gui.rs:4241
 #: crates/bigimage-integrations/src/action.rs:518
 msgid "Aumentar resolução…"
 msgstr "Увеличить разрешение…"
 
-#: crates/bigiris/src/gui.rs:4214
+#: crates/bigiris/src/gui.rs:4243
 msgid "Painel de edição"
 msgstr "Панель редактирования"
 
-#: crates/bigiris/src/gui.rs:4215
+#: crates/bigiris/src/gui.rs:4244
 msgid "Ver original (segure)"
 msgstr "Показать оригинал (удерживайте)"
 
-#: crates/bigiris/src/gui.rs:4219
+#: crates/bigiris/src/gui.rs:4248
 #: crates/bigiris/src/gui/dialogs/properties.rs:120
 msgid "Arquivo"
 msgstr "Файл"
 
-#: crates/bigiris/src/gui.rs:4224
+#: crates/bigiris/src/gui.rs:4253
 msgid "Imprimir"
 msgstr "Печать"
 
-#: crates/bigiris/src/gui.rs:4225
+#: crates/bigiris/src/gui.rs:4254
 #: crates/bigiris/src/gui/dialogs/properties.rs:38
 #: crates/bigiris/src/gui/dialogs/properties.rs:80
 msgid "Propriedades"
 msgstr "Свойства"
 
-#: crates/bigiris/src/gui.rs:4230
+#: crates/bigiris/src/gui.rs:4259
 msgid "Ajuda"
 msgstr "Справка"
 
-#: crates/bigiris/src/gui.rs:4231
+#: crates/bigiris/src/gui.rs:4260
 msgid "Este diálogo"
 msgstr "Это окно"
 
-#: crates/bigiris/src/gui.rs:4231
+#: crates/bigiris/src/gui.rs:4260
 msgid "Sobre"
 msgstr "О приложении"
 
-#: crates/bigiris/src/gui.rs:4241
+#: crates/bigiris/src/gui.rs:4270
 msgid "Roda do mouse"
 msgstr "Колесо мыши"
 
-#: crates/bigiris/src/gui.rs:4269
+#: crates/bigiris/src/gui.rs:4298
 msgid "Atalhos de teclado"
 msgstr "Комбинации клавиш"
 
-#: crates/bigiris/src/gui.rs:4295
+#: crates/bigiris/src/gui.rs:4324
 msgid ""
 "Visualizador e conversor de imagens para Linux. Rápido, acessível por "
 "teclado e integrado ao gerenciador de arquivos."
@@ -542,23 +548,23 @@ msgstr ""
 "Просмотрщик и конвертер изображений для Linux. Быстрый, доступный с "
 "клавиатуры и интегрированный с файловым менеджером."
 
-#: crates/bigiris/src/gui.rs:4328
+#: crates/bigiris/src/gui.rs:4357
 msgid "Abra suas imagens"
 msgstr "Откройте свои изображения"
 
-#: crates/bigiris/src/gui.rs:4333
+#: crates/bigiris/src/gui.rs:4362
 msgid "Arraste imagens para cá ou cole arquivos com Ctrl+V."
 msgstr "Перетащите изображения сюда или вставьте файлы с помощью Ctrl+V."
 
-#: crates/bigiris/src/gui.rs:4376
+#: crates/bigiris/src/gui.rs:4405
 msgid "Selecionar pasta com imagens"
 msgstr "Выберите папку с изображениями"
 
-#: crates/bigiris/src/gui.rs:4396
+#: crates/bigiris/src/gui.rs:4425
 msgid "Selecionar imagens"
 msgstr "Выбрать изображения"
 
-#: crates/bigiris/src/gui.rs:4443
+#: crates/bigiris/src/gui.rs:4472
 msgid "{current} de {total}"
 msgstr "{current} из {total}"
 
@@ -589,7 +595,7 @@ msgstr ""
 msgid "O processamento terminou inesperadamente. Tente novamente."
 msgstr "Обработка неожиданно завершилась. Попробуйте ещё раз."
 
-#: crates/bigiris/src/gui/batch_runner.rs:319 crates/bigiris/src/main.rs:1703
+#: crates/bigiris/src/gui/batch_runner.rs:319 crates/bigiris/src/main.rs:1721
 msgid "um worker terminou inesperadamente"
 msgstr "рабочий процесс неожиданно завершился"
 
@@ -2350,81 +2356,85 @@ msgstr ""
 "Переименуйте входные файлы, обработайте их по отдельности или используйте "
 "политику increment."
 
-#: crates/bigiris/src/main.rs:1226
+#: crates/bigiris/src/main.rs:1230
 msgid "substituiu a saída de outra entrada: {path}"
 msgstr "заменён выходной файл другого входного файла: {path}"
 
-#: crates/bigiris/src/main.rs:1256
+#: crates/bigiris/src/main.rs:1265
+msgid "o perfil de cor está corrompido; as cores foram tratadas como sRGB"
+msgstr "цветовой профиль повреждён; цвета обработаны как sRGB"
+
+#: crates/bigiris/src/main.rs:1270
 msgid "já existe: {path}"
 msgstr "уже существует: {path}"
 
-#: crates/bigiris/src/main.rs:1262
+#: crates/bigiris/src/main.rs:1276
 msgid ""
 "{operation}: {written} gravado(s), {skipped} ignorado(s), {failed} falha(s)"
 msgstr ""
 "{operation}: записано: {written}, пропущено: {skipped}, ошибок: {failed}"
 
-#: crates/bigiris/src/main.rs:1355
+#: crates/bigiris/src/main.rs:1369
 msgid "{model} não está instalado ({path} não existe). Instale com: {command}"
 msgstr ""
 "{model} не установлен ({path} не существует). Установите командой: {command}"
 
-#: crates/bigiris/src/main.rs:1364
+#: crates/bigiris/src/main.rs:1378
 msgid "não foi possível ler os pesos de {model} em {path}: {error}"
 msgstr "не удалось прочитать веса {model} из {path}: {error}"
 
-#: crates/bigiris/src/main.rs:1397
+#: crates/bigiris/src/main.rs:1411
 msgid "fator inválido: {factor}. Use 2, 3 ou 4."
 msgstr "неверный коэффициент: {factor}. Используйте 2, 3 или 4."
 
-#: crates/bigiris/src/main.rs:1414
+#: crates/bigiris/src/main.rs:1428
 msgid "Real-ESRGAN indisponível; usando Lanczos3. Para usar IA: {command}"
 msgstr ""
 "Real-ESRGAN недоступен; используется Lanczos3. Чтобы использовать ИИ: "
 "{command}"
 
-#: crates/bigiris/src/main.rs:1474
+#: crates/bigiris/src/main.rs:1488
 msgid "máscara {path}: {error}"
 msgstr "маска {path}: {error}"
 
-#: crates/bigiris/src/main.rs:1486
+#: crates/bigiris/src/main.rs:1500
 msgid "não marca nenhuma área (pinte de branco o que deve ser apagado)"
 msgstr "не отмечает ни одной области (закрасьте белым то, что нужно стереть)"
 
-#: crates/bigiris/src/main.rs:1522
+#: crates/bigiris/src/main.rs:1536
 msgid "{count} quadro(s)"
 msgstr "кадров: {count}"
 
-#: crates/bigiris/src/main.rs:1565
+#: crates/bigiris/src/main.rs:1579
 msgid "não foi possível ler {path}: {error}"
 msgstr "не удалось прочитать {path}: {error}"
 
-#: crates/bigiris/src/main.rs:1571
+#: crates/bigiris/src/main.rs:1585
 msgid "perfil TOML inválido: {error}"
 msgstr "неверный профиль TOML: {error}"
 
-#: crates/bigiris/src/main.rs:1574
+#: crates/bigiris/src/main.rs:1588
 msgid "quality deve estar entre 1 e 100"
 msgstr "значение quality должно быть от 1 до 100"
 
-#: crates/bigiris/src/main.rs:1577
+#: crates/bigiris/src/main.rs:1591
 msgid "formato do perfil inválido: {error}"
 msgstr "неверный формат в профиле: {error}"
 
-#: crates/bigiris/src/main.rs:1589
+#: crates/bigiris/src/main.rs:1603
 msgid "overwrite inválido: {value}; use skip, replace ou increment"
 msgstr ""
 "неверное значение overwrite: {value}; используйте skip, replace или increment"
 
-#: crates/bigiris/src/main.rs:1597
+#: crates/bigiris/src/main.rs:1611
 msgid "não foi possível criar {path}: {error}"
 msgstr "не удалось создать {path}: {error}"
 
-#: crates/bigiris/src/main.rs:1620
+#: crates/bigiris/src/main.rs:1634
 msgid "nenhuma imagem encontrada para o lote"
 msgstr "не найдено ни одного изображения для пакетной обработки"
 
-#: crates/bigiris/src/main.rs:1728
+#: crates/bigiris/src/main.rs:1746
 msgid ""
 "LibreOffice (`soffice`) não encontrado no PATH. Instale `libreoffice-fresh` "
 "(recomendado) ou `libreoffice-still` (ex.: `sudo pacman -S libreoffice-"
@@ -2434,83 +2444,83 @@ msgstr ""
 "(рекомендуется) или `libreoffice-still` (напр.: `sudo pacman -S libreoffice-"
 "fresh`)."
 
-#: crates/bigiris/src/main.rs:1780
+#: crates/bigiris/src/main.rs:1798
 msgid "não é um arquivo regular"
 msgstr "не является обычным файлом"
 
-#: crates/bigiris/src/main.rs:1783
+#: crates/bigiris/src/main.rs:1801
 msgid "nome de arquivo inválido"
 msgstr "недопустимое имя файла"
 
-#: crates/bigiris/src/main.rs:1804
+#: crates/bigiris/src/main.rs:1822
 msgid "falha ao invocar soffice: {error}"
 msgstr "не удалось запустить soffice: {error}"
 
-#: crates/bigiris/src/main.rs:1815
+#: crates/bigiris/src/main.rs:1833
 msgid "soffice excedeu o limite de {seconds} s"
 msgstr "soffice превысил лимит в {seconds} с"
 
-#: crates/bigiris/src/main.rs:1828
+#: crates/bigiris/src/main.rs:1846
 msgid "soffice não gerou o PDF ({status})"
 msgstr "soffice не создал PDF ({status})"
 
-#: crates/bigiris/src/main.rs:1871
+#: crates/bigiris/src/main.rs:1889
 msgid "muitos arquivos com o mesmo nome: {path}"
 msgstr "слишком много файлов с одинаковым именем: {path}"
 
-#: crates/bigiris/src/main.rs:1914
+#: crates/bigiris/src/main.rs:1932
 msgid "a instalação falhou: {error}"
 msgstr "установка не удалась: {error}"
 
-#: crates/bigiris/src/main.rs:1920
+#: crates/bigiris/src/main.rs:1938
 msgid "instalado"
 msgstr "установлено"
 
-#: crates/bigiris/src/main.rs:1921
+#: crates/bigiris/src/main.rs:1939
 msgid "instalado no total: {files} arquivo(s) em {managers} gerenciador(es)"
 msgstr "всего установлено файлов: {files}, файловых менеджеров: {managers}"
 
-#: crates/bigiris/src/main.rs:1937
+#: crates/bigiris/src/main.rs:1955
 msgid "a remoção falhou: {error}"
 msgstr "удаление не удалось: {error}"
 
-#: crates/bigiris/src/main.rs:1941
+#: crates/bigiris/src/main.rs:1959
 msgid "removido"
 msgstr "удалено"
 
-#: crates/bigiris/src/main.rs:1942
+#: crates/bigiris/src/main.rs:1960
 msgid "removido no total: {files} arquivo(s) em {managers} gerenciador(es)"
 msgstr "всего удалено файлов: {files}, файловых менеджеров: {managers}"
 
-#: crates/bigiris/src/main.rs:1965
+#: crates/bigiris/src/main.rs:1983
 msgid "FALHA"
 msgstr "ОШИБКА"
 
-#: crates/bigiris/src/main.rs:1970
+#: crates/bigiris/src/main.rs:1988
 msgid "fornecido pelo pacote"
 msgstr "предоставлено пакетом"
 
-#: crates/bigiris/src/main.rs:1973
+#: crates/bigiris/src/main.rs:1991
 msgid "sem alterações"
 msgstr "без изменений"
 
-#: crates/bigiris/src/main.rs:1975
+#: crates/bigiris/src/main.rs:1993
 msgid "ignorado"
 msgstr "пропущено"
 
-#: crates/bigiris/src/main.rs:1981
+#: crates/bigiris/src/main.rs:1999
 msgid "detectado"
 msgstr "обнаружен"
 
-#: crates/bigiris/src/main.rs:1981
+#: crates/bigiris/src/main.rs:1999
 msgid "ausente no PATH"
 msgstr "нет в PATH"
 
-#: crates/bigiris/src/main.rs:1983
+#: crates/bigiris/src/main.rs:2001
 msgid "{count} arquivo(s)"
 msgstr "файлов: {count}"
 
-#: crates/bigiris/src/main.rs:2010
+#: crates/bigiris/src/main.rs:2028
 msgid ""
 "aviso: build atual sem feature `gui`. Diálogo '{dialog}' ignorado (recompile "
 "com --features gui)."
@@ -2518,7 +2528,7 @@ msgstr ""
 "предупреждение: текущая сборка без feature `gui`. Диалог «{dialog}» пропущен "
 "(пересоберите с --features gui)."
 
-#: crates/bigiris/src/main.rs:2017
+#: crates/bigiris/src/main.rs:2035
 msgid ""
 "aviso: build atual sem feature `gui`. Visualizador indisponível (recompile "
 "com --features gui)."
@@ -2526,7 +2536,7 @@ msgstr ""
 "предупреждение: текущая сборка без feature `gui`. Просмотрщик недоступен "
 "(пересоберите с --features gui)."
 
-#: crates/bigiris/src/main.rs:2022
+#: crates/bigiris/src/main.rs:2040
 msgid ""
 "aviso: build atual sem feature `gui`. Visualizador indisponível; arquivos "
 "recebidos:"

@@ -288,8 +288,9 @@ struct Loaded<M> {
     path: PathBuf,
 }
 
-/// Lazily loaded, reused model of one kind. Runs of the same model wait
-/// for each other; the engines use every thread they were given anyway.
+/// Lazily loaded, reused model of one kind. Runs of every model wait for
+/// each other (see `RUN`); the engines use every thread they were given
+/// anyway.
 pub(crate) struct Slot<M> {
     #[cfg(feature = "native")]
     loaded: std::sync::Mutex<Option<Loaded<M>>>,
@@ -310,6 +311,12 @@ pub(crate) struct Budget {
     /// Everything one run allocates (network and image buffers).
     pub run: u64,
 }
+
+/// Held by [`Slot::run`] across admission, load and work, so runs of
+/// different models never pass the same free memory at once. Lock order:
+/// `RUN`, then a slot's `loaded`, then its `device`.
+#[cfg(feature = "native")]
+static RUN: std::sync::Mutex<()> = std::sync::Mutex::new(());
 
 fn lock<T>(mutex: &std::sync::Mutex<T>) -> std::sync::MutexGuard<'_, T> {
     mutex.lock().unwrap_or_else(std::sync::PoisonError::into_inner)
@@ -357,6 +364,7 @@ impl<M: NativeModel> Slot<M> {
         mut work: impl FnMut(&mut M, Progress<'_>) -> Result<R, AiError>,
     ) -> Result<R, AiError> {
         let path = info.ready_path()?;
+        let _running = lock(&RUN);
         let mut loaded = lock(&self.loaded);
         if loaded.as_ref().is_some_and(|l| l.path != path) {
             *loaded = None;

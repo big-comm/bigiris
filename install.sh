@@ -25,7 +25,7 @@
 
 set -euo pipefail
 
-# ── Project location (works from any cwd and with spaces in the path) ──
+# Project location (works from any cwd and with spaces in the path)
 SRC="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PREFIX="${PREFIX:-$HOME/.local}"
 BUILD=1
@@ -50,7 +50,7 @@ ok()   { printf '\033[1;32m✓ %s\033[0m\n' "$*"; }
 warn() { printf '\033[1;33m! %s\033[0m\n' "$*" >&2; }
 die()  { printf '\033[1;31m✗ %s\033[0m\n' "$*" >&2; exit 1; }
 
-# ── Uninstall ─────────────────────────────────────────────────────────────────
+# Uninstall
 if [ "$UNINSTALL" -eq 1 ]; then
     SHARE="$PREFIX/share"
     if [ -x "$PREFIX/bin/bigiris" ]; then
@@ -89,7 +89,7 @@ if [ "$UNINSTALL" -eq 1 ]; then
     exit 0
 fi
 
-# ── Prerequisites ─────────────────────────────────────────────────────────────
+# Prerequisites
 say "Checking dependencies"
 command -v bwrap >/dev/null || die "bubblewrap is missing: install the bubblewrap package"
 command -v prlimit >/dev/null || die "prlimit is missing: install the util-linux package"
@@ -128,7 +128,7 @@ else
 fi
 ok "Dependency check finished"
 
-# ── Build ─────────────────────────────────────────────────────────────────────
+# Build
 # The target directory is not necessarily `$SRC/target`: only asking cargo
 # honors config.toml, CARGO_TARGET_DIR and the default without restating the rule.
 TARGET_DIR=""
@@ -155,7 +155,7 @@ if ! ldd "$BIN" 2>/dev/null | grep -qi gtk-4; then
     die "The binary is NOT linked against GTK4 (headless build). Rebuild with --features \"gui ai\"."
 fi
 
-# ── Binary ────────────────────────────────────────────────────────────────────
+# Binary
 say "Installing the binary into $PREFIX/bin"
 install -Dm755 "$BIN" "$PREFIX/bin/bigiris"
 ok "bigiris → $PREFIX/bin/bigiris"
@@ -208,7 +208,7 @@ if [ "$BIN_ONLY" -eq 0 ]; then
     fi
 fi
 
-# ── Final check ───────────────────────────────────────────────────────────────
+# Final check
 say "Self-test"
 "$PREFIX/bin/bigiris" --self-test
 

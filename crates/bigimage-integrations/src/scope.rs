@@ -153,7 +153,7 @@ impl ScopePaths {
         self.data.join("applications")
     }
 
-    /// `~/.local/share/icons/hicolor/scalable/apps/` — scalable app icons.
+    /// `~/.local/share/icons/hicolor/scalable/apps/`: scalable app icons.
     pub fn app_icon_dir(&self) -> PathBuf {
         self.data.join("icons/hicolor/scalable/apps")
     }

@@ -15,11 +15,8 @@ POT="data/po/bigiris.pot"
 POTFILES="data/po/POTFILES.in"
 LINGUAS="data/po/LINGUAS"
 
-# `--language=C` reads Rust literals because the `gettext("…")` call syntax
-# is the same; its warnings about apostrophes in comments are expected.
-# The C scanner skips lines starting with `#` (preprocessor directives), which
-# would drop `#[arg(help = gettext("…"))]`, so it reads a copy with `#[` turned
-# into ` [`, keeping file names and line numbers.
+# The C scanner reads Rust's `gettext("…")` calls but skips `#` lines as
+# preprocessor directives, so it scans copies with `#[` turned into ` [`.
 scan=$(mktemp -d)
 trap 'rm -rf "$scan"' EXIT
 mapfile -t rust_sources < <(grep -v '^\s*#' "$POTFILES" | grep -v '^\s*$' | grep '\.rs$')

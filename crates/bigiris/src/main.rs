@@ -347,6 +347,36 @@ impl ExtentSizeArgs {
     }
 }
 
+/// Encoder settings shared by the commands that write a re-encoded image.
+#[derive(Args, Debug, Clone)]
+struct EncodeArgs {
+    #[arg(
+        long,
+        value_name = "MODE",
+        default_value = "balanced",
+        value_parser = parse_target,
+        help = gettext("Visual quality to aim for: maximum, balanced or smallest (also max, small). Each format looks for the smallest file that keeps this quality (SSIMULACRA2 85 / 80 / 70)")
+    )]
+    target: QualityTarget,
+    #[arg(
+        long,
+        value_parser = clap::value_parser!(u8).range(1..=100),
+        help = gettext("Fixed quality 1..100 for JPEG/WebP/AVIF, without searching (ignores --target). In WebP, 100 writes losslessly")
+    )]
+    quality: Option<u8>,
+    #[arg(long, help = gettext("Accepted for compatibility: JPEG is always progressive"))]
+    progressive: bool,
+    #[arg(long, help = gettext("Slower compression and smaller files, with no extra loss: PNG and AVIF"))]
+    optimize: bool,
+}
+
+impl EncodeArgs {
+    fn options(self) -> EncodeOptions {
+        let Self { target, quality, progressive, optimize } = self;
+        EncodeOptions { quality, progressive, optimize, target, ..EncodeOptions::default() }
+    }
+}
+
 #[derive(Subcommand, Debug)]
 enum Command {
     #[command(about = gettext("Convert files (headless)"))]
@@ -356,24 +386,8 @@ enum Command {
             help = gettext("Target format: png, jpg, webp, avif, tiff, bmp, gif, ico, pnm/ppm/pgm/pbm, tga, qoi, hdr, exr")
         )]
         to: String,
-        #[arg(
-            long,
-            value_name = "MODE",
-            default_value = "balanced",
-            value_parser = parse_target,
-            help = gettext("Visual quality to aim for: maximum, balanced or smallest (also max, small). Each format looks for the smallest file that keeps this quality (SSIMULACRA2 85 / 80 / 70)")
-        )]
-        target: QualityTarget,
-        #[arg(
-            long,
-            value_parser = clap::value_parser!(u8).range(1..=100),
-            help = gettext("Fixed quality 1..100 for JPEG/WebP/AVIF, without searching (ignores --target). In WebP, 100 writes losslessly")
-        )]
-        quality: Option<u8>,
-        #[arg(long, help = gettext("Accepted for compatibility: JPEG is always progressive"))]
-        progressive: bool,
-        #[arg(long, help = gettext("Slower compression and smaller files, with no extra loss: PNG and AVIF"))]
-        optimize: bool,
+        #[command(flatten)]
+        encode: EncodeArgs,
         #[arg(
             long = "overwrite",
             value_enum,
@@ -397,24 +411,8 @@ enum Command {
         filter: FilterArg,
         #[arg(long, help = gettext("Target format (optional; keeps the original format if omitted)"))]
         to: Option<String>,
-        #[arg(
-            long,
-            value_name = "MODE",
-            default_value = "balanced",
-            value_parser = parse_target,
-            help = gettext("Visual quality to aim for: maximum, balanced or smallest (also max, small)")
-        )]
-        target: QualityTarget,
-        #[arg(
-            long,
-            value_parser = clap::value_parser!(u8).range(1..=100),
-            help = gettext("Fixed quality 1..100 for JPEG/WebP/AVIF, without searching (ignores --target)")
-        )]
-        quality: Option<u8>,
-        #[arg(long, help = gettext("Accepted for compatibility: JPEG is always progressive"))]
-        progressive: bool,
-        #[arg(long, help = gettext("Slower compression and smaller files, with no extra loss: PNG and AVIF"))]
-        optimize: bool,
+        #[command(flatten)]
+        encode: EncodeArgs,
         #[arg(
             long = "overwrite",
             value_enum,
@@ -741,43 +739,17 @@ fn main() -> color_eyre::Result<()> {
     }
 
     let result = match cli.command {
-        Some(Command::Convert { to, target, quality, progressive, optimize, overwrite, files }) => {
-            let opts = EncodeOptions {
-                quality,
-                progressive,
-                optimize,
-                target,
-                ..EncodeOptions::default()
-            };
-            run_convert(&to, opts, overwrite.into(), &files)
+        Some(Command::Convert { to, encode, overwrite, files }) => {
+            run_convert(&to, encode.options(), overwrite.into(), &files)
         }
-        Some(Command::Resize {
-            mode,
-            filter,
-            to,
-            target,
-            quality,
-            progressive,
-            optimize,
-            overwrite,
-            files,
-        }) => {
-            let opts = EncodeOptions {
-                quality,
-                progressive,
-                optimize,
-                target,
-                ..EncodeOptions::default()
-            };
-            run_resize(
-                mode.into_mode(),
-                filter.into(),
-                to.as_deref(),
-                opts,
-                overwrite.into(),
-                &files,
-            )
-        }
+        Some(Command::Resize { mode, filter, to, encode, overwrite, files }) => run_resize(
+            mode.into_mode(),
+            filter.into(),
+            to.as_deref(),
+            encode.options(),
+            overwrite.into(),
+            &files,
+        ),
         Some(Command::Rotate { degrees, auto, to, overwrite, files }) => {
             let target = parse_optional_target(to.as_deref())?;
             let policy: OverwritePolicy = overwrite.into();
@@ -1718,7 +1690,7 @@ fn run_batch(profile: &std::path::Path, inputs: &[PathBuf]) -> color_eyre::Resul
     for worker in workers {
         if worker.join().is_err() {
             failed += 1;
-            eprintln!("erro: {}", gettext("a worker ended unexpectedly"));
+            eprintln!("err batch: {}", gettext("a worker ended unexpectedly"));
         }
     }
     println!("{}", tally("batch", ok, skipped, failed));

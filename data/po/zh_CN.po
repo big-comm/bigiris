@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: bigiris 0.1.0\n"
 "Report-Msgid-Bugs-To: https://github.com/big-comm/bigiris/issues\n"
-"POT-Creation-Date: 2026-11-25 18:25-0300\n"
+"POT-Creation-Date: 2026-11-25 18:32-0300\n"
 "PO-Revision-Date: 2026-10-14 01:37-0300\n"
 "Last-Translator: BigCommunity Team\n"
 "Language-Team: BigCommunity Team\n"
@@ -480,7 +480,7 @@ msgid "Remove background (AI)…"
 msgstr "移除背景（AI）…"
 
 #: crates/bigiris/src/gui.rs:4234
-#: crates/bigimage-integrations/src/action.rs:518
+#: crates/bigimage-integrations/src/action.rs:514
 msgid "Upscale…"
 msgstr "提高分辨率…"
 
@@ -578,7 +578,7 @@ msgstr ""
 msgid "Processing ended unexpectedly. Please try again."
 msgstr "处理意外终止。请重试。"
 
-#: crates/bigiris/src/gui/batch_runner.rs:319 crates/bigiris/src/main.rs:1721
+#: crates/bigiris/src/gui/batch_runner.rs:319 crates/bigiris/src/main.rs:1693
 msgid "a worker ended unexpectedly"
 msgstr "一个工作进程意外终止"
 
@@ -725,7 +725,7 @@ msgstr "编码器速度"
 msgid "higher = faster, slightly lower palette quality · default 10"
 msgstr "越大越快，调色板质量略差 · 默认 10"
 
-#: crates/bigiris/src/gui/dialogs/animate.rs:95 crates/bigiris/src/main.rs:612
+#: crates/bigiris/src/gui/dialogs/animate.rs:95 crates/bigiris/src/main.rs:610
 msgid "Output file (.gif)"
 msgstr "输出文件（.gif）"
 
@@ -1753,7 +1753,7 @@ msgid "90° (clockwise)"
 msgstr "90°（顺时针）"
 
 #: crates/bigiris/src/gui/dialogs/rotate.rs:31
-#: crates/bigimage-integrations/src/action.rs:260
+#: crates/bigimage-integrations/src/action.rs:259
 msgid "180°"
 msgstr "180°"
 
@@ -1955,19 +1955,7 @@ msgid ""
 "image in that ratio"
 msgstr "目标比例（W:H）。画布仅按需扩展，使图像符合该比例"
 
-#: crates/bigiris/src/main.rs:352
-msgid "Convert files (headless)"
-msgstr "转换文件（无界面）"
-
-#: crates/bigiris/src/main.rs:356
-msgid ""
-"Target format: png, jpg, webp, avif, tiff, bmp, gif, ico, pnm/ppm/pgm/pbm, "
-"tga, qoi, hdr, exr"
-msgstr ""
-"目标格式：png, jpg, webp, avif, tiff, bmp, gif, ico, pnm/ppm/pgm/pbm, tga, "
-"qoi, hdr, exr"
-
-#: crates/bigiris/src/main.rs:364
+#: crates/bigiris/src/main.rs:358
 msgid ""
 "Visual quality to aim for: maximum, balanced or smallest (also max, small). "
 "Each format looks for the smallest file that keeps this quality (SSIMULACRA2 "
@@ -1976,7 +1964,7 @@ msgstr ""
 "目标视觉质量：maximum、balanced 或 smallest（也可用 max、small）。每种格式都"
 "会寻找能保持该质量的最小文件（SSIMULACRA2 85 / 80 / 70）"
 
-#: crates/bigiris/src/main.rs:370
+#: crates/bigiris/src/main.rs:364
 msgid ""
 "Fixed quality 1..100 for JPEG/WebP/AVIF, without searching (ignores --"
 "target). In WebP, 100 writes losslessly"
@@ -1984,24 +1972,36 @@ msgstr ""
 "JPEG/WebP/AVIF 的固定质量 1..100，不进行搜索（忽略 --target）。对于 WebP，"
 "100 表示无损保存"
 
-#: crates/bigiris/src/main.rs:373 crates/bigiris/src/main.rs:414
+#: crates/bigiris/src/main.rs:367
 msgid "Accepted for compatibility: JPEG is always progressive"
 msgstr "为兼容性而保留：JPEG 始终为渐进式"
 
-#: crates/bigiris/src/main.rs:375 crates/bigiris/src/main.rs:416
+#: crates/bigiris/src/main.rs:369
 msgid "Slower compression and smaller files, with no extra loss: PNG and AVIF"
 msgstr "压缩更慢但文件更小，不额外损失画质：PNG 和 AVIF"
 
-#: crates/bigiris/src/main.rs:381 crates/bigiris/src/main.rs:422
-#: crates/bigiris/src/main.rs:449
+#: crates/bigiris/src/main.rs:382
+msgid "Convert files (headless)"
+msgstr "转换文件（无界面）"
+
+#: crates/bigiris/src/main.rs:386
+msgid ""
+"Target format: png, jpg, webp, avif, tiff, bmp, gif, ico, pnm/ppm/pgm/pbm, "
+"tga, qoi, hdr, exr"
+msgstr ""
+"目标格式：png, jpg, webp, avif, tiff, bmp, gif, ico, pnm/ppm/pgm/pbm, tga, "
+"qoi, hdr, exr"
+
+#: crates/bigiris/src/main.rs:395 crates/bigiris/src/main.rs:420
+#: crates/bigiris/src/main.rs:447
 msgid "What to do when the output file already exists"
 msgstr "输出文件已存在时的策略"
 
-#: crates/bigiris/src/main.rs:384
+#: crates/bigiris/src/main.rs:398
 msgid "Input files"
 msgstr "输入文件"
 
-#: crates/bigiris/src/main.rs:387
+#: crates/bigiris/src/main.rs:401
 msgid ""
 "Resize files (headless). Exactly one mode among --max-edge / --percent / --"
 "exact / --fit is required"
@@ -2009,25 +2009,15 @@ msgstr ""
 "调整文件大小（无界面）。必须在 --max-edge / --percent / --exact / --fit 中恰"
 "好指定一种模式"
 
-#: crates/bigiris/src/main.rs:395
+#: crates/bigiris/src/main.rs:409
 msgid "Interpolation kernel (default: lanczos3)"
 msgstr "插值核（默认：lanczos3）"
 
-#: crates/bigiris/src/main.rs:398 crates/bigiris/src/main.rs:443
+#: crates/bigiris/src/main.rs:412 crates/bigiris/src/main.rs:441
 msgid "Target format (optional; keeps the original format if omitted)"
 msgstr "目标格式（可选；省略时保留原格式）"
 
-#: crates/bigiris/src/main.rs:405
-msgid ""
-"Visual quality to aim for: maximum, balanced or smallest (also max, small)"
-msgstr "目标视觉质量：maximum、balanced 或 smallest（也可用 max、small）"
-
-#: crates/bigiris/src/main.rs:411
-msgid ""
-"Fixed quality 1..100 for JPEG/WebP/AVIF, without searching (ignores --target)"
-msgstr "JPEG/WebP/AVIF 的固定质量 1..100，不进行搜索（忽略 --target）"
-
-#: crates/bigiris/src/main.rs:428
+#: crates/bigiris/src/main.rs:426
 msgid ""
 "Rotate files (headless). Right-angle rotations through a re-encode pipeline; "
 "`--auto` reads the EXIF Orientation tag and applies the right rotation"
@@ -2035,38 +2025,38 @@ msgstr ""
 "旋转文件（无界面）。90 度倍数的旋转通过重新编码流程完成；`--auto` 读取 EXIF "
 "Orientation 标签并应用正确的旋转"
 
-#: crates/bigiris/src/main.rs:434
+#: crates/bigiris/src/main.rs:432
 msgid "Rotation in degrees: 90 | 180 | 270"
 msgstr "旋转角度：90 | 180 | 270"
 
-#: crates/bigiris/src/main.rs:440
+#: crates/bigiris/src/main.rs:438
 msgid "Auto-orient from EXIF (Orientation tag)"
 msgstr "根据 EXIF（Orientation 标签）自动调整方向"
 
-#: crates/bigiris/src/main.rs:455
+#: crates/bigiris/src/main.rs:453
 msgid "Mirror files horizontally or vertically (headless)"
 msgstr "水平或垂直翻转文件（无界面）"
 
-#: crates/bigiris/src/main.rs:457
+#: crates/bigiris/src/main.rs:455
 msgid "Axis: horizontal | vertical"
 msgstr "方向：horizontal | vertical"
 
-#: crates/bigiris/src/main.rs:459 crates/bigiris/src/main.rs:473
-#: crates/bigiris/src/main.rs:497 crates/bigiris/src/main.rs:533
+#: crates/bigiris/src/main.rs:457 crates/bigiris/src/main.rs:471
+#: crates/bigiris/src/main.rs:495 crates/bigiris/src/main.rs:531
 msgid "Target format (optional)"
 msgstr "目标格式（可选）"
 
-#: crates/bigiris/src/main.rs:466
+#: crates/bigiris/src/main.rs:464
 msgid ""
 "Crop a rectangle from images (headless). Use --rect WxH+X+Y, ImageMagick "
 "style"
 msgstr "从图像中裁剪矩形区域（无界面）。使用 ImageMagick 风格的 --rect WxH+X+Y"
 
-#: crates/bigiris/src/main.rs:470
+#: crates/bigiris/src/main.rs:468
 msgid "Crop geometry in the WxH+X+Y format (e.g. 800x600+100+50)"
 msgstr "裁剪区域，格式为 WxH+X+Y（例如：800x600+100+50）"
 
-#: crates/bigiris/src/main.rs:480
+#: crates/bigiris/src/main.rs:478
 msgid ""
 "Extend the canvas around the image (letterbox). Exactly one mode among --"
 "size and --aspect is required. The canvas is filled with --bg and the "
@@ -2075,35 +2065,35 @@ msgstr ""
 "扩展图像周围的画布（补边）。必须在 --size 和 --aspect 中恰好指定一种模式。画"
 "布以 --bg 填充，原图像按 --gravity 放置"
 
-#: crates/bigiris/src/main.rs:487
+#: crates/bigiris/src/main.rs:485
 msgid "Background color in hexadecimal (#RRGGBB or #RRGGBBAA)"
 msgstr "十六进制背景颜色（#RRGGBB 或 #RRGGBBAA）"
 
-#: crates/bigiris/src/main.rs:494
+#: crates/bigiris/src/main.rs:492
 msgid "Position of the original image on the extended canvas"
 msgstr "原图像在扩展画布上的位置"
 
-#: crates/bigiris/src/main.rs:504
+#: crates/bigiris/src/main.rs:502
 msgid "Adjust color/tone (brightness, contrast, saturation, gamma)"
 msgstr "调整颜色/色调（亮度、对比度、饱和度、伽马）"
 
-#: crates/bigiris/src/main.rs:510
+#: crates/bigiris/src/main.rs:508
 msgid "Brightness -100..100 (0 = no change)"
 msgstr "亮度 -100..100（0 = 不变）"
 
-#: crates/bigiris/src/main.rs:517
+#: crates/bigiris/src/main.rs:515
 msgid "Contrast -100..100 (0 = no change)"
 msgstr "对比度 -100..100（0 = 不变）"
 
-#: crates/bigiris/src/main.rs:524
+#: crates/bigiris/src/main.rs:522
 msgid "Saturation -100..100 (-100 = gray, 0 = no change)"
 msgstr "饱和度 -100..100（-100 = 灰色，0 = 不变）"
 
-#: crates/bigiris/src/main.rs:530
+#: crates/bigiris/src/main.rs:528
 msgid "Gamma 0.1..10.0 (< 1 brightens midtones, > 1 darkens)"
 msgstr "伽马 0.1..10.0（< 1 提亮中间调，> 1 压暗）"
 
-#: crates/bigiris/src/main.rs:540
+#: crates/bigiris/src/main.rs:538
 msgid ""
 "Remove the background with local AI (BiRefNet-lite, birefnet-native "
 "package). Writes `<name>_nobg.png` (PNG with alpha) next to each image"
@@ -2111,15 +2101,15 @@ msgstr ""
 "使用本地 AI 移除背景（BiRefNet-lite，birefnet-native 软件包）。在每张图像旁保"
 "存 `<文件名>_nobg.png`（带 Alpha 通道的 PNG）"
 
-#: crates/bigiris/src/main.rs:546
+#: crates/bigiris/src/main.rs:544
 msgid "Segmentation model"
 msgstr "分割模型"
 
-#: crates/bigiris/src/main.rs:553
+#: crates/bigiris/src/main.rs:551
 msgid "What to do when `<name>_nobg.png` already exists"
 msgstr "`<文件名>_nobg.png` 已存在时的策略"
 
-#: crates/bigiris/src/main.rs:559
+#: crates/bigiris/src/main.rs:557
 msgid ""
 "Increase resolution by 2, 3 or 4. With the realesrgan-native package it uses "
 "AI (Real-ESRGAN); without it, Lanczos3. Writes `<name>_<pct>pct.<ext>`"
@@ -2127,11 +2117,11 @@ msgstr ""
 "将分辨率提高 2、3 或 4 倍。安装了 realesrgan-native 软件包时使用 AI（Real-"
 "ESRGAN），否则使用 Lanczos3。保存为 `<文件名>_<pct>pct.<ext>`"
 
-#: crates/bigiris/src/main.rs:561
+#: crates/bigiris/src/main.rs:559
 msgid "Integer factor (2, 3 or 4)"
 msgstr "整数倍数（2、3 或 4）"
 
-#: crates/bigiris/src/main.rs:567
+#: crates/bigiris/src/main.rs:565
 msgid ""
 "Engine: auto (Real-ESRGAN if installed, otherwise Lanczos3), realesrgan "
 "(fails if missing) or lanczos"
@@ -2139,12 +2129,12 @@ msgstr ""
 "引擎：auto（已安装则用 Real-ESRGAN，否则用 Lanczos3）、realesrgan（未安装则失"
 "败）或 lanczos"
 
-#: crates/bigiris/src/main.rs:574 crates/bigiris/src/main.rs:586
-#: crates/bigiris/src/main.rs:604 crates/bigiris/src/main.rs:636
+#: crates/bigiris/src/main.rs:572 crates/bigiris/src/main.rs:584
+#: crates/bigiris/src/main.rs:602 crates/bigiris/src/main.rs:634
 msgid "Overwrite policy for the output file"
 msgstr "输出文件的覆盖策略"
 
-#: crates/bigiris/src/main.rs:580
+#: crates/bigiris/src/main.rs:578
 msgid ""
 "Remove noise and compression artifacts with local AI (SCUNet, scunet-native "
 "package). Writes `<name>_denoised.<ext>`"
@@ -2152,7 +2142,7 @@ msgstr ""
 "使用本地 AI 去除噪点和压缩伪影（SCUNet，scunet-native 软件包）。保存为 `<文件"
 "名>_denoised.<ext>`"
 
-#: crates/bigiris/src/main.rs:592
+#: crates/bigiris/src/main.rs:590
 msgid ""
 "Erase objects: fills the area marked in the mask with local AI (LaMa, lama-"
 "native package). Writes `<name>_inpaint.<ext>`"
@@ -2160,53 +2150,53 @@ msgstr ""
 "擦除对象：使用本地 AI 填充蒙版中标记的区域（LaMa，lama-native 软件包）。保存"
 "为 `<文件名>_inpaint.<ext>`"
 
-#: crates/bigiris/src/main.rs:597
+#: crates/bigiris/src/main.rs:595
 msgid ""
 "Mask the same size as the image: white = fill, black = keep (transparent "
 "areas are kept)"
 msgstr "与图像尺寸相同的蒙版：白色 = 填充，黑色 = 保留（透明区域会被保留）"
 
-#: crates/bigiris/src/main.rs:610
+#: crates/bigiris/src/main.rs:608
 msgid "Create an animated GIF from a sequence of images (headless)"
 msgstr "从图像序列创建 GIF 动画（无界面）"
 
-#: crates/bigiris/src/main.rs:617
+#: crates/bigiris/src/main.rs:615
 msgid "Delay between frames in milliseconds (100 ≈ 10 fps)"
 msgstr "帧间隔，单位为毫秒（100 ≈ 10 fps）"
 
-#: crates/bigiris/src/main.rs:623
+#: crates/bigiris/src/main.rs:621
 msgid "Number of repetitions: 0 = infinite (default), 1+ = fixed"
 msgstr "循环次数：0 = 无限（默认），1 及以上 = 固定次数"
 
-#: crates/bigiris/src/main.rs:629
+#: crates/bigiris/src/main.rs:627
 msgid "Encoder speed 1..30 (higher = faster, worse palette)"
 msgstr "编码器速度 1..30（越大越快，调色板越差）"
 
-#: crates/bigiris/src/main.rs:639
+#: crates/bigiris/src/main.rs:637
 msgid "Frames in order (at least 1)"
 msgstr "按顺序排列的帧（至少 1 帧）"
 
-#: crates/bigiris/src/main.rs:642
+#: crates/bigiris/src/main.rs:640
 msgid "Process files or folders in parallel from a TOML profile"
 msgstr "根据 TOML 配置文件并行处理文件或文件夹"
 
-#: crates/bigiris/src/main.rs:644
+#: crates/bigiris/src/main.rs:642
 msgid "Profile file (.toml)"
 msgstr ".toml 配置文件"
 
-#: crates/bigiris/src/main.rs:649
+#: crates/bigiris/src/main.rs:647
 msgid "Install file manager integrations"
 msgstr "安装文件管理器集成"
 
-#: crates/bigiris/src/main.rs:651
+#: crates/bigiris/src/main.rs:649
 msgid "Install in ~/.local/share (default)"
 msgstr "安装到 ~/.local/share（默认）"
 
-#: crates/bigiris/src/main.rs:655
+#: crates/bigiris/src/main.rs:653
 msgid "Install in /usr/share (requires root; usually done by the package)"
 msgstr "安装到 /usr/share（需要 root；通常由软件包完成）"
 
-#: crates/bigiris/src/main.rs:663
+#: crates/bigiris/src/main.rs:661
 msgid ""
 "DESTDIR prefix for packaging (e.g. $pkgdir in the PKGBUILD). Only makes "
 "sense together with --system"
@@ -2214,11 +2204,11 @@ msgstr ""
 "用于打包的 DESTDIR 前缀（例如 PKGBUILD 中的 $pkgdir）。仅在与 --system 一起使"
 "用时有意义"
 
-#: crates/bigiris/src/main.rs:667
+#: crates/bigiris/src/main.rs:665
 msgid "Remove previously installed integrations"
 msgstr "移除先前安装的集成"
 
-#: crates/bigiris/src/main.rs:669
+#: crates/bigiris/src/main.rs:667
 msgid ""
 "Convert documents (ODT, DOCX, TXT, MD, RTF, XLSX, PPTX, etc.) to PDF with "
 "headless LibreOffice. The output is written next to the source file"
@@ -2226,143 +2216,143 @@ msgstr ""
 "通过无界面的 LibreOffice 将文档（ODT、DOCX、TXT、MD、RTF、XLSX、PPTX 等）转换"
 "为 PDF。输出保存在源文件旁"
 
-#: crates/bigiris/src/main.rs:675
+#: crates/bigiris/src/main.rs:673
 msgid "What to do when `<name>.pdf` already exists"
 msgstr "`<文件名>.pdf` 已存在时的策略"
 
-#: crates/bigiris/src/main.rs:682
+#: crates/bigiris/src/main.rs:680
 msgid "Maximum time per document, in seconds"
 msgstr "每个文档的最长处理时间，单位为秒"
 
-#: crates/bigiris/src/main.rs:695
+#: crates/bigiris/src/main.rs:693
 msgid "BiRefNet-lite (the only model available)"
 msgstr "BiRefNet-lite（唯一可用的模型）"
 
-#: crates/bigiris/src/main.rs:703
+#: crates/bigiris/src/main.rs:701
 msgid ""
 "Real-ESRGAN when the realesrgan-native package is installed, otherwise "
 "Lanczos3"
 msgstr "已安装 realesrgan-native 软件包时使用 Real-ESRGAN，否则使用 Lanczos3"
 
-#: crates/bigiris/src/main.rs:708
+#: crates/bigiris/src/main.rs:706
 msgid "Real-ESRGAN AI (requires realesrgan-native)"
 msgstr "Real-ESRGAN AI（需要 realesrgan-native）"
 
-#: crates/bigiris/src/main.rs:711
+#: crates/bigiris/src/main.rs:709
 msgid "Lanczos3 resampling (no AI)"
 msgstr "Lanczos3 重采样（无 AI）"
 
-#: crates/bigiris/src/main.rs:793
+#: crates/bigiris/src/main.rs:765
 msgid "rotate: use --degrees 90|180|270 or --auto"
 msgstr "rotate：请使用 --degrees 90|180|270 或 --auto"
 
-#: crates/bigiris/src/main.rs:865
+#: crates/bigiris/src/main.rs:837
 msgid "BigIris: the operation failed"
 msgstr "BigIris：操作失败"
 
-#: crates/bigiris/src/main.rs:878
+#: crates/bigiris/src/main.rs:850
 msgid "Some files were not processed; see the details in the terminal."
 msgstr "部分文件未能处理；请在终端中查看详细信息。"
 
-#: crates/bigiris/src/main.rs:953
+#: crates/bigiris/src/main.rs:925
 msgid "invalid quality target: {value}; use maximum, balanced or smallest"
 msgstr "质量目标无效：{value}；请使用 maximum、balanced 或 smallest"
 
-#: crates/bigiris/src/main.rs:966 crates/bigiris/src/main.rs:1060
+#: crates/bigiris/src/main.rs:938 crates/bigiris/src/main.rs:1032
 msgid "invalid target format: {error}"
 msgstr "目标格式无效：{error}"
 
-#: crates/bigiris/src/main.rs:976
+#: crates/bigiris/src/main.rs:948
 msgid "the original was already smaller; copied without recompression"
 msgstr "原文件已更小；已直接复制，未重新压缩"
 
-#: crates/bigiris/src/main.rs:1034
+#: crates/bigiris/src/main.rs:1006
 msgid "invalid --bg: {error}"
 msgstr "--bg 无效：{error}"
 
-#: crates/bigiris/src/main.rs:1166
+#: crates/bigiris/src/main.rs:1138
 msgid "several inputs would write the same output file:"
 msgstr "多个输入会写入同一个输出文件："
 
-#: crates/bigiris/src/main.rs:1174
+#: crates/bigiris/src/main.rs:1146
 msgid "Rename the inputs, process them separately or use the increment policy."
 msgstr "请重命名输入、分别处理，或使用 increment 策略。"
 
-#: crates/bigiris/src/main.rs:1226
+#: crates/bigiris/src/main.rs:1198
 msgid "replaced the output of another input: {path}"
 msgstr "已替换另一个输入的输出：{path}"
 
-#: crates/bigiris/src/main.rs:1261
+#: crates/bigiris/src/main.rs:1233
 msgid "the color profile is corrupted; colors were treated as sRGB"
 msgstr "颜色配置文件已损坏；颜色已按 sRGB 处理"
 
-#: crates/bigiris/src/main.rs:1266
+#: crates/bigiris/src/main.rs:1238
 msgid "already exists: {path}"
 msgstr "已存在：{path}"
 
-#: crates/bigiris/src/main.rs:1272
+#: crates/bigiris/src/main.rs:1244
 msgid "{operation}: {written} written, {skipped} skipped, {failed} failed"
 msgstr ""
 "{operation}：已写入 {written} 个，已跳过 {skipped} 个，失败 {failed} 个"
 
-#: crates/bigiris/src/main.rs:1366
+#: crates/bigiris/src/main.rs:1338
 msgid ""
 "{model} is not installed ({path} does not exist). Install it with: {command}"
 msgstr "{model} 未安装（{path} 不存在）。请使用以下命令安装：{command}"
 
-#: crates/bigiris/src/main.rs:1376
+#: crates/bigiris/src/main.rs:1348
 msgid "could not read the {model} weights at {path}: {error}"
 msgstr "无法从 {path} 读取 {model} 的权重：{error}"
 
-#: crates/bigiris/src/main.rs:1409
+#: crates/bigiris/src/main.rs:1381
 msgid "invalid factor: {factor}. Use 2, 3 or 4."
 msgstr "倍数无效：{factor}。请使用 2、3 或 4。"
 
-#: crates/bigiris/src/main.rs:1425
+#: crates/bigiris/src/main.rs:1397
 msgid "Real-ESRGAN unavailable; using Lanczos3. To use AI: {command}"
 msgstr "Real-ESRGAN 不可用；改用 Lanczos3。如需使用 AI：{command}"
 
-#: crates/bigiris/src/main.rs:1484
+#: crates/bigiris/src/main.rs:1456
 msgid "mask {path}: {error}"
 msgstr "蒙版 {path}：{error}"
 
-#: crates/bigiris/src/main.rs:1495
+#: crates/bigiris/src/main.rs:1467
 msgid "marks no area (paint the areas to erase white)"
 msgstr "未标记任何区域（请将要擦除的部分涂成白色）"
 
-#: crates/bigiris/src/main.rs:1529
+#: crates/bigiris/src/main.rs:1501
 msgid "{count} frame(s)"
 msgstr "{count} 帧"
 
-#: crates/bigiris/src/main.rs:1568
+#: crates/bigiris/src/main.rs:1540
 msgid "could not read {path}: {error}"
 msgstr "无法读取 {path}：{error}"
 
-#: crates/bigiris/src/main.rs:1599
+#: crates/bigiris/src/main.rs:1571
 msgid "invalid TOML profile: {error}"
 msgstr "TOML 配置文件无效：{error}"
 
-#: crates/bigiris/src/main.rs:1602
+#: crates/bigiris/src/main.rs:1574
 msgid "quality must be between 1 and 100"
 msgstr "quality 必须介于 1 和 100 之间"
 
-#: crates/bigiris/src/main.rs:1605
+#: crates/bigiris/src/main.rs:1577
 msgid "invalid profile format: {error}"
 msgstr "配置文件中的格式无效：{error}"
 
-#: crates/bigiris/src/main.rs:1617
+#: crates/bigiris/src/main.rs:1589
 msgid "invalid overwrite: {value}; use skip, replace or increment"
 msgstr "overwrite 无效：{value}；请使用 skip、replace 或 increment"
 
-#: crates/bigiris/src/main.rs:1625
+#: crates/bigiris/src/main.rs:1597
 msgid "could not create {path}: {error}"
 msgstr "无法创建 {path}：{error}"
 
-#: crates/bigiris/src/main.rs:1634
+#: crates/bigiris/src/main.rs:1606
 msgid "no images found for the batch"
 msgstr "未找到可批量处理的图像"
 
-#: crates/bigiris/src/main.rs:1743
+#: crates/bigiris/src/main.rs:1715
 msgid ""
 "LibreOffice (`soffice`) not found in PATH. Install `libreoffice-fresh` "
 "(recommended) or `libreoffice-still` (e.g. `sudo pacman -S libreoffice-"
@@ -2371,83 +2361,83 @@ msgstr ""
 "在 PATH 中找不到 LibreOffice（`soffice`）。请安装 `libreoffice-fresh`（推荐）"
 "或 `libreoffice-still`（例如：`sudo pacman -S libreoffice-fresh`）。"
 
-#: crates/bigiris/src/main.rs:1795
+#: crates/bigiris/src/main.rs:1767
 msgid "not a regular file"
 msgstr "不是普通文件"
 
-#: crates/bigiris/src/main.rs:1798
+#: crates/bigiris/src/main.rs:1770
 msgid "invalid file name"
 msgstr "文件名无效"
 
-#: crates/bigiris/src/main.rs:1819
+#: crates/bigiris/src/main.rs:1791
 msgid "could not run soffice: {error}"
 msgstr "调用 soffice 失败：{error}"
 
-#: crates/bigiris/src/main.rs:1830
+#: crates/bigiris/src/main.rs:1802
 msgid "soffice exceeded the {seconds} s limit"
 msgstr "soffice 超出了 {seconds} 秒的时间限制"
 
-#: crates/bigiris/src/main.rs:1843
+#: crates/bigiris/src/main.rs:1815
 msgid "soffice did not produce the PDF ({status})"
 msgstr "soffice 未生成 PDF（{status}）"
 
-#: crates/bigiris/src/main.rs:1886
+#: crates/bigiris/src/main.rs:1858
 msgid "too many files with the same name: {path}"
 msgstr "同名文件过多：{path}"
 
-#: crates/bigiris/src/main.rs:1928
+#: crates/bigiris/src/main.rs:1900
 msgid "installation failed: {error}"
 msgstr "安装失败：{error}"
 
-#: crates/bigiris/src/main.rs:1934
+#: crates/bigiris/src/main.rs:1906
 msgid "installed"
 msgstr "已安装"
 
-#: crates/bigiris/src/main.rs:1935
+#: crates/bigiris/src/main.rs:1907
 msgid "installed in total: {files} file(s) in {managers} file manager(s)"
 msgstr "共安装：{managers} 个文件管理器中的 {files} 个文件"
 
-#: crates/bigiris/src/main.rs:1951
+#: crates/bigiris/src/main.rs:1923
 msgid "removal failed: {error}"
 msgstr "移除失败：{error}"
 
-#: crates/bigiris/src/main.rs:1954
+#: crates/bigiris/src/main.rs:1926
 msgid "removed"
 msgstr "已移除"
 
-#: crates/bigiris/src/main.rs:1955
+#: crates/bigiris/src/main.rs:1927
 msgid "removed in total: {files} file(s) in {managers} file manager(s)"
 msgstr "共移除：{managers} 个文件管理器中的 {files} 个文件"
 
-#: crates/bigiris/src/main.rs:1978
+#: crates/bigiris/src/main.rs:1950
 msgid "FAILED"
 msgstr "失败"
 
-#: crates/bigiris/src/main.rs:1983
+#: crates/bigiris/src/main.rs:1955
 msgid "provided by the package"
 msgstr "由软件包提供"
 
-#: crates/bigiris/src/main.rs:1986
+#: crates/bigiris/src/main.rs:1958
 msgid "unchanged"
 msgstr "无变化"
 
-#: crates/bigiris/src/main.rs:1988
+#: crates/bigiris/src/main.rs:1960
 msgid "skipped"
 msgstr "已跳过"
 
-#: crates/bigiris/src/main.rs:1993
+#: crates/bigiris/src/main.rs:1965
 msgid "detected"
 msgstr "已检测到"
 
-#: crates/bigiris/src/main.rs:1993
+#: crates/bigiris/src/main.rs:1965
 msgid "not in PATH"
 msgstr "PATH 中不存在"
 
-#: crates/bigiris/src/main.rs:1995
+#: crates/bigiris/src/main.rs:1967
 msgid "{count} file(s)"
 msgstr "{count} 个文件"
 
-#: crates/bigiris/src/main.rs:2020
+#: crates/bigiris/src/main.rs:1992
 msgid ""
 "warning: this build lacks the `gui` feature. Dialog '{dialog}' ignored "
 "(rebuild with --features gui)."
@@ -2455,7 +2445,7 @@ msgstr ""
 "警告：当前构建未包含 `gui` 功能。已忽略对话框“{dialog}”（请使用 --features "
 "gui 重新编译）。"
 
-#: crates/bigiris/src/main.rs:2027
+#: crates/bigiris/src/main.rs:1999
 msgid ""
 "warning: this build lacks the `gui` feature. Viewer unavailable (rebuild "
 "with --features gui)."
@@ -2463,7 +2453,7 @@ msgstr ""
 "警告：当前构建未包含 `gui` 功能。查看器不可用（请使用 --features gui 重新编"
 "译）。"
 
-#: crates/bigiris/src/main.rs:2032
+#: crates/bigiris/src/main.rs:2004
 msgid ""
 "warning: this build lacks the `gui` feature. Viewer unavailable; files "
 "received:"
@@ -2501,155 +2491,155 @@ msgstr "处理此文件夹…"
 msgid "JPG"
 msgstr "JPG"
 
-#: crates/bigimage-integrations/src/action.rs:194
-#: crates/bigimage-integrations/src/action.rs:243
-#: crates/bigimage-integrations/src/action.rs:284
-#: crates/bigimage-integrations/src/action.rs:309
-#: crates/bigimage-integrations/src/action.rs:358
+#: crates/bigimage-integrations/src/action.rs:193
+#: crates/bigimage-integrations/src/action.rs:242
+#: crates/bigimage-integrations/src/action.rs:283
+#: crates/bigimage-integrations/src/action.rs:308
+#: crates/bigimage-integrations/src/action.rs:357
 msgid "More options…"
 msgstr "更多选项…"
 
-#: crates/bigimage-integrations/src/action.rs:203
+#: crates/bigimage-integrations/src/action.rs:202
 msgid "25%"
 msgstr "25%"
 
-#: crates/bigimage-integrations/src/action.rs:211
+#: crates/bigimage-integrations/src/action.rs:210
 msgid "50%"
 msgstr "50%"
 
-#: crates/bigimage-integrations/src/action.rs:219
+#: crates/bigimage-integrations/src/action.rs:218
 msgid "200%"
 msgstr "200%"
 
-#: crates/bigimage-integrations/src/action.rs:227
+#: crates/bigimage-integrations/src/action.rs:226
 msgid "HD (1920 px)"
 msgstr "高清（1920 像素）"
 
-#: crates/bigimage-integrations/src/action.rs:235
+#: crates/bigimage-integrations/src/action.rs:234
 msgid "4K (3840 px)"
 msgstr "4K（3840 像素）"
 
-#: crates/bigimage-integrations/src/action.rs:252
+#: crates/bigimage-integrations/src/action.rs:251
 msgid "90°"
 msgstr "90°"
 
-#: crates/bigimage-integrations/src/action.rs:268
+#: crates/bigimage-integrations/src/action.rs:267
 msgid "270°"
 msgstr "270°"
 
-#: crates/bigimage-integrations/src/action.rs:276
+#: crates/bigimage-integrations/src/action.rs:275
 msgid "Automatic (EXIF)"
 msgstr "自动（EXIF）"
 
-#: crates/bigimage-integrations/src/action.rs:293
+#: crates/bigimage-integrations/src/action.rs:292
 msgid "Horizontal"
 msgstr "水平"
 
-#: crates/bigimage-integrations/src/action.rs:301
+#: crates/bigimage-integrations/src/action.rs:300
 msgid "Vertical"
 msgstr "垂直"
 
-#: crates/bigimage-integrations/src/action.rs:318
+#: crates/bigimage-integrations/src/action.rs:317
 msgid "+ Brightness (+10)"
 msgstr "+ 亮度（+10）"
 
-#: crates/bigimage-integrations/src/action.rs:326
+#: crates/bigimage-integrations/src/action.rs:325
 msgid "− Brightness (-10)"
 msgstr "− 亮度（-10）"
 
-#: crates/bigimage-integrations/src/action.rs:334
+#: crates/bigimage-integrations/src/action.rs:333
 msgid "+ Contrast (+20)"
 msgstr "+ 对比度（+20）"
 
-#: crates/bigimage-integrations/src/action.rs:342
+#: crates/bigimage-integrations/src/action.rs:341
 msgid "Black and white"
 msgstr "黑白"
 
-#: crates/bigimage-integrations/src/action.rs:350
+#: crates/bigimage-integrations/src/action.rs:349
 msgid "Vivid colors (+40)"
 msgstr "鲜艳色彩（+40）"
 
-#: crates/bigimage-integrations/src/action.rs:370
+#: crates/bigimage-integrations/src/action.rs:367
 msgid "WhatsApp (1280 px · JPG q85)"
 msgstr "WhatsApp（1280 像素 · JPG q85）"
 
-#: crates/bigimage-integrations/src/action.rs:378
+#: crates/bigimage-integrations/src/action.rs:375
 msgid "Instagram (1080 px · JPG q90)"
 msgstr "Instagram（1080 像素 · JPG q90）"
 
-#: crates/bigimage-integrations/src/action.rs:386
+#: crates/bigimage-integrations/src/action.rs:383
 msgid "Facebook (2048 px · JPG q85)"
 msgstr "Facebook（2048 像素 · JPG q85）"
 
-#: crates/bigimage-integrations/src/action.rs:394
+#: crates/bigimage-integrations/src/action.rs:391
 msgid "Twitter · X (1200 px · JPG q85)"
 msgstr "Twitter · X（1200 像素 · JPG q85）"
 
-#: crates/bigimage-integrations/src/action.rs:402
+#: crates/bigimage-integrations/src/action.rs:399
 msgid "Telegram (2560 px · JPG q85)"
 msgstr "Telegram（2560 像素 · JPG q85）"
 
-#: crates/bigimage-integrations/src/action.rs:410
+#: crates/bigimage-integrations/src/action.rs:407
 msgid "Discord (2048 px · JPG q80)"
 msgstr "Discord（2048 像素 · JPG q80）"
 
-#: crates/bigimage-integrations/src/action.rs:418
+#: crates/bigimage-integrations/src/action.rs:415
 msgid "Optimize PNG (maximum compression)"
 msgstr "优化 PNG（最大压缩）"
 
-#: crates/bigimage-integrations/src/action.rs:431
+#: crates/bigimage-integrations/src/action.rs:427
 msgid "Letterbox YouTube post (1:1)"
 msgstr "补边：YouTube 帖子（1:1）"
 
-#: crates/bigimage-integrations/src/action.rs:439
+#: crates/bigimage-integrations/src/action.rs:435
 msgid "Letterbox Instagram feed (4:5)"
 msgstr "补边：Instagram 动态（4:5）"
 
-#: crates/bigimage-integrations/src/action.rs:447
+#: crates/bigimage-integrations/src/action.rs:443
 msgid "Letterbox Stories / Shorts (9:16)"
 msgstr "补边：Stories / Shorts（9:16）"
 
-#: crates/bigimage-integrations/src/action.rs:455
+#: crates/bigimage-integrations/src/action.rs:451
 msgid "Custom letterbox…"
 msgstr "自定义补边…"
 
-#: crates/bigimage-integrations/src/action.rs:464
+#: crates/bigimage-integrations/src/action.rs:460
 msgid "View metadata…"
 msgstr "查看元数据…"
 
-#: crates/bigimage-integrations/src/action.rs:472
+#: crates/bigimage-integrations/src/action.rs:468
 msgid "Remove all metadata (clean re-encode)"
 msgstr "移除全部元数据（重新编码）"
 
-#: crates/bigimage-integrations/src/action.rs:483
+#: crates/bigimage-integrations/src/action.rs:479
 msgid "Batch convert (Prisma)…"
 msgstr "批量转换（Prisma）…"
 
-#: crates/bigimage-integrations/src/action.rs:491
+#: crates/bigimage-integrations/src/action.rs:487
 msgid "Create animated GIF…"
 msgstr "创建 GIF 动画…"
 
-#: crates/bigimage-integrations/src/action.rs:499
+#: crates/bigimage-integrations/src/action.rs:495
 msgid "Compare 2 images…"
 msgstr "比较 2 张图像…"
 
-#: crates/bigimage-integrations/src/action.rs:508
+#: crates/bigimage-integrations/src/action.rs:504
 msgid "Remove background (BiRefNet)"
 msgstr "移除背景（BiRefNet）"
 
-#: crates/bigimage-integrations/src/action.rs:529
+#: crates/bigimage-integrations/src/action.rs:525
 msgid "Convert to PDF (LibreOffice)"
 msgstr "转换为 PDF（LibreOffice）"
 
-#: data/nautilus/bigiris-menu.py:125
+#: data/nautilus/bigiris-menu.py:115
 msgid "BigIris actions"
 msgstr "BigIris 操作"
 
-#: data/nautilus/bigiris-menu.py:150
+#: data/nautilus/bigiris-menu.py:140
 msgid "BigIris: Process this folder…"
 msgstr "BigIris：处理此文件夹…"
 
-#: data/nautilus/bigiris-menu.py:151
+#: data/nautilus/bigiris-menu.py:141
 msgid "Convert folder images with Prisma"
 msgstr "使用 Prisma 转换文件夹中的图像"
 

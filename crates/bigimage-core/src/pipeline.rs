@@ -514,11 +514,7 @@ pub(crate) fn encode_keeping_smaller(
     original: Option<&Path>,
 ) -> Result<(crate::ConvertOutcome, bool)> {
     use std::io::{Seek, Write};
-    let destination_bpp = match target {
-        Format::OpenExr => 16,
-        Format::Hdr => 12,
-        _ => img.color().bytes_per_pixel().max(4),
-    };
+    let destination_bpp = crate::convert::prepared_bytes_per_pixel(img.color(), target);
     check_dimensions(img.width(), img.height(), destination_bpp)?;
     let prepared = crate::convert::prepare_for_target(img, target);
     let mut temp = output_temp(&output, policy)?;

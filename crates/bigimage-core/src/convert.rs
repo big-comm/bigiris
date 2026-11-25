@@ -142,6 +142,36 @@ pub fn convert_file_report(
 /// format stores sRGB-encoded values, so crossing that boundary applies the
 /// sRGB transfer function (and its inverse) instead of a bare rescale, which
 /// would make linear images look far too dark and vice versa.
+/// Bytes per pixel of the buffer [`prepare_for_target`] makes from a `color`
+/// source, so a too-large result is refused before it is allocated.
+pub(crate) fn prepared_bytes_per_pixel(color: image::ColorType, target: Format) -> u8 {
+    use image::ColorType as C;
+    match target {
+        Format::OpenExr => 16,
+        Format::Hdr => 12,
+        Format::Ico | Format::WebP | Format::Gif | Format::Bmp | Format::Tga | Format::Qoi => 4,
+        Format::Jpeg => 3,
+        Format::Png => match color {
+            C::Rgb32F => 6,
+            C::Rgba32F => 8,
+            other => other.bytes_per_pixel(),
+        },
+        Format::Tiff => match color {
+            C::Rgb32F => 6,
+            C::Rgba32F | C::La16 => 8,
+            C::La8 => 4,
+            other => other.bytes_per_pixel(),
+        },
+        Format::Pnm => match color {
+            C::L8 | C::La8 => 1,
+            C::L16 | C::La16 => 2,
+            C::Rgb8 | C::Rgba8 => 3,
+            _ => 6,
+        },
+        Format::Avif => color.bytes_per_pixel(),
+    }
+}
+
 pub(crate) fn prepare_for_target(img: DynamicImage, target: Format) -> DynamicImage {
     let img = match target {
         Format::OpenExr | Format::Hdr => sanitize_floats(linear_from_srgb(img)),
@@ -363,6 +393,38 @@ fn flatten_alpha_keep_depth(img: DynamicImage) -> DynamicImage {
             flatten_alpha_keep_depth(DynamicImage::ImageRgba16(other.into_rgba16()))
         }
         other => DynamicImage::ImageRgb16(other.into_rgb16()),
+    }
+}
+
+#[cfg(test)]
+mod prepared_size_tests {
+    use super::*;
+
+    #[test]
+    fn predicted_bytes_match_prepared_buffer() {
+        let sources = [
+            DynamicImage::new_luma8(1, 1),
+            DynamicImage::new_luma_a8(1, 1),
+            DynamicImage::new_rgb8(1, 1),
+            DynamicImage::new_rgba8(1, 1),
+            DynamicImage::new_luma16(1, 1),
+            DynamicImage::new_luma_a16(1, 1),
+            DynamicImage::new_rgb16(1, 1),
+            DynamicImage::new_rgba16(1, 1),
+            DynamicImage::new_rgb32f(1, 1),
+            DynamicImage::new_rgba32f(1, 1),
+        ];
+        for &target in Format::all() {
+            for source in &sources {
+                let color = source.color();
+                let prepared = prepare_for_target(source.clone(), target);
+                assert_eq!(
+                    prepared_bytes_per_pixel(color, target),
+                    prepared.color().bytes_per_pixel(),
+                    "{color:?} -> {target:?}"
+                );
+            }
+        }
     }
 }
 

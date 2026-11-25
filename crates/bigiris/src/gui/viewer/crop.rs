@@ -591,6 +591,9 @@ pub(in crate::gui) fn connect(state: &Rc<RefCell<ViewerState>>, window: &adw::Ap
 
 /// Start cropping the image on screen.
 pub(in crate::gui) fn enter(state: &Rc<RefCell<ViewerState>>) {
+    // A slider gesture still waiting to commit (Straighten) changes the
+    // natural size the selection is drawn against: land it first.
+    super::edit_panel::flush_commit(state);
     let message = {
         let s = state.borrow();
         if s.crop.is_some() || s.files.is_empty() || s.texture.is_none() {

@@ -126,6 +126,14 @@ struct ToolJob {
     cancel: Arc<AtomicBool>,
 }
 
+impl Drop for ToolJob {
+    /// Whoever drops the job (Cancel, navigation, the window closing) stops
+    /// the network at its next step.
+    fn drop(&mut self) {
+        self.cancel.store(true, Ordering::Release);
+    }
+}
+
 /// Progress a tool worker publishes for the panel.
 #[derive(Clone, Debug)]
 enum ToolProgress {
@@ -1468,6 +1476,18 @@ fn apply_resize(state: &Rc<RefCell<ViewerState>>) {
     if (w, h) == natural || w == 0 || h == 0 {
         return;
     }
+    // Refused here, where the size is chosen: the pipeline would keep the
+    // image as is and leave an edit that does nothing.
+    if !bigimage_core::within_limits(w, h, 4) {
+        let message = fill(
+            &gettext("{width}×{height} passa do limite de processamento"),
+            &[("width", &w.to_string()), ("height", &h.to_string())],
+        );
+        let osd = state.borrow().osd_label.clone();
+        osd.set_text(&message);
+        pulse_osd(state);
+        return;
+    }
     apply_edit(state, EditOp::Resize { w, h });
 }
 
@@ -1620,6 +1640,15 @@ fn show_tool_progress(bar: &gtk::ProgressBar, progress: &ToolProgress, op: EditO
             }));
         }
     }
+}
+
+/// Drop the working copies and the original made from the file's previous
+/// bytes, after a save replaced them.
+pub(in crate::gui) fn forget_file_pixels(s: &mut ViewerState) {
+    s.edit.base = None;
+    s.edit.base_job = None;
+    s.edit.original = None;
+    s.edit.original_job = None;
 }
 
 /// Give the panel back at once; a result that still arrives is dropped.

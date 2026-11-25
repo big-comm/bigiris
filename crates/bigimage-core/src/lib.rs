@@ -110,6 +110,12 @@ pub fn sniff_format(path: impl AsRef<std::path::Path>) -> Option<Format> {
     pipeline::sniff_format(path.as_ref())
 }
 
+/// Whether a `width × height` buffer of `bytes_per_pixel` fits the limits
+/// every decode and transform enforces.
+pub fn within_limits(width: u32, height: u32, bytes_per_pixel: u8) -> bool {
+    pipeline::check_dimensions(width, height, bytes_per_pixel).is_ok()
+}
+
 /// Read just the dimensions of an image, dispatching the decoder by content.
 /// See [`open_image`] for why this matters.
 pub fn image_dimensions(path: impl AsRef<std::path::Path>) -> image::ImageResult<(u32, u32)> {

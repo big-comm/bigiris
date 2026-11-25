@@ -1001,6 +1001,9 @@ fn build_window_preloaded(
                 pulse_osd(&state);
                 return glib::Propagation::Stop;
             }
+            // A slider gesture commits after a short delay; one still in
+            // flight is an unsaved edit too.
+            viewer::edit_panel::flush_commit(&state);
             if state.borrow().pending_ops.is_empty() {
                 return glib::Propagation::Proceed;
             }
@@ -2578,12 +2581,12 @@ fn redo_edit(state: &Rc<RefCell<ViewerState>>) {
 /// JPEG o re-encode perde qualidade e o user precisa ciência disso.
 fn save_edits(state: &Rc<RefCell<ViewerState>>) {
     viewer::edit_panel::flush_commit(state);
-    let (window, path, ops) = {
+    let (window, path) = {
         let s = state.borrow();
         if s.pending_ops.is_empty() || s.files.is_empty() || s.saving {
             return;
         }
-        (s.window().clone(), s.files[s.idx].clone(), s.pending_ops.clone())
+        (s.window().clone(), s.files[s.idx].clone())
     };
     // Known before asking for confirmation: no point in a dialog that can
     // only end in a failure.
@@ -2621,11 +2624,18 @@ fn save_edits(state: &Rc<RefCell<ViewerState>>) {
 
     let state = state.clone();
     alert.connect_response(Some("save"), move |_, _| {
-        {
+        // Read the edits now, not when the dialog opened: an undo or a
+        // navigation while it was up changes what is to be written.
+        let (ops, spinner) = {
             let mut s = state.borrow_mut();
+            let current = s.files.get(s.idx) == Some(&path);
+            if !current || s.pending_ops.is_empty() || s.saving {
+                return;
+            }
             s.saving = true;
-            s.loading_spinner.set_visible(true);
-        }
+            (s.pending_ops.clone(), s.loading_spinner.clone())
+        };
+        spinner.set_visible(true);
         sync_edit_actions(&state);
 
         let worker_path = path.clone();
@@ -2641,16 +2651,20 @@ fn save_edits(state: &Rc<RefCell<ViewerState>>) {
                 .await
                 .unwrap_or_else(|_| Err(SaveFailure::Other("save worker panicked".to_string())));
             let dropped = result.as_ref().ok().cloned().unwrap_or_default();
-            {
+            let spinner = {
                 let mut s = state.borrow_mut();
                 s.saving = false;
-                s.loading_spinner.set_visible(false);
                 if result.is_ok() {
                     s.pending_ops.clear();
                     s.redo_ops.clear();
                     s.loader.clear_cache();
+                    // The file on disk now holds the edits: working copies
+                    // and "Ver original" made from the old bytes are stale.
+                    viewer::edit_panel::forget_file_pixels(&mut s);
                 }
-            }
+                s.loading_spinner.clone()
+            };
+            spinner.set_visible(false);
             refresh_title(&state);
             sync_edit_actions(&state);
             match result {
@@ -2684,7 +2698,9 @@ fn save_edits(state: &Rc<RefCell<ViewerState>>) {
 fn adopt_saved_frame(state: &Rc<RefCell<ViewerState>>, path: &Path) {
     {
         let mut s = state.borrow_mut();
-        let current = s.files.get(s.idx).is_some_and(|p| p == path);
+        // A frame still on its way would cache the pre-edit texture under the
+        // saved file's new modification time.
+        let current = s.current_ready && s.files.get(s.idx).is_some_and(|p| p == path);
         if let (true, Some(texture)) = (current, s.texture.clone()) {
             s.shown_path = Some(path.to_path_buf());
             paint_current_thumb(&s, &texture);
@@ -2917,6 +2933,9 @@ fn update_display(state: &Rc<RefCell<ViewerState>>) {
     // guaranteed empty by the navigation guard, while a redo-only branch
     // (after undoing back to the original) must not leak into the next image.
     state.borrow_mut().redo_ops.clear();
+    // An AI tool still running belongs to the previous file: its result
+    // would be dropped, and it would keep the new file's edits locked.
+    viewer::edit_panel::cancel_tool(state);
     state.borrow().loader.clear_cache();
     sync_edit_actions(state);
     if !show_cached_frame(state, &path) {

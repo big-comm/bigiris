@@ -447,11 +447,11 @@ msgstr "Rogner…"
 
 #: crates/bigiris/src/gui.rs:4206
 msgid "Recorte: mover a seleção"
-msgstr "Recadrage : déplacer la sélection"
+msgstr "Recadrage : déplacer la sélection"
 
 #: crates/bigiris/src/gui.rs:4209
 msgid "Recorte: redimensionar a seleção"
-msgstr "Recadrage : redimensionner la sélection"
+msgstr "Recadrage : redimensionner la sélection"
 
 #: crates/bigiris/src/gui.rs:4211
 msgid "Remover fundo (IA)…"
@@ -748,7 +748,7 @@ msgstr "Création du GIF…"
 
 #: crates/bigiris/src/gui/dialogs/animate.rs:291
 msgid "Concluído: {file}"
-msgstr "Terminé : {file}"
+msgstr "Terminé : {file}"
 
 #: crates/bigiris/src/gui/dialogs/animate.rs:298
 msgid "O arquivo {file} passou a existir e foi mantido; nada foi gravado."

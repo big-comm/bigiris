@@ -801,7 +801,7 @@ msgstr "Использовать папку исходного файла"
 
 #: crates/bigiris/src/gui/dialogs/batch.rs:102
 msgid "Pronto"
-msgstr "Готово"
+msgstr "Готов к запуску"
 
 #: crates/bigiris/src/gui/dialogs/batch.rs:108
 msgid "Aguardando. Clique em Processar para iniciar."

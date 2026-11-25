@@ -41,7 +41,7 @@ msgstr "ביטול"
 
 #: crates/bigiris/src/gui.rs:924
 msgid "Recalculando a edição…"
-msgstr "מחשב מחדש את העריכה…"
+msgstr "חישוב מחדש של העריכה…"
 
 #: crates/bigiris/src/gui.rs:1072 crates/bigiris/src/gui.rs:3807
 #: crates/bigiris/src/gui/viewer/crop.rs:624

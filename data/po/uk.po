@@ -42,7 +42,7 @@ msgstr "Скасувати"
 
 #: crates/bigiris/src/gui.rs:924
 msgid "Recalculando a edição…"
-msgstr "Перерахунок редагування…"
+msgstr "Перерахунок змін…"
 
 #: crates/bigiris/src/gui.rs:1072 crates/bigiris/src/gui.rs:3807
 #: crates/bigiris/src/gui/viewer/crop.rs:624
@@ -800,7 +800,7 @@ msgstr "Використовувати теку файла-джерела"
 
 #: crates/bigiris/src/gui/dialogs/batch.rs:102
 msgid "Pronto"
-msgstr "Готово"
+msgstr "Готовий до запуску"
 
 #: crates/bigiris/src/gui/dialogs/batch.rs:108
 msgid "Aguardando. Clique em Processar para iniciar."

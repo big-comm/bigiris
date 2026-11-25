@@ -193,9 +193,26 @@ fn same_canonical_profile(a: &[u8], b: &[u8]) -> bool {
         && a[100..] == b[100..]
 }
 
+/// Creation date stamped into the generated profile: 2026-01-01 00:00:00,
+/// as six big-endian u16 (ICC dateTimeNumber).
+const PROFILE_DATE: [u8; 12] = [0x07, 0xEA, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0];
+
 /// A generated sRGB profile contains no source camera, GPS or author fields.
+/// moxcms stamps the current time and an MD5 profile ID over it, which made
+/// two saves of the same pixels differ byte for byte; the date is fixed and
+/// the ID left zero ("not computed", ICC.1 7.2.18).
 pub(crate) fn srgb_profile() -> ImageResult<Vec<u8>> {
-    ColorProfile::new_srgb().encode().map_err(error)
+    static PROFILE: std::sync::OnceLock<Vec<u8>> = std::sync::OnceLock::new();
+    if let Some(profile) = PROFILE.get() {
+        return Ok(profile.clone());
+    }
+    let mut icc = ColorProfile::new_srgb().encode().map_err(error)?;
+    if icc.len() < 128 {
+        return Err(error("perfil sRGB gerado sem cabeçalho"));
+    }
+    icc[24..36].copy_from_slice(&PROFILE_DATE);
+    icc[84..100].fill(0);
+    Ok(PROFILE.get_or_init(|| icc).clone())
 }
 
 #[cfg(test)]
@@ -214,6 +231,23 @@ mod tests {
         assert_ne!(&pixel[..3], &[40000, 20000, 10000]);
         assert_eq!(pixel[3], 12345);
     }
+    /// Saves embed this profile: a clock-dependent stamp made identical
+    /// saves differ, so it must not depend on when it was generated.
+    #[test]
+    fn generated_srgb_profile_is_stable_and_valid() {
+        let icc = srgb_profile().unwrap();
+        assert_eq!(&icc[24..36], &PROFILE_DATE);
+        assert!(icc[84..100].iter().all(|&b| b == 0));
+        assert_eq!(parse(&icc).unwrap().color_space, DataColorSpace::Rgb);
+        let mut image = DynamicImage::ImageRgb8(image::ImageBuffer::from_pixel(
+            1,
+            1,
+            image::Rgb([1, 128, 254]),
+        ));
+        normalize_srgb(&mut image, &icc).unwrap();
+        assert_eq!(image.as_rgb8().unwrap().get_pixel(0, 0).0, [1, 128, 254]);
+    }
+
     #[test]
     fn generated_srgb_preserves_exact_samples_across_creation_dates() {
         let mut icc = srgb_profile().unwrap();

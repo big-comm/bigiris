@@ -720,3 +720,46 @@ fn viewer_inline_crop() {
     window.destroy();
     settle(&context, 100);
 }
+
+/// A malformed embedded colour profile opens the photo, through the real
+/// sandboxed codec, and the viewer says the colours may be off.
+#[test]
+#[ignore = "requires a graphical display; run alone with GSETTINGS_BACKEND=memory"]
+fn viewer_broken_profile_notice() {
+    assert_eq!(
+        std::env::var("GSETTINGS_BACKEND").as_deref(),
+        Ok("memory"),
+        "synthetic GUI tests require GSETTINGS_BACKEND=memory"
+    );
+    crate::codec::configure_for_tests(None);
+    adw::init().expect("GTK display required");
+    let app = adw::Application::builder()
+        .application_id("com.biglinux.Iris.ProfileProbe")
+        .flags(gio::ApplicationFlags::NON_UNIQUE)
+        .build();
+    app.register(None::<&gio::Cancellable>).unwrap();
+    let context = glib::MainContext::default();
+    let dir = tempfile::tempdir().unwrap();
+    let broken = dir.path().join("broken-profile.png");
+    let mut bytes = Vec::new();
+    {
+        use image::ImageEncoder;
+        let mut encoder = image::codecs::png::PngEncoder::new(&mut bytes);
+        encoder.set_icc_profile(b"not an ICC profile".to_vec()).unwrap();
+        let pixels = image::RgbImage::from_pixel(40, 30, image::Rgb([10, 128, 250]));
+        encoder.write_image(pixels.as_raw(), 40, 30, image::ExtendedColorType::Rgb8).unwrap();
+    }
+    std::fs::write(&broken, bytes).unwrap();
+
+    let (window, witness) = build_window_tracked(&app, Rc::new(vec![broken]), 0);
+    window.present();
+    let state = witness.upgrade().unwrap();
+    wait(&context, "photo shown", &|| state.borrow().texture.is_some());
+    assert_eq!(texture_pixel(&state, 0, 0)[..3], [10, 128, 250]);
+    let notice =
+        gettext("O perfil de cor desta imagem está corrompido; as cores podem estar imprecisas");
+    wait(&context, "profile notice", &|| state.borrow().osd_label.text() == notice);
+
+    window.destroy();
+    settle(&context, 100);
+}

@@ -39,13 +39,13 @@ impl CropRect {
         }
         let x_end = self.x.checked_add(self.width).ok_or_else(|| {
             BigImageError::InvalidInput(format!(
-                "recorte estoura u32 em x: {} + {}",
+                "crop overflows u32 on x: {} + {}",
                 self.x, self.width
             ))
         })?;
         let y_end = self.y.checked_add(self.height).ok_or_else(|| {
             BigImageError::InvalidInput(format!(
-                "recorte estoura u32 em y: {} + {}",
+                "crop overflows u32 on y: {} + {}",
                 self.y, self.height
             ))
         })?;

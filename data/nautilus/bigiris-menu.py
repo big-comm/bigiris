@@ -1,17 +1,14 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # -*- coding: utf-8 -*-
 #
-# BigIris — extensao top-level do Nautilus.
-#
-# Requer o pacote `nautilus-python` instalado. Instalado sob:
-#   - /usr/share/nautilus-python/extensions/       (system-wide, via PKGBUILD)
-#   - ~/.local/share/nautilus-python/extensions/  (por usuario, via
+# BigIris: top-level Nautilus extension, loaded by `nautilus-python` from
+#   - /usr/share/nautilus-python/extensions/       (system-wide, the package)
+#   - ~/.local/share/nautilus-python/extensions/  (per user, through
 #     `bigiris install-integrations --user`)
+# Restart Nautilus after installing: `nautilus -q`.
 #
-# Depois de instalar, recarregue o Nautilus: `nautilus -q`.
-#
-# As acoes vem de crates/bigimage-integrations/src/action.rs: o instalador
-# substitui a linha `_ACTIONS = []` abaixo pela tabela gerada dali.
+# The installer replaces the `_ACTIONS = []` line below with the table built
+# from crates/bigimage-integrations/src/action.rs.
 
 import sys
 import gettext
@@ -21,11 +18,8 @@ _ = gettext.translation("bigiris", localedir=os.environ.get("BIGIRIS_LOCALE_DIR"
 
 import gi
 
-# Nautilus >= 43 expoe o namespace `Nautilus` sem typelib versionado no
-# gi.repository (via nautilus-python). `gi.require_version` pode falhar
-# silenciosamente nesse caso — so tentamos fixar se o typelib existir e
-# ignoramos qualquer outro cenario. O import subsequente continua
-# funcionando porque nautilus-python injeta o modulo diretamente.
+# Nautilus 43 and later may expose `Nautilus` without a versioned typelib,
+# so pinning is best effort: nautilus-python injects the module either way.
 for _nautilus_version in ("4.1", "4.0", "3.0"):
     try:
         gi.require_version("Nautilus", _nautilus_version)
@@ -36,7 +30,7 @@ for _nautilus_version in ("4.1", "4.0", "3.0"):
 from gi.repository import GObject, Nautilus  # noqa: E402
 import subprocess  # noqa: E402
 
-sys.stderr.write("BigIris: extensão Nautilus carregada\n")
+sys.stderr.write("BigIris: Nautilus extension loaded\n")
 
 
 _TOP_LABEL = "BigIris"
@@ -53,24 +47,20 @@ def _matches(mime, patterns):
 
 
 class BigIrisMenuProvider(GObject.GObject, Nautilus.MenuProvider):
-    """Provider que acrescenta o submenu 'BigIris ▸' ao clique direito."""
+    """Adds the 'BigIris ▸' submenu to the right-click menu."""
 
     def get_file_items(self, *args):
-        # Nunca deixe escapar exceção daqui: nautilus-python carrega
-        # todas as extensions no mesmo processo e uma exceção aqui pode
-        # matar o menu inteiro (inclusive de outras extensions). Logamos
-        # em stderr pra `journalctl --user -t nautilus` mostrar, e
-        # retornamos [] silenciosamente pro usuário não ver nada quebrado.
+        # nautilus-python runs every extension in one process, and an escaping
+        # exception can break the whole menu; log it for journalctl instead.
         try:
             return self._build_items(args)
         except Exception as exc:  # noqa: BLE001
-            sys.stderr.write(f"BigIris: erro em get_file_items: {exc!r}\n")
+            sys.stderr.write(f"BigIris: get_file_items failed: {exc!r}\n")
             return []
 
     def _build_items(self, args):
-        # Nautilus 3.x chama `get_file_items(window, files)`, Nautilus 4.x
-        # chama `get_file_items(files)`. Pegar sempre o ultimo argumento
-        # preserva compatibilidade com ambos.
+        # Nautilus 3 calls `get_file_items(window, files)` and Nautilus 4
+        # `get_file_items(files)`; the last argument is the files in both.
         files = args[-1] if args else []
         selected = self._local_files(files)
         folder_paths = [path for path, mime in selected if _matches(mime, _FOLDER_MIMES)]
@@ -160,7 +150,7 @@ class BigIrisMenuProvider(GObject.GObject, Nautilus.MenuProvider):
             paths = [path for path, mime in self._local_files([folder]) if _matches(mime, _FOLDER_MIMES)]
             return self._folder_items(paths)
         except Exception as exc:
-            sys.stderr.write(f"BigIris: erro em get_background_items: {exc!r}\n")
+            sys.stderr.write(f"BigIris: get_background_items failed: {exc!r}\n")
             return []
 
     def _run_action(self, menu_item, args, paths):
@@ -171,4 +161,4 @@ class BigIrisMenuProvider(GObject.GObject, Nautilus.MenuProvider):
                 start_new_session=True,
             )
         except Exception as exc:
-            sys.stderr.write(f"BigIris: falha ao invocar {_BINARY} {args}: {exc}\n")
+            sys.stderr.write(f"BigIris: could not start {_BINARY} {args}: {exc}\n")

@@ -38,12 +38,12 @@ with patch.dict(sys.modules, {"gi": gi, "gi.repository": repository}):
     spec.loader.exec_module(module)
 # The installer fills the table from action.rs; these rows have its shape.
 module._ACTIONS = [
-    ("view", None, None, None, "Visualizar em BigIris", [], "com.biglinux.Iris", ["image/*"]),
-    ("batch-folder", None, None, None, "Processar esta pasta…", ["--dialog=batch"],
+    ("view", None, None, None, "View in BigIris", [], "com.biglinux.Iris", ["image/*"]),
+    ("batch-folder", None, None, None, "Process this folder…", ["--dialog=batch"],
      "folder-pictures-symbolic", ["inode/directory"]),
-    ("convert-png", "convert", "Converter", "document-save-as-symbolic", "PNG",
+    ("convert-png", "convert", "Convert", "document-save-as-symbolic", "PNG",
      ["convert", "--to", "png", "--overwrite", "skip"], "image-x-generic-symbolic", ["image/*"]),
-    ("pdf-convert", "pdf", "PDF", "application-pdf-symbolic", "Converter para PDF (LibreOffice)",
+    ("pdf-convert", "pdf", "PDF", "application-pdf-symbolic", "Convert to PDF (LibreOffice)",
      ["to-pdf"], "application-pdf-symbolic", ["text/plain"]),
 ]
 
@@ -56,7 +56,7 @@ class NautilusContract(unittest.TestCase):
         self.provider = module.BigIrisMenuProvider()
 
     def test_both_nautilus_callback_signatures_work(self):
-        files = [file("image/png", "/tmp/imagem ç.png")]
+        files = [file("image/png", "/tmp/image ç.png")]
         self.assertEqual(len(self.provider.get_file_items(files)), 1)
         self.assertEqual(len(self.provider.get_file_items(object(), files)), 1)
 
@@ -78,7 +78,7 @@ class NautilusContract(unittest.TestCase):
         self.assertTrue(popen.call_args.kwargs["close_fds"])
 
     def test_folder_selection_and_background_dispatch_batch(self):
-        folder = file("inode/directory", "/tmp/fotos")
+        folder = file("inode/directory", "/tmp/photos")
         for items in (self.provider.get_file_items([folder]),
                       self.provider.get_background_items(folder),
                       self.provider.get_background_items(object(), folder)):
@@ -86,12 +86,12 @@ class NautilusContract(unittest.TestCase):
             callback, args = items[0].callback
             with patch.object(module.subprocess, "Popen") as popen:
                 callback(items[0], *args)
-            self.assertEqual(popen.call_args.args[0], ["bigiris", "--dialog=batch", "/tmp/fotos"])
+            self.assertEqual(popen.call_args.args[0], ["bigiris", "--dialog=batch", "/tmp/photos"])
         self.assertEqual(self.provider.get_background_items(file("inode/directory", None)), [])
 
     def test_localized_labels_keep_action_ids_and_argv_stable(self):
-        folder = file("inode/directory", "/tmp/fotos")
-        image = file("image/png", "/tmp/foto.png")
+        folder = file("inode/directory", "/tmp/photos")
+        image = file("image/png", "/tmp/photo.png")
         with patch.object(module, "_", side_effect=lambda text: "localized " + text):
             folder_item = self.provider.get_background_items(folder)[0]
             self.assertTrue(folder_item.options["label"].startswith("localized "))
@@ -108,7 +108,7 @@ class NautilusContract(unittest.TestCase):
             callback, args = folder_item.callback
             with patch.object(module.subprocess, "Popen") as popen:
                 callback(folder_item, *args)
-            self.assertEqual(popen.call_args.args[0], ["bigiris", "--dialog=batch", "/tmp/fotos"])
+            self.assertEqual(popen.call_args.args[0], ["bigiris", "--dialog=batch", "/tmp/photos"])
 
     def test_extension_errors_do_not_escape_to_file_manager(self):
         with patch.object(module.subprocess, "Popen", side_effect=FileNotFoundError):

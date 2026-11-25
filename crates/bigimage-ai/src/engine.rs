@@ -374,6 +374,7 @@ impl<M: NativeModel> Slot<M> {
                 tracing::warn!(model = info.name, %error, "GPU falhou; repetindo na CPU");
                 self.cpu_only.store(true, Ordering::Relaxed);
                 *loaded = None;
+                crate::memory::admit(info.name, budget.load + budget.run)?;
                 check(progress(Stage::Loading))?;
                 let mut cpu = Loaded { model: self.load(info, &path, true)?, path };
                 let result = work(&mut cpu.model, progress);

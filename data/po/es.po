@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: bigiris 0.1.0\n"
 "Report-Msgid-Bugs-To: https://github.com/big-comm/bigiris/issues\n"
-"POT-Creation-Date: 2026-11-16 21:59-0300\n"
+"POT-Creation-Date: 2026-11-25 14:23-0300\n"
 "PO-Revision-Date: 2026-10-14 01:35-0300\n"
 "Last-Translator: BigCommunity Team\n"
 "Language-Team: BigCommunity Team\n"
@@ -16,106 +16,126 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: crates/bigiris/src/gui.rs:710
+#: crates/bigiris/src/gui.rs:758
 msgid "BigIris"
 msgstr "BigIris"
 
-#: crates/bigiris/src/gui.rs:745 crates/bigiris/src/gui/previews.rs:240
+#: crates/bigiris/src/gui.rs:793 crates/bigiris/src/gui/previews.rs:257
 msgid "Não foi possível abrir a imagem"
 msgstr "No se pudo abrir la imagen"
 
-#: crates/bigiris/src/gui.rs:998 crates/bigiris/src/gui.rs:3593
-#: crates/bigiris/src/gui/viewer/crop.rs:600
+#: crates/bigiris/src/gui.rs:912 crates/bigiris/src/gui.rs:2789
+#: crates/bigiris/src/gui.rs:4086 crates/bigiris/src/gui/dialogs/animate.rs:184
+#: crates/bigiris/src/gui/dialogs/batch.rs:122
+#: crates/bigiris/src/gui/dialogs/batch.rs:255
+#: crates/bigiris/src/gui/dialogs/batch.rs:349
+#: crates/bigiris/src/gui/viewer/crop.rs:393
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:412
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:413
+#: crates/bigiris/src/gui/dialogs/mod.rs:251
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:219
+#: crates/bigiris/src/gui/dialogs/resize.rs:390
+#: crates/bigiris/src/gui/previews.rs:220
+msgid "Cancelar"
+msgstr "Cancelar"
+
+#: crates/bigiris/src/gui.rs:924
+msgid "Recalculando a edição…"
+msgstr "Recalculando la edición…"
+
+#: crates/bigiris/src/gui.rs:1072 crates/bigiris/src/gui.rs:3807
+#: crates/bigiris/src/gui/viewer/crop.rs:624
 msgid "Aguarde o salvamento terminar"
 msgstr "Espere a que termine el guardado"
 
-#: crates/bigiris/src/gui.rs:1009
+#: crates/bigiris/src/gui.rs:1086
 msgid "Descartar alterações?"
 msgstr "¿Descartar los cambios?"
 
-#: crates/bigiris/src/gui.rs:1010
+#: crates/bigiris/src/gui.rs:1087
 msgid "A imagem tem edições que ainda não foram salvas."
 msgstr "La imagen tiene cambios no guardados."
 
-#: crates/bigiris/src/gui.rs:1012
+#: crates/bigiris/src/gui.rs:1089
 msgid "Continuar editando"
 msgstr "Seguir editando"
 
-#: crates/bigiris/src/gui.rs:1013
+#: crates/bigiris/src/gui.rs:1090
 msgid "Descartar"
 msgstr "Descartar"
 
-#: crates/bigiris/src/gui.rs:1083
+#: crates/bigiris/src/gui.rs:1160
 msgid "Imagem anterior"
 msgstr "Imagen anterior"
 
-#: crates/bigiris/src/gui.rs:1084
+#: crates/bigiris/src/gui.rs:1161
 msgid "Próxima imagem"
 msgstr "Siguiente imagen"
 
-#: crates/bigiris/src/gui.rs:1100
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:292
+#: crates/bigiris/src/gui.rs:1177
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:305
 msgid "Editar"
 msgstr "Editar"
 
-#: crates/bigiris/src/gui.rs:1103
+#: crates/bigiris/src/gui.rs:1180
 msgid "Editar (E)"
 msgstr "Editar (E)"
 
-#: crates/bigiris/src/gui.rs:1110
+#: crates/bigiris/src/gui.rs:1187
 msgid "Propriedades da imagem (Ctrl+I)"
 msgstr "Propiedades de la imagen (Ctrl+I)"
 
-#: crates/bigiris/src/gui.rs:1116
+#: crates/bigiris/src/gui.rs:1193
 msgid "Tela cheia (F11)"
 msgstr "Pantalla completa (F11)"
 
-#: crates/bigiris/src/gui.rs:1125
+#: crates/bigiris/src/gui.rs:1202
 msgid "Afastar"
 msgstr "Reducir"
 
-#: crates/bigiris/src/gui.rs:1129 crates/bigiris/src/gui.rs:3952
+#: crates/bigiris/src/gui.rs:1206 crates/bigiris/src/gui.rs:4182
 msgid "Ajustar à janela"
 msgstr "Ajustar a la ventana"
 
-#: crates/bigiris/src/gui.rs:1130 crates/bigiris/src/gui.rs:3953
+#: crates/bigiris/src/gui.rs:1207 crates/bigiris/src/gui.rs:4183
 msgid "Tamanho real (100%)"
 msgstr "Tamaño real (100%)"
 
-#: crates/bigiris/src/gui.rs:1139 crates/bigiris/src/gui.rs:3949
+#: crates/bigiris/src/gui.rs:1216 crates/bigiris/src/gui.rs:4179
 msgid "Zoom"
 msgstr "Zoom"
 
-#: crates/bigiris/src/gui.rs:1143
+#: crates/bigiris/src/gui.rs:1220
 msgid "Aproximar"
 msgstr "Ampliar"
 
-#: crates/bigiris/src/gui.rs:2189
+#: crates/bigiris/src/gui.rs:2307
 msgid "Slideshow: pausado"
 msgstr "Presentación: en pausa"
 
-#: crates/bigiris/src/gui.rs:2217
+#: crates/bigiris/src/gui.rs:2335
 msgid "Slideshow: a cada {interval} s"
 msgstr "Presentación: cada {interval} s"
 
-#: crates/bigiris/src/gui.rs:2239
+#: crates/bigiris/src/gui.rs:2354
 msgid "Histograma ligado"
 msgstr "Histograma activado"
 
-#: crates/bigiris/src/gui.rs:2241
+#: crates/bigiris/src/gui.rs:2356
 msgid "Histograma desligado"
 msgstr "Histograma desactivado"
 
-#: crates/bigiris/src/gui.rs:2417 crates/bigiris/src/gui/dialogs/batch.rs:340
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:1632
+#: crates/bigiris/src/gui.rs:2479 crates/bigiris/src/gui.rs:2590
+#: crates/bigiris/src/gui/dialogs/batch.rs:341
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:1712
 msgid "Cancelado"
 msgstr "Cancelado"
 
-#: crates/bigiris/src/gui.rs:2418
+#: crates/bigiris/src/gui.rs:2591
 msgid "Falha na IA: {error}"
 msgstr "Error de la IA: {error}"
 
-#: crates/bigiris/src/gui.rs:2424
+#: crates/bigiris/src/gui.rs:2597
 msgid ""
 "Esta build não inclui IA. Recompile com `cargo build --features ai` (requer "
 "glslc, do pacote shaderc)."
@@ -123,15 +143,15 @@ msgstr ""
 "Esta compilación no incluye IA. Recompile con `cargo build --features ai` "
 "(requiere glslc, del paquete shaderc)."
 
-#: crates/bigiris/src/gui.rs:2430
+#: crates/bigiris/src/gui.rs:2603
 msgid "{model} não está instalado. Instale com: sudo pacman -S {package}"
 msgstr "{model} no está instalado. Instálelo con: sudo pacman -S {package}"
 
-#: crates/bigiris/src/gui.rs:2444
+#: crates/bigiris/src/gui.rs:2617
 msgid "Não foi possível ler {path}: {error}"
 msgstr "No se pudo leer {path}: {error}"
 
-#: crates/bigiris/src/gui.rs:2602
+#: crates/bigiris/src/gui.rs:2777
 msgid ""
 "O arquivo será sobrescrito. JPEG é recodificado a cada gravação; isso pode "
 "reduzir a qualidade."
@@ -139,11 +159,11 @@ msgstr ""
 "El archivo se sobrescribirá. JPEG se vuelve a codificar cada vez que se "
 "guarda; esto puede reducir la calidad."
 
-#: crates/bigiris/src/gui.rs:2604
+#: crates/bigiris/src/gui.rs:2779
 msgid "O arquivo será sobrescrito."
 msgstr "El archivo se sobrescribirá."
 
-#: crates/bigiris/src/gui.rs:2610
+#: crates/bigiris/src/gui.rs:2785
 msgid ""
 "Este formato não guarda todos os metadados da foto (data, câmera, perfil de "
 "cor); o que ele não suportar será removido ou convertido."
@@ -151,34 +171,21 @@ msgstr ""
 "Este formato no conserva todos los metadatos de la foto (fecha, cámara, "
 "perfil de color); lo que no admita se eliminará o se convertirá."
 
-#: crates/bigiris/src/gui.rs:2613
+#: crates/bigiris/src/gui.rs:2788
 msgid "Salvar alterações?"
 msgstr "¿Guardar los cambios?"
 
-#: crates/bigiris/src/gui.rs:2614 crates/bigiris/src/gui.rs:3857
-#: crates/bigiris/src/gui/dialogs/animate.rs:187
-#: crates/bigiris/src/gui/dialogs/batch.rs:122
-#: crates/bigiris/src/gui/dialogs/batch.rs:255
-#: crates/bigiris/src/gui/dialogs/batch.rs:348
-#: crates/bigiris/src/gui/viewer/crop.rs:373
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:396
-#: crates/bigiris/src/gui/dialogs/mod.rs:251
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:219
-#: crates/bigiris/src/gui/previews.rs:202
-msgid "Cancelar"
-msgstr "Cancelar"
-
-#: crates/bigiris/src/gui.rs:2615
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:408
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:410
+#: crates/bigiris/src/gui.rs:2790
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:425
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:427
 msgid "Salvar"
 msgstr "Guardar"
 
-#: crates/bigiris/src/gui.rs:2664
+#: crates/bigiris/src/gui.rs:2850
 msgid "Salvo"
 msgstr "Guardado"
 
-#: crates/bigiris/src/gui.rs:2743
+#: crates/bigiris/src/gui.rs:2931
 msgid ""
 "Este arquivo é animado, tem várias páginas ou não pôde ser verificado. Girar "
 "ou espelhar e salvar descartaria os outros quadros, então ele não foi "
@@ -188,7 +195,7 @@ msgstr ""
 "Girarlo o voltearlo y guardarlo descartaría los demás fotogramas, por lo que "
 "no se modificó."
 
-#: crates/bigiris/src/gui.rs:2744
+#: crates/bigiris/src/gui.rs:2932
 msgid ""
 "O BigIris não sabe gravar este formato. As alterações não podem ser salvas "
 "no próprio arquivo."
@@ -196,293 +203,305 @@ msgstr ""
 "BigIris no puede escribir este formato. Los cambios no se pueden guardar en "
 "el propio archivo."
 
-#: crates/bigiris/src/gui.rs:2745
+#: crates/bigiris/src/gui.rs:2933
 msgid "Sem permissão para alterar este arquivo ou a pasta dele."
 msgstr "Sin permiso para modificar este archivo o su carpeta."
 
-#: crates/bigiris/src/gui.rs:2747
+#: crates/bigiris/src/gui.rs:2935
 msgid "O arquivo não foi alterado. Detalhes: {detail}"
 msgstr "El archivo no se modificó. Detalles: {detail}"
 
-#: crates/bigiris/src/gui.rs:2759
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:1764
+#: crates/bigiris/src/gui.rs:2947
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:1846
 msgid "Não foi possível salvar"
 msgstr "No se pudo guardar"
 
-#: crates/bigiris/src/gui.rs:2762
+#: crates/bigiris/src/gui.rs:2950
 msgid "Manter alterações"
 msgstr "Conservar los cambios"
 
-#: crates/bigiris/src/gui.rs:2763
+#: crates/bigiris/src/gui.rs:2951
 msgid "Descartar alterações"
 msgstr "Descartar los cambios"
 
-#: crates/bigiris/src/gui.rs:2852
+#: crates/bigiris/src/gui.rs:3041
 msgid "o formato não guarda EXIF"
 msgstr "el formato no guarda EXIF"
 
-#: crates/bigiris/src/gui.rs:2853
+#: crates/bigiris/src/gui.rs:3042
 msgid "EXIF grande demais para JPEG"
 msgstr "EXIF demasiado grande para JPEG"
 
-#: crates/bigiris/src/gui.rs:2854
+#: crates/bigiris/src/gui.rs:3043
 msgid "EXIF inválido"
 msgstr "EXIF no válido"
 
-#: crates/bigiris/src/gui.rs:2857
+#: crates/bigiris/src/gui.rs:3046
 msgid "perfil de cor convertido para sRGB"
 msgstr "perfil de color convertido a sRGB"
 
-#: crates/bigiris/src/gui.rs:2858
+#: crates/bigiris/src/gui.rs:3047
 msgid "perfil de cor inválido ignorado"
 msgstr "perfil de color no válido ignorado"
 
-#: crates/bigiris/src/gui.rs:2859
+#: crates/bigiris/src/gui.rs:3048
 msgid "metadados não suportados"
 msgstr "metadatos no admitidos"
 
-#: crates/bigiris/src/gui.rs:2869
+#: crates/bigiris/src/gui.rs:3058
 msgid "Salvo. Alguns metadados não puderam ser mantidos: {list}"
 msgstr "Guardado. No se pudieron conservar algunos metadatos: {list}"
 
-#: crates/bigiris/src/gui.rs:3132
+#: crates/bigiris/src/gui.rs:3342
 msgid "Salve ou desfaça as alterações antes de navegar"
 msgstr "Guarde o deshaga los cambios antes de navegar"
 
-#: crates/bigiris/src/gui.rs:3215 crates/bigiris/src/gui.rs:4107
-#: crates/bigiris/src/gui.rs:5157 crates/bigiris/src/gui.rs:5292
+#: crates/bigiris/src/gui.rs:3431 crates/bigiris/src/gui.rs:4342
+#: crates/bigiris/src/gui.rs:5393 crates/bigiris/src/gui.rs:5528
 msgid "Abrir imagens…"
 msgstr "Abrir imágenes…"
 
-#: crates/bigiris/src/gui.rs:3216 crates/bigiris/src/gui.rs:3988
+#: crates/bigiris/src/gui.rs:3432 crates/bigiris/src/gui.rs:4223
 msgid "Colar arquivos de imagem"
 msgstr "Pegar archivos de imagen"
 
-#: crates/bigiris/src/gui.rs:3218 crates/bigiris/src/gui.rs:3987
+#: crates/bigiris/src/gui.rs:3434 crates/bigiris/src/gui.rs:4222
 msgid "Copiar imagem"
 msgstr "Copiar la imagen"
 
-#: crates/bigiris/src/gui.rs:3219
+#: crates/bigiris/src/gui.rs:3435
 msgid "Imprimir…"
 msgstr "Imprimir…"
 
-#: crates/bigiris/src/gui.rs:3221 crates/bigiris/src/gui.rs:4119
-#: crates/bigiris/src/gui.rs:5157
+#: crates/bigiris/src/gui.rs:3437 crates/bigiris/src/gui.rs:4354
+#: crates/bigiris/src/gui.rs:5393
 msgid "Processar uma pasta…"
 msgstr "Procesar una carpeta…"
 
-#: crates/bigiris/src/gui.rs:3227
+#: crates/bigiris/src/gui.rs:3443
 msgid "Editar imagem"
 msgstr "Editar la imagen"
 
-#: crates/bigiris/src/gui.rs:3228 crates/bigiris/src/gui.rs:3971
+#: crates/bigiris/src/gui.rs:3444 crates/bigiris/src/gui.rs:4201
 msgid "Desfazer"
 msgstr "Deshacer"
 
-#: crates/bigiris/src/gui.rs:3229 crates/bigiris/src/gui.rs:3972
+#: crates/bigiris/src/gui.rs:3445 crates/bigiris/src/gui.rs:4202
 msgid "Refazer"
 msgstr "Rehacer"
 
-#: crates/bigiris/src/gui.rs:3232 crates/bigiris/src/gui.rs:3978
+#: crates/bigiris/src/gui.rs:3448 crates/bigiris/src/gui.rs:4213
 msgid "Salvar alterações"
 msgstr "Guardar los cambios"
 
-#: crates/bigiris/src/gui.rs:3233 crates/bigiris/src/gui.rs:3991
+#: crates/bigiris/src/gui.rs:3449 crates/bigiris/src/gui.rs:4226
 msgid "Mover para a lixeira"
 msgstr "Mover a la papelera"
 
-#: crates/bigiris/src/gui.rs:3237
+#: crates/bigiris/src/gui.rs:3453
 msgid "Atalhos do teclado"
 msgstr "Atajos de teclado"
 
-#: crates/bigiris/src/gui.rs:3238
+#: crates/bigiris/src/gui.rs:3454
 msgid "Sobre o BigIris"
 msgstr "Acerca de BigIris"
 
-#: crates/bigiris/src/gui.rs:3243
+#: crates/bigiris/src/gui.rs:3459
 msgid "Menu principal"
 msgstr "Menú principal"
 
-#: crates/bigiris/src/gui.rs:3595
+#: crates/bigiris/src/gui.rs:3809
 msgid "Salve ou desfaça as alterações antes de usar esta ferramenta"
 msgstr "Guarde o deshaga los cambios antes de usar esta herramienta"
 
-#: crates/bigiris/src/gui.rs:3611 crates/bigiris/src/gui.rs:4165
-#: crates/bigiris/src/gui/dialogs/batch.rs:390
+#: crates/bigiris/src/gui.rs:3825 crates/bigiris/src/gui.rs:4399
+#: crates/bigiris/src/gui/dialogs/batch.rs:389
 #: crates/bigiris/src/gui/dialogs/remove_bg.rs:121
 msgid "Imagens"
 msgstr "Imágenes"
 
-#: crates/bigiris/src/gui.rs:3617 crates/bigiris/src/gui.rs:3986
+#: crates/bigiris/src/gui.rs:3831 crates/bigiris/src/gui.rs:4221
 msgid "Abrir imagens"
 msgstr "Abrir imágenes"
 
-#: crates/bigiris/src/gui.rs:3669 crates/bigiris/src/gui.rs:3709
+#: crates/bigiris/src/gui.rs:3873
+msgid "Aguarde a imagem terminar de carregar"
+msgstr "Espera a que la imagen termine de cargar"
+
+#: crates/bigiris/src/gui.rs:3898 crates/bigiris/src/gui.rs:3938
 msgid "Não foi possível preparar a página"
 msgstr "No se pudo preparar la página"
 
-#: crates/bigiris/src/gui.rs:3691
+#: crates/bigiris/src/gui.rs:3920
 msgid "O preparo da impressão falhou"
 msgstr "Falló la preparación de la impresión"
 
-#: crates/bigiris/src/gui.rs:3748
+#: crates/bigiris/src/gui.rs:3977
 msgid "Não foi possível imprimir"
 msgstr "No se pudo imprimir"
 
-#: crates/bigiris/src/gui.rs:3751 crates/bigiris/src/gui.rs:3883
+#: crates/bigiris/src/gui.rs:3980 crates/bigiris/src/gui.rs:4112
 #: crates/bigiris/src/gui/dialogs/animate.rs:53
-#: crates/bigiris/src/gui/dialogs/batch.rs:346
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:1765
+#: crates/bigiris/src/gui/dialogs/batch.rs:347
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:311
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:1847
 #: crates/bigiris/src/gui/dialogs/remove_bg.rs:102
 #: crates/bigiris/src/gui/dialogs/remove_bg.rs:339
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:381
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:386
 #: crates/bigiris/src/gui/transfers.rs:99
 msgid "Fechar"
 msgstr "Cerrar"
 
-#: crates/bigiris/src/gui.rs:3849
+#: crates/bigiris/src/gui.rs:4078
 msgid "Mover para a lixeira?"
 msgstr "¿Mover a la papelera?"
 
-#: crates/bigiris/src/gui.rs:3853
+#: crates/bigiris/src/gui.rs:4082
 msgid ""
 "O arquivo será movido para a lixeira do sistema. Você pode restaurá-lo "
 "depois."
 msgstr ""
 "El archivo se moverá a la papelera del sistema. Puede restaurarlo más tarde."
 
-#: crates/bigiris/src/gui.rs:3858
+#: crates/bigiris/src/gui.rs:4087
 msgid "Mover"
 msgstr "Mover"
 
-#: crates/bigiris/src/gui.rs:3880
+#: crates/bigiris/src/gui.rs:4109
 msgid "Não foi possível mover para a lixeira"
 msgstr "No se pudo mover a la papelera"
 
-#: crates/bigiris/src/gui.rs:3941
+#: crates/bigiris/src/gui.rs:4171
 msgid "Navegação"
 msgstr "Navegación"
 
-#: crates/bigiris/src/gui.rs:3943
+#: crates/bigiris/src/gui.rs:4173
 msgid "Anterior / próximo"
 msgstr "Anterior / siguiente"
 
-#: crates/bigiris/src/gui.rs:3944
+#: crates/bigiris/src/gui.rs:4174
 msgid "Primeiro / último"
 msgstr "Primero / último"
 
-#: crates/bigiris/src/gui.rs:3945
+#: crates/bigiris/src/gui.rs:4175
 msgid "Slideshow (auto-avanço)"
 msgstr "Presentación (avance automático)"
 
-#: crates/bigiris/src/gui.rs:3951
+#: crates/bigiris/src/gui.rs:4181
 msgid "Aproximar / afastar"
 msgstr "Ampliar / reducir"
 
-#: crates/bigiris/src/gui.rs:3954
+#: crates/bigiris/src/gui.rs:4184
 msgid "Zoom contínuo"
 msgstr "Zoom continuo"
 
-#: crates/bigiris/src/gui.rs:3958
+#: crates/bigiris/src/gui.rs:4188
 msgid "Janela"
 msgstr "Ventana"
 
-#: crates/bigiris/src/gui.rs:3960
+#: crates/bigiris/src/gui.rs:4190
 msgid "Tela cheia"
 msgstr "Pantalla completa"
 
-#: crates/bigiris/src/gui.rs:3961
+#: crates/bigiris/src/gui.rs:4191
 msgid "Modo teatro"
 msgstr "Modo teatro"
 
-#: crates/bigiris/src/gui.rs:3962
+#: crates/bigiris/src/gui.rs:4192
 msgid "Fita de miniaturas"
 msgstr "Tira de miniaturas"
 
-#: crates/bigiris/src/gui.rs:3963
+#: crates/bigiris/src/gui.rs:4193
 msgid "Histograma RGB"
 msgstr "Histograma RGB"
 
-#: crates/bigiris/src/gui.rs:3964
+#: crates/bigiris/src/gui.rs:4194
 msgid "Fixar barras visíveis"
 msgstr "Mantener los controles visibles"
 
-#: crates/bigiris/src/gui.rs:3965
+#: crates/bigiris/src/gui.rs:4195
 msgid "Sair da tela cheia ou fechar"
 msgstr "Salir de pantalla completa o cerrar"
 
-#: crates/bigiris/src/gui.rs:3969
+#: crates/bigiris/src/gui.rs:4199
 msgid "Edição"
 msgstr "Edición"
 
-#: crates/bigiris/src/gui.rs:3973
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:312
+#: crates/bigiris/src/gui.rs:4203
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:326
 msgid "Girar à direita"
 msgstr "Girar a la derecha"
 
-#: crates/bigiris/src/gui.rs:3974
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:311
+#: crates/bigiris/src/gui.rs:4204
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:325
 msgid "Girar à esquerda"
 msgstr "Girar a la izquierda"
 
-#: crates/bigiris/src/gui.rs:3975
+#: crates/bigiris/src/gui.rs:4205
 msgid "Recortar…"
 msgstr "Recortar…"
 
-#: crates/bigiris/src/gui.rs:3976
+#: crates/bigiris/src/gui.rs:4206
+msgid "Recorte: mover a seleção"
+msgstr "Recorte: mover la selección"
+
+#: crates/bigiris/src/gui.rs:4209
+msgid "Recorte: redimensionar a seleção"
+msgstr "Recorte: redimensionar la selección"
+
+#: crates/bigiris/src/gui.rs:4211
 msgid "Remover fundo (IA)…"
 msgstr "Quitar fondo (IA)…"
 
-#: crates/bigiris/src/gui.rs:3977
-#: crates/bigimage-integrations/src/action.rs:517
-#: data/nautilus/bigiris-menu.py:239
+#: crates/bigiris/src/gui.rs:4212
+#: crates/bigimage-integrations/src/action.rs:518
 msgid "Aumentar resolução…"
 msgstr "Aumentar resolución…"
 
-#: crates/bigiris/src/gui.rs:3979
+#: crates/bigiris/src/gui.rs:4214
 msgid "Painel de edição"
 msgstr "Panel de edición"
 
-#: crates/bigiris/src/gui.rs:3980
+#: crates/bigiris/src/gui.rs:4215
 msgid "Ver original (segure)"
 msgstr "Ver original (mantener pulsado)"
 
-#: crates/bigiris/src/gui.rs:3984
+#: crates/bigiris/src/gui.rs:4219
 #: crates/bigiris/src/gui/dialogs/properties.rs:120
 msgid "Arquivo"
 msgstr "Archivo"
 
-#: crates/bigiris/src/gui.rs:3989
+#: crates/bigiris/src/gui.rs:4224
 msgid "Imprimir"
 msgstr "Imprimir"
 
-#: crates/bigiris/src/gui.rs:3990
+#: crates/bigiris/src/gui.rs:4225
 #: crates/bigiris/src/gui/dialogs/properties.rs:38
 #: crates/bigiris/src/gui/dialogs/properties.rs:80
 msgid "Propriedades"
 msgstr "Propiedades"
 
-#: crates/bigiris/src/gui.rs:3995
+#: crates/bigiris/src/gui.rs:4230
 msgid "Ajuda"
 msgstr "Ayuda"
 
-#: crates/bigiris/src/gui.rs:3996
+#: crates/bigiris/src/gui.rs:4231
 msgid "Este diálogo"
 msgstr "Este diálogo"
 
-#: crates/bigiris/src/gui.rs:3996
+#: crates/bigiris/src/gui.rs:4231
 msgid "Sobre"
 msgstr "Acerca de"
 
-#: crates/bigiris/src/gui.rs:4006
+#: crates/bigiris/src/gui.rs:4241
 msgid "Roda do mouse"
 msgstr "Rueda del ratón"
 
-#: crates/bigiris/src/gui.rs:4034
+#: crates/bigiris/src/gui.rs:4269
 msgid "Atalhos de teclado"
 msgstr "Atajos de teclado"
 
-#: crates/bigiris/src/gui.rs:4060
+#: crates/bigiris/src/gui.rs:4295
 msgid ""
 "Visualizador e conversor de imagens para Linux. Rápido, acessível por "
 "teclado e integrado ao gerenciador de arquivos."
@@ -490,23 +509,23 @@ msgstr ""
 "Visor y convertidor de imágenes para Linux. Rápido, accesible con el teclado "
 "e integrado con su gestor de archivos."
 
-#: crates/bigiris/src/gui.rs:4093
+#: crates/bigiris/src/gui.rs:4328
 msgid "Abra suas imagens"
 msgstr "Abra sus imágenes"
 
-#: crates/bigiris/src/gui.rs:4098
+#: crates/bigiris/src/gui.rs:4333
 msgid "Arraste imagens para cá ou cole arquivos com Ctrl+V."
 msgstr "Arrastre imágenes aquí o pegue archivos con Ctrl+V."
 
-#: crates/bigiris/src/gui.rs:4141
+#: crates/bigiris/src/gui.rs:4376
 msgid "Selecionar pasta com imagens"
 msgstr "Seleccionar carpeta con imágenes"
 
-#: crates/bigiris/src/gui.rs:4162
+#: crates/bigiris/src/gui.rs:4396
 msgid "Selecionar imagens"
 msgstr "Seleccionar imágenes"
 
-#: crates/bigiris/src/gui.rs:4209
+#: crates/bigiris/src/gui.rs:4443
 msgid "{current} de {total}"
 msgstr "{current} de {total}"
 
@@ -518,11 +537,11 @@ msgstr "≈ mismo tamaño"
 msgid "{written} gravado(s), {skipped} ignorado(s), {failed} falha(s)"
 msgstr "guardados: {written}, omitidos: {skipped}, fallos: {failed}"
 
-#: crates/bigiris/src/gui/batch_runner.rs:190
+#: crates/bigiris/src/gui/batch_runner.rs:189
 msgid "Concluído em {time} · {counts}"
 msgstr "Completado en {time} · {counts}"
 
-#: crates/bigiris/src/gui/batch_runner.rs:199
+#: crates/bigiris/src/gui/batch_runner.rs:198
 msgid ""
 "{before} → {after} ({delta}) · média por arquivo {average_before} → "
 "{average_after}"
@@ -530,18 +549,18 @@ msgstr ""
 "{before} → {after} ({delta}) · media por archivo {average_before} → "
 "{average_after}"
 
-#: crates/bigiris/src/gui/batch_runner.rs:222
-#: crates/bigiris/src/gui/dialogs/animate.rs:315
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:1581
+#: crates/bigiris/src/gui/batch_runner.rs:220
+#: crates/bigiris/src/gui/dialogs/animate.rs:309
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:1652
 #: crates/bigiris/src/gui/dialogs/remove_bg.rs:336
 msgid "O processamento terminou inesperadamente. Tente novamente."
 msgstr "El procesamiento terminó inesperadamente. Inténtelo de nuevo."
 
-#: crates/bigiris/src/gui/batch_runner.rs:311
+#: crates/bigiris/src/gui/batch_runner.rs:342
 msgid "falha inesperada no worker"
 msgstr "fallo inesperado en el worker"
 
-#: crates/bigiris/src/gui/batch_runner.rs:359
+#: crates/bigiris/src/gui/batch_runner.rs:391
 msgid "um worker terminou inesperadamente"
 msgstr "un worker terminó inesperadamente"
 
@@ -551,12 +570,11 @@ msgstr "Ajustar colores — Prisma"
 
 #: crates/bigiris/src/gui/dialogs/adjust.rs:35
 #: crates/bigimage-integrations/src/action.rs:91
-#: data/nautilus/bigiris-menu.py:153
 msgid "Ajustar cores"
 msgstr "Ajustar colores"
 
 #: crates/bigiris/src/gui/dialogs/adjust.rs:38
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:334
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:348
 msgid "Brilho"
 msgstr "Brillo"
 
@@ -565,7 +583,7 @@ msgid "-100 escuro · 0 neutro · +100 claro"
 msgstr "-100 oscuro · 0 neutro · +100 claro"
 
 #: crates/bigiris/src/gui/dialogs/adjust.rs:43
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:335
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:349
 msgid "Contraste"
 msgstr "Contraste"
 
@@ -574,7 +592,7 @@ msgid "-100 plano · 0 neutro · +100 agressivo"
 msgstr "-100 plano · 0 neutro · +100 fuerte"
 
 #: crates/bigiris/src/gui/dialogs/adjust.rs:48
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:336
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:350
 msgid "Saturação"
 msgstr "Saturación"
 
@@ -593,14 +611,14 @@ msgstr ""
 "los oscurece"
 
 #: crates/bigiris/src/gui/dialogs/adjust.rs:64
-#: crates/bigiris/src/gui/dialogs/batch.rs:375
+#: crates/bigiris/src/gui/dialogs/batch.rs:374
 #: crates/bigiris/src/gui/dialogs/convert.rs:39
 #: crates/bigiris/src/gui/dialogs/crop.rs:344
 #: crates/bigiris/src/gui/dialogs/extent.rs:92
 #: crates/bigiris/src/gui/dialogs/flip.rs:37
 #: crates/bigiris/src/gui/dialogs/resize.rs:128
 #: crates/bigiris/src/gui/dialogs/rotate.rs:42
-#: crates/bigiris/src/gui/dialogs/upscale.rs:82
+#: crates/bigiris/src/gui/dialogs/upscale.rs:88
 msgid "Arquivos selecionados"
 msgstr "Archivos seleccionados"
 
@@ -618,15 +636,15 @@ msgid "Saída"
 msgstr "Salida"
 
 #: crates/bigiris/src/gui/dialogs/adjust.rs:83
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:366
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:381
 msgid "Aplicar"
 msgstr "Aplicar"
 
-#: crates/bigiris/src/gui/dialogs/adjust.rs:190
+#: crates/bigiris/src/gui/dialogs/adjust.rs:188
 msgid "Ajustando…"
 msgstr "Ajustando…"
 
-#: crates/bigiris/src/gui/dialogs/adjust.rs:196
+#: crates/bigiris/src/gui/dialogs/adjust.rs:194
 msgid "Ajustando"
 msgstr "Ajustando"
 
@@ -699,41 +717,40 @@ msgstr "Fotogramas"
 msgid "Criar GIF"
 msgstr "Crear GIF"
 
-#: crates/bigiris/src/gui/dialogs/animate.rs:184
+#: crates/bigiris/src/gui/dialogs/animate.rs:181
 msgid "Substituir arquivo existente?"
 msgstr "¿Reemplazar el archivo existente?"
 
-#: crates/bigiris/src/gui/dialogs/animate.rs:188
+#: crates/bigiris/src/gui/dialogs/animate.rs:185
 msgid "Substituir"
 msgstr "Reemplazar"
 
-#: crates/bigiris/src/gui/dialogs/animate.rs:206
+#: crates/bigiris/src/gui/dialogs/animate.rs:203
 msgid "Informe o arquivo de saída."
 msgstr "Indique el archivo de salida."
 
-#: crates/bigiris/src/gui/dialogs/animate.rs:215
+#: crates/bigiris/src/gui/dialogs/animate.rs:212
 msgid "O arquivo de saída não pode ser uma pasta."
 msgstr "El archivo de salida no puede ser una carpeta."
 
-#: crates/bigiris/src/gui/dialogs/animate.rs:219
+#: crates/bigiris/src/gui/dialogs/animate.rs:216
 msgid "O arquivo de saída não pode ser um dos quadros."
 msgstr "El archivo de salida no puede ser uno de los fotogramas."
 
-#: crates/bigiris/src/gui/dialogs/animate.rs:255
+#: crates/bigiris/src/gui/dialogs/animate.rs:249
 msgid "Montando GIF…"
 msgstr "Creando GIF…"
 
-#: crates/bigiris/src/gui/dialogs/animate.rs:297
-#: crates/bigiris/src/gui/dialogs/batch.rs:102
-msgid "Pronto"
-msgstr "Listo"
+#: crates/bigiris/src/gui/dialogs/animate.rs:291
+msgid "Concluído: {file}"
+msgstr "Listo: {file}"
 
-#: crates/bigiris/src/gui/dialogs/animate.rs:302
+#: crates/bigiris/src/gui/dialogs/animate.rs:298
 msgid "O arquivo {file} passou a existir e foi mantido; nada foi gravado."
 msgstr ""
 "El archivo {file} apareció mientras tanto y se conservó; no se guardó nada."
 
-#: crates/bigiris/src/gui/dialogs/animate.rs:309
+#: crates/bigiris/src/gui/dialogs/animate.rs:304
 msgid "Falha"
 msgstr "Error"
 
@@ -750,7 +767,7 @@ msgid "Arquivos"
 msgstr "Archivos"
 
 #: crates/bigiris/src/gui/dialogs/batch.rs:50
-#: crates/bigiris/src/gui/dialogs/batch.rs:388
+#: crates/bigiris/src/gui/dialogs/batch.rs:387
 msgid "Adicionar arquivos"
 msgstr "Añadir archivos"
 
@@ -785,6 +802,10 @@ msgstr "Misma carpeta que el archivo de origen"
 msgid "Usar a mesma pasta do arquivo de origem"
 msgstr "Usar la carpeta del archivo de origen"
 
+#: crates/bigiris/src/gui/dialogs/batch.rs:102
+msgid "Pronto"
+msgstr "Listo"
+
 #: crates/bigiris/src/gui/dialogs/batch.rs:108
 msgid "Aguardando. Clique em Processar para iniciar."
 msgstr "En espera. Haga clic en Procesar para comenzar."
@@ -805,7 +826,7 @@ msgstr "Iniciando…"
 msgid "Processando…"
 msgstr "Procesando…"
 
-#: crates/bigiris/src/gui/dialogs/batch.rs:302
+#: crates/bigiris/src/gui/dialogs/batch.rs:303
 msgid ""
 "Cancelado após {done}/{total} em {timing}. {ok} gravado(s), {skip} "
 "ignorado(s), {fail} falha(s)."
@@ -813,24 +834,24 @@ msgstr ""
 "Cancelado tras {done}/{total} en {timing}. Guardados: {ok}, omitidos: "
 "{skip}, fallos: {fail}."
 
-#: crates/bigiris/src/gui/dialogs/batch.rs:304
+#: crates/bigiris/src/gui/dialogs/batch.rs:305
 msgid ""
 "Concluído em {timing}. {ok} gravado(s), {skip} ignorado(s), {fail} falha(s)."
 msgstr ""
 "Completado en {timing}. Guardados: {ok}, omitidos: {skip}, fallos: {fail}."
 
-#: crates/bigiris/src/gui/dialogs/batch.rs:324
+#: crates/bigiris/src/gui/dialogs/batch.rs:325
 msgid ""
 "{before} → {after} ({delta}) · média por arquivo {avg_before} → {avg_after}"
 msgstr ""
 "{before} → {after} ({delta}) · media por archivo {avg_before} → {avg_after}"
 
-#: crates/bigiris/src/gui/dialogs/batch.rs:342
+#: crates/bigiris/src/gui/dialogs/batch.rs:343
 #: crates/bigiris/src/gui/dialogs/remove_bg.rs:356
 msgid "Concluído"
 msgstr "Completado"
 
-#: crates/bigiris/src/gui/dialogs/batch.rs:432
+#: crates/bigiris/src/gui/dialogs/batch.rs:431
 msgid "Adicionar pasta com imagens"
 msgstr "Añadir carpeta con imágenes"
 
@@ -861,7 +882,6 @@ msgstr "Convertir imágenes — Prisma"
 #: crates/bigiris/src/gui/dialogs/convert.rs:32
 #: crates/bigiris/src/gui/dialogs/convert.rs:79
 #: crates/bigimage-integrations/src/action.rs:75
-#: data/nautilus/bigiris-menu.py:100
 msgid "Converter"
 msgstr "Convertir"
 
@@ -882,16 +902,16 @@ msgstr ""
 "públicamente — nuestro pipeline elimina el EXIF automáticamente al "
 "recodificar."
 
-#: crates/bigiris/src/gui/dialogs/convert.rs:195
+#: crates/bigiris/src/gui/dialogs/convert.rs:193
 msgid "Convertendo…"
 msgstr "Convirtiendo…"
 
-#: crates/bigiris/src/gui/dialogs/convert.rs:201
+#: crates/bigiris/src/gui/dialogs/convert.rs:199
 msgid "Convertendo"
 msgstr "Convirtiendo"
 
 #: crates/bigiris/src/gui/dialogs/crop.rs:284
-#: crates/bigiris/src/gui/viewer/crop.rs:658
+#: crates/bigiris/src/gui/viewer/crop.rs:682
 msgid ""
 "Arraste nos cantos para redimensionar · dentro do recorte para mover · fora "
 "dele para uma nova seleção."
@@ -905,20 +925,20 @@ msgstr "Recortar — Prisma"
 
 #: crates/bigiris/src/gui/dialogs/crop.rs:321
 #: crates/bigiris/src/gui/dialogs/crop.rs:389
-#: crates/bigiris/src/gui/viewer/crop.rs:375
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:326
+#: crates/bigiris/src/gui/viewer/crop.rs:395
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:340
 msgid "Recortar"
 msgstr "Recortar"
 
 #: crates/bigiris/src/gui/dialogs/crop.rs:348
 #: crates/bigiris/src/gui/dialogs/extent.rs:96
-#: crates/bigiris/src/gui/dialogs/upscale.rs:86
+#: crates/bigiris/src/gui/dialogs/upscale.rs:92
 msgid "Tamanho original"
 msgstr "Tamaño original"
 
 #: crates/bigiris/src/gui/dialogs/crop.rs:349
 #: crates/bigiris/src/gui/dialogs/extent.rs:97
-#: crates/bigiris/src/gui/dialogs/upscale.rs:90
+#: crates/bigiris/src/gui/dialogs/upscale.rs:96
 msgid "Primeiro arquivo"
 msgstr "Primer archivo"
 
@@ -931,12 +951,12 @@ msgid "Y (px)"
 msgstr "Y (px)"
 
 #: crates/bigiris/src/gui/dialogs/crop.rs:363
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:347
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:361
 msgid "Largura (px)"
 msgstr "Ancho (px)"
 
 #: crates/bigiris/src/gui/dialogs/crop.rs:367
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:348
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:362
 msgid "Altura (px)"
 msgstr "Altura (px)"
 
@@ -944,23 +964,24 @@ msgstr "Altura (px)"
 msgid "Centro 50%"
 msgstr "Centrado al 50%"
 
-#: crates/bigiris/src/gui/dialogs/crop.rs:449
+#: crates/bigiris/src/gui/dialogs/crop.rs:447
 msgid "Recortando…"
 msgstr "Recortando…"
 
-#: crates/bigiris/src/gui/dialogs/crop.rs:455
+#: crates/bigiris/src/gui/dialogs/crop.rs:453
 msgid "Recortando"
 msgstr "Recortando"
 
-#: crates/bigiris/src/gui/viewer/crop.rs:361
+#: crates/bigiris/src/gui/viewer/crop.rs:381
 msgid "Livre"
 msgstr "Libre"
 
-#: crates/bigiris/src/gui/viewer/crop.rs:362
+#: crates/bigiris/src/gui/viewer/crop.rs:382
 msgid "Original"
 msgstr "Original"
 
-#: crates/bigiris/src/gui/viewer/crop.rs:368
+#: crates/bigiris/src/gui/viewer/crop.rs:388
+#: crates/bigiris/src/gui/viewer/crop.rs:406
 msgid "Proporção"
 msgstr "Relación de aspecto"
 
@@ -979,11 +1000,11 @@ msgstr "Equilibrado"
 msgid "Menor arquivo"
 msgstr "Archivo más pequeño"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:210
-msgid "Restaurar"
-msgstr "Restablecer"
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:218
+msgid "Restaurar {setting}"
+msgstr "Restablecer {setting}"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:261
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:274
 msgid ""
 "Aumentar resolução usa Lanczos3. Para IA (Real-ESRGAN): sudo pacman -S "
 "{package}"
@@ -991,166 +1012,173 @@ msgstr ""
 "Aumentar resolución usa Lanczos3. Para IA (Real-ESRGAN): sudo pacman -S "
 "{package}"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:275
-#: crates/bigiris/src/gui/dialogs/upscale.rs:246
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:288
+#: crates/bigiris/src/gui/dialogs/upscale.rs:253
 msgid "Roda em: {device}"
 msgstr "Se ejecuta en: {device}"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:297
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:310
 msgid "Fechar (Esc)"
 msgstr "Cerrar (Esc)"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:303
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:317
 msgid "Ver original"
 msgstr "Ver original"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:304
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:318
 msgid "Mostra a imagem sem as edições (segure \\)"
 msgstr "Muestra la imagen sin las ediciones (mantenga pulsado \\)"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:307
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:321
 msgid "Transformar"
 msgstr "Transformar"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:313
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:327
 msgid "Espelhar horizontal"
 msgstr "Voltear horizontalmente"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:314
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:328
 msgid "Espelhar vertical"
 msgstr "Voltear verticalmente"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:319
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:333
 msgid "Endireitar"
 msgstr "Enderezar"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:322
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:336
 msgid "Gira a foto e recorta as bordas vazias para alinhar o horizonte"
 msgstr "Gira la foto y recorta los bordes vacíos para nivelar el horizonte"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:327
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:341
 msgid "Recortar na própria imagem (Ctrl+R)"
 msgstr "Recortar en la propia imagen (Ctrl+R)"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:333
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:347
 msgid "Ajustes"
 msgstr "Ajustes"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:337
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:351
 msgid "Gama"
 msgstr "Gamma"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:342
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:356
 msgid "Restaurar ajustes"
 msgstr "Restablecer ajustes"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:346
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:360
 #: crates/bigiris/src/gui/dialogs/properties.rs:163
 #: crates/bigiris/src/gui/dialogs/properties.rs:170
 msgid "Tamanho"
 msgstr "Tamaño"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:352
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:366
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:369
 msgid "Manter proporção"
 msgstr "Mantener proporción"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:363
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:364
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:378
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:379
 #: crates/bigiris/src/gui/dialogs/resize.rs:48
 msgid "Escala (%)"
 msgstr "Escala (%)"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:376
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:391
 msgid "Ferramentas"
 msgstr "Herramientas"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:377
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:392
 msgid "Remover fundo (IA)"
 msgstr "Quitar fondo (IA)"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:379
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:394
 msgid "Remover ruído (IA)"
 msgstr "Quitar ruido (IA)"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:383
-#: crates/bigiris/src/gui/dialogs/upscale.rs:97
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:398
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:404
+#: crates/bigiris/src/gui/dialogs/upscale.rs:103
 msgid "Fator"
 msgstr "Factor"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:384
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:399
 #: crates/bigiris/src/gui/dialogs/upscale.rs:40
 msgid "Aumentar resolução"
 msgstr "Aumentar resolución"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:411
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:428
 msgid "Salvar alterações (Ctrl+S)"
 msgstr "Guardar los cambios (Ctrl+S)"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:415
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:432
 msgid "Salvar como…"
 msgstr "Guardar como…"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:424
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:441
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:443
 msgid "Qualidade ao salvar como"
 msgstr "Calidad al guardar como"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:978
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:1038
 msgid "Recorta o objeto principal com BiRefNet-lite, no seu computador"
 msgstr "Recorta el objeto principal con BiRefNet-lite, en su equipo"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:984
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:1044
 msgid "Limpa ruído e artefatos de compressão com SCUNet, no seu computador"
 msgstr ""
 "Limpia el ruido y los artefactos de compresión con SCUNet, en su equipo"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:989
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:1049
 msgid "Real-ESRGAN (IA), no seu computador"
 msgstr "Real-ESRGAN (IA), en su equipo"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:991
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:1051
 msgid "Lanczos3 (sem IA)"
 msgstr "Lanczos3 (sin IA)"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:1507
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:1534
+msgid "{width}×{height} passa do limite de processamento"
+msgstr "{width}×{height} supera el límite de procesamiento"
+
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:1578
 #: crates/bigiris/src/gui/dialogs/remove_bg.rs:224
 msgid "Preparando…"
 msgstr "Preparando…"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:1607
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:396
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:1678
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:401
 msgid "Carregando o modelo…"
 msgstr "Cargando el modelo…"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:1617
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:1688
 msgid "Removendo o fundo…"
 msgstr "Quitando el fondo…"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:1618
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:1689
 msgid "Removendo ruído…"
 msgstr "Quitando ruido…"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:1619
-#: crates/bigiris/src/gui/dialogs/upscale.rs:197
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:1690
+#: crates/bigiris/src/gui/dialogs/upscale.rs:201
 msgid "Aumentando…"
 msgstr "Aumentando la resolución…"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:1649
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:1729
 msgid "{name}-editada"
 msgstr "{name}-editada"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:1651
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:1731
 msgid "Salvar como"
 msgstr "Guardar como"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:1682
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:1762
 msgid "Para alterar o próprio arquivo, use Salvar."
 msgstr "Para modificar el propio archivo, use Guardar."
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:1719
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:1801
 msgid "Cópia salva: {name}"
 msgstr "Copia guardada: {name}"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:1759
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:1841
 msgid ""
 "O BigIris não sabe gravar este formato. Use, por exemplo, .png, .jpg "
 "ou .webp."
@@ -1257,7 +1285,7 @@ msgid "Posição da imagem"
 msgstr "Posición de la imagen"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:144
-#: crates/bigiris/src/gui/dialogs/upscale.rs:103
+#: crates/bigiris/src/gui/dialogs/upscale.rs:109
 msgid "Destino previsto"
 msgstr "Destino previsto"
 
@@ -1269,11 +1297,11 @@ msgstr "Extender"
 msgid "—"
 msgstr "—"
 
-#: crates/bigiris/src/gui/dialogs/extent.rs:326
+#: crates/bigiris/src/gui/dialogs/extent.rs:324
 msgid "Estendendo…"
 msgstr "Extendiendo…"
 
-#: crates/bigiris/src/gui/dialogs/extent.rs:332
+#: crates/bigiris/src/gui/dialogs/extent.rs:330
 msgid "Estendendo"
 msgstr "Extendiendo"
 
@@ -1284,7 +1312,6 @@ msgstr "Voltear imágenes — Prisma"
 #: crates/bigiris/src/gui/dialogs/flip.rs:24
 #: crates/bigiris/src/gui/dialogs/flip.rs:47
 #: crates/bigimage-integrations/src/action.rs:87
-#: data/nautilus/bigiris-menu.py:142
 msgid "Espelhar"
 msgstr "Voltear"
 
@@ -1300,17 +1327,16 @@ msgstr "Vertical (arriba ↔ abajo)"
 msgid "Eixo"
 msgstr "Eje"
 
-#: crates/bigiris/src/gui/dialogs/flip.rs:87
+#: crates/bigiris/src/gui/dialogs/flip.rs:85
 msgid "Espelhando…"
 msgstr "Volteando…"
 
-#: crates/bigiris/src/gui/dialogs/flip.rs:93
+#: crates/bigiris/src/gui/dialogs/flip.rs:91
 msgid "Espelhando"
 msgstr "Volteando"
 
 #: crates/bigiris/src/gui/dialogs/mod.rs:64
 #: crates/bigimage-integrations/src/action.rs:151
-#: data/nautilus/bigiris-menu.py:104
 msgid "PNG"
 msgstr "PNG"
 
@@ -1320,19 +1346,16 @@ msgstr "JPG (JPEG)"
 
 #: crates/bigiris/src/gui/dialogs/mod.rs:66
 #: crates/bigimage-integrations/src/action.rs:167
-#: data/nautilus/bigiris-menu.py:106
 msgid "WebP"
 msgstr "WebP"
 
 #: crates/bigiris/src/gui/dialogs/mod.rs:67
 #: crates/bigimage-integrations/src/action.rs:175
-#: data/nautilus/bigiris-menu.py:107
 msgid "AVIF"
 msgstr "AVIF"
 
 #: crates/bigiris/src/gui/dialogs/mod.rs:68
 #: crates/bigimage-integrations/src/action.rs:183
-#: data/nautilus/bigiris-menu.py:108
 msgid "TIFF"
 msgstr "TIFF"
 
@@ -1550,8 +1573,8 @@ msgstr "Quitar fondo — Prisma"
 
 #: crates/bigiris/src/gui/dialogs/remove_bg.rs:78
 #: crates/bigiris/src/gui/dialogs/remove_bg.rs:164
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:525
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:550
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:532
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:557
 msgid "Remover fundo"
 msgstr "Quitar fondo"
 
@@ -1560,7 +1583,7 @@ msgid "Prisma · BiRefNet-lite"
 msgstr "Prisma · BiRefNet-lite"
 
 #: crates/bigiris/src/gui/dialogs/remove_bg.rs:96
-#: crates/bigiris/src/gui/previews.rs:223
+#: crates/bigiris/src/gui/previews.rs:240
 msgid "Nenhuma imagem selecionada"
 msgstr "Ninguna imagen seleccionada"
 
@@ -1595,32 +1618,32 @@ msgid "Falha ao carregar o modelo: {error}"
 msgstr "No se pudo cargar el modelo: {error}"
 
 #: crates/bigiris/src/gui/dialogs/remove_bg.rs:355
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:375
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:380
 msgid "Imagens gravadas"
 msgstr "Imágenes guardadas"
 
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:376
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:381
 msgid "Falhas"
 msgstr "Fallos"
 
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:378
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:383
 msgid "Com erros"
 msgstr "Con errores"
 
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:402
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:407
 msgid "Processando {current}/{total} — {file}"
 msgstr "Procesando {current}/{total} — {file}"
 
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:417
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:422
 msgid "BiRefNet-lite (MIT) · roda offline em {device}"
 msgstr "BiRefNet-lite (MIT) · funciona sin conexión en {device}"
 
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:420
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:425
 msgid "BiRefNet-lite (MIT) · roda offline no seu computador"
 msgstr "BiRefNet-lite (MIT) · funciona sin conexión en su equipo"
 
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:538
-#: crates/bigiris/src/gui/dialogs/upscale.rs:142
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:545
+#: crates/bigiris/src/gui/dialogs/upscale.rs:148
 msgid "Aumentar"
 msgstr "Aumentar"
 
@@ -1650,9 +1673,8 @@ msgstr "Redimensionar imágenes — Prisma"
 
 #: crates/bigiris/src/gui/dialogs/resize.rs:41
 #: crates/bigiris/src/gui/dialogs/resize.rs:144
-#: crates/bigiris/src/gui/dialogs/resize.rs:372
+#: crates/bigiris/src/gui/dialogs/resize.rs:369
 #: crates/bigimage-integrations/src/action.rs:79
-#: data/nautilus/bigiris-menu.py:115
 msgid "Redimensionar"
 msgstr "Redimensionar"
 
@@ -1713,11 +1735,11 @@ msgstr "Modo de redimensionamiento"
 msgid "Opções"
 msgstr "Opciones"
 
-#: crates/bigiris/src/gui/dialogs/resize.rs:292
+#: crates/bigiris/src/gui/dialogs/resize.rs:290
 msgid "Redimensionando…"
 msgstr "Redimensionando…"
 
-#: crates/bigiris/src/gui/dialogs/resize.rs:298
+#: crates/bigiris/src/gui/dialogs/resize.rs:296
 msgid "Redimensionando"
 msgstr "Redimensionando"
 
@@ -1728,7 +1750,6 @@ msgstr "Girar imágenes — Prisma"
 #: crates/bigiris/src/gui/dialogs/rotate.rs:29
 #: crates/bigiris/src/gui/dialogs/rotate.rs:52
 #: crates/bigimage-integrations/src/action.rs:83
-#: data/nautilus/bigiris-menu.py:129
 msgid "Girar"
 msgstr "Girar"
 
@@ -1738,7 +1759,6 @@ msgstr "90° (en sentido horario)"
 
 #: crates/bigiris/src/gui/dialogs/rotate.rs:31
 #: crates/bigimage-integrations/src/action.rs:260
-#: data/nautilus/bigiris-menu.py:134
 msgid "180°"
 msgstr "180°"
 
@@ -1750,11 +1770,11 @@ msgstr "270° (en sentido antihorario)"
 msgid "Rotação"
 msgstr "Rotación"
 
-#: crates/bigiris/src/gui/dialogs/rotate.rs:93
+#: crates/bigiris/src/gui/dialogs/rotate.rs:91
 msgid "Girando…"
 msgstr "Girando…"
 
-#: crates/bigiris/src/gui/dialogs/rotate.rs:99
+#: crates/bigiris/src/gui/dialogs/rotate.rs:97
 msgid "Girando"
 msgstr "Girando"
 
@@ -1766,15 +1786,15 @@ msgstr "Aumentar resolución — Prisma"
 msgid "Usar IA (Real-ESRGAN)"
 msgstr "Usar IA (Real-ESRGAN)"
 
-#: crates/bigiris/src/gui/dialogs/upscale.rs:112
+#: crates/bigiris/src/gui/dialogs/upscale.rs:118
 msgid "× {factor} (tamanho indisponível)"
 msgstr "× {factor} (tamaño no disponible)"
 
-#: crates/bigiris/src/gui/dialogs/upscale.rs:231
+#: crates/bigiris/src/gui/dialogs/upscale.rs:239
 msgid "Aumentando"
 msgstr "Aumentando la resolución"
 
-#: crates/bigiris/src/gui/dialogs/upscale.rs:247
+#: crates/bigiris/src/gui/dialogs/upscale.rs:254
 msgid "Detalhes mais nítidos que Lanczos3; roda no seu computador"
 msgstr "Detalles más nítidos que Lanczos3; funciona en su equipo"
 
@@ -1786,11 +1806,11 @@ msgstr "Vista previa"
 msgid "Original: {width}×{height} px"
 msgstr "Original: {width}×{height} px"
 
-#: crates/bigiris/src/gui/previews.rs:201
+#: crates/bigiris/src/gui/previews.rs:219
 msgid "Preparando pré-visualização…"
 msgstr "Preparando vista previa…"
 
-#: crates/bigiris/src/gui/previews.rs:249
+#: crates/bigiris/src/gui/previews.rs:265
 msgid "A preparação foi interrompida"
 msgstr "La preparación se interrumpió"
 
@@ -1820,32 +1840,26 @@ msgid "Não foi possível abrir os arquivos"
 msgstr "No se pudieron abrir los archivos"
 
 #: crates/bigimage-integrations/src/action.rs:97
-#: data/nautilus/bigiris-menu.py:167
 msgid "Para web"
 msgstr "Para la web"
 
 #: crates/bigimage-integrations/src/action.rs:101
-#: data/nautilus/bigiris-menu.py:213
 msgid "Metadados"
 msgstr "Metadatos"
 
 #: crates/bigimage-integrations/src/action.rs:105
-#: data/nautilus/bigiris-menu.py:223
 msgid "Utilidades"
 msgstr "Utilidades"
 
 #: crates/bigimage-integrations/src/action.rs:111
-#: data/nautilus/bigiris-menu.py:234
 msgid "IA"
 msgstr "IA"
 
 #: crates/bigimage-integrations/src/action.rs:116
-#: data/nautilus/bigiris-menu.py:244
 msgid "PDF"
 msgstr "PDF"
 
 #: crates/bigimage-integrations/src/action.rs:134
-#: data/nautilus/bigiris-menu.py:255
 msgid "Visualizar em BigIris"
 msgstr "Ver en BigIris"
 
@@ -1854,7 +1868,6 @@ msgid "Processar esta pasta…"
 msgstr "Procesar esta carpeta…"
 
 #: crates/bigimage-integrations/src/action.rs:159
-#: data/nautilus/bigiris-menu.py:105
 msgid "JPG"
 msgstr "JPG"
 
@@ -1863,186 +1876,150 @@ msgstr "JPG"
 #: crates/bigimage-integrations/src/action.rs:284
 #: crates/bigimage-integrations/src/action.rs:309
 #: crates/bigimage-integrations/src/action.rs:358
-#: data/nautilus/bigiris-menu.py:110 data/nautilus/bigiris-menu.py:124
-#: data/nautilus/bigiris-menu.py:137 data/nautilus/bigiris-menu.py:148
-#: data/nautilus/bigiris-menu.py:162
 msgid "Mais opções…"
 msgstr "Más opciones…"
 
 #: crates/bigimage-integrations/src/action.rs:203
-#: data/nautilus/bigiris-menu.py:119
 msgid "25%"
 msgstr "25%"
 
 #: crates/bigimage-integrations/src/action.rs:211
-#: data/nautilus/bigiris-menu.py:120
 msgid "50%"
 msgstr "50%"
 
 #: crates/bigimage-integrations/src/action.rs:219
-#: data/nautilus/bigiris-menu.py:121
 msgid "200%"
 msgstr "200%"
 
 #: crates/bigimage-integrations/src/action.rs:227
-#: data/nautilus/bigiris-menu.py:122
 msgid "HD (1920 px)"
 msgstr "HD (1920 px)"
 
 #: crates/bigimage-integrations/src/action.rs:235
-#: data/nautilus/bigiris-menu.py:123
 msgid "4K (3840 px)"
 msgstr "4K (3840 px)"
 
 #: crates/bigimage-integrations/src/action.rs:252
-#: data/nautilus/bigiris-menu.py:133
 msgid "90°"
 msgstr "90°"
 
 #: crates/bigimage-integrations/src/action.rs:268
-#: data/nautilus/bigiris-menu.py:135
 msgid "270°"
 msgstr "270°"
 
 #: crates/bigimage-integrations/src/action.rs:276
-#: data/nautilus/bigiris-menu.py:136
 msgid "Automático (EXIF)"
 msgstr "Automático (EXIF)"
 
 #: crates/bigimage-integrations/src/action.rs:293
-#: data/nautilus/bigiris-menu.py:146
 msgid "Horizontal"
 msgstr "Horizontal"
 
 #: crates/bigimage-integrations/src/action.rs:301
-#: data/nautilus/bigiris-menu.py:147
 msgid "Vertical"
 msgstr "Vertical"
 
 #: crates/bigimage-integrations/src/action.rs:318
-#: data/nautilus/bigiris-menu.py:157
 msgid "+ Brilho (+10)"
 msgstr "+ Brillo (+10)"
 
 #: crates/bigimage-integrations/src/action.rs:326
-#: data/nautilus/bigiris-menu.py:158
 msgid "− Brilho (-10)"
 msgstr "− Brillo (-10)"
 
 #: crates/bigimage-integrations/src/action.rs:334
-#: data/nautilus/bigiris-menu.py:159
 msgid "+ Contraste (+20)"
 msgstr "+ Contraste (+20)"
 
 #: crates/bigimage-integrations/src/action.rs:342
-#: data/nautilus/bigiris-menu.py:160
 msgid "Preto e branco"
 msgstr "Blanco y negro"
 
 #: crates/bigimage-integrations/src/action.rs:350
-#: data/nautilus/bigiris-menu.py:161
 msgid "Cores vivas (+40)"
 msgstr "Colores vivos (+40)"
 
 #: crates/bigimage-integrations/src/action.rs:370
-#: data/nautilus/bigiris-menu.py:171
 msgid "WhatsApp (1280 px · JPG q85)"
 msgstr "WhatsApp (1280 px · JPG q85)"
 
 #: crates/bigimage-integrations/src/action.rs:378
-#: data/nautilus/bigiris-menu.py:175
 msgid "Instagram (1080 px · JPG q90)"
 msgstr "Instagram (1080 px · JPG q90)"
 
 #: crates/bigimage-integrations/src/action.rs:386
-#: data/nautilus/bigiris-menu.py:179
 msgid "Facebook (2048 px · JPG q85)"
 msgstr "Facebook (2048 px · JPG q85)"
 
 #: crates/bigimage-integrations/src/action.rs:394
-#: data/nautilus/bigiris-menu.py:183
 msgid "Twitter · X (1200 px · JPG q85)"
 msgstr "Twitter · X (1200 px · JPG q85)"
 
 #: crates/bigimage-integrations/src/action.rs:402
-#: data/nautilus/bigiris-menu.py:187
 msgid "Telegram (2560 px · JPG q85)"
 msgstr "Telegram (2560 px · JPG q85)"
 
 #: crates/bigimage-integrations/src/action.rs:410
-#: data/nautilus/bigiris-menu.py:191
 msgid "Discord (2048 px · JPG q80)"
 msgstr "Discord (2048 px · JPG q80)"
 
 #: crates/bigimage-integrations/src/action.rs:418
-#: data/nautilus/bigiris-menu.py:195
 msgid "Otimizar PNG (compressão máxima)"
 msgstr "Optimizar PNG (máxima compresión)"
 
-#: crates/bigimage-integrations/src/action.rs:430
-#: data/nautilus/bigiris-menu.py:199
+#: crates/bigimage-integrations/src/action.rs:431
 msgid "Letterbox YouTube post (1:1)"
 msgstr "Bandas para publicación de YouTube (1:1)"
 
-#: crates/bigimage-integrations/src/action.rs:438
-#: data/nautilus/bigiris-menu.py:202
+#: crates/bigimage-integrations/src/action.rs:439
 msgid "Letterbox Instagram feed (4:5)"
 msgstr "Bandas para feed de Instagram (4:5)"
 
-#: crates/bigimage-integrations/src/action.rs:446
-#: data/nautilus/bigiris-menu.py:205
+#: crates/bigimage-integrations/src/action.rs:447
 msgid "Letterbox Stories / Shorts (9:16)"
 msgstr "Bandas para Stories / Shorts (9:16)"
 
-#: crates/bigimage-integrations/src/action.rs:454
-#: data/nautilus/bigiris-menu.py:208
+#: crates/bigimage-integrations/src/action.rs:455
 msgid "Letterbox personalizado…"
 msgstr "Bandas personalizadas…"
 
-#: crates/bigimage-integrations/src/action.rs:463
-#: data/nautilus/bigiris-menu.py:217
+#: crates/bigimage-integrations/src/action.rs:464
 msgid "Ver metadados…"
 msgstr "Ver los metadatos…"
 
-#: crates/bigimage-integrations/src/action.rs:471
-#: data/nautilus/bigiris-menu.py:218
+#: crates/bigimage-integrations/src/action.rs:472
 msgid "Remover tudo (re-encode limpo)"
 msgstr "Quitar todos los metadatos (recodificación limpia)"
 
-#: crates/bigimage-integrations/src/action.rs:482
-#: data/nautilus/bigiris-menu.py:227
+#: crates/bigimage-integrations/src/action.rs:483
 msgid "Converter em lote (Prisma)…"
 msgstr "Convertir por lotes (Prisma)…"
 
-#: crates/bigimage-integrations/src/action.rs:490
-#: data/nautilus/bigiris-menu.py:228
+#: crates/bigimage-integrations/src/action.rs:491
 msgid "Criar GIF animado…"
 msgstr "Crear GIF animado…"
 
-#: crates/bigimage-integrations/src/action.rs:498
-#: data/nautilus/bigiris-menu.py:229
+#: crates/bigimage-integrations/src/action.rs:499
 msgid "Comparar 2 imagens…"
 msgstr "Comparar 2 imágenes…"
 
-#: crates/bigimage-integrations/src/action.rs:507
-#: data/nautilus/bigiris-menu.py:238
+#: crates/bigimage-integrations/src/action.rs:508
 msgid "Remover fundo (BiRefNet)"
 msgstr "Quitar fondo (BiRefNet)"
 
-#: crates/bigimage-integrations/src/action.rs:528
-#: data/nautilus/bigiris-menu.py:248
+#: crates/bigimage-integrations/src/action.rs:529
 msgid "Converter para PDF (LibreOffice)"
 msgstr "Convertir a PDF (LibreOffice)"
 
-#: data/nautilus/bigiris-menu.py:295
+#: data/nautilus/bigiris-menu.py:125
 msgid "Operações BigIris"
 msgstr "Acciones de BigIris"
 
-#: data/nautilus/bigiris-menu.py:374
+#: data/nautilus/bigiris-menu.py:150
 msgid "BigIris: Processar esta pasta…"
 msgstr "BigIris: Procesar esta carpeta…"
 
-#: data/nautilus/bigiris-menu.py:375
+#: data/nautilus/bigiris-menu.py:151
 msgid "Converter imagens da pasta com o Prisma"
 msgstr "Convertir las imágenes de la carpeta con Prisma"
 

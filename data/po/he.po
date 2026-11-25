@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: bigiris 0.1.0\n"
 "Report-Msgid-Bugs-To: https://github.com/big-comm/bigiris/issues\n"
-"POT-Creation-Date: 2026-11-16 21:59-0300\n"
+"POT-Creation-Date: 2026-11-25 14:23-0300\n"
 "PO-Revision-Date: 2026-10-14 01:36-0300\n"
 "Last-Translator: BigCommunity Team\n"
 "Language-Team: BigCommunity Team\n"
@@ -16,106 +16,126 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: crates/bigiris/src/gui.rs:710
+#: crates/bigiris/src/gui.rs:758
 msgid "BigIris"
 msgstr "BigIris"
 
-#: crates/bigiris/src/gui.rs:745 crates/bigiris/src/gui/previews.rs:240
+#: crates/bigiris/src/gui.rs:793 crates/bigiris/src/gui/previews.rs:257
 msgid "Não foi possível abrir a imagem"
 msgstr "לא ניתן לפתוח את התמונה"
 
-#: crates/bigiris/src/gui.rs:998 crates/bigiris/src/gui.rs:3593
-#: crates/bigiris/src/gui/viewer/crop.rs:600
+#: crates/bigiris/src/gui.rs:912 crates/bigiris/src/gui.rs:2789
+#: crates/bigiris/src/gui.rs:4086 crates/bigiris/src/gui/dialogs/animate.rs:184
+#: crates/bigiris/src/gui/dialogs/batch.rs:122
+#: crates/bigiris/src/gui/dialogs/batch.rs:255
+#: crates/bigiris/src/gui/dialogs/batch.rs:349
+#: crates/bigiris/src/gui/viewer/crop.rs:393
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:412
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:413
+#: crates/bigiris/src/gui/dialogs/mod.rs:251
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:219
+#: crates/bigiris/src/gui/dialogs/resize.rs:390
+#: crates/bigiris/src/gui/previews.rs:220
+msgid "Cancelar"
+msgstr "ביטול"
+
+#: crates/bigiris/src/gui.rs:924
+msgid "Recalculando a edição…"
+msgstr "מחשב מחדש את העריכה…"
+
+#: crates/bigiris/src/gui.rs:1072 crates/bigiris/src/gui.rs:3807
+#: crates/bigiris/src/gui/viewer/crop.rs:624
 msgid "Aguarde o salvamento terminar"
 msgstr "יש להמתין לסיום השמירה"
 
-#: crates/bigiris/src/gui.rs:1009
+#: crates/bigiris/src/gui.rs:1086
 msgid "Descartar alterações?"
 msgstr "לבטל את השינויים?"
 
-#: crates/bigiris/src/gui.rs:1010
+#: crates/bigiris/src/gui.rs:1087
 msgid "A imagem tem edições que ainda não foram salvas."
 msgstr "בתמונה יש שינויים שטרם נשמרו."
 
-#: crates/bigiris/src/gui.rs:1012
+#: crates/bigiris/src/gui.rs:1089
 msgid "Continuar editando"
 msgstr "המשך עריכה"
 
-#: crates/bigiris/src/gui.rs:1013
+#: crates/bigiris/src/gui.rs:1090
 msgid "Descartar"
 msgstr "ביטול השינויים"
 
-#: crates/bigiris/src/gui.rs:1083
+#: crates/bigiris/src/gui.rs:1160
 msgid "Imagem anterior"
 msgstr "תמונה קודמת"
 
-#: crates/bigiris/src/gui.rs:1084
+#: crates/bigiris/src/gui.rs:1161
 msgid "Próxima imagem"
 msgstr "תמונה הבאה"
 
-#: crates/bigiris/src/gui.rs:1100
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:292
+#: crates/bigiris/src/gui.rs:1177
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:305
 msgid "Editar"
 msgstr "עריכה"
 
-#: crates/bigiris/src/gui.rs:1103
+#: crates/bigiris/src/gui.rs:1180
 msgid "Editar (E)"
 msgstr "עריכה (E)"
 
-#: crates/bigiris/src/gui.rs:1110
+#: crates/bigiris/src/gui.rs:1187
 msgid "Propriedades da imagem (Ctrl+I)"
 msgstr "מאפייני תמונה (Ctrl+I)"
 
-#: crates/bigiris/src/gui.rs:1116
+#: crates/bigiris/src/gui.rs:1193
 msgid "Tela cheia (F11)"
 msgstr "מסך מלא (F11)"
 
-#: crates/bigiris/src/gui.rs:1125
+#: crates/bigiris/src/gui.rs:1202
 msgid "Afastar"
 msgstr "התרחקות"
 
-#: crates/bigiris/src/gui.rs:1129 crates/bigiris/src/gui.rs:3952
+#: crates/bigiris/src/gui.rs:1206 crates/bigiris/src/gui.rs:4182
 msgid "Ajustar à janela"
 msgstr "התאמה לחלון"
 
-#: crates/bigiris/src/gui.rs:1130 crates/bigiris/src/gui.rs:3953
+#: crates/bigiris/src/gui.rs:1207 crates/bigiris/src/gui.rs:4183
 msgid "Tamanho real (100%)"
 msgstr "גודל אמיתי (100%)"
 
-#: crates/bigiris/src/gui.rs:1139 crates/bigiris/src/gui.rs:3949
+#: crates/bigiris/src/gui.rs:1216 crates/bigiris/src/gui.rs:4179
 msgid "Zoom"
 msgstr "זום"
 
-#: crates/bigiris/src/gui.rs:1143
+#: crates/bigiris/src/gui.rs:1220
 msgid "Aproximar"
 msgstr "התקרבות"
 
-#: crates/bigiris/src/gui.rs:2189
+#: crates/bigiris/src/gui.rs:2307
 msgid "Slideshow: pausado"
 msgstr "מצגת: מושהית"
 
-#: crates/bigiris/src/gui.rs:2217
+#: crates/bigiris/src/gui.rs:2335
 msgid "Slideshow: a cada {interval} s"
 msgstr "מצגת: כל {interval} שנ׳"
 
-#: crates/bigiris/src/gui.rs:2239
+#: crates/bigiris/src/gui.rs:2354
 msgid "Histograma ligado"
 msgstr "היסטוגרמה מופעלת"
 
-#: crates/bigiris/src/gui.rs:2241
+#: crates/bigiris/src/gui.rs:2356
 msgid "Histograma desligado"
 msgstr "היסטוגרמה כבויה"
 
-#: crates/bigiris/src/gui.rs:2417 crates/bigiris/src/gui/dialogs/batch.rs:340
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:1632
+#: crates/bigiris/src/gui.rs:2479 crates/bigiris/src/gui.rs:2590
+#: crates/bigiris/src/gui/dialogs/batch.rs:341
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:1712
 msgid "Cancelado"
 msgstr "בוטל"
 
-#: crates/bigiris/src/gui.rs:2418
+#: crates/bigiris/src/gui.rs:2591
 msgid "Falha na IA: {error}"
 msgstr "שגיאת בינה מלאכותית: {error}"
 
-#: crates/bigiris/src/gui.rs:2424
+#: crates/bigiris/src/gui.rs:2597
 msgid ""
 "Esta build não inclui IA. Recompile com `cargo build --features ai` (requer "
 "glslc, do pacote shaderc)."
@@ -123,26 +143,26 @@ msgstr ""
 "גרסה זו אינה כוללת בינה מלאכותית. יש להדר מחדש עם `cargo build --features "
 "ai` (דורש glslc, מהחבילה shaderc)."
 
-#: crates/bigiris/src/gui.rs:2430
+#: crates/bigiris/src/gui.rs:2603
 msgid "{model} não está instalado. Instale com: sudo pacman -S {package}"
 msgstr "{model} אינו מותקן. להתקנה: sudo pacman -S {package}"
 
-#: crates/bigiris/src/gui.rs:2444
+#: crates/bigiris/src/gui.rs:2617
 msgid "Não foi possível ler {path}: {error}"
 msgstr "לא ניתן לקרוא את {path}: {error}"
 
-#: crates/bigiris/src/gui.rs:2602
+#: crates/bigiris/src/gui.rs:2777
 msgid ""
 "O arquivo será sobrescrito. JPEG é recodificado a cada gravação; isso pode "
 "reduzir a qualidade."
 msgstr ""
 "הקובץ יוחלף. JPEG מקודד מחדש בכל שמירה; פעולה זו עלולה להפחית את האיכות."
 
-#: crates/bigiris/src/gui.rs:2604
+#: crates/bigiris/src/gui.rs:2779
 msgid "O arquivo será sobrescrito."
 msgstr "הקובץ יוחלף."
 
-#: crates/bigiris/src/gui.rs:2610
+#: crates/bigiris/src/gui.rs:2785
 msgid ""
 "Este formato não guarda todos os metadados da foto (data, câmera, perfil de "
 "cor); o que ele não suportar será removido ou convertido."
@@ -150,34 +170,21 @@ msgstr ""
 "תבנית זו אינה שומרת את כל נתוני המטא של התמונה (תאריך, מצלמה, פרופיל צבע); "
 "מה שאינו נתמך יוסר או יומר."
 
-#: crates/bigiris/src/gui.rs:2613
+#: crates/bigiris/src/gui.rs:2788
 msgid "Salvar alterações?"
 msgstr "לשמור שינויים?"
 
-#: crates/bigiris/src/gui.rs:2614 crates/bigiris/src/gui.rs:3857
-#: crates/bigiris/src/gui/dialogs/animate.rs:187
-#: crates/bigiris/src/gui/dialogs/batch.rs:122
-#: crates/bigiris/src/gui/dialogs/batch.rs:255
-#: crates/bigiris/src/gui/dialogs/batch.rs:348
-#: crates/bigiris/src/gui/viewer/crop.rs:373
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:396
-#: crates/bigiris/src/gui/dialogs/mod.rs:251
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:219
-#: crates/bigiris/src/gui/previews.rs:202
-msgid "Cancelar"
-msgstr "ביטול"
-
-#: crates/bigiris/src/gui.rs:2615
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:408
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:410
+#: crates/bigiris/src/gui.rs:2790
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:425
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:427
 msgid "Salvar"
 msgstr "שמירה"
 
-#: crates/bigiris/src/gui.rs:2664
+#: crates/bigiris/src/gui.rs:2850
 msgid "Salvo"
 msgstr "נשמר"
 
-#: crates/bigiris/src/gui.rs:2743
+#: crates/bigiris/src/gui.rs:2931
 msgid ""
 "Este arquivo é animado, tem várias páginas ou não pôde ser verificado. Girar "
 "ou espelhar e salvar descartaria os outros quadros, então ele não foi "
@@ -186,321 +193,333 @@ msgstr ""
 "קובץ זה מונפש, מרובה עמודים או שלא ניתן היה לבדוק אותו. סיבוב או היפוך "
 "ושמירה היו מוחקים את שאר הפריימים, ולכן הקובץ לא שונה."
 
-#: crates/bigiris/src/gui.rs:2744
+#: crates/bigiris/src/gui.rs:2932
 msgid ""
 "O BigIris não sabe gravar este formato. As alterações não podem ser salvas "
 "no próprio arquivo."
 msgstr ""
 "BigIris אינו יודע לכתוב תבנית זו. לא ניתן לשמור את השינויים בקובץ עצמו."
 
-#: crates/bigiris/src/gui.rs:2745
+#: crates/bigiris/src/gui.rs:2933
 msgid "Sem permissão para alterar este arquivo ou a pasta dele."
 msgstr "אין הרשאה לשנות קובץ זה או את התיקייה שלו."
 
-#: crates/bigiris/src/gui.rs:2747
+#: crates/bigiris/src/gui.rs:2935
 msgid "O arquivo não foi alterado. Detalhes: {detail}"
 msgstr "הקובץ לא שונה. פרטים: {detail}"
 
-#: crates/bigiris/src/gui.rs:2759
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:1764
+#: crates/bigiris/src/gui.rs:2947
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:1846
 msgid "Não foi possível salvar"
 msgstr "לא ניתן לשמור"
 
-#: crates/bigiris/src/gui.rs:2762
+#: crates/bigiris/src/gui.rs:2950
 msgid "Manter alterações"
 msgstr "השארת השינויים"
 
-#: crates/bigiris/src/gui.rs:2763
+#: crates/bigiris/src/gui.rs:2951
 msgid "Descartar alterações"
 msgstr "ביטול השינויים"
 
-#: crates/bigiris/src/gui.rs:2852
+#: crates/bigiris/src/gui.rs:3041
 msgid "o formato não guarda EXIF"
 msgstr "התבנית אינה שומרת EXIF"
 
-#: crates/bigiris/src/gui.rs:2853
+#: crates/bigiris/src/gui.rs:3042
 msgid "EXIF grande demais para JPEG"
 msgstr "EXIF גדול מדי עבור JPEG"
 
-#: crates/bigiris/src/gui.rs:2854
+#: crates/bigiris/src/gui.rs:3043
 msgid "EXIF inválido"
 msgstr "EXIF לא תקין"
 
-#: crates/bigiris/src/gui.rs:2857
+#: crates/bigiris/src/gui.rs:3046
 msgid "perfil de cor convertido para sRGB"
 msgstr "פרופיל הצבע הומר ל־sRGB"
 
-#: crates/bigiris/src/gui.rs:2858
+#: crates/bigiris/src/gui.rs:3047
 msgid "perfil de cor inválido ignorado"
 msgstr "פרופיל צבע לא תקין לא נלקח בחשבון"
 
-#: crates/bigiris/src/gui.rs:2859
+#: crates/bigiris/src/gui.rs:3048
 msgid "metadados não suportados"
 msgstr "נתוני מטא שאינם נתמכים"
 
-#: crates/bigiris/src/gui.rs:2869
+#: crates/bigiris/src/gui.rs:3058
 msgid "Salvo. Alguns metadados não puderam ser mantidos: {list}"
 msgstr "נשמר. לא ניתן היה לשמור חלק מנתוני המטא: {list}"
 
-#: crates/bigiris/src/gui.rs:3132
+#: crates/bigiris/src/gui.rs:3342
 msgid "Salve ou desfaça as alterações antes de navegar"
 msgstr "יש לשמור או לבטל את השינויים לפני הניווט"
 
-#: crates/bigiris/src/gui.rs:3215 crates/bigiris/src/gui.rs:4107
-#: crates/bigiris/src/gui.rs:5157 crates/bigiris/src/gui.rs:5292
+#: crates/bigiris/src/gui.rs:3431 crates/bigiris/src/gui.rs:4342
+#: crates/bigiris/src/gui.rs:5393 crates/bigiris/src/gui.rs:5528
 msgid "Abrir imagens…"
 msgstr "פתיחת תמונות…"
 
-#: crates/bigiris/src/gui.rs:3216 crates/bigiris/src/gui.rs:3988
+#: crates/bigiris/src/gui.rs:3432 crates/bigiris/src/gui.rs:4223
 msgid "Colar arquivos de imagem"
 msgstr "הדבקת קבצי תמונה"
 
-#: crates/bigiris/src/gui.rs:3218 crates/bigiris/src/gui.rs:3987
+#: crates/bigiris/src/gui.rs:3434 crates/bigiris/src/gui.rs:4222
 msgid "Copiar imagem"
 msgstr "העתקת תמונה"
 
-#: crates/bigiris/src/gui.rs:3219
+#: crates/bigiris/src/gui.rs:3435
 msgid "Imprimir…"
 msgstr "הדפסה…"
 
-#: crates/bigiris/src/gui.rs:3221 crates/bigiris/src/gui.rs:4119
-#: crates/bigiris/src/gui.rs:5157
+#: crates/bigiris/src/gui.rs:3437 crates/bigiris/src/gui.rs:4354
+#: crates/bigiris/src/gui.rs:5393
 msgid "Processar uma pasta…"
 msgstr "עיבוד תיקייה…"
 
-#: crates/bigiris/src/gui.rs:3227
+#: crates/bigiris/src/gui.rs:3443
 msgid "Editar imagem"
 msgstr "עריכת תמונה"
 
-#: crates/bigiris/src/gui.rs:3228 crates/bigiris/src/gui.rs:3971
+#: crates/bigiris/src/gui.rs:3444 crates/bigiris/src/gui.rs:4201
 msgid "Desfazer"
 msgstr "ביטול פעולה"
 
-#: crates/bigiris/src/gui.rs:3229 crates/bigiris/src/gui.rs:3972
+#: crates/bigiris/src/gui.rs:3445 crates/bigiris/src/gui.rs:4202
 msgid "Refazer"
 msgstr "ביצוע חוזר"
 
-#: crates/bigiris/src/gui.rs:3232 crates/bigiris/src/gui.rs:3978
+#: crates/bigiris/src/gui.rs:3448 crates/bigiris/src/gui.rs:4213
 msgid "Salvar alterações"
 msgstr "שמירת השינויים"
 
-#: crates/bigiris/src/gui.rs:3233 crates/bigiris/src/gui.rs:3991
+#: crates/bigiris/src/gui.rs:3449 crates/bigiris/src/gui.rs:4226
 msgid "Mover para a lixeira"
 msgstr "העברה לאשפה"
 
-#: crates/bigiris/src/gui.rs:3237
+#: crates/bigiris/src/gui.rs:3453
 msgid "Atalhos do teclado"
 msgstr "צירופי מקשים"
 
-#: crates/bigiris/src/gui.rs:3238
+#: crates/bigiris/src/gui.rs:3454
 msgid "Sobre o BigIris"
 msgstr "על אודות BigIris"
 
-#: crates/bigiris/src/gui.rs:3243
+#: crates/bigiris/src/gui.rs:3459
 msgid "Menu principal"
 msgstr "תפריט ראשי"
 
-#: crates/bigiris/src/gui.rs:3595
+#: crates/bigiris/src/gui.rs:3809
 msgid "Salve ou desfaça as alterações antes de usar esta ferramenta"
 msgstr "יש לשמור או לבטל את השינויים לפני השימוש בכלי זה"
 
-#: crates/bigiris/src/gui.rs:3611 crates/bigiris/src/gui.rs:4165
-#: crates/bigiris/src/gui/dialogs/batch.rs:390
+#: crates/bigiris/src/gui.rs:3825 crates/bigiris/src/gui.rs:4399
+#: crates/bigiris/src/gui/dialogs/batch.rs:389
 #: crates/bigiris/src/gui/dialogs/remove_bg.rs:121
 msgid "Imagens"
 msgstr "תמונות"
 
-#: crates/bigiris/src/gui.rs:3617 crates/bigiris/src/gui.rs:3986
+#: crates/bigiris/src/gui.rs:3831 crates/bigiris/src/gui.rs:4221
 msgid "Abrir imagens"
 msgstr "פתיחת תמונות"
 
-#: crates/bigiris/src/gui.rs:3669 crates/bigiris/src/gui.rs:3709
+#: crates/bigiris/src/gui.rs:3873
+msgid "Aguarde a imagem terminar de carregar"
+msgstr "יש להמתין לסיום טעינת התמונה"
+
+#: crates/bigiris/src/gui.rs:3898 crates/bigiris/src/gui.rs:3938
 msgid "Não foi possível preparar a página"
 msgstr "לא ניתן להכין את העמוד"
 
-#: crates/bigiris/src/gui.rs:3691
+#: crates/bigiris/src/gui.rs:3920
 msgid "O preparo da impressão falhou"
 msgstr "הכנת ההדפסה נכשלה"
 
-#: crates/bigiris/src/gui.rs:3748
+#: crates/bigiris/src/gui.rs:3977
 msgid "Não foi possível imprimir"
 msgstr "לא ניתן להדפיס"
 
-#: crates/bigiris/src/gui.rs:3751 crates/bigiris/src/gui.rs:3883
+#: crates/bigiris/src/gui.rs:3980 crates/bigiris/src/gui.rs:4112
 #: crates/bigiris/src/gui/dialogs/animate.rs:53
-#: crates/bigiris/src/gui/dialogs/batch.rs:346
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:1765
+#: crates/bigiris/src/gui/dialogs/batch.rs:347
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:311
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:1847
 #: crates/bigiris/src/gui/dialogs/remove_bg.rs:102
 #: crates/bigiris/src/gui/dialogs/remove_bg.rs:339
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:381
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:386
 #: crates/bigiris/src/gui/transfers.rs:99
 msgid "Fechar"
 msgstr "סגירה"
 
-#: crates/bigiris/src/gui.rs:3849
+#: crates/bigiris/src/gui.rs:4078
 msgid "Mover para a lixeira?"
 msgstr "להעביר לאשפה?"
 
-#: crates/bigiris/src/gui.rs:3853
+#: crates/bigiris/src/gui.rs:4082
 msgid ""
 "O arquivo será movido para a lixeira do sistema. Você pode restaurá-lo "
 "depois."
 msgstr "הקובץ יועבר לאשפה של המערכת. ניתן לשחזר אותו מאוחר יותר."
 
-#: crates/bigiris/src/gui.rs:3858
+#: crates/bigiris/src/gui.rs:4087
 msgid "Mover"
 msgstr "העברה"
 
-#: crates/bigiris/src/gui.rs:3880
+#: crates/bigiris/src/gui.rs:4109
 msgid "Não foi possível mover para a lixeira"
 msgstr "לא ניתן להעביר לאשפה"
 
-#: crates/bigiris/src/gui.rs:3941
+#: crates/bigiris/src/gui.rs:4171
 msgid "Navegação"
 msgstr "ניווט"
 
-#: crates/bigiris/src/gui.rs:3943
+#: crates/bigiris/src/gui.rs:4173
 msgid "Anterior / próximo"
 msgstr "הקודמת / הבאה"
 
-#: crates/bigiris/src/gui.rs:3944
+#: crates/bigiris/src/gui.rs:4174
 msgid "Primeiro / último"
 msgstr "ראשונה / אחרונה"
 
-#: crates/bigiris/src/gui.rs:3945
+#: crates/bigiris/src/gui.rs:4175
 msgid "Slideshow (auto-avanço)"
 msgstr "מצגת (מעבר אוטומטי)"
 
-#: crates/bigiris/src/gui.rs:3951
+#: crates/bigiris/src/gui.rs:4181
 msgid "Aproximar / afastar"
 msgstr "התקרבות / התרחקות"
 
-#: crates/bigiris/src/gui.rs:3954
+#: crates/bigiris/src/gui.rs:4184
 msgid "Zoom contínuo"
 msgstr "זום רציף"
 
-#: crates/bigiris/src/gui.rs:3958
+#: crates/bigiris/src/gui.rs:4188
 msgid "Janela"
 msgstr "חלון"
 
-#: crates/bigiris/src/gui.rs:3960
+#: crates/bigiris/src/gui.rs:4190
 msgid "Tela cheia"
 msgstr "מסך מלא"
 
-#: crates/bigiris/src/gui.rs:3961
+#: crates/bigiris/src/gui.rs:4191
 msgid "Modo teatro"
 msgstr "מצב תיאטרון"
 
-#: crates/bigiris/src/gui.rs:3962
+#: crates/bigiris/src/gui.rs:4192
 msgid "Fita de miniaturas"
 msgstr "רצועת תמונות ממוזערות"
 
-#: crates/bigiris/src/gui.rs:3963
+#: crates/bigiris/src/gui.rs:4193
 msgid "Histograma RGB"
 msgstr "היסטוגרמת RGB"
 
-#: crates/bigiris/src/gui.rs:3964
+#: crates/bigiris/src/gui.rs:4194
 msgid "Fixar barras visíveis"
 msgstr "הצגה קבועה של הסרגלים"
 
-#: crates/bigiris/src/gui.rs:3965
+#: crates/bigiris/src/gui.rs:4195
 msgid "Sair da tela cheia ou fechar"
 msgstr "יציאה ממסך מלא או סגירה"
 
-#: crates/bigiris/src/gui.rs:3969
+#: crates/bigiris/src/gui.rs:4199
 msgid "Edição"
 msgstr "עריכה"
 
-#: crates/bigiris/src/gui.rs:3973
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:312
+#: crates/bigiris/src/gui.rs:4203
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:326
 msgid "Girar à direita"
 msgstr "סיבוב ימינה"
 
-#: crates/bigiris/src/gui.rs:3974
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:311
+#: crates/bigiris/src/gui.rs:4204
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:325
 msgid "Girar à esquerda"
 msgstr "סיבוב שמאלה"
 
-#: crates/bigiris/src/gui.rs:3975
+#: crates/bigiris/src/gui.rs:4205
 msgid "Recortar…"
 msgstr "חיתוך…"
 
-#: crates/bigiris/src/gui.rs:3976
+#: crates/bigiris/src/gui.rs:4206
+msgid "Recorte: mover a seleção"
+msgstr "חיתוך: הזזת הבחירה"
+
+#: crates/bigiris/src/gui.rs:4209
+msgid "Recorte: redimensionar a seleção"
+msgstr "חיתוך: שינוי גודל הבחירה"
+
+#: crates/bigiris/src/gui.rs:4211
 msgid "Remover fundo (IA)…"
 msgstr "הסרת רקע (בינה מלאכותית)…"
 
-#: crates/bigiris/src/gui.rs:3977
-#: crates/bigimage-integrations/src/action.rs:517
-#: data/nautilus/bigiris-menu.py:239
+#: crates/bigiris/src/gui.rs:4212
+#: crates/bigimage-integrations/src/action.rs:518
 msgid "Aumentar resolução…"
 msgstr "הגדלת רזולוציה…"
 
-#: crates/bigiris/src/gui.rs:3979
+#: crates/bigiris/src/gui.rs:4214
 msgid "Painel de edição"
 msgstr "חלונית עריכה"
 
-#: crates/bigiris/src/gui.rs:3980
+#: crates/bigiris/src/gui.rs:4215
 msgid "Ver original (segure)"
 msgstr "הצגת המקור (בלחיצה ממושכת)"
 
-#: crates/bigiris/src/gui.rs:3984
+#: crates/bigiris/src/gui.rs:4219
 #: crates/bigiris/src/gui/dialogs/properties.rs:120
 msgid "Arquivo"
 msgstr "קובץ"
 
-#: crates/bigiris/src/gui.rs:3989
+#: crates/bigiris/src/gui.rs:4224
 msgid "Imprimir"
 msgstr "הדפסה"
 
-#: crates/bigiris/src/gui.rs:3990
+#: crates/bigiris/src/gui.rs:4225
 #: crates/bigiris/src/gui/dialogs/properties.rs:38
 #: crates/bigiris/src/gui/dialogs/properties.rs:80
 msgid "Propriedades"
 msgstr "מאפיינים"
 
-#: crates/bigiris/src/gui.rs:3995
+#: crates/bigiris/src/gui.rs:4230
 msgid "Ajuda"
 msgstr "עזרה"
 
-#: crates/bigiris/src/gui.rs:3996
+#: crates/bigiris/src/gui.rs:4231
 msgid "Este diálogo"
 msgstr "תיבת דו־שיח זו"
 
-#: crates/bigiris/src/gui.rs:3996
+#: crates/bigiris/src/gui.rs:4231
 msgid "Sobre"
 msgstr "על אודות"
 
-#: crates/bigiris/src/gui.rs:4006
+#: crates/bigiris/src/gui.rs:4241
 msgid "Roda do mouse"
 msgstr "גלגל העכבר"
 
-#: crates/bigiris/src/gui.rs:4034
+#: crates/bigiris/src/gui.rs:4269
 msgid "Atalhos de teclado"
 msgstr "צירופי מקשים"
 
-#: crates/bigiris/src/gui.rs:4060
+#: crates/bigiris/src/gui.rs:4295
 msgid ""
 "Visualizador e conversor de imagens para Linux. Rápido, acessível por "
 "teclado e integrado ao gerenciador de arquivos."
 msgstr "מציג וממיר תמונות ללינוקס. מהיר, נגיש מהמקלדת ומשולב במנהל הקבצים."
 
-#: crates/bigiris/src/gui.rs:4093
+#: crates/bigiris/src/gui.rs:4328
 msgid "Abra suas imagens"
 msgstr "פתחו את התמונות שלכם"
 
-#: crates/bigiris/src/gui.rs:4098
+#: crates/bigiris/src/gui.rs:4333
 msgid "Arraste imagens para cá ou cole arquivos com Ctrl+V."
 msgstr "גררו לכאן תמונות או הדביקו קבצים עם Ctrl+V."
 
-#: crates/bigiris/src/gui.rs:4141
+#: crates/bigiris/src/gui.rs:4376
 msgid "Selecionar pasta com imagens"
 msgstr "בחירת תיקייה עם תמונות"
 
-#: crates/bigiris/src/gui.rs:4162
+#: crates/bigiris/src/gui.rs:4396
 msgid "Selecionar imagens"
 msgstr "בחירת תמונות"
 
-#: crates/bigiris/src/gui.rs:4209
+#: crates/bigiris/src/gui.rs:4443
 msgid "{current} de {total}"
 msgstr "{current} מתוך {total}"
 
@@ -512,29 +531,29 @@ msgstr "≈ אותו גודל"
 msgid "{written} gravado(s), {skipped} ignorado(s), {failed} falha(s)"
 msgstr "נכתבו: {written}, דולגו: {skipped}, נכשלו: {failed}"
 
-#: crates/bigiris/src/gui/batch_runner.rs:190
+#: crates/bigiris/src/gui/batch_runner.rs:189
 msgid "Concluído em {time} · {counts}"
 msgstr "הושלם תוך {time} · {counts}"
 
-#: crates/bigiris/src/gui/batch_runner.rs:199
+#: crates/bigiris/src/gui/batch_runner.rs:198
 msgid ""
 "{before} → {after} ({delta}) · média por arquivo {average_before} → "
 "{average_after}"
 msgstr ""
 "{before} → {after} ({delta}) · ממוצע לקובץ {average_before} → {average_after}"
 
-#: crates/bigiris/src/gui/batch_runner.rs:222
-#: crates/bigiris/src/gui/dialogs/animate.rs:315
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:1581
+#: crates/bigiris/src/gui/batch_runner.rs:220
+#: crates/bigiris/src/gui/dialogs/animate.rs:309
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:1652
 #: crates/bigiris/src/gui/dialogs/remove_bg.rs:336
 msgid "O processamento terminou inesperadamente. Tente novamente."
 msgstr "העיבוד הסתיים באופן בלתי צפוי. נא לנסות שוב."
 
-#: crates/bigiris/src/gui/batch_runner.rs:311
+#: crates/bigiris/src/gui/batch_runner.rs:342
 msgid "falha inesperada no worker"
 msgstr "כשל בלתי צפוי בתהליכון עיבוד"
 
-#: crates/bigiris/src/gui/batch_runner.rs:359
+#: crates/bigiris/src/gui/batch_runner.rs:391
 msgid "um worker terminou inesperadamente"
 msgstr "תהליכון עיבוד הסתיים באופן בלתי צפוי"
 
@@ -544,12 +563,11 @@ msgstr "התאמת צבעים — Prisma"
 
 #: crates/bigiris/src/gui/dialogs/adjust.rs:35
 #: crates/bigimage-integrations/src/action.rs:91
-#: data/nautilus/bigiris-menu.py:153
 msgid "Ajustar cores"
 msgstr "התאמת צבעים"
 
 #: crates/bigiris/src/gui/dialogs/adjust.rs:38
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:334
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:348
 msgid "Brilho"
 msgstr "בהירות"
 
@@ -558,7 +576,7 @@ msgid "-100 escuro · 0 neutro · +100 claro"
 msgstr "-100 כהה · 0 נייטרלי · +100 בהיר"
 
 #: crates/bigiris/src/gui/dialogs/adjust.rs:43
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:335
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:349
 msgid "Contraste"
 msgstr "ניגודיות"
 
@@ -567,7 +585,7 @@ msgid "-100 plano · 0 neutro · +100 agressivo"
 msgstr "-100 שטוח · 0 נייטרלי · +100 חזק"
 
 #: crates/bigiris/src/gui/dialogs/adjust.rs:48
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:336
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:350
 msgid "Saturação"
 msgstr "רוויה"
 
@@ -584,14 +602,14 @@ msgid "Abaixo de 1 clareia os meios-tons · 1 mantém · acima de 1 escurece"
 msgstr "מתחת ל־1 מבהיר את טוני הביניים · 1 שומר · מעל 1 מכהה"
 
 #: crates/bigiris/src/gui/dialogs/adjust.rs:64
-#: crates/bigiris/src/gui/dialogs/batch.rs:375
+#: crates/bigiris/src/gui/dialogs/batch.rs:374
 #: crates/bigiris/src/gui/dialogs/convert.rs:39
 #: crates/bigiris/src/gui/dialogs/crop.rs:344
 #: crates/bigiris/src/gui/dialogs/extent.rs:92
 #: crates/bigiris/src/gui/dialogs/flip.rs:37
 #: crates/bigiris/src/gui/dialogs/resize.rs:128
 #: crates/bigiris/src/gui/dialogs/rotate.rs:42
-#: crates/bigiris/src/gui/dialogs/upscale.rs:82
+#: crates/bigiris/src/gui/dialogs/upscale.rs:88
 msgid "Arquivos selecionados"
 msgstr "קבצים שנבחרו"
 
@@ -609,15 +627,15 @@ msgid "Saída"
 msgstr "פלט"
 
 #: crates/bigiris/src/gui/dialogs/adjust.rs:83
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:366
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:381
 msgid "Aplicar"
 msgstr "החלה"
 
-#: crates/bigiris/src/gui/dialogs/adjust.rs:190
+#: crates/bigiris/src/gui/dialogs/adjust.rs:188
 msgid "Ajustando…"
 msgstr "מתבצעת התאמה…"
 
-#: crates/bigiris/src/gui/dialogs/adjust.rs:196
+#: crates/bigiris/src/gui/dialogs/adjust.rs:194
 msgid "Ajustando"
 msgstr "מתבצעת התאמה"
 
@@ -689,40 +707,39 @@ msgstr "פריימים"
 msgid "Criar GIF"
 msgstr "יצירת GIF"
 
-#: crates/bigiris/src/gui/dialogs/animate.rs:184
+#: crates/bigiris/src/gui/dialogs/animate.rs:181
 msgid "Substituir arquivo existente?"
 msgstr "להחליף את הקובץ הקיים?"
 
-#: crates/bigiris/src/gui/dialogs/animate.rs:188
+#: crates/bigiris/src/gui/dialogs/animate.rs:185
 msgid "Substituir"
 msgstr "החלפה"
 
-#: crates/bigiris/src/gui/dialogs/animate.rs:206
+#: crates/bigiris/src/gui/dialogs/animate.rs:203
 msgid "Informe o arquivo de saída."
 msgstr "יש לציין את קובץ הפלט."
 
-#: crates/bigiris/src/gui/dialogs/animate.rs:215
+#: crates/bigiris/src/gui/dialogs/animate.rs:212
 msgid "O arquivo de saída não pode ser uma pasta."
 msgstr "קובץ הפלט אינו יכול להיות תיקייה."
 
-#: crates/bigiris/src/gui/dialogs/animate.rs:219
+#: crates/bigiris/src/gui/dialogs/animate.rs:216
 msgid "O arquivo de saída não pode ser um dos quadros."
 msgstr "קובץ הפלט אינו יכול להיות אחד מהפריימים."
 
-#: crates/bigiris/src/gui/dialogs/animate.rs:255
+#: crates/bigiris/src/gui/dialogs/animate.rs:249
 msgid "Montando GIF…"
 msgstr "בניית GIF…"
 
-#: crates/bigiris/src/gui/dialogs/animate.rs:297
-#: crates/bigiris/src/gui/dialogs/batch.rs:102
-msgid "Pronto"
-msgstr "מוכן"
+#: crates/bigiris/src/gui/dialogs/animate.rs:291
+msgid "Concluído: {file}"
+msgstr "הושלם: {file}"
 
-#: crates/bigiris/src/gui/dialogs/animate.rs:302
+#: crates/bigiris/src/gui/dialogs/animate.rs:298
 msgid "O arquivo {file} passou a existir e foi mantido; nada foi gravado."
 msgstr "הקובץ {file} נוצר בינתיים ונשמר; לא נכתב דבר."
 
-#: crates/bigiris/src/gui/dialogs/animate.rs:309
+#: crates/bigiris/src/gui/dialogs/animate.rs:304
 msgid "Falha"
 msgstr "נכשל"
 
@@ -739,7 +756,7 @@ msgid "Arquivos"
 msgstr "קבצים"
 
 #: crates/bigiris/src/gui/dialogs/batch.rs:50
-#: crates/bigiris/src/gui/dialogs/batch.rs:388
+#: crates/bigiris/src/gui/dialogs/batch.rs:387
 msgid "Adicionar arquivos"
 msgstr "הוספת קבצים"
 
@@ -774,6 +791,10 @@ msgstr "אותה תיקייה כמו קובץ המקור"
 msgid "Usar a mesma pasta do arquivo de origem"
 msgstr "שימוש בתיקיית קובץ המקור"
 
+#: crates/bigiris/src/gui/dialogs/batch.rs:102
+msgid "Pronto"
+msgstr "מוכן"
+
 #: crates/bigiris/src/gui/dialogs/batch.rs:108
 msgid "Aguardando. Clique em Processar para iniciar."
 msgstr "בהמתנה. יש ללחוץ על עיבוד כדי להתחיל."
@@ -794,7 +815,7 @@ msgstr "מתחיל…"
 msgid "Processando…"
 msgstr "מעבד…"
 
-#: crates/bigiris/src/gui/dialogs/batch.rs:302
+#: crates/bigiris/src/gui/dialogs/batch.rs:303
 msgid ""
 "Cancelado após {done}/{total} em {timing}. {ok} gravado(s), {skip} "
 "ignorado(s), {fail} falha(s)."
@@ -802,22 +823,22 @@ msgstr ""
 "בוטל לאחר {done}/{total} תוך {timing}. נכתבו: {ok}, דולגו: {skip}, נכשלו: "
 "{fail}."
 
-#: crates/bigiris/src/gui/dialogs/batch.rs:304
+#: crates/bigiris/src/gui/dialogs/batch.rs:305
 msgid ""
 "Concluído em {timing}. {ok} gravado(s), {skip} ignorado(s), {fail} falha(s)."
 msgstr "הושלם תוך {timing}. נכתבו: {ok}, דולגו: {skip}, נכשלו: {fail}."
 
-#: crates/bigiris/src/gui/dialogs/batch.rs:324
+#: crates/bigiris/src/gui/dialogs/batch.rs:325
 msgid ""
 "{before} → {after} ({delta}) · média por arquivo {avg_before} → {avg_after}"
 msgstr "{before} → {after} ({delta}) · ממוצע לקובץ {avg_before} → {avg_after}"
 
-#: crates/bigiris/src/gui/dialogs/batch.rs:342
+#: crates/bigiris/src/gui/dialogs/batch.rs:343
 #: crates/bigiris/src/gui/dialogs/remove_bg.rs:356
 msgid "Concluído"
 msgstr "הושלם"
 
-#: crates/bigiris/src/gui/dialogs/batch.rs:432
+#: crates/bigiris/src/gui/dialogs/batch.rs:431
 msgid "Adicionar pasta com imagens"
 msgstr "הוספת תיקייה עם תמונות"
 
@@ -848,7 +869,6 @@ msgstr "המרת תמונות — Prisma"
 #: crates/bigiris/src/gui/dialogs/convert.rs:32
 #: crates/bigiris/src/gui/dialogs/convert.rs:79
 #: crates/bigimage-integrations/src/action.rs:75
-#: data/nautilus/bigiris-menu.py:100
 msgid "Converter"
 msgstr "המרה"
 
@@ -866,16 +886,16 @@ msgstr ""
 "תמונה זו מכילה GPS (מיקום) ב־EXIF. יש להיזהר בשיתוף פומבי — תהליך העיבוד "
 "שלנו מסיר את ה־EXIF אוטומטית בקידוד מחדש."
 
-#: crates/bigiris/src/gui/dialogs/convert.rs:195
+#: crates/bigiris/src/gui/dialogs/convert.rs:193
 msgid "Convertendo…"
 msgstr "ממיר…"
 
-#: crates/bigiris/src/gui/dialogs/convert.rs:201
+#: crates/bigiris/src/gui/dialogs/convert.rs:199
 msgid "Convertendo"
 msgstr "ממיר"
 
 #: crates/bigiris/src/gui/dialogs/crop.rs:284
-#: crates/bigiris/src/gui/viewer/crop.rs:658
+#: crates/bigiris/src/gui/viewer/crop.rs:682
 msgid ""
 "Arraste nos cantos para redimensionar · dentro do recorte para mover · fora "
 "dele para uma nova seleção."
@@ -888,20 +908,20 @@ msgstr "חיתוך — Prisma"
 
 #: crates/bigiris/src/gui/dialogs/crop.rs:321
 #: crates/bigiris/src/gui/dialogs/crop.rs:389
-#: crates/bigiris/src/gui/viewer/crop.rs:375
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:326
+#: crates/bigiris/src/gui/viewer/crop.rs:395
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:340
 msgid "Recortar"
 msgstr "חיתוך"
 
 #: crates/bigiris/src/gui/dialogs/crop.rs:348
 #: crates/bigiris/src/gui/dialogs/extent.rs:96
-#: crates/bigiris/src/gui/dialogs/upscale.rs:86
+#: crates/bigiris/src/gui/dialogs/upscale.rs:92
 msgid "Tamanho original"
 msgstr "הגודל המקורי"
 
 #: crates/bigiris/src/gui/dialogs/crop.rs:349
 #: crates/bigiris/src/gui/dialogs/extent.rs:97
-#: crates/bigiris/src/gui/dialogs/upscale.rs:90
+#: crates/bigiris/src/gui/dialogs/upscale.rs:96
 msgid "Primeiro arquivo"
 msgstr "קובץ ראשון"
 
@@ -914,12 +934,12 @@ msgid "Y (px)"
 msgstr "Y (px)"
 
 #: crates/bigiris/src/gui/dialogs/crop.rs:363
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:347
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:361
 msgid "Largura (px)"
 msgstr "רוחב (px)"
 
 #: crates/bigiris/src/gui/dialogs/crop.rs:367
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:348
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:362
 msgid "Altura (px)"
 msgstr "גובה (px)"
 
@@ -927,23 +947,24 @@ msgstr "גובה (px)"
 msgid "Centro 50%"
 msgstr "מרכז 50%"
 
-#: crates/bigiris/src/gui/dialogs/crop.rs:449
+#: crates/bigiris/src/gui/dialogs/crop.rs:447
 msgid "Recortando…"
 msgstr "חיתוך…"
 
-#: crates/bigiris/src/gui/dialogs/crop.rs:455
+#: crates/bigiris/src/gui/dialogs/crop.rs:453
 msgid "Recortando"
 msgstr "חיתוך"
 
-#: crates/bigiris/src/gui/viewer/crop.rs:361
+#: crates/bigiris/src/gui/viewer/crop.rs:381
 msgid "Livre"
 msgstr "חופשי"
 
-#: crates/bigiris/src/gui/viewer/crop.rs:362
+#: crates/bigiris/src/gui/viewer/crop.rs:382
 msgid "Original"
 msgstr "מקורי"
 
-#: crates/bigiris/src/gui/viewer/crop.rs:368
+#: crates/bigiris/src/gui/viewer/crop.rs:388
+#: crates/bigiris/src/gui/viewer/crop.rs:406
 msgid "Proporção"
 msgstr "יחס גובה־רוחב"
 
@@ -962,11 +983,11 @@ msgstr "מאוזן"
 msgid "Menor arquivo"
 msgstr "הקובץ הקטן ביותר"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:210
-msgid "Restaurar"
-msgstr "איפוס"
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:218
+msgid "Restaurar {setting}"
+msgstr "איפוס: {setting}"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:261
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:274
 msgid ""
 "Aumentar resolução usa Lanczos3. Para IA (Real-ESRGAN): sudo pacman -S "
 "{package}"
@@ -974,165 +995,172 @@ msgstr ""
 "הגדלת הרזולוציה משתמשת ב־Lanczos3. לבינה מלאכותית (Real-ESRGAN): sudo pacman "
 "-S {package}"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:275
-#: crates/bigiris/src/gui/dialogs/upscale.rs:246
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:288
+#: crates/bigiris/src/gui/dialogs/upscale.rs:253
 msgid "Roda em: {device}"
 msgstr "פועל על: {device}"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:297
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:310
 msgid "Fechar (Esc)"
 msgstr "סגירה (Esc)"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:303
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:317
 msgid "Ver original"
 msgstr "הצגת המקור"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:304
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:318
 msgid "Mostra a imagem sem as edições (segure \\)"
 msgstr "מציג את התמונה ללא העריכות (בלחיצה ממושכת על \\)"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:307
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:321
 msgid "Transformar"
 msgstr "התמרה"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:313
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:327
 msgid "Espelhar horizontal"
 msgstr "היפוך אופקי"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:314
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:328
 msgid "Espelhar vertical"
 msgstr "היפוך אנכי"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:319
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:333
 msgid "Endireitar"
 msgstr "יישור"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:322
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:336
 msgid "Gira a foto e recorta as bordas vazias para alinhar o horizonte"
 msgstr "מסובב את התמונה וחותך את השוליים הריקים כדי ליישר את קו האופק"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:327
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:341
 msgid "Recortar na própria imagem (Ctrl+R)"
 msgstr "חיתוך בתמונה עצמה (Ctrl+R)"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:333
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:347
 msgid "Ajustes"
 msgstr "כוונונים"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:337
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:351
 msgid "Gama"
 msgstr "גאמה"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:342
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:356
 msgid "Restaurar ajustes"
 msgstr "איפוס הכוונונים"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:346
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:360
 #: crates/bigiris/src/gui/dialogs/properties.rs:163
 #: crates/bigiris/src/gui/dialogs/properties.rs:170
 msgid "Tamanho"
 msgstr "גודל"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:352
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:366
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:369
 msgid "Manter proporção"
 msgstr "שמירה על יחס גובה־רוחב"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:363
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:364
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:378
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:379
 #: crates/bigiris/src/gui/dialogs/resize.rs:48
 msgid "Escala (%)"
 msgstr "קנה מידה (%)"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:376
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:391
 msgid "Ferramentas"
 msgstr "כלים"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:377
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:392
 msgid "Remover fundo (IA)"
 msgstr "הסרת רקע (בינה מלאכותית)"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:379
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:394
 msgid "Remover ruído (IA)"
 msgstr "הסרת רעש (בינה מלאכותית)"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:383
-#: crates/bigiris/src/gui/dialogs/upscale.rs:97
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:398
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:404
+#: crates/bigiris/src/gui/dialogs/upscale.rs:103
 msgid "Fator"
 msgstr "מקדם"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:384
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:399
 #: crates/bigiris/src/gui/dialogs/upscale.rs:40
 msgid "Aumentar resolução"
 msgstr "הגדלת רזולוציה"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:411
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:428
 msgid "Salvar alterações (Ctrl+S)"
 msgstr "שמירת השינויים (Ctrl+S)"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:415
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:432
 msgid "Salvar como…"
 msgstr "שמירה בשם…"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:424
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:441
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:443
 msgid "Qualidade ao salvar como"
 msgstr "איכות בשמירה בשם"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:978
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:1038
 msgid "Recorta o objeto principal com BiRefNet-lite, no seu computador"
 msgstr "חותך את האובייקט הראשי בעזרת BiRefNet-lite, במחשב שלך"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:984
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:1044
 msgid "Limpa ruído e artefatos de compressão com SCUNet, no seu computador"
 msgstr "מנקה רעש וארטיפקטים של דחיסה בעזרת SCUNet, במחשב שלך"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:989
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:1049
 msgid "Real-ESRGAN (IA), no seu computador"
 msgstr "Real-ESRGAN (בינה מלאכותית), במחשב שלך"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:991
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:1051
 msgid "Lanczos3 (sem IA)"
 msgstr "Lanczos3 (ללא בינה מלאכותית)"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:1507
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:1534
+msgid "{width}×{height} passa do limite de processamento"
+msgstr "{width}×{height} חורג ממגבלת העיבוד"
+
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:1578
 #: crates/bigiris/src/gui/dialogs/remove_bg.rs:224
 msgid "Preparando…"
 msgstr "מתכונן…"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:1607
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:396
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:1678
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:401
 msgid "Carregando o modelo…"
 msgstr "טוען את המודל…"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:1617
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:1688
 msgid "Removendo o fundo…"
 msgstr "מסיר את הרקע…"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:1618
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:1689
 msgid "Removendo ruído…"
 msgstr "מסיר רעש…"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:1619
-#: crates/bigiris/src/gui/dialogs/upscale.rs:197
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:1690
+#: crates/bigiris/src/gui/dialogs/upscale.rs:201
 msgid "Aumentando…"
 msgstr "מגדיל רזולוציה…"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:1649
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:1729
 msgid "{name}-editada"
 msgstr "{name}-ערוך"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:1651
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:1731
 msgid "Salvar como"
 msgstr "שמירה בשם"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:1682
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:1762
 msgid "Para alterar o próprio arquivo, use Salvar."
 msgstr "כדי לשנות את הקובץ עצמו, יש להשתמש בשמירה."
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:1719
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:1801
 msgid "Cópia salva: {name}"
 msgstr "העותק נשמר: {name}"
 
-#: crates/bigiris/src/gui/viewer/edit_panel.rs:1759
+#: crates/bigiris/src/gui/viewer/edit_panel.rs:1841
 msgid ""
 "O BigIris não sabe gravar este formato. Use, por exemplo, .png, .jpg "
 "ou .webp."
@@ -1238,7 +1266,7 @@ msgid "Posição da imagem"
 msgstr "מיקום התמונה"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:144
-#: crates/bigiris/src/gui/dialogs/upscale.rs:103
+#: crates/bigiris/src/gui/dialogs/upscale.rs:109
 msgid "Destino previsto"
 msgstr "תוצאה צפויה"
 
@@ -1250,11 +1278,11 @@ msgstr "הרחבה"
 msgid "—"
 msgstr "—"
 
-#: crates/bigiris/src/gui/dialogs/extent.rs:326
+#: crates/bigiris/src/gui/dialogs/extent.rs:324
 msgid "Estendendo…"
 msgstr "מרחיב…"
 
-#: crates/bigiris/src/gui/dialogs/extent.rs:332
+#: crates/bigiris/src/gui/dialogs/extent.rs:330
 msgid "Estendendo"
 msgstr "מרחיב"
 
@@ -1265,7 +1293,6 @@ msgstr "היפוך תמונות — Prisma"
 #: crates/bigiris/src/gui/dialogs/flip.rs:24
 #: crates/bigiris/src/gui/dialogs/flip.rs:47
 #: crates/bigimage-integrations/src/action.rs:87
-#: data/nautilus/bigiris-menu.py:142
 msgid "Espelhar"
 msgstr "היפוך"
 
@@ -1281,17 +1308,16 @@ msgstr "אנכית (למעלה ↔ למטה)"
 msgid "Eixo"
 msgstr "ציר"
 
-#: crates/bigiris/src/gui/dialogs/flip.rs:87
+#: crates/bigiris/src/gui/dialogs/flip.rs:85
 msgid "Espelhando…"
 msgstr "הופך…"
 
-#: crates/bigiris/src/gui/dialogs/flip.rs:93
+#: crates/bigiris/src/gui/dialogs/flip.rs:91
 msgid "Espelhando"
 msgstr "הופך"
 
 #: crates/bigiris/src/gui/dialogs/mod.rs:64
 #: crates/bigimage-integrations/src/action.rs:151
-#: data/nautilus/bigiris-menu.py:104
 msgid "PNG"
 msgstr "PNG"
 
@@ -1301,19 +1327,16 @@ msgstr "JPG (JPEG)"
 
 #: crates/bigiris/src/gui/dialogs/mod.rs:66
 #: crates/bigimage-integrations/src/action.rs:167
-#: data/nautilus/bigiris-menu.py:106
 msgid "WebP"
 msgstr "WebP"
 
 #: crates/bigiris/src/gui/dialogs/mod.rs:67
 #: crates/bigimage-integrations/src/action.rs:175
-#: data/nautilus/bigiris-menu.py:107
 msgid "AVIF"
 msgstr "AVIF"
 
 #: crates/bigiris/src/gui/dialogs/mod.rs:68
 #: crates/bigimage-integrations/src/action.rs:183
-#: data/nautilus/bigiris-menu.py:108
 msgid "TIFF"
 msgstr "TIFF"
 
@@ -1531,8 +1554,8 @@ msgstr "הסרת רקע — Prisma"
 
 #: crates/bigiris/src/gui/dialogs/remove_bg.rs:78
 #: crates/bigiris/src/gui/dialogs/remove_bg.rs:164
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:525
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:550
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:532
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:557
 msgid "Remover fundo"
 msgstr "הסרת רקע"
 
@@ -1541,7 +1564,7 @@ msgid "Prisma · BiRefNet-lite"
 msgstr "Prisma · BiRefNet-lite"
 
 #: crates/bigiris/src/gui/dialogs/remove_bg.rs:96
-#: crates/bigiris/src/gui/previews.rs:223
+#: crates/bigiris/src/gui/previews.rs:240
 msgid "Nenhuma imagem selecionada"
 msgstr "לא נבחרה תמונה"
 
@@ -1575,32 +1598,32 @@ msgid "Falha ao carregar o modelo: {error}"
 msgstr "טעינת המודל נכשלה: {error}"
 
 #: crates/bigiris/src/gui/dialogs/remove_bg.rs:355
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:375
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:380
 msgid "Imagens gravadas"
 msgstr "תמונות שנשמרו"
 
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:376
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:381
 msgid "Falhas"
 msgstr "כשלים"
 
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:378
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:383
 msgid "Com erros"
 msgstr "עם שגיאות"
 
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:402
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:407
 msgid "Processando {current}/{total} — {file}"
 msgstr "מעבד {current}/{total} — {file}"
 
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:417
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:422
 msgid "BiRefNet-lite (MIT) · roda offline em {device}"
 msgstr "BiRefNet-lite (MIT) · פועל ללא חיבור לרשת על {device}"
 
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:420
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:425
 msgid "BiRefNet-lite (MIT) · roda offline no seu computador"
 msgstr "BiRefNet-lite (MIT) · פועל במחשב שלך ללא חיבור לרשת"
 
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:538
-#: crates/bigiris/src/gui/dialogs/upscale.rs:142
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:545
+#: crates/bigiris/src/gui/dialogs/upscale.rs:148
 msgid "Aumentar"
 msgstr "הגדלה"
 
@@ -1630,9 +1653,8 @@ msgstr "שינוי גודל תמונות — Prisma"
 
 #: crates/bigiris/src/gui/dialogs/resize.rs:41
 #: crates/bigiris/src/gui/dialogs/resize.rs:144
-#: crates/bigiris/src/gui/dialogs/resize.rs:372
+#: crates/bigiris/src/gui/dialogs/resize.rs:369
 #: crates/bigimage-integrations/src/action.rs:79
-#: data/nautilus/bigiris-menu.py:115
 msgid "Redimensionar"
 msgstr "שינוי גודל"
 
@@ -1693,11 +1715,11 @@ msgstr "מצב שינוי גודל"
 msgid "Opções"
 msgstr "אפשרויות"
 
-#: crates/bigiris/src/gui/dialogs/resize.rs:292
+#: crates/bigiris/src/gui/dialogs/resize.rs:290
 msgid "Redimensionando…"
 msgstr "שינוי גודל…"
 
-#: crates/bigiris/src/gui/dialogs/resize.rs:298
+#: crates/bigiris/src/gui/dialogs/resize.rs:296
 msgid "Redimensionando"
 msgstr "שינוי גודל"
 
@@ -1708,7 +1730,6 @@ msgstr "סיבוב תמונות — Prisma"
 #: crates/bigiris/src/gui/dialogs/rotate.rs:29
 #: crates/bigiris/src/gui/dialogs/rotate.rs:52
 #: crates/bigimage-integrations/src/action.rs:83
-#: data/nautilus/bigiris-menu.py:129
 msgid "Girar"
 msgstr "סיבוב"
 
@@ -1718,7 +1739,6 @@ msgstr "90° (בכיוון השעון)"
 
 #: crates/bigiris/src/gui/dialogs/rotate.rs:31
 #: crates/bigimage-integrations/src/action.rs:260
-#: data/nautilus/bigiris-menu.py:134
 msgid "180°"
 msgstr "180°"
 
@@ -1730,11 +1750,11 @@ msgstr "270° (נגד כיוון השעון)"
 msgid "Rotação"
 msgstr "סיבוב"
 
-#: crates/bigiris/src/gui/dialogs/rotate.rs:93
+#: crates/bigiris/src/gui/dialogs/rotate.rs:91
 msgid "Girando…"
 msgstr "מסובב…"
 
-#: crates/bigiris/src/gui/dialogs/rotate.rs:99
+#: crates/bigiris/src/gui/dialogs/rotate.rs:97
 msgid "Girando"
 msgstr "מסובב"
 
@@ -1746,15 +1766,15 @@ msgstr "הגדלת רזולוציה — Prisma"
 msgid "Usar IA (Real-ESRGAN)"
 msgstr "שימוש בבינה מלאכותית (Real-ESRGAN)"
 
-#: crates/bigiris/src/gui/dialogs/upscale.rs:112
+#: crates/bigiris/src/gui/dialogs/upscale.rs:118
 msgid "× {factor} (tamanho indisponível)"
 msgstr "× {factor} (גודל לא זמין)"
 
-#: crates/bigiris/src/gui/dialogs/upscale.rs:231
+#: crates/bigiris/src/gui/dialogs/upscale.rs:239
 msgid "Aumentando"
 msgstr "מגדיל רזולוציה"
 
-#: crates/bigiris/src/gui/dialogs/upscale.rs:247
+#: crates/bigiris/src/gui/dialogs/upscale.rs:254
 msgid "Detalhes mais nítidos que Lanczos3; roda no seu computador"
 msgstr "פרטים חדים יותר מאשר ב־Lanczos3; פועל במחשב שלך"
 
@@ -1766,11 +1786,11 @@ msgstr "תצוגה מקדימה"
 msgid "Original: {width}×{height} px"
 msgstr "מקור: {width}×{height} px"
 
-#: crates/bigiris/src/gui/previews.rs:201
+#: crates/bigiris/src/gui/previews.rs:219
 msgid "Preparando pré-visualização…"
 msgstr "מכין תצוגה מקדימה…"
 
-#: crates/bigiris/src/gui/previews.rs:249
+#: crates/bigiris/src/gui/previews.rs:265
 msgid "A preparação foi interrompida"
 msgstr "ההכנה הופסקה"
 
@@ -1799,32 +1819,26 @@ msgid "Não foi possível abrir os arquivos"
 msgstr "לא ניתן לפתוח את הקבצים"
 
 #: crates/bigimage-integrations/src/action.rs:97
-#: data/nautilus/bigiris-menu.py:167
 msgid "Para web"
 msgstr "לרשת"
 
 #: crates/bigimage-integrations/src/action.rs:101
-#: data/nautilus/bigiris-menu.py:213
 msgid "Metadados"
 msgstr "נתוני מטא"
 
 #: crates/bigimage-integrations/src/action.rs:105
-#: data/nautilus/bigiris-menu.py:223
 msgid "Utilidades"
 msgstr "כלי עזר"
 
 #: crates/bigimage-integrations/src/action.rs:111
-#: data/nautilus/bigiris-menu.py:234
 msgid "IA"
 msgstr "בינה מלאכותית"
 
 #: crates/bigimage-integrations/src/action.rs:116
-#: data/nautilus/bigiris-menu.py:244
 msgid "PDF"
 msgstr "PDF"
 
 #: crates/bigimage-integrations/src/action.rs:134
-#: data/nautilus/bigiris-menu.py:255
 msgid "Visualizar em BigIris"
 msgstr "הצגה ב־BigIris"
 
@@ -1833,7 +1847,6 @@ msgid "Processar esta pasta…"
 msgstr "עיבוד תיקייה זו…"
 
 #: crates/bigimage-integrations/src/action.rs:159
-#: data/nautilus/bigiris-menu.py:105
 msgid "JPG"
 msgstr "JPG"
 
@@ -1842,186 +1855,150 @@ msgstr "JPG"
 #: crates/bigimage-integrations/src/action.rs:284
 #: crates/bigimage-integrations/src/action.rs:309
 #: crates/bigimage-integrations/src/action.rs:358
-#: data/nautilus/bigiris-menu.py:110 data/nautilus/bigiris-menu.py:124
-#: data/nautilus/bigiris-menu.py:137 data/nautilus/bigiris-menu.py:148
-#: data/nautilus/bigiris-menu.py:162
 msgid "Mais opções…"
 msgstr "אפשרויות נוספות…"
 
 #: crates/bigimage-integrations/src/action.rs:203
-#: data/nautilus/bigiris-menu.py:119
 msgid "25%"
 msgstr "25%"
 
 #: crates/bigimage-integrations/src/action.rs:211
-#: data/nautilus/bigiris-menu.py:120
 msgid "50%"
 msgstr "50%"
 
 #: crates/bigimage-integrations/src/action.rs:219
-#: data/nautilus/bigiris-menu.py:121
 msgid "200%"
 msgstr "200%"
 
 #: crates/bigimage-integrations/src/action.rs:227
-#: data/nautilus/bigiris-menu.py:122
 msgid "HD (1920 px)"
 msgstr "HD (1920 px)"
 
 #: crates/bigimage-integrations/src/action.rs:235
-#: data/nautilus/bigiris-menu.py:123
 msgid "4K (3840 px)"
 msgstr "4K (3840 px)"
 
 #: crates/bigimage-integrations/src/action.rs:252
-#: data/nautilus/bigiris-menu.py:133
 msgid "90°"
 msgstr "90°"
 
 #: crates/bigimage-integrations/src/action.rs:268
-#: data/nautilus/bigiris-menu.py:135
 msgid "270°"
 msgstr "270°"
 
 #: crates/bigimage-integrations/src/action.rs:276
-#: data/nautilus/bigiris-menu.py:136
 msgid "Automático (EXIF)"
 msgstr "אוטומטי (EXIF)"
 
 #: crates/bigimage-integrations/src/action.rs:293
-#: data/nautilus/bigiris-menu.py:146
 msgid "Horizontal"
 msgstr "אופקית"
 
 #: crates/bigimage-integrations/src/action.rs:301
-#: data/nautilus/bigiris-menu.py:147
 msgid "Vertical"
 msgstr "אנכית"
 
 #: crates/bigimage-integrations/src/action.rs:318
-#: data/nautilus/bigiris-menu.py:157
 msgid "+ Brilho (+10)"
 msgstr "+ בהירות (+10)"
 
 #: crates/bigimage-integrations/src/action.rs:326
-#: data/nautilus/bigiris-menu.py:158
 msgid "− Brilho (-10)"
 msgstr "− בהירות (-10)"
 
 #: crates/bigimage-integrations/src/action.rs:334
-#: data/nautilus/bigiris-menu.py:159
 msgid "+ Contraste (+20)"
 msgstr "+ ניגודיות (+20)"
 
 #: crates/bigimage-integrations/src/action.rs:342
-#: data/nautilus/bigiris-menu.py:160
 msgid "Preto e branco"
 msgstr "שחור־לבן"
 
 #: crates/bigimage-integrations/src/action.rs:350
-#: data/nautilus/bigiris-menu.py:161
 msgid "Cores vivas (+40)"
 msgstr "צבעים חיים (+40)"
 
 #: crates/bigimage-integrations/src/action.rs:370
-#: data/nautilus/bigiris-menu.py:171
 msgid "WhatsApp (1280 px · JPG q85)"
 msgstr "WhatsApp (1280 px · JPG q85)"
 
 #: crates/bigimage-integrations/src/action.rs:378
-#: data/nautilus/bigiris-menu.py:175
 msgid "Instagram (1080 px · JPG q90)"
 msgstr "Instagram (1080 px · JPG q90)"
 
 #: crates/bigimage-integrations/src/action.rs:386
-#: data/nautilus/bigiris-menu.py:179
 msgid "Facebook (2048 px · JPG q85)"
 msgstr "Facebook (2048 px · JPG q85)"
 
 #: crates/bigimage-integrations/src/action.rs:394
-#: data/nautilus/bigiris-menu.py:183
 msgid "Twitter · X (1200 px · JPG q85)"
 msgstr "Twitter · X (1200 px · JPG q85)"
 
 #: crates/bigimage-integrations/src/action.rs:402
-#: data/nautilus/bigiris-menu.py:187
 msgid "Telegram (2560 px · JPG q85)"
 msgstr "Telegram (2560 px · JPG q85)"
 
 #: crates/bigimage-integrations/src/action.rs:410
-#: data/nautilus/bigiris-menu.py:191
 msgid "Discord (2048 px · JPG q80)"
 msgstr "Discord (2048 px · JPG q80)"
 
 #: crates/bigimage-integrations/src/action.rs:418
-#: data/nautilus/bigiris-menu.py:195
 msgid "Otimizar PNG (compressão máxima)"
 msgstr "אופטימיזציה של PNG (דחיסה מקסימלית)"
 
-#: crates/bigimage-integrations/src/action.rs:430
-#: data/nautilus/bigiris-menu.py:199
+#: crates/bigimage-integrations/src/action.rs:431
 msgid "Letterbox YouTube post (1:1)"
 msgstr "התאמה עם פסים: פוסט YouTube (1:1)"
 
-#: crates/bigimage-integrations/src/action.rs:438
-#: data/nautilus/bigiris-menu.py:202
+#: crates/bigimage-integrations/src/action.rs:439
 msgid "Letterbox Instagram feed (4:5)"
 msgstr "התאמה עם פסים: פיד Instagram (4:5)"
 
-#: crates/bigimage-integrations/src/action.rs:446
-#: data/nautilus/bigiris-menu.py:205
+#: crates/bigimage-integrations/src/action.rs:447
 msgid "Letterbox Stories / Shorts (9:16)"
 msgstr "התאמה עם פסים: Stories / Shorts (9:16)"
 
-#: crates/bigimage-integrations/src/action.rs:454
-#: data/nautilus/bigiris-menu.py:208
+#: crates/bigimage-integrations/src/action.rs:455
 msgid "Letterbox personalizado…"
 msgstr "התאמה עם פסים, מותאם אישית…"
 
-#: crates/bigimage-integrations/src/action.rs:463
-#: data/nautilus/bigiris-menu.py:217
+#: crates/bigimage-integrations/src/action.rs:464
 msgid "Ver metadados…"
 msgstr "הצגת נתוני מטא…"
 
-#: crates/bigimage-integrations/src/action.rs:471
-#: data/nautilus/bigiris-menu.py:218
+#: crates/bigimage-integrations/src/action.rs:472
 msgid "Remover tudo (re-encode limpo)"
 msgstr "הסרת הכול (קידוד מחדש נקי)"
 
-#: crates/bigimage-integrations/src/action.rs:482
-#: data/nautilus/bigiris-menu.py:227
+#: crates/bigimage-integrations/src/action.rs:483
 msgid "Converter em lote (Prisma)…"
 msgstr "המרה באצווה (Prisma)…"
 
-#: crates/bigimage-integrations/src/action.rs:490
-#: data/nautilus/bigiris-menu.py:228
+#: crates/bigimage-integrations/src/action.rs:491
 msgid "Criar GIF animado…"
 msgstr "יצירת GIF מונפש…"
 
-#: crates/bigimage-integrations/src/action.rs:498
-#: data/nautilus/bigiris-menu.py:229
+#: crates/bigimage-integrations/src/action.rs:499
 msgid "Comparar 2 imagens…"
 msgstr "השוואת 2 תמונות…"
 
-#: crates/bigimage-integrations/src/action.rs:507
-#: data/nautilus/bigiris-menu.py:238
+#: crates/bigimage-integrations/src/action.rs:508
 msgid "Remover fundo (BiRefNet)"
 msgstr "הסרת רקע (BiRefNet)"
 
-#: crates/bigimage-integrations/src/action.rs:528
-#: data/nautilus/bigiris-menu.py:248
+#: crates/bigimage-integrations/src/action.rs:529
 msgid "Converter para PDF (LibreOffice)"
 msgstr "המרה ל־PDF (LibreOffice)"
 
-#: data/nautilus/bigiris-menu.py:295
+#: data/nautilus/bigiris-menu.py:125
 msgid "Operações BigIris"
 msgstr "פעולות BigIris"
 
-#: data/nautilus/bigiris-menu.py:374
+#: data/nautilus/bigiris-menu.py:150
 msgid "BigIris: Processar esta pasta…"
 msgstr "BigIris: עיבוד תיקייה זו…"
 
-#: data/nautilus/bigiris-menu.py:375
+#: data/nautilus/bigiris-menu.py:151
 msgid "Converter imagens da pasta com o Prisma"
 msgstr "המרת תמונות התיקייה עם Prisma"
 

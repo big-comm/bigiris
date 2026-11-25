@@ -721,7 +721,7 @@ msgstr "Vytváření GIF…"
 #: crates/bigiris/src/gui/dialogs/animate.rs:297
 #: crates/bigiris/src/gui/dialogs/batch.rs:102
 msgid "Pronto"
-msgstr "Hotovo"
+msgstr "Připraveno"
 
 #: crates/bigiris/src/gui/dialogs/animate.rs:302
 msgid "O arquivo {file} passou a existir e foi mantido; nada foi gravado."

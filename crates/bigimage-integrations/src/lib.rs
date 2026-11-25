@@ -2,7 +2,8 @@
 //! bigimage-integrations — installs/removes right-click actions in Linux file managers.
 //!
 //! Support matrix:
-//! - Dolphin / Konqueror (`.desktop` with `X-KDE-Submenu` for nested menus)
+//! - Dolphin / Konqueror (`.desktop` under one `X-KDE-Submenu=BigIris`,
+//!   groups split by `_SEPARATOR_`)
 //! - Nautilus (scripts tree under `~/.local/share/nautilus/scripts/BigIris/`)
 //! - Nemo (`.nemo_action`, flattened with prefix)
 //! - Thunar (merge into `~/.config/Thunar/uca.xml`)

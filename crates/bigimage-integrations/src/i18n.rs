@@ -27,16 +27,18 @@ pub(crate) fn localized(key: &str, render: impl Fn(&str) -> String) -> String {
         .collect()
 }
 
-pub(crate) fn localized_name(key: &str, source: &str) -> String {
-    localized(key, |lang| lookup(lang, source).to_owned())
-}
-
 pub(crate) fn flat_label(lang: &str, action: &crate::Action) -> String {
     match action.submenu {
-        Some(sub) => {
-            format!("BigIris ▸ {} ▸ {}", lookup(lang, sub.label), lookup(lang, action.label))
-        }
+        Some(_) => format!("BigIris ▸ {}", grouped_label(lang, action)),
         None => format!("{} (BigIris)", lookup(lang, action.label)),
+    }
+}
+
+/// The action's label under the BigIris menu: `<submenu> ▸ <label>`.
+pub(crate) fn grouped_label(lang: &str, action: &crate::Action) -> String {
+    match action.submenu {
+        Some(sub) => format!("{} ▸ {}", lookup(lang, sub.label), lookup(lang, action.label)),
+        None => lookup(lang, action.label).to_owned(),
     }
 }
 

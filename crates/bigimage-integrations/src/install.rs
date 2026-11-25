@@ -678,7 +678,7 @@ mod tests {
         let report = install_to_destdir(tmp.path());
         assert!(report.is_success());
         // Dolphin .desktop files should sit under DESTDIR/usr/share/kio/servicemenus/.
-        assert!(tmp.path().join("usr/share/kio/servicemenus/bigiris-convert-png.desktop").exists());
+        assert!(tmp.path().join("usr/share/kio/servicemenus/bigiris-view.desktop").exists());
         // /etc/xdg/Thunar/uca.xml belongs to the thunar package; a distro
         // package shipping it would file-conflict with thunar.
         assert!(!tmp.path().join("etc/xdg/Thunar/uca.xml").exists());

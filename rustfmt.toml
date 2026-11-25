@@ -3,6 +3,6 @@ max_width = 100
 use_small_heuristics = "Max"
 reorder_imports = true
 
-# Regras abaixo exigem nightly — ativar quando CI tiver toolchain nightly opcional:
+# These need nightly rustfmt; enable them once CI has an optional nightly toolchain:
 # imports_granularity = "Crate"
 # group_imports      = "StdExternalCrate"

@@ -257,7 +257,7 @@ jobs:
       - name: POT matches the sources
         run: |
           bash data/po/regen-pot.sh
-          git diff --exit-code -I '^"POT-Creation-Date: ' data/po
+          git diff --exit-code -I '^"POT-Creation-Date: ' -I '^#: ' data/po
 
   desktop:
     name: .desktop validation

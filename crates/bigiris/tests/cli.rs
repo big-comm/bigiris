@@ -361,12 +361,8 @@ fn ai_commands_skip_existing_outputs_without_loading_the_model() {
         (vec!["denoise", "source.png"], "BIGIRIS_SCUNET_WEIGHTS"),
     ] {
         // Loading the fake weights would fail the file: a skip must not.
-        let output = bigiris()
-            .args(&args)
-            .env(var, &fake)
-            .current_dir(dir.path())
-            .output()
-            .unwrap();
+        let output =
+            bigiris().args(&args).env(var, &fake).current_dir(dir.path()).output().unwrap();
         if args[0] == "denoise" && !output.status.success() && !sandbox_available() {
             continue;
         }
@@ -394,12 +390,8 @@ fn ai_commands_name_the_missing_package_before_any_work() {
             "realesrgan-native",
         ),
     ] {
-        let output = bigiris()
-            .args(&args)
-            .env(var, &absent)
-            .current_dir(dir.path())
-            .output()
-            .unwrap();
+        let output =
+            bigiris().args(&args).env(var, &absent).current_dir(dir.path()).output().unwrap();
         assert_eq!(output.status.code(), Some(1), "{args:?}");
         let error = String::from_utf8_lossy(&output.stderr);
         assert!(error.contains(&format!("sudo pacman -S {package}")), "{args:?}: {error}");

@@ -4771,7 +4771,7 @@ mod anchor_tests {
             &opts,
             OverwritePolicy::Replace,
         )
-        .expect("resize_file at 200 %% should succeed");
+        .expect("resize_file at 200 % should succeed");
         assert!(matches!(outcome, ConvertOutcome::Written { .. }));
 
         // Output name follows resize's Percent suffix: "_200pct".

@@ -71,8 +71,8 @@ mod tests {
         let a = ACTIONS.iter().find(|a| a.id == "flip-horizontal").unwrap();
         let text = render(a);
         assert!(text.starts_with("[Contractor Entry]\n"));
-        assert!(text.contains("Name=BigIris ▸ Espelhar ▸ Horizontal"));
+        assert!(text.contains("Name=BigIris ▸ Flip ▸ Horizontal"));
         assert!(text.contains("MimeType=image/*;"));
-        assert!(text.contains("Exec=bigiris flip --axis horizontal"));
+        assert!(text.contains("Exec=bigiris --notify flip --axis horizontal"));
     }
 }

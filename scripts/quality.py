@@ -47,7 +47,7 @@ def main():
         (output / f"{name}.log").write_text(text)
         results.append({"name": name, "command": command, "exit_code": code,
                         "seconds": round(time.monotonic() - started, 3), "log": f"{name}.log"})
-        print(f"  {'OK' if code == 0 else 'FALHOU'} ({results[-1]['seconds']} s)", flush=True)
+        print(f"  {'OK' if code == 0 else 'FAILED'} ({results[-1]['seconds']} s)", flush=True)
         if code:
             print(text[-2500:], flush=True)
         return code
@@ -69,7 +69,7 @@ def main():
         run("syntax-" + name.replace("/", "-"), ["bash", "-n", name])
     if args.graphical:
         if not (env.get("DISPLAY") or env.get("WAYLAND_DISPLAY")):
-            parser.error("--graphical exige uma sessão gráfica ou Xvfb")
+            parser.error("--graphical needs a graphical session or Xvfb")
         run("viewer-lifecycle", ["cargo", "test", "-p", "bigiris", "--features", "gui ai"] + locked +
             ["viewer_lifecycle_releases_state_and_workers", "--", "--ignored", "--test-threads=1"],
             extra_env={"GSETTINGS_BACKEND": "memory"})
@@ -91,7 +91,7 @@ def main():
               "performance": args.performance, "audit": args.audit,
               "passed": all(r["exit_code"] == 0 for r in results), "checks": results}
     (output / "summary.json").write_text(json.dumps(report, indent=2) + "\n")
-    print(f"Evidências: {output / 'summary.json'}", flush=True)
+    print(f"Evidence: {output / 'summary.json'}", flush=True)
     return 0 if report["passed"] else 1
 
 if __name__ == "__main__":

@@ -71,10 +71,10 @@ fn budget(width: u32, height: u32) -> Budget {
 
 fn check_size(width: u32, height: u32) -> Result<(), AiError> {
     if width == 0 || height == 0 {
-        return Err(AiError::Processing("imagem vazia".into()));
+        return Err(AiError::Processing("empty image".into()));
     }
     if u64::from(width) * u64::from(height) * 4 > MAX_BYTES {
-        return Err(AiError::Processing("imagem excede o limite de 512 MiB em RGBA".into()));
+        return Err(AiError::Processing("image exceeds the 512 MiB RGBA limit".into()));
     }
     Ok(())
 }

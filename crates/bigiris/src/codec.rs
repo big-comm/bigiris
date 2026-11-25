@@ -2,9 +2,11 @@
 //! Confine untrusted codecs to a short-lived, resource-limited process.
 //! The parent accepts only a validated, bounded raw-pixel protocol.
 use bigimage_core::{backend, BigImageError, Format, Metadata, PreviewSession};
+use gettextrs::gettext;
 use image::{ColorType, DynamicImage, GenericImageView, ImageBuffer, ImageError, ImageResult};
 use std::cell::RefCell;
 use std::io::{Read, Seek, SeekFrom, Write};
+use std::os::fd::AsRawFd;
 use std::os::unix::fs::OpenOptionsExt;
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
@@ -116,7 +118,7 @@ pub(crate) fn installed_executable() -> std::io::Result<(PathBuf, bool)> {
     replaced.map(|path| (path, true)).ok_or_else(|| {
         std::io::Error::new(
             std::io::ErrorKind::NotFound,
-            "o executável do BigIris foi removido; reinicie o BigIris",
+            gettext("the BigIris executable was removed; restart BigIris"),
         )
     })
 }
@@ -188,44 +190,69 @@ fn worker_executable() -> std::io::Result<(PathBuf, bool, Duration)> {
 /// reach the sandboxed codec (which refuses to run with any) or a launched
 /// BigIris window. Every descriptor above stdio is marked close-on-exec in
 /// the child just before `exec`, so the parent's own state is untouched.
-#[allow(unsafe_code)]
 pub(crate) fn close_inherited_descriptors(command: &mut Command) -> &mut Command {
-    use std::os::unix::process::CommandExt;
-    // SAFETY: the hook runs in the forked child before `exec`. It only issues
-    // raw, async-signal-safe syscalls (close_range, getrlimit, fcntl): no
-    // allocation, no locks and no access to memory shared with other threads.
-    // Marking descriptors close-on-exec (rather than closing them) keeps the
-    // pipe std uses to report `exec` failures working until `exec` itself.
-    unsafe {
-        command.pre_exec(|| {
-            mark_descriptors_cloexec();
-            Ok(())
-        })
-    }
+    install_descriptor_hook(command, None)
 }
 
-/// Body of the `pre_exec` hook; see [`close_inherited_descriptors`].
+/// [`close_inherited_descriptors`], except that `fd` reaches the child as
+/// descriptor 3, the only one above stdio that survives `exec`.
+fn close_inherited_descriptors_passing(
+    command: &mut Command,
+    fd: std::os::fd::RawFd,
+) -> &mut Command {
+    install_descriptor_hook(command, Some(fd))
+}
+
 #[allow(unsafe_code)]
-fn mark_descriptors_cloexec() {
-    // SAFETY: plain syscalls on integer descriptors; failures are ignored
-    // because the worker re-checks its descriptor table and fails closed.
+fn install_descriptor_hook(
+    command: &mut Command,
+    pass_as_3: Option<std::os::fd::RawFd>,
+) -> &mut Command {
+    use std::os::unix::process::CommandExt;
+    // SAFETY: the hook runs in the forked child before `exec`. It only issues
+    // raw, async-signal-safe syscalls (close_range, getrlimit, fcntl, dup2):
+    // no allocation, no locks and no access to memory shared with other
+    // threads. Marking descriptors close-on-exec (rather than closing them)
+    // keeps the pipe std uses to report `exec` failures working until `exec`
+    // itself. A passed descriptor stays open in the parent until `spawn`
+    // returns.
+    unsafe { command.pre_exec(move || prepare_descriptors(pass_as_3)) }
+}
+
+/// Body of the `pre_exec` hook; see [`install_descriptor_hook`].
+#[allow(unsafe_code)]
+fn prepare_descriptors(pass_as_3: Option<std::os::fd::RawFd>) -> std::io::Result<()> {
+    // SAFETY: plain syscalls on integer descriptors. Marking failures are
+    // ignored because the worker re-checks its descriptor table and fails
+    // closed; a failed hand-over of descriptor 3 fails the spawn.
     unsafe {
         // Linux >= 5.11: one syscall for the whole range.
-        if libc::syscall(libc::SYS_close_range, 3u32, u32::MAX, libc::CLOSE_RANGE_CLOEXEC) == 0 {
-            return;
-        }
-        // Older kernels: walk the descriptor table up to the soft limit.
-        let mut limit = libc::rlimit { rlim_cur: 0, rlim_max: 0 };
-        let top = if libc::getrlimit(libc::RLIMIT_NOFILE, &mut limit) == 0 {
-            limit.rlim_cur.min(1 << 16) as libc::c_int
-        } else {
-            1024
-        };
-        for fd in 3..top {
-            let flags = libc::fcntl(fd, libc::F_GETFD);
-            if flags >= 0 && flags & libc::FD_CLOEXEC == 0 {
-                libc::fcntl(fd, libc::F_SETFD, flags | libc::FD_CLOEXEC);
+        if libc::syscall(libc::SYS_close_range, 3u32, u32::MAX, libc::CLOSE_RANGE_CLOEXEC) != 0 {
+            // Older kernels: walk the descriptor table up to the soft limit.
+            let mut limit = libc::rlimit { rlim_cur: 0, rlim_max: 0 };
+            let top = if libc::getrlimit(libc::RLIMIT_NOFILE, &mut limit) == 0 {
+                limit.rlim_cur.min(1 << 16) as libc::c_int
+            } else {
+                1024
+            };
+            for fd in 3..top {
+                let flags = libc::fcntl(fd, libc::F_GETFD);
+                if flags >= 0 && flags & libc::FD_CLOEXEC == 0 {
+                    libc::fcntl(fd, libc::F_SETFD, flags | libc::FD_CLOEXEC);
+                }
             }
+        }
+        // dup2 clears close-on-exec on the copy; a descriptor that already
+        // is 3 has its flag cleared directly.
+        let placed = match pass_as_3 {
+            None => 0,
+            Some(3) => libc::fcntl(3, libc::F_SETFD, 0),
+            Some(fd) => libc::dup2(fd, 3),
+        };
+        if placed < 0 {
+            Err(std::io::Error::last_os_error())
+        } else {
+            Ok(())
         }
     }
 }
@@ -266,7 +293,7 @@ fn userns_hardening() -> bool {
             .spawn()
         else {
             tracing::warn!(
-                "bwrap indisponível para testar --disable-userns; sandbox sem esse reforço"
+                "bwrap unavailable to test --disable-userns; sandbox runs without that hardening"
             );
             return false;
         };
@@ -278,8 +305,8 @@ fn userns_hardening() -> bool {
         if !supported {
             // Logged once: the answer is cached for the whole process.
             tracing::warn!(
-                "bwrap recusou --disable-userns (bwrap < 0.8 ou política do sistema); \
-                 o codec isolado roda sem esse reforço"
+                "bwrap refused --disable-userns (bwrap < 0.8 or system policy); \
+                 the isolated codec runs without that hardening"
             );
         }
         supported
@@ -301,14 +328,14 @@ fn wait_child(
     .ok();
     loop {
         if cancellable && cancelled() {
-            return Err(invalid("operação cancelada"));
+            return Err(invalid(gettext("operation canceled")));
         }
         if let Some(status) = child.try_wait()? {
             return Ok(status);
         }
         let now = Instant::now();
         if now >= deadline {
-            return Err(invalid("codec excedeu o limite de tempo"));
+            return Err(invalid(gettext("the codec exceeded its time limit")));
         }
         let slice = (deadline - now).min(Duration::from_millis(50));
         match &pidfd {
@@ -363,7 +390,9 @@ pub(crate) fn sanitize_text(text: &str) -> String {
 }
 
 /// Appended to worker failures when the executable was replaced on disk.
-const RESTART_HINT: &str = " (o BigIris foi atualizado; reinicie-o)";
+fn restart_hint() -> String {
+    format!(" ({})", gettext("BigIris was updated; restart it"))
+}
 
 /// Identity a worker must match: the protocol magic, the crate version and
 /// the build id from `build.rs`. The version alone never changes between
@@ -383,7 +412,7 @@ fn run<T>(
     let mut replaced = false;
     execute(path, mode, &mut replaced).and_then(parse).map_err(|error| {
         if replaced && !cancelled() {
-            invalid(format!("{error}{RESTART_HINT}"))
+            invalid(format!("{error}{}", restart_hint()))
         } else {
             error
         }
@@ -393,7 +422,7 @@ fn run<T>(
 /// `replaced` reports whether failures still need the restart hint.
 fn execute(path: &Path, mode: &str, replaced: &mut bool) -> ImageResult<std::fs::File> {
     if cancelled() {
-        return Err(invalid("operação cancelada"));
+        return Err(invalid(gettext("operation canceled")));
     }
     let input = std::fs::OpenOptions::new()
         .read(true)
@@ -401,7 +430,7 @@ fn execute(path: &Path, mode: &str, replaced: &mut bool) -> ImageResult<std::fs:
         .open(path)?;
     let info = input.metadata()?;
     if !info.is_file() || info.len() > MAX_INPUT {
-        return Err(invalid("entrada não regular ou acima de 1 GiB"));
+        return Err(invalid(gettext("not a regular file, or larger than 1 GiB")));
     }
     let extension = path
         .extension()
@@ -419,7 +448,10 @@ fn execute(path: &Path, mode: &str, replaced: &mut bool) -> ImageResult<std::fs:
     };
     let output = tempfile::tempfile()?;
     let mut command = Command::new("/usr/bin/prlimit");
-    close_inherited_descriptors(&mut command)
+    // Not stdin: a descriptor the codec keeps open would let it reopen the
+    // host file writable through /proc/self/fd, past the read-only mount.
+    // bwrap closes descriptor 3 once the bind is made.
+    close_inherited_descriptors_passing(&mut command, input.as_raw_fd())
         .env_clear()
         .args(["--as=2147483648", "--cpu=30", "--nofile=64", "--core=0"])
         .arg(format!("--fsize={output_limit}"))
@@ -462,7 +494,7 @@ fn execute(path: &Path, mode: &str, replaced: &mut bool) -> ImageResult<std::fs:
         ])
         .arg(executable)
         .arg("/app/bigiris")
-        .args(["--ro-bind", "/proc/self/fd/0"])
+        .args(["--ro-bind-fd", "3"])
         .arg(&sandbox_input)
         .args([
             "--chdir",
@@ -479,26 +511,33 @@ fn execute(path: &Path, mode: &str, replaced: &mut bool) -> ImageResult<std::fs:
         ])
         .arg(mode)
         .arg(&sandbox_input)
-        .stdin(Stdio::from(input))
+        .stdin(Stdio::null())
         .stdout(Stdio::from(output.try_clone()?))
         .stderr(Stdio::piped());
     let child = command.spawn().map_err(|error| {
-        invalid(format!("sandbox indisponível: instale bubblewrap e util-linux; {error}"))
+        invalid(crate::with_error(
+            &gettext("sandbox unavailable: install bubblewrap and util-linux; {error}"),
+            error,
+        ))
     })?;
+    drop(input);
     let mut child = ChildGuard(child);
     let diagnostics = child.0.stderr.take().map(drain_diagnostics);
     let status = wait_child(&mut child.0, Instant::now() + budget, true)?;
     if !status.success() {
         // Both messages below already carry the restart advice.
-        let hint = if std::mem::take(replaced) { RESTART_HINT } else { "" };
+        let hint = if std::mem::take(replaced) { restart_hint() } else { String::new() };
         if status.code() == Some(VERSION_MISMATCH) {
-            return Err(invalid("o BigIris foi atualizado enquanto estava aberto; reinicie-o"));
+            return Err(invalid(gettext("BigIris was updated while it was open; restart it")));
         }
         let details = diagnostics
             .and_then(|rx| rx.recv_timeout(Duration::from_secs(2)).ok())
             .unwrap_or_default();
         let details = sanitize_text(String::from_utf8_lossy(&details).trim());
-        return Err(invalid(format!("codec isolado recusou a imagem ({status}){hint}: {details}")));
+        return Err(invalid(crate::fill(
+            &gettext("the isolated codec rejected the image ({status}){hint}: {details}"),
+            &[("status", &status.to_string()), ("hint", &hint), ("details", &details)],
+        )));
     }
     let mut output = output;
     output.seek(SeekFrom::Start(0))?;
@@ -526,8 +565,8 @@ fn receive(output: std::fs::File) -> ImageResult<Pixels> {
 fn receive_with(mut output: std::fs::File, trailer: bool) -> ImageResult<(Pixels, ResaveExtras)> {
     let mut header = [0u8; HEADER];
     output.read_exact(&mut header)?;
-    if &header[..8] != MAGIC || header[10] > 1 || header[11] != 0 {
-        return Err(invalid("protocolo de codec inválido"));
+    if &header[..8] != MAGIC || header[10] > 1 || header[11] > 1 {
+        return Err(invalid("invalid codec protocol"));
     }
     let word = |offset| u32::from_le_bytes(header[offset..offset + 4].try_into().unwrap());
     let (w, h) = (word(12), word(16));
@@ -544,7 +583,7 @@ fn receive_with(mut output: std::fs::File, trailer: bool) -> ImageResult<(Pixels
         8 => ColorType::Rgba16,
         9 => ColorType::Rgb32F,
         10 => ColorType::Rgba32F,
-        _ => return Err(invalid("tipo de pixels inválido")),
+        _ => return Err(invalid("invalid pixel type")),
     };
     if w == 0
         || h == 0
@@ -555,13 +594,13 @@ fn receive_with(mut output: std::fs::File, trailer: bool) -> ImageResult<(Pixels
         || length > MAX_BYTES
         || length != u64::from(w) * u64::from(h) * u64::from(color.bytes_per_pixel())
     {
-        return Err(invalid("dimensões ou tamanho do protocolo inválidos"));
+        return Err(invalid("invalid protocol dimensions or size"));
     }
     let total = output.metadata()?.len();
     let pixels_end = HEADER as u64 + length;
     let (exif_length, icc_length, quality) = if trailer {
         if total < pixels_end + RESAVE_TRAILER as u64 {
-            return Err(invalid("dimensões ou tamanho do protocolo inválidos"));
+            return Err(invalid("invalid protocol dimensions or size"));
         }
         let mut lengths = [0u8; RESAVE_TRAILER];
         output.seek(SeekFrom::Start(pixels_end))?;
@@ -570,12 +609,12 @@ fn receive_with(mut output: std::fs::File, trailer: bool) -> ImageResult<(Pixels
         let exif = u64::from_le_bytes(lengths[..8].try_into().unwrap());
         let icc = u64::from_le_bytes(lengths[8..16].try_into().unwrap());
         if exif > MAX_RESAVE_EXIF || icc > MAX_RESAVE_ICC {
-            return Err(invalid("metadados excessivos"));
+            return Err(invalid("excessive metadata"));
         }
         let quality = match lengths[16] {
             0 => None,
             q @ 1..=100 => Some(q),
-            _ => return Err(invalid("qualidade JPEG inválida")),
+            _ => return Err(invalid("invalid JPEG quality")),
         };
         (exif, icc, quality)
     } else {
@@ -584,12 +623,12 @@ fn receive_with(mut output: std::fs::File, trailer: bool) -> ImageResult<(Pixels
     let expected =
         pixels_end + if trailer { RESAVE_TRAILER as u64 + exif_length + icc_length } else { 0 };
     if total != expected {
-        return Err(invalid("dimensões ou tamanho do protocolo inválidos"));
+        return Err(invalid("invalid protocol dimensions or size"));
     }
     let format = if header[9] == 255 {
         None
     } else {
-        Some(*Format::all().get(header[9] as usize).ok_or_else(|| invalid("formato inválido"))?)
+        Some(*Format::all().get(header[9] as usize).ok_or_else(|| invalid("invalid format"))?)
     };
     let length = length as usize;
     // Decode wide samples straight into their typed buffer through a small
@@ -597,7 +636,7 @@ fn receive_with(mut output: std::fs::File, trailer: bool) -> ImageResult<(Pixels
     macro_rules! buffer {
         ($data:expr, $variant:ident) => {
             DynamicImage::$variant(
-                ImageBuffer::from_raw(w, h, $data).ok_or_else(|| invalid("buffer inválido"))?,
+                ImageBuffer::from_raw(w, h, $data).ok_or_else(|| invalid("invalid buffer"))?,
             )
         };
     }
@@ -629,7 +668,7 @@ fn receive_with(mut output: std::fs::File, trailer: bool) -> ImageResult<(Pixels
         ColorType::Rgba16 => buffer!(shorts!(), ImageRgba16),
         ColorType::Rgb32F => buffer!(floats!(), ImageRgb32F),
         ColorType::Rgba32F => buffer!(floats!(), ImageRgba32F),
-        _ => return Err(invalid("tipo de pixels inválido")),
+        _ => return Err(invalid("invalid pixel type")),
     };
     let mut extras = ResaveExtras { quality, ..ResaveExtras::default() };
     if trailer {
@@ -645,6 +684,9 @@ fn receive_with(mut output: std::fs::File, trailer: bool) -> ImageResult<(Pixels
         };
         extras.source.exif = blob(exif_length)?;
         extras.source.icc = blob(icc_length)?;
+    }
+    if header[11] == 1 {
+        bigimage_core::color::note_ignored_profile();
     }
     Ok((Pixels { image, format, natural, gps: header[10] == 1 }, extras))
 }
@@ -701,7 +743,7 @@ fn dimensions(path: &Path) -> ImageResult<(u32, u32)> {
 }
 fn read_dimensions(mut output: std::fs::File) -> ImageResult<(u32, u32)> {
     if output.metadata()?.len() != 8 {
-        return Err(invalid("dimensões inválidas"));
+        return Err(invalid("invalid dimensions"));
     }
     let mut bytes = [0; 8];
     output.read_exact(&mut bytes)?;
@@ -710,7 +752,7 @@ fn read_dimensions(mut output: std::fs::File) -> ImageResult<(u32, u32)> {
         u32::from_le_bytes(bytes[4..].try_into().unwrap()),
     );
     if size.0 == 0 || size.1 == 0 || u64::from(size.0) * u64::from(size.1) > 256 * 1024 * 1024 {
-        return Err(invalid("dimensões inválidas"));
+        return Err(invalid("invalid dimensions"));
     }
     Ok(size)
 }
@@ -722,7 +764,7 @@ fn preview(path: &Path) -> bigimage_core::Result<PreviewSession> {
         pixels.natural,
         pixels
             .format
-            .ok_or_else(|| BigImageError::UnsupportedFormat("preview sem formato".into()))?,
+            .ok_or_else(|| BigImageError::UnsupportedFormat("preview without a format".into()))?,
         pixels.image,
         pixels.gps,
     )
@@ -786,7 +828,7 @@ pub fn information(path: &Path) -> ImageResult<Information> {
 /// Bounded JSON answer of the `metadata` and `information` modes.
 fn read_json<T: serde::de::DeserializeOwned>(output: std::fs::File) -> ImageResult<T> {
     if output.metadata()?.len() > MAX_METADATA {
-        return Err(invalid("metadados excessivos"));
+        return Err(invalid("excessive metadata"));
     }
     serde_json::from_reader(std::io::BufReader::new(output)).map_err(|e| invalid(e.to_string()))
 }
@@ -820,7 +862,7 @@ fn send_to(
         ColorType::Rgba16 => 8,
         ColorType::Rgb32F => 9,
         ColorType::Rgba32F => 10,
-        _ => return Err(invalid("tipo de pixels inválido")),
+        _ => return Err(invalid("invalid pixel type")),
     };
     let mut header = Vec::with_capacity(HEADER);
     header.extend(MAGIC);
@@ -828,7 +870,9 @@ fn send_to(
         color,
         format.map_or(255, |f| Format::all().iter().position(|x| *x == f).unwrap() as u8),
         u8::from(gps),
-        0,
+        // The decode that produced `image` on this thread showed a malformed
+        // ICC profile as sRGB; the parent relays the note to its caller.
+        u8::from(bigimage_core::color::take_ignored_profile()),
     ]);
     for value in [image.width(), image.height(), natural.0, natural.1] {
         header.extend(value.to_le_bytes());
@@ -1071,7 +1115,7 @@ mod tests {
             return;
         };
         let message = result.unwrap_err().to_string();
-        assert!(message.contains("protocolo") && message.ends_with(RESTART_HINT), "{message}");
+        assert!(message.contains("protocol") && message.ends_with(&restart_hint()), "{message}");
         // A worker that already explains the upgrade is not hinted twice.
         let Some(result) = with_worker("exit 86", DEADLINE, || {
             TEST_EXECUTABLE.with(|slot| slot.borrow_mut().as_mut().unwrap().2 = true);
@@ -1080,7 +1124,7 @@ mod tests {
             return;
         };
         let message = result.unwrap_err().to_string();
-        assert!(message.contains("reinicie") && !message.ends_with(RESTART_HINT), "{message}");
+        assert!(message.contains("restart") && !message.ends_with(&restart_hint()), "{message}");
     }
 
     #[test]
@@ -1165,7 +1209,7 @@ mod tests {
         let mut forged = payload.clone();
         forged[trailer + 16] = 101;
         let error = receive_bytes(&forged, true).unwrap_err().to_string();
-        assert!(error.contains("qualidade"), "{error}");
+        assert!(error.contains("quality"), "{error}");
         // Truncated blob, extra bytes and a missing trailer.
         assert!(receive_bytes(&payload[..payload.len() - 1], true).is_err());
         assert!(receive_bytes(&[payload.as_slice(), &[0]].concat(), true).is_err());
@@ -1175,7 +1219,7 @@ mod tests {
             let mut forged = payload.clone();
             forged[trailer + offset..trailer + offset + 8].copy_from_slice(&claim.to_le_bytes());
             let error = receive_bytes(&forged, true).unwrap_err().to_string();
-            assert!(error.contains("excessivos"), "{error}");
+            assert!(error.contains("excessive metadata"), "{error}");
         }
     }
 
@@ -1205,7 +1249,7 @@ mod tests {
         else {
             return;
         };
-        assert!(result.unwrap_err().to_string().contains("excessivos"));
+        assert!(result.unwrap_err().to_string().contains("excessive metadata"));
     }
 
     #[test]
@@ -1350,7 +1394,7 @@ mod tests {
         else {
             return;
         };
-        assert!(result.unwrap_err().to_string().contains("limite"));
+        assert!(result.unwrap_err().to_string().contains("time limit"));
         assert!(started.elapsed() < Duration::from_secs(10));
 
         let flag = Arc::new(AtomicBool::new(false));
@@ -1361,7 +1405,7 @@ mod tests {
         });
         let started = Instant::now();
         let result = with_worker(script, DEADLINE, || with_cancel(flag, || decode(file.path())));
-        assert!(result.unwrap().unwrap_err().to_string().contains("cancelada"));
+        assert!(result.unwrap().unwrap_err().to_string().contains("canceled"));
         assert!(started.elapsed() < Duration::from_secs(10));
         // --die-with-parent tears the sandbox down with bwrap.
         let deadline = Instant::now() + Duration::from_secs(5);

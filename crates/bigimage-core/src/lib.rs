@@ -46,6 +46,7 @@ pub use extent::{
 pub use flip::{flip_file, flip_file_with_options, FlipAxis};
 pub use format::Format;
 pub use metadata::{Metadata, MetadataLoss, MetadataSupport, SourceMetadata};
+pub use pipeline::TEMP_FILE_PREFIX;
 pub use preview::{PreviewOp, PreviewSession};
 pub use resize::{resize_file, Filter, ResizeMode};
 pub use rotate::{
@@ -107,6 +108,12 @@ pub fn transform_file(
 /// name their output after) when no target format is given.
 pub fn sniff_format(path: impl AsRef<std::path::Path>) -> Option<Format> {
     pipeline::sniff_format(path.as_ref())
+}
+
+/// Whether a `width × height` buffer of `bytes_per_pixel` fits the limits
+/// every decode and transform enforces.
+pub fn within_limits(width: u32, height: u32, bytes_per_pixel: u8) -> bool {
+    pipeline::check_dimensions(width, height, bytes_per_pixel).is_ok()
 }
 
 /// Read just the dimensions of an image, dispatching the decoder by content.
@@ -175,10 +182,7 @@ pub fn open_image_for_resave(
         return decode(path).map(|(image, _, meta)| (image, meta));
     }
     if backend::configured().is_some() {
-        tracing::warn!(
-            ?path,
-            "backend sem decodificação para regravação; metadados não preservados"
-        );
+        tracing::warn!(?path, "backend cannot decode for re-saving; metadata not preserved");
         return open_image(path).map(|image| (image, SourceMetadata::default()));
     }
     pipeline::decode_local_with(path, false).map(|(image, _, meta)| (image, meta))
@@ -262,7 +266,7 @@ pub fn save_image_preserving_metadata_report(
                 Ok(true) => MetadataLoss::IccMismatched,
                 Ok(false) => MetadataLoss::IccDiscarded,
                 Err(error) => {
-                    tracing::warn!(%error, "perfil ICC de origem descartado ao regravar");
+                    tracing::warn!(%error, "source ICC profile dropped while re-saving");
                     MetadataLoss::IccDiscarded
                 }
             };
@@ -373,7 +377,7 @@ mod tests {
     #[test]
     fn transform_file_names_skips_and_writes_like_the_builtin_transforms() {
         let dir = tempfile::tempdir().unwrap();
-        let input = dir.path().join("foto.png");
+        let input = dir.path().join("photo.png");
         image::RgbImage::from_pixel(4, 2, image::Rgb([10, 20, 30])).save(&input).unwrap();
         let opts = EncodeOptions::default();
         let double =
@@ -381,7 +385,7 @@ mod tests {
         let out =
             transform_file(&input, "_x2", None, &opts, OverwritePolicy::Skip, double).unwrap();
         let ConvertOutcome::Written { output } = out else { panic!("not written: {out:?}") };
-        assert_eq!(output, dir.path().join("foto_x2.png"));
+        assert_eq!(output, dir.path().join("photo_x2.png"));
         assert_eq!(image_dimensions(&output).unwrap(), (8, 4));
         // Skip never runs the transform again.
         let out = transform_file(&input, "_x2", None, &opts, OverwritePolicy::Skip, |_| {
@@ -396,10 +400,10 @@ mod tests {
             Some(Format::Jpeg),
             &opts,
             OverwritePolicy::Skip,
-            |_| Err(BigImageError::Other("modelo ausente".into())),
+            |_| Err(BigImageError::Other("model missing".into())),
         );
-        assert!(failed.unwrap_err().to_string().contains("modelo ausente"));
-        assert!(!dir.path().join("foto_err.jpg").exists());
+        assert!(failed.unwrap_err().to_string().contains("model missing"));
+        assert!(!dir.path().join("photo_err.jpg").exists());
     }
 
     #[test]

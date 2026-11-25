@@ -5,12 +5,19 @@ use std::path::PathBuf;
 /// Choose batch concurrency from CPUs, image dimensions and available memory.
 /// Leaves half of available RAM to GNOME and other applications, uses at most
 /// four jobs, and estimates 32 bytes/pixel for decoded/converted/scratch buffers.
-/// This is a scheduling heuristic, not a hard process memory limit.
+/// This is a scheduling heuristic, not a hard process memory limit: only the
+/// largest files on disk are probed, since each probe is a sandboxed decode
+/// of the header and a batch can hold thousands of files.
 pub fn batch_worker_count(files: &[PathBuf]) -> usize {
+    const PROBED: usize = 3;
     let cpus = std::thread::available_parallelism().map(|n| n.get()).unwrap_or(1);
-    let working_set = files
+    let mut by_size: Vec<(u64, &PathBuf)> =
+        files.iter().map(|p| (std::fs::metadata(p).map_or(0, |m| m.len()), p)).collect();
+    by_size.sort_unstable_by_key(|&(size, _)| std::cmp::Reverse(size));
+    let working_set = by_size
         .iter()
-        .filter_map(|p| crate::image_dimensions(p).ok())
+        .take(PROBED)
+        .filter_map(|(_, p)| crate::image_dimensions(p).ok())
         .map(|(w, h)| (u64::from(w) * u64::from(h)).saturating_mul(32))
         .max()
         .unwrap_or(512 * 1024 * 1024)

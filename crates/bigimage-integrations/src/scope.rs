@@ -12,7 +12,7 @@ use thiserror::Error;
 #[non_exhaustive]
 pub enum ScopeError {
     /// Could not resolve the user's home directory (unusual on Linux).
-    #[error("não foi possível localizar $HOME")]
+    #[error("could not locate $HOME")]
     NoHome,
 }
 
@@ -153,7 +153,7 @@ impl ScopePaths {
         self.data.join("applications")
     }
 
-    /// `~/.local/share/icons/hicolor/scalable/apps/` — vetor de apps.
+    /// `~/.local/share/icons/hicolor/scalable/apps/`: scalable app icons.
     pub fn app_icon_dir(&self) -> PathBuf {
         self.data.join("icons/hicolor/scalable/apps")
     }
@@ -184,7 +184,7 @@ fn config_dirs_from(value: Option<std::ffi::OsString>) -> Vec<PathBuf> {
 pub(crate) const GENERATED_MARKER: &str = "X-BigIris-Generated=true";
 
 /// Upper bound on how much of a candidate file we read to identify it.
-/// Our generated files are a few KiB even with 29 locales.
+/// Our generated files are a few KiB even with 30 locales.
 const MAX_IDENTIFY_BYTES: u64 = 256 * 1024;
 
 /// Is `body` a file our generators wrote? Current files carry
@@ -319,7 +319,7 @@ mod tests {
 
     #[test]
     fn is_on_path_finds_sh() {
-        assert!(is_on_path("sh"), "sh deveria estar sempre no PATH em um linux");
+        assert!(is_on_path("sh"), "sh should always be on PATH on Linux");
     }
 
     #[test]

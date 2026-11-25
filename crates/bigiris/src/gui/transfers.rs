@@ -83,20 +83,16 @@ fn show_error(window: &adw::ApplicationWindow, error: TransferError) {
     }
     let body = match error {
         TransferError::TooLarge | TransferError::TooManyFiles => {
-            gettext("A seleção é muito grande. Abra menos arquivos por vez.")
+            gettext("The selection is too large. Open fewer files at a time.")
         }
-        TransferError::Remote => gettext("Arraste ou copie arquivos locais de imagem."),
-        TransferError::Timeout => gettext("A transferência demorou demais. Tente novamente."),
-        TransferError::Launch => {
-            gettext("Não foi possível iniciar o visualizador. Tente novamente.")
-        }
-        _ => gettext("Copie arquivos de imagem no gerenciador e tente novamente."),
+        TransferError::Remote => gettext("Drop or copy local image files."),
+        TransferError::Timeout => gettext("The transfer timed out. Try again."),
+        TransferError::Launch => gettext("Could not start the viewer. Try again."),
+        _ => gettext("Copy image files in your file manager and try again."),
     };
-    let dialog = adw::AlertDialog::builder()
-        .heading(gettext("Não foi possível abrir os arquivos"))
-        .body(body)
-        .build();
-    dialog.add_response("close", &gettext("Fechar"));
+    let dialog =
+        adw::AlertDialog::builder().heading(gettext("Could not open the files")).body(body).build();
+    dialog.add_response("close", &gettext("Close"));
     dialog.set_close_response("close");
     dialog.present(Some(window));
 }
@@ -104,7 +100,7 @@ fn show_error(window: &adw::ApplicationWindow, error: TransferError) {
 /// Start an independent BigIris process (viewer or Prisma dialog). After an
 /// upgrade the running image is "(deleted)"; the installed one is launched.
 /// The child is reaped when it exits, so no zombie is left per launch.
-pub(crate) fn spawn_bigiris<I, S>(args: I) -> std::io::Result<()>
+fn spawn_bigiris<I, S>(args: I) -> std::io::Result<()>
 where
     I: IntoIterator<Item = S>,
     S: AsRef<std::ffi::OsStr>,
@@ -129,14 +125,20 @@ pub(super) fn open_files(
     }
     let mut args = vec![std::ffi::OsString::from("--")];
     args.extend(paths.into_iter().map(PathBuf::into_os_string));
+    let launched = launch(window, args);
+    if launched && close_after_open {
+        window.close();
+    }
+    launched
+}
+
+/// Start another BigIris process (a window or a Prisma dialog), telling the
+/// user when it cannot start instead of doing nothing.
+pub(super) fn launch(window: &adw::ApplicationWindow, args: Vec<std::ffi::OsString>) -> bool {
     match spawn_bigiris(args) {
-        Ok(()) => {
-            if close_after_open {
-                window.close();
-            }
-            true
-        }
-        Err(_) => {
+        Ok(()) => true,
+        Err(error) => {
+            tracing::warn!(%error, "could not start bigiris");
             show_error(window, TransferError::Launch);
             false
         }

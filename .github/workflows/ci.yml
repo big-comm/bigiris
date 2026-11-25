@@ -81,10 +81,11 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           persist-credentials: false
-      - name: install libdav1d-dev
+      - name: install system packages
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends libdav1d-dev pkg-config bubblewrap util-linux
+          sudo apt-get install -y --no-install-recommends libdav1d-dev pkg-config bubblewrap util-linux gettext locales
+          sudo localedef -i pt_BR -f UTF-8 pt_BR.UTF-8
       - name: prepare distro Bubblewrap policy and verify isolation
         run: bash .github/scripts/prepare-sandbox.sh
       - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # master (2026-10-16)
@@ -129,8 +130,9 @@ jobs:
           python3 scripts/translations.py compile --destdir "$PWD/target/quality/locale"
           sudo localedef -i fr_FR -f UTF-8 fr_FR.UTF-8
           sudo localedef -i he_IL -f UTF-8 he_IL.UTF-8
-          for language in en fr he; do
-            session_locale=en_US.UTF-8
+          sudo localedef -i pt_BR -f UTF-8 pt_BR.UTF-8
+          for language in pt_BR fr he; do
+            session_locale=pt_BR.UTF-8
             if [ "$language" = fr ]; then session_locale=fr_FR.UTF-8; fi
             if [ "$language" = he ]; then session_locale=he_IL.UTF-8; fi
             xvfb-run -a dbus-run-session -- env \
@@ -236,13 +238,12 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends appstream
-      # --no-net evita lookup das URLs (homepage, bugtracker) que sao
-      # warnings esperados antes do repo virar publico. Trocar por
-      # `appstreamcli validate` (sem --no-net) quando o repo for publico.
+      # --no-net skips the URL checks (homepage, bug tracker), which warn
+      # while the repository is private; drop it once the repository is public.
       - run: appstreamcli validate --no-net data/com.biglinux.Iris.metainfo.xml
 
   translations:
-    name: 29-language catalogs and localized integration assets
+    name: 30-language catalogs and localized integration assets
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
@@ -254,6 +255,10 @@ jobs:
           components: rustfmt
       - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends gettext
       - run: python3 scripts/translations.py check --check-generated
+      - name: POT matches the sources
+        run: |
+          bash data/po/regen-pot.sh
+          git diff --exit-code -I '^"POT-Creation-Date: ' -I '^#: ' data/po
 
   desktop:
     name: .desktop validation
@@ -268,6 +273,18 @@ jobs:
           sudo apt-get install -y --no-install-recommends desktop-file-utils
       - run: desktop-file-validate data/com.biglinux.Iris.desktop
 
+  licenses:
+    name: THIRD_PARTY_LICENSES matches Cargo.lock
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # master (2026-10-16)
+        with:
+          toolchain: stable
+      - run: python3 scripts/third_party_licenses.py --check
+
   makepkg:
     name: makepkg (Arch container, PKGBUILD.local)
     runs-on: ubuntu-latest
@@ -276,7 +293,7 @@ jobs:
     steps:
       - name: install Arch deps
         run: |
-          pacman -Syu --noconfirm --needed base-devel rust git sudo
+          pacman -Syu --noconfirm --needed base-devel rust git sudo namcap
           useradd -m builder
           echo "builder ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
@@ -284,8 +301,19 @@ jobs:
           persist-credentials: false
       - name: chown for builder
         run: chown -R builder:builder .
-      # Usa PKGBUILD.local (build do checkout local, sem clone remoto).
-      # A receita principal clona o repo oficial; esta usa o checkout exato.
+      # CI builds PKGBUILD.local (the checked-out commit); the shipped
+      # PKGBUILD clones the repository. Their declarations must agree.
+      - name: compare PKGBUILD and PKGBUILD.local
+        run: sudo -u builder bash scripts/compare-pkgbuilds.sh
+      # realesrgan-native is a BigLinux package that Arch does not carry, so
+      # the dependencies are installed here and makepkg skips its own check.
+      - name: install build and runtime dependencies
+        working-directory: pkgbuild
+        shell: bash
+        run: |
+          mapfile -t deps < <(sudo -u builder makepkg --printsrcinfo -p PKGBUILD.local |
+            sed -n 's/^\t\(make\)\{0,1\}depends = //p' | grep -vx realesrgan-native)
+          pacman -S --noconfirm --needed "${deps[@]}"
       # check() probes nested sandbox support, runs all available tests and
       # reports the three functional tests filtered in restricted containers.
       # Host test/build jobs still require full sandbox functionality.
@@ -295,10 +323,21 @@ jobs:
           sudo -u builder PKGEXT=.pkg.tar makepkg \
             -p PKGBUILD.local \
             --noconfirm \
-            --syncdeps \
+            --nodeps \
             --skipchecksums \
             --skipinteg \
             --clean
+      - name: namcap on the built package
+        working-directory: pkgbuild
+        shell: bash
+        # namcap resolves the Nautilus extension's Python modules through the
+        # installed tree of its optional dependency nautilus-python.
+        run: |
+          pacman -S --noconfirm --needed nautilus-python
+          namcap bigiris-*.pkg.tar | tee namcap.log
+          # namcap wants one file per uncommon license; THIRD_PARTY_LICENSES
+          # holds all of their texts in one file.
+          ! grep ' E: ' namcap.log | grep -v ' E: Uncommon license identifiers '
 
   nautilus:
     name: Nautilus extension contracts

@@ -8,11 +8,14 @@ depends=(
   'util-linux'
   'gcc-libs'
   'glibc'
+  'glib2'
+  'cairo'
+  'graphene'
   'gtk4>=4.12'
   'libadwaita>=1.6'
   'dav1d'            # AVIF decoder
   'hicolor-icon-theme'
-  # Real-ESRGAN weights (~5 MB). Without them "Aumentar resolução" silently
+  # Real-ESRGAN weights (~5 MB). Without them "Upscale" silently
   # falls back to Lanczos3, so the AI upscale ships with the app. The larger
   # weights packages stay optional.
   'realesrgan-native'
@@ -23,6 +26,8 @@ optdepends=(
   'scunet-native: remove noise and JPEG artifacts with AI (SCUNet weights)'
   'lama-native: erase objects with AI (Big LaMa weights)'
   'vulkan-icd-loader: run the AI tools on a Vulkan GPU (CPU otherwise)'
+  'libreoffice-fresh: convert documents to PDF from the file manager'
+  'libnotify: show failures of the file manager quick actions'
 )
 # base-devel's C compiler also builds the vendored mozjpeg, libwebp and
 # libdeflate sources (no nasm or cmake needed).
@@ -35,11 +40,15 @@ makedepends=('rust' 'cargo' 'git' 'pkgconf' 'gettext' 'python' 'shaderc')
 # shows up undefined at the final link. Confirmed against the leaner
 # archlinux:latest CI image; some user setups can hit it too. We keep
 # -O3 and the mimalloc batch perf win without LTO.
-options=('!lto')
+# The release profile strips debug info, so a -debug package would be empty.
+options=('!lto' '!debug')
 pkgver=$(date +%y.%m.%d)
 pkgrel=$(date +%H%M)
 arch=('x86_64')
-license=('GPL-3.0-or-later')
+# The binary statically links the crates and vendored C libraries listed in
+# THIRD_PARTY_LICENSES (mozjpeg, libwebp, libdeflate and mimalloc among them).
+license=('GPL-3.0-or-later' 'Apache-2.0' 'BSD-2-Clause' 'BSD-3-Clause' 'IJG' 'MIT'
+         'MPL-2.0' 'Unicode-3.0' 'Zlib')
 url="https://github.com/big-comm/${pkgname}"
 source=("git+${url}.git")
 sha256sums=('SKIP')
@@ -53,8 +62,9 @@ fi
 
 prepare() {
   cd "${srcdir}/${pkgname}"
-  # Add blueprint-compiler when the GUI starts using .blp files.
-  true
+  export RUSTUP_TOOLCHAIN=stable
+  # Download every crate here so build() and check() run offline.
+  cargo fetch --locked --target "$(rustc -vV | sed -n 's/^host: //p')"
 }
 
 build() {
@@ -66,7 +76,7 @@ build() {
   # engines (image-engine-native) run on the CPU or a Vulkan GPU with no
   # runtime library; each tool needs its optional *-native weights
   # package and shows how to install it when missing.
-  cargo build --locked --release --features "gui ai" --package bigiris
+  cargo build --frozen --release --features "gui ai" --package bigiris
 
   # Compile every translation catalog listed in data/po/LINGUAS.
   # package() installs the resulting .mo files under /usr/share/locale.
@@ -103,6 +113,8 @@ package() {
   # Documentation and license
   install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
   install -Dm644 NOTICE "$pkgdir/usr/share/licenses/$pkgname/NOTICE"
+  install -Dm644 THIRD_PARTY_LICENSES \
+    "$pkgdir/usr/share/licenses/$pkgname/THIRD_PARTY_LICENSES"
   install -Dm644 README.md "$pkgdir/usr/share/doc/$pkgname/README.md"
 
   # Translation catalogs compiled in build().

@@ -11,17 +11,17 @@ import subprocess
 
 ROOT = Path(__file__).resolve().parents[1]
 PO = ROOT / 'data/po'
-LANGUAGES = ('bg', 'cs', 'da', 'de', 'el', 'en', 'es', 'et', 'fi', 'fr', 'he', 'hr', 'hu', 'is', 'it', 'ja', 'ko', 'nl', 'no', 'pl', 'pt', 'pt_BR', 'ro', 'ru', 'sk', 'sv', 'tr', 'uk', 'zh')
+LANGUAGES = ('bg', 'cs', 'da', 'de', 'el', 'es', 'et', 'fi', 'fr', 'he', 'hr', 'hu', 'is', 'it', 'ja', 'ko', 'nb', 'nl', 'pl', 'pt', 'pt_BR', 'ro', 'ru', 'sk', 'sv', 'tr', 'uk', 'zh_CN', 'zh_TW')
 
 def n_(text):
     return text
 
 DESKTOP_MESSAGES = (
-    n_('Visualizador de imagens'),
-    n_('Visualize e converta imagens com integração ao gerenciador de arquivos'),
+    n_('Image viewer'),
+    n_('View and convert images with file manager integration'),
 )
 
-APPSTREAM_SUMMARY = n_('Visualizador e conversor de imagens moderno')
+APPSTREAM_SUMMARY = n_('Modern image viewer and converter')
 
 def read_po(path, allow_fuzzy=False):
     """Read singular GNU PO messages without a build dependency on polib."""
@@ -60,7 +60,7 @@ def languages():
     found = tuple(line.strip() for line in (PO / 'LINGUAS').read_text().splitlines()
                   if line.strip() and not line.lstrip().startswith('#'))
     if found != LANGUAGES:
-        raise ValueError('LINGUAS must match the 29 BigCommunity locales documented in CONTRIBUTING.md')
+        raise ValueError('LINGUAS must match LANGUAGES')
     return found
 
 def catalogs():
@@ -117,13 +117,14 @@ def generated_assets():
     desktop = re.sub(r'^(GenericName|Comment)\[[^]]+\]=.*\n', '', desktop, flags=re.M)
     for key, source in zip(('GenericName', 'Comment'), DESKTOP_MESSAGES):
         localized = ''.join(f'{key}[{lang}]={entries[source]}\n' for lang, entries in catalog.items())
-        desktop = re.sub(rf'^{key}=.*\n', lambda m: m[0]+localized, desktop, flags=re.M)
+        desktop = re.sub(rf'^{key}=.*\n', lambda m: f'{key}={source}\n'+localized, desktop, flags=re.M)
     metainfo = (ROOT / 'data/com.biglinux.Iris.metainfo.xml').read_text()
     metainfo = re.sub(r'^  <summary xml:lang=.*</summary>\n', '', metainfo, flags=re.M)
     localized_summary = ''.join(
         f'  <summary xml:lang="{lang.replace("_", "-")}">{html.escape(entries[APPSTREAM_SUMMARY])}</summary>\n'
         for lang, entries in catalog.items())
-    metainfo = re.sub(r'^  <summary>.*</summary>\n', lambda m: m[0]+localized_summary, metainfo, flags=re.M)
+    summary = f'  <summary>{html.escape(APPSTREAM_SUMMARY)}</summary>\n'
+    metainfo = re.sub(r'^ {2}<summary>.*</summary>\n', lambda m: summary+localized_summary, metainfo, flags=re.M)
     return {path: rust, ROOT / 'data/com.biglinux.Iris.desktop': desktop,
             ROOT / 'data/com.biglinux.Iris.metainfo.xml': metainfo}
 

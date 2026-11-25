@@ -51,7 +51,7 @@ impl ResizeMode {
     pub(crate) fn target_dims(&self, src_w: u32, src_h: u32) -> Result<(u32, u32)> {
         if src_w == 0 || src_h == 0 {
             return Err(BigImageError::InvalidInput(format!(
-                "origem com dimensão zero: {src_w}x{src_h}"
+                "source with a zero dimension: {src_w}x{src_h}"
             )));
         }
 
@@ -60,7 +60,7 @@ impl ResizeMode {
             ResizeMode::Percent(p) => {
                 if !p.is_finite() || p <= 0.0 || p > 1000.0 {
                     return Err(BigImageError::InvalidInput(format!(
-                        "percent fora do intervalo (0, 1000]: {p}"
+                        "percent outside (0, 1000]: {p}"
                     )));
                 }
                 let f = f64::from(p) / 100.0;
@@ -71,7 +71,7 @@ impl ResizeMode {
             ResizeMode::Exact { width, height } => {
                 if width == 0 || height == 0 {
                     return Err(BigImageError::InvalidInput(format!(
-                        "destino com dimensão zero: {width}x{height}"
+                        "target with a zero dimension: {width}x{height}"
                     )));
                 }
                 Ok((width, height))
@@ -79,7 +79,7 @@ impl ResizeMode {
             ResizeMode::Fit { width, height } => {
                 if width == 0 || height == 0 {
                     return Err(BigImageError::InvalidInput(format!(
-                        "caixa de encaixe com dimensão zero: {width}x{height}"
+                        "fit box with a zero dimension: {width}x{height}"
                     )));
                 }
                 let scale = f64::min(
@@ -148,7 +148,7 @@ impl Filter {
 /// Resize a single file.
 ///
 /// `target = None` preserves the source encoding; the output file always
-/// carries a suffix describing the resize (e.g. `foto_1080.jpg`) so we never
+/// carries a suffix describing the resize (e.g. `photo_1080.jpg`) so we never
 /// overwrite the original unless policy explicitly asks for it.
 pub fn resize_file(
     input: impl AsRef<Path>,

@@ -2,8 +2,9 @@
 //! bigimage-integrations — installs/removes right-click actions in Linux file managers.
 //!
 //! Support matrix:
-//! - Dolphin / Konqueror (`.desktop` with `X-KDE-Submenu` for nested menus)
-//! - Nautilus (scripts tree under `~/.local/share/nautilus/scripts/BigIris/`)
+//! - Dolphin / Konqueror (`.desktop` under one `X-KDE-Submenu=BigIris`,
+//!   groups split by `_SEPARATOR_`)
+//! - Nautilus (nautilus-python extension under `~/.local/share/nautilus-python/extensions/`)
 //! - Nemo (`.nemo_action`, flattened with prefix)
 //! - Thunar (merge into `~/.config/Thunar/uca.xml`)
 //! - PCManFM-Qt / libfm (`.desktop` `Type=Action`)
@@ -39,7 +40,7 @@ pub fn version() -> &'static str {
 pub enum FileManager {
     /// KDE Dolphin / Konqueror (shared ServiceMenu format).
     Dolphin,
-    /// GNOME Nautilus (scripts tree).
+    /// GNOME Nautilus (nautilus-python extension).
     Nautilus,
     /// Cinnamon Nemo.
     Nemo,

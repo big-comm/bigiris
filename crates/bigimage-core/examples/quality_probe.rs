@@ -49,7 +49,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         || count > if mode == "soak" { 86400 } else { 3600 }
         || !["benchmark", "stress", "soak"].contains(&mode)
     {
-        return Err("use benchmark <amostras>, stress <jobs> ou soak <segundos>, opcionalmente WIDTHxHEIGHT".into());
+        return Err(
+            "use benchmark <samples>, stress <jobs> or soak <seconds>, optionally WIDTHxHEIGHT"
+                .into(),
+        );
     }
     let size = args.get(3).map(String::as_str).unwrap_or("1920x1080");
     let (width, height) = size.split_once('x').ok_or("size must be WIDTHxHEIGHT")?;
@@ -185,9 +188,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let passed = growth <= 64 * 1024 && fd_end == fd_start && threads_end == threads_start;
         println!("{{\"mode\":\"soak\",\"seconds\":{:.3},\"cycles\":{cycles},\"baseline_rss_kib\":{baseline},\"final_rss_kib\":{final_rss},\"growth_kib\":{growth},\"hwm_kib\":{},\"fds_before\":{fd_start},\"fds_after\":{fd_end},\"threads_before\":{threads_start},\"threads_after\":{threads_end},\"rss_samples_kib\":{samples:?},\"passed\":{passed}}}", start.elapsed().as_secs_f64(), metric("VmHWM:"));
         if !passed {
-            return Err(
-                "crescimento de recursos acima do limite do probe; investigar com profiler".into(),
-            );
+            return Err("resource growth above the probe limit; investigate with a profiler".into());
         }
     }
     Ok(())

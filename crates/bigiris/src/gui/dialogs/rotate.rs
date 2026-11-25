@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-//! Girar: rotate by 90, 180 or 270 degrees.
+//! Rotate: rotate by 90, 180 or 270 degrees.
 
 use super::*;
 
@@ -22,16 +22,16 @@ pub(in crate::gui) fn build_rotate_dialog(
         .application(app)
         .default_width(440)
         .default_height(340)
-        .title(gettext("Girar imagens — Prisma"))
+        .title(gettext("Rotate images — Prisma"))
         .build();
 
     let header = adw::HeaderBar::new();
-    header.set_title_widget(Some(&adw::WindowTitle::new(&gettext("Girar"), "Prisma")));
+    header.set_title_widget(Some(&adw::WindowTitle::new(&gettext("Rotate"), "Prisma")));
 
-    let rotations = [n_("90° (horário)"), n_("180°"), n_("270° (anti-horário)")];
+    let rotations = [n_("90° (clockwise)"), n_("180°"), n_("270° (counterclockwise)")];
     let rotation_row = adw::ComboRow::builder()
         .use_markup(false)
-        .title(gettext("Rotação"))
+        .title(gettext("Rotation"))
         .model(&translated_strings(&rotations))
         .build();
 
@@ -39,7 +39,7 @@ pub(in crate::gui) fn build_rotate_dialog(
 
     let overwrite_row = overwrite_row();
 
-    let files_row = selection_row(&gettext("Arquivos selecionados"), &files);
+    let files_row = selection_row(&gettext("Selected files"), &files);
 
     let group = adw::PreferencesGroup::new();
     group.add(&files_row);
@@ -49,24 +49,14 @@ pub(in crate::gui) fn build_rotate_dialog(
 
     let status = status_label();
 
-    let (cancel_btn, apply_btn, actions) = action_buttons(&gettext("Girar"));
+    let (cancel_btn, apply_btn, actions) = action_buttons(&gettext("Rotate"));
 
-    let content = gtk::Box::builder()
-        .orientation(gtk::Orientation::Vertical)
-        .spacing(16)
-        .margin_top(16)
-        .margin_bottom(16)
-        .margin_start(16)
-        .margin_end(16)
-        .build();
+    let content = padded_box(gtk::Orientation::Vertical, 16);
     content.append(&group);
     content.append(&status);
     content.append(&actions);
 
-    let toolbar_view = adw::ToolbarView::new();
-    toolbar_view.add_top_bar(&header);
-    toolbar_view.set_content(Some(&content));
-    window.set_content(Some(&toolbar_view));
+    set_dialog_content(&window, &header, &content);
 
     close_on_click(&window, &cancel_btn);
 
@@ -77,7 +67,6 @@ pub(in crate::gui) fn build_rotate_dialog(
         let overwrite_row = overwrite_row.clone();
         let status = status.clone();
         let apply_btn = apply_btn.clone();
-        let cancel_btn = cancel_btn.clone();
         let window = window.clone();
         dialog_signal!(window, apply_btn.clone(), connect_clicked, move |_| {
             let rotation = match rotation_row.selected() {
@@ -89,17 +78,15 @@ pub(in crate::gui) fn build_rotate_dialog(
             let policy = selected_overwrite(&overwrite_row);
 
             apply_btn.set_sensitive(false);
-            cancel_btn.set_sensitive(false);
-            status.set_text(&gettext("Girando…"));
+            status.set_text(&gettext("Rotating…"));
 
             let work_files: Vec<PathBuf> = (*files).clone();
             run_batch_async(
                 work_files,
                 move |f| rotate_file(f, rotation, target, policy),
-                gettext("Girando"),
+                gettext("Rotating"),
                 status.clone(),
                 apply_btn.clone(),
-                cancel_btn.clone(),
                 window.clone(),
             );
         });

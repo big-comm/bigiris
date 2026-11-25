@@ -37,7 +37,7 @@ enum Mode {
 
 fn config(mode: Mode) -> ImageResult<webp::WebPConfig> {
     let mut config = webp::WebPConfig::new()
-        .map_err(|()| encode_error(image::ImageFormat::WebP, "configuração inválida"))?;
+        .map_err(|()| encode_error(image::ImageFormat::WebP, "invalid configuration"))?;
     config.thread_level = 1;
     match mode {
         Mode::Lossy(quality) => {
@@ -104,7 +104,7 @@ pub(crate) fn mux(webp: Vec<u8>, width: u32, height: u32, extras: &Extras) -> Im
     if icc.is_none() && exif.is_none() {
         return Ok(webp);
     }
-    let bad = || encode_error(image::ImageFormat::WebP, "saída do libwebp inesperada");
+    let bad = || encode_error(image::ImageFormat::WebP, "unexpected libwebp output");
     if webp.len() < 12 || &webp[..4] != b"RIFF" || &webp[8..12] != b"WEBP" {
         return Err(bad());
     }

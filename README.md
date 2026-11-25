@@ -5,187 +5,193 @@
 <h1 align="center">BigIris</h1>
 
 <p align="center">
-  <strong>Um visualizador rápido e um estúdio de imagens sob demanda.</strong><br>
-  Rust · GTK4/libadwaita · CLI · processamento local · GNOME/Nautilus e outros desktops
+  <strong>A fast image viewer and an image studio on demand.</strong><br>
+  Rust · GTK4/libadwaita · CLI · local processing · GNOME/Nautilus and other desktops
 </p>
 
-BigIris segue uma ideia simples: abrir uma foto deve ser imediato e silencioso;
-trabalhar em muitas fotos deve oferecer uma interface completa. Por isso o
-projeto tem duas experiências no mesmo binário:
+BigIris follows a simple idea: opening a photo should be instant and quiet;
+working on many photos should offer a complete interface. That is why the
+project has two experiences in the same binary:
 
-- **Íris** é o visualizador minimalista: abre no arquivo escolhido, descobre as
-  imagens irmãs da pasta, navega em ordem natural e mantém a foto no centro.
-- **Prisma** aparece quando é necessário converter, redimensionar, recortar,
-  ajustar, comparar, animar ou processar uma pasta inteira.
+- **Íris** is the minimal viewer: it opens on the chosen file, finds the
+  sibling images in the folder, navigates in natural order and keeps the photo
+  at the center.
+- **Prisma** appears when you need to convert, resize, crop, adjust, compare,
+  animate or process a whole folder.
 
-O fluxo compacto e os atalhos têm o IrfanView como referência funcional. A
-interface usa GTK4/libadwaita, com prioridade para o BigCommunity GNOME
-e integração também com outros desktops. O resultado respeita o tema,
-usa ícones simbólicos do sistema e mantém as operações avançadas fora do caminho
-principal.
+The compact flow and the shortcuts take IrfanView as their functional
+reference. The interface uses GTK4/libadwaita, with priority on BigCommunity
+GNOME and integration with other desktops too. The result follows the theme,
+uses the system's symbolic icons and keeps advanced operations out of the main
+path.
 
-A tela inicial abre em uma janela compacta. Use **Abrir imagens**, arraste uma
-seleção de arquivos locais ou cole arquivos copiados no gerenciador com
-`Ctrl+V`. **Processar uma pasta** abre as ferramentas de lote.
+The start screen opens in a compact window. Use **Open images…**, drag a
+selection of local files, or paste files copied in the file manager with
+`Ctrl+V`. **Process a folder…** opens the batch tools.
 
-## Destaques
+## Highlights
 
-- Decodificação da imagem e das miniaturas fora da thread gráfica.
-- Navegação rápida por pasta com coalescência: resultados antigos são descartados
-  quando o usuário percorre várias imagens rapidamente.
-- Zoom centrado no cursor, pan por arrasto, 1:1, ajustar à janela, tela cheia,
-  slideshow, fita de miniaturas e histograma RGB.
-- Giro, espelhamento e recorte não destrutivos, com desfazer/refazer. O recorte
-  acontece direto na imagem aberta (`Ctrl+R`): arraste os cantos ou as bordas,
-  escolha uma proporção e confirme com `Enter`. `Ctrl+S` confirma e grava por
-  substituição atômica, preservando o original se o encoder falhar.
-- Painel de edição lateral e translúcido (botão **Editar** ou `E`): girar,
-  espelhar, endireitar (−45° a +45°, com grade e recorte automático das bordas
-  vazias) e recortar; brilho, contraste, saturação e gama com prévia ao vivo;
-  redimensionar com proporção travada ou em porcentagem; remover fundo,
-  remover ruído e aumentar resolução com IA direto na imagem, com progresso e
-  botão de cancelar;
-  **Salvar** e **Salvar como…** (grava uma cópia editada, sem tocar no
-  original). Cada gesto vira um passo de desfazer, e o resultado das
-  ferramentas pesadas fica guardado para que as edições seguintes não as
-  repitam. **Ver original** (ou segurar `\`) mostra a imagem sem as edições.
-- Processamento em lote paralelo, cancelável, com progresso, tempo e tamanho
-  antes/depois.
-- Integração com Dolphin, Nautilus, Nemo, Thunar, PCManFM-Qt e elementary Files.
-- Ação de pasta no Nautilus e no Dolphin: **BigIris → Processar esta pasta…**.
-- IA local, sem upload das imagens e sem downloads: remoção de fundo
-  (BiRefNet-lite), aumento de resolução (Real-ESRGAN), remoção de ruído
-  (SCUNet) e apagar objetos por máscara (LaMa, por enquanto na CLI). Veja
-  [IA local](#ia-local).
-- Limites preventivos de 1 GiB por arquivo, 256 MP e 512 MiB por buffer de imagem.
+- Image and thumbnail decoding off the GUI thread.
+- Fast folder navigation with coalescing: stale results are discarded when the
+  user steps through several images quickly.
+- Zoom centered on the cursor, drag to pan, 1:1, fit to window, full screen,
+  slideshow, thumbnail strip and RGB histogram.
+- Non-destructive rotate, flip and crop, with undo/redo. Cropping happens
+  directly on the open image (`Ctrl+R`): drag the corners or edges, pick an
+  aspect ratio and confirm with `Enter`. `Ctrl+S` confirms and writes by atomic
+  replacement, keeping the original if the encoder fails.
+- Translucent side edit panel (**Edit** button or `E`): rotate, flip,
+  straighten (−45° to +45°, with a grid and automatic cropping of the empty
+  edges) and crop; brightness, contrast, saturation and gamma with a live
+  preview; resize with locked aspect ratio or by percentage; remove background,
+  remove noise and upscale with AI directly on the image, with progress and a
+  cancel button; **Save** and **Save as…** (writes an edited copy without
+  touching the original). Each gesture becomes an undo step, and the result of
+  the heavy tools is kept so that later edits do not repeat them. **View
+  original** (or holding `\`) shows the image without the edits.
+- Parallel, cancelable batch processing with progress, elapsed time and
+  before/after size.
+- Integration with Dolphin, Nautilus, Nemo, Thunar, PCManFM-Qt and elementary
+  Files.
+- Folder action in Nautilus and Dolphin: **BigIris → Process this folder…**.
+- Local AI, with no image uploads and no downloads: background removal
+  (BiRefNet-lite), upscaling (Real-ESRGAN), noise removal (SCUNet) and object
+  erasing by mask (LaMa, CLI only for now). See [Local AI](#local-ai).
+- Preventive limits of 1 GiB per file, 256 MP and 512 MiB per image buffer.
 
 ## Zoom
 
-Posicione o cursor sobre o detalhe da imagem e use a roda do mouse, `+`/`-`
-ou os botões de zoom. A transição é gradual, com movimentos proporcionais no
-touchpad, e respeita a preferência de desativar animações do GTK. A ampliação
-preserva esse ponto, respeitando os limites
-de rolagem da imagem. `1` exibe 100%; `0` ajusta à janela. Sem posição conhecida
-do cursor, o ponto de referência é o centro da área visível.
+Place the cursor over the image detail and use the mouse wheel, `+`/`-` or the
+zoom buttons. The transition is gradual, with proportional touchpad movements,
+and honors the GTK preference to disable animations. Magnification keeps that
+point fixed, within the image's scroll limits. `1` shows 100%; `0` fits to the
+window. When the cursor position is unknown, the reference point is the center
+of the visible area.
 
-## IA local
+## Local AI
 
-As ferramentas de IA usam os motores do
-[image-engine-native](https://github.com/biglinux/image-engine-native), do
-BigLinux: os modelos escritos em Rust puro, sem ONNX Runtime, PyTorch ou
-Python. Rodam na GPU por Vulkan 1.2 quando há uma (a primeira carga na GPU
-compila os shaders, alguns segundos, e fica em cache) e na CPU caso contrário.
-O dispositivo em uso aparece na dica das ferramentas do painel e na saída da
-CLI. Os pesos **não são baixados**: vêm de pacotes do sistema, um por
-ferramenta, e cada ferramenta funciona sem as outras.
+The AI tools use the engines from BigLinux's
+[image-engine-native](https://github.com/biglinux/image-engine-native): the
+models written in pure Rust, with no ONNX Runtime, PyTorch or Python. They run
+on the GPU through Vulkan 1.2 when there is one (the first GPU load compiles the
+shaders, which takes a few seconds and is cached) and on the CPU otherwise. The
+device in use shows in the tooltip of the panel tools and in the CLI output.
+The weights are **not downloaded**: they come from system packages, one per
+tool, and each tool works without the others.
 
-| Ferramenta | Modelo | Pacote | Pesos |
+| Tool | Model | Package | Weights |
 |---|---|---|---|
-| Remover fundo | BiRefNet-lite (MIT) | `birefnet-native` | 90 MB |
-| Aumentar resolução | Real-ESRGAN general x4v3 (BSD-3-Clause) | `realesrgan-native` | 4,9 MB |
-| Remover ruído | SCUNet (Apache-2.0) | `scunet-native` | 37 MB |
-| Apagar objeto | Big LaMa (Apache-2.0) | `lama-native` | 102 MB |
+| Remove background | BiRefNet-lite (MIT) | `birefnet-native` | 90 MB |
+| Upscale | Real-ESRGAN general x4v3 (BSD-3-Clause) | `realesrgan-native` | 4.9 MB |
+| Remove noise | SCUNet (Apache-2.0) | `scunet-native` | 37 MB |
+| Erase object | Big LaMa (Apache-2.0) | `lama-native` | 102 MB |
 
 ```bash
 sudo pacman -S birefnet-native realesrgan-native scunet-native lama-native
 ```
 
-O pacote do BigLinux já instala o `realesrgan-native` (4,9 MB) como
-dependência; os outros pesos são opcionais. Sem o pacote, a ferramenta aparece
-indisponível e diz qual pacote instalar; sem `realesrgan-native` (instalação
-manual ou outra distribuição), **Aumentar resolução** usa Lanczos3. Para testes e
-desenvolvimento, `BIGIRIS_BIREFNET_WEIGHTS`, `BIGIRIS_REALESRGAN_WEIGHTS`,
-`BIGIRIS_SCUNET_WEIGHTS` e `BIGIRIS_LAMA_WEIGHTS` apontam para outros arquivos
-de pesos; `IMAGE_ENGINE_NATIVE_GPU=0` força a CPU.
+The BigLinux package already installs `realesrgan-native` (4.9 MB) as a
+dependency; the other weights are optional. Without its package, a tool shows
+as unavailable and says which package to install; without `realesrgan-native`
+(manual install or another distribution), **Upscale** uses Lanczos3. For
+testing and development, `BIGIRIS_BIREFNET_WEIGHTS`,
+`BIGIRIS_REALESRGAN_WEIGHTS`, `BIGIRIS_SCUNET_WEIGHTS` and
+`BIGIRIS_LAMA_WEIGHTS` point to other weight files;
+`IMAGE_ENGINE_NATIVE_GPU=0` forces the CPU.
 
-Memória medida neste projeto (processo inteiro, CPU): cerca de 0,3 GB para a
-remoção de fundo, 0,1 a 0,4 GB mais a imagem de saída para o Real-ESRGAN
-(trabalha em blocos), 0,4 a 0,7 GB para o SCUNet (também em blocos) e 0,25 GB
-a 0,5 GB para o LaMa, que roda só numa caixa em volta da máscara, reduzida a
-1024 px no lado maior. Antes de carregar e de cada execução o aplicativo
-confere se a estimativa cabe na memória livre agora (memória disponível do
-Linux, limites cgroup v2 e de espaço virtual; swap não conta) e recusa com
-explicação se não couber. O visualizador e as conversões seguem disponíveis.
+Memory measured in this project (whole process, CPU): about 0.3 GB for
+background removal, 0.1 to 0.4 GB plus the output image for Real-ESRGAN (it
+works in tiles), 0.4 to 0.7 GB for SCUNet (also in tiles) and 0.25 GB to
+0.5 GB for LaMa, which runs only on a box around the mask, scaled down to
+1024 px on the longer side. Before loading and before each run, the
+application checks whether the estimate fits in the memory free right now
+(Linux available memory, cgroup v2 limits and virtual address space limits;
+swap does not count) and refuses with an explanation if it does not fit. The
+viewer and conversions stay available.
 
-As redes trabalham em sRGB de 8 bits: imagens de 16 bits ou de ponto
-flutuante saem em 8 bits destas ferramentas (o Lanczos3 mantém a
-profundidade). O canal alfa é preservado: ampliado com Lanczos3 no Real-ESRGAN,
-intacto no SCUNet e no LaMa.
+The networks work in 8-bit sRGB: 16-bit and floating-point images come out of
+these tools as 8-bit (Lanczos3 keeps the bit depth). The alpha channel is
+preserved: upscaled with Lanczos3 by Real-ESRGAN, untouched by SCUNet and LaMa.
 
-## Formatos
+## Formats
 
-O build padrão completo lê e grava os formatos fornecidos pelo pipeline atual:
-PNG, JPEG, WebP, AVIF, TIFF, BMP, GIF, ICO, PNM, TGA, QOI, Radiance HDR e
-OpenEXR. HEIC/HEIF, JPEG XL, SVG e RAW de câmeras ainda não são anunciados como
-suportados.
+The complete default build reads and writes the formats provided by the
+current pipeline: PNG, JPEG, WebP, AVIF, TIFF, BMP, GIF, ICO, PNM, TGA, QOI,
+Radiance HDR and OpenEXR. HEIC/HEIF, JPEG XL, SVG and camera RAW are not
+advertised as supported yet.
 
-As conversões estáticas reencodam os pixels e removem metadados pessoais.
-Perfis ICC RGB são normalizados para sRGB; PNG/JPEG recebem um perfil sRGB
-gerado sem dados da imagem original. Edição estática de animações e TIFF
-multipágina é recusada para impedir perda de conteúdo. O viewer exibe o
-primeiro quadro/página; reprodução animada e navegação multipágina permanecem pendentes. ICO é
-limitado a 256 × 256. Consulte as limitações em
-[docs/QUALITY.md](docs/QUALITY.md) antes de converter um acervo.
+Static conversions re-encode the pixels and remove personal metadata. RGB ICC
+profiles are normalized to sRGB; PNG/JPEG receive an sRGB profile generated
+without data from the original image. Static editing of animations and
+multi-page TIFF is refused to prevent content loss. The viewer shows the first
+frame or page; animated playback and multi-page navigation remain pending. ICO
+is limited to 256 × 256. Read the limitations in
+[docs/QUALITY.md](docs/QUALITY.md) before converting a collection.
 
-### Qualidade e tamanho
+### Quality and size
 
-Cada conversão procura **o menor arquivo que mantém a qualidade visual
-escolhida**, medida com SSIMULACRA2 contra os pixels gravados (imagens com
-transparência são avaliadas sobre fundo preto e branco, valendo a pior nota):
+Each conversion looks for **the smallest file that keeps the chosen visual
+quality**, measured with SSIMULACRA2 against the written pixels (images with
+transparency are scored over black and white backgrounds, and the worse score
+counts):
 
-| Modo (`--target`) | Nota mínima | Uso |
+| Mode (`--target`) | Minimum score | Use |
 |---|---|---|
-| `maxima` (`max`) | 85 | diferença só aparece comparando com zoom |
-| `equilibrado` (`balanced`) — padrão | 80 | sem perda visível em uso normal |
-| `menor` (`small`) | 70 | alta qualidade, arquivos menores |
+| `maximum` (`max`) | 85 | differences only show when comparing zoomed in |
+| `balanced` (default) | 80 | no visible loss in normal use |
+| `smallest` (`small`) | 70 | high quality, smaller files |
 
-- **JPEG**: mozjpeg (progressivo, trellis, Huffman otimizado), 4:2:0 e 4:4:4
-  quando as cores exigem.
-- **WebP**: libwebp com perdas (equivalente a `cwebp -m 6 -sharp_yuv -af`),
-  comparado com versões sem perdas e quase sem perdas; vence a menor que
-  atinge a meta.
-- **AVIF**: ravif 10 bits; busca rápida e codificação final mais lenta.
-- **PNG**: otimização sem perdas (oxipng); paleta de 256 cores só quando atinge
-  a meta e fica menor (nunca em `maxima`; 16 bits só em `menor`).
-- **GIF**: paleta exata ou imagequant, com o pontilhado escolhido pela nota.
-- **ICO, BMP, TGA, TIFF, OpenEXR**: o menor formato sem perdas de cada um
-  (PNG otimizado, paleta/24 bits, RLE, Deflate com preditor, ZIP/PIZ).
-- **QOI, PNM, HDR** não têm parâmetros de tamanho.
+- **JPEG**: mozjpeg (progressive, trellis, optimized Huffman), 4:2:0, and
+  4:4:4 when the colors require it.
+- **WebP**: lossy libwebp (equivalent to `cwebp -m 6 -sharp_yuv -af`), compared
+  with lossless and near-lossless versions; the smallest one that meets the
+  target wins.
+- **AVIF**: 10-bit ravif; fast search and a slower final encode.
+- **PNG**: lossless optimization (oxipng); a 256-color palette only when it
+  meets the target and comes out smaller (never with `maximum`; 16 bits only
+  with `smallest`).
+- **GIF**: exact palette or imagequant, with the dithering chosen by the score.
+- **ICO, BMP, TGA, TIFF, OpenEXR**: the smallest lossless form of each (optimized
+  PNG, palette/24 bits, RLE, Deflate with predictor, ZIP/PIZ).
+- **QOI, PNM, HDR** have no size parameters.
 
-`--quality N` (1 a 100) fixa a qualidade de JPEG/WebP/AVIF sem busca, como
-antes; em WebP, 100 grava sem perdas. Ao converter para o **mesmo formato**,
-se o resultado ficasse maior que o original e o original não tiver metadados
-pessoais (EXIF, XMP, textos), o original é copiado sem recompressão.
+`--quality N` (1 to 100) sets the JPEG/WebP/AVIF quality without a search; for
+WebP, 100 writes lossless. When converting to the **same format**, if the
+result would be larger than the original and the original has no personal
+metadata (EXIF, XMP, text chunks), the original is copied without
+recompression.
 
-## Instalação no BigCommunity GNOME
+## Installing on BigCommunity GNOME
 
-O runtime exige `bubblewrap` e `util-linux`, com namespaces não privilegiados
-disponíveis. O aplicativo recusa decodificação se o isolamento não puder iniciar.
+The runtime requires `bubblewrap` and `util-linux`, with unprivileged
+namespaces available. The application refuses to decode if the sandbox cannot
+start.
 
-Para compilar e empacotar o checkout local na base Arch:
+To build and package the local checkout on the Arch base:
 
 ```bash
 cd pkgbuild
 makepkg -si -p PKGBUILD.local
 ```
 
-A integração com o Nautilus depende de `nautilus-python`. O pacote instala a
-extensão no sistema; não é necessário executar `install-integrations --user`.
-Para carregar a extensão após instalar ou atualizar, feche o Nautilus com
-`nautilus -q` e abra-o novamente.
+The Nautilus integration depends on `nautilus-python`. The package installs the
+extension system-wide; you do not need to run `install-integrations --user`. To
+load the extension after installing or upgrading, close Nautilus with
+`nautilus -q` and open it again.
 
-O pacote inclui catálogos para os 30 idiomas adotados pelos aplicativos
-BigCommunity. A interface e a extensão Nautilus seguem o idioma da sessão;
-veja o inventário e o fluxo de manutenção em [CONTRIBUTING.md](CONTRIBUTING.md#i18n).
+The package includes catalogs for 29 languages adopted by the BigCommunity
+applications; English is the source language and needs no catalog. The
+interface and the Nautilus extension follow the session language; see the
+inventory and the maintenance flow in [CONTRIBUTING.md](CONTRIBUTING.md#i18n).
 
-A campanha de testes prioriza GNOME/Wayland; veja os resultados, limites e
-critérios para adoção oficial em [docs/QUALITY.md](docs/QUALITY.md), e os
-comandos reproduzíveis em
-[CONTRIBUTING.md](CONTRIBUTING.md#campanha-de-qualidade-no-gnome).
+The test campaign prioritizes GNOME/Wayland; see the results, limits and
+criteria for official adoption in [docs/QUALITY.md](docs/QUALITY.md), and the
+reproducible commands in
+[CONTRIBUTING.md](CONTRIBUTING.md#quality-campaign-on-gnome).
 
-## Instalação no OpenMandriva
+## Installing on OpenMandriva
 
-Para instalar o checkout apenas no seu usuário:
+To install the checkout for your user only:
 
 ```bash
 sudo dnf install rust cargo lib64gtk4.0-devel lib64adwaita-devel \
@@ -193,184 +199,186 @@ sudo dnf install rust cargo lib64gtk4.0-devel lib64adwaita-devel \
 ./install.sh
 ```
 
-O instalador compila a versão release, coloca o aplicativo em `~/.local`,
-registra somente os gerenciadores de arquivos detectados e atualiza o cache do
-Plasma (`kbuildsycoca6`). Se o menu não aparecer em uma janela antiga do Dolphin,
-feche essa janela e abra outra.
+The installer builds the release version, places the application in
+`~/.local`, registers only the file managers it detects and refreshes the
+Plasma cache (`kbuildsycoca6`). If the menu does not show in an old Dolphin
+window, close that window and open another.
 
-Os pacotes de pesos da IA ainda não existem no OpenMandriva: lá as ferramentas
-de IA aparecem indisponíveis (e o aumento de resolução usa Lanczos3).
+The AI weight packages do not exist on OpenMandriva yet: there the AI tools
+show as unavailable (and upscaling uses Lanczos3).
 
-Para o ABF/Cooker, use a receita e as instruções em
-[`packaging/openmandriva/`](packaging/openmandriva/README.md). Ela usa um
-tarball vendorizado para que o build seja offline e reproduzível.
+For ABF/Cooker, use the recipe and instructions in
+[`packaging/openmandriva/`](packaging/openmandriva/README.md). It uses a
+vendored tarball so the build is offline and reproducible.
 
-## Outras instalações
+## Other installations
 
-No Arch, BigLinux ou Manjaro:
+On Arch, BigLinux or Manjaro:
 
 ```bash
 cd pkgbuild
 makepkg -si -p PKGBUILD.local
 ```
 
-O `PKGBUILD` sem sufixo é o do build do BigCommunity: ele calcula a versão pela
-data e hora, que mudam durante uma compilação longa, e o `makepkg -si` local não
-encontra o pacote gerado. O `PKGBUILD.local` tem a mesma receita com versão fixa.
+The `PKGBUILD` without a suffix is the BigCommunity build's: it derives the
+version from the date and time, which change during a long build, so a local
+`makepkg -si` cannot find the generated package. `PKGBUILD.local` has the same
+recipe with a fixed version.
 
-Em outras distribuições, após instalar Rust (1.95 ou posterior), GTK4,
-libadwaita, dav1d, gettext e `glslc` (do shaderc, usado só na compilação):
+On other distributions, after installing Rust (1.95 or later), GTK4,
+libadwaita, dav1d, gettext and `glslc` (from shaderc, used only at build time):
 
 ```bash
 cargo build --locked --release --features "gui ai" -p bigiris
 ./install.sh --no-build
 ```
 
-As ações do Thunar são sempre por usuário: `bigiris install-integrations --user`
-mescla as entradas do BigIris em `~/.config/Thunar/uca.xml`, preservando as
-ações que você já tinha. Se você ainda não tem esse arquivo, ele começa como
-cópia de `/etc/xdg/Thunar/uca.xml` (como o próprio Thunar faz), para não esconder
-as ações padrão do sistema. Os pacotes não instalam `/etc/xdg/Thunar/uca.xml`:
-esse arquivo pertence ao pacote `thunar`. Quem usa Thunar deve rodar o comando
-acima uma vez por usuário (`install.sh` já faz isso).
+Thunar actions are always per user: `bigiris install-integrations --user`
+merges the BigIris entries into `~/.config/Thunar/uca.xml`, keeping the actions
+you already had. If you do not have that file yet, it starts as a copy of
+`/etc/xdg/Thunar/uca.xml` (as Thunar itself does), so the system's default
+actions are not hidden. The packages do not install `/etc/xdg/Thunar/uca.xml`:
+that file belongs to the `thunar` package. Thunar users must run the command
+above once per user (`install.sh` already does).
 
-Com o pacote instalado, `install-integrations --user` não grava cópias pessoais
-das integrações que o pacote já fornece em `/usr/share` (Dolphin, Nautilus, Nemo,
-PCManFM-Qt, elementary Files, atalho e ícone) e apaga cópias pessoais antigas
-delas, que de outro modo sombreariam as do pacote e ficariam desatualizadas.
-Na prática, só as ações do Thunar são gravadas.
+With the package installed, `install-integrations --user` does not write
+personal copies of the integrations the package already provides in
+`/usr/share` (Dolphin, Nautilus, Nemo, PCManFM-Qt, elementary Files, launcher
+and icon), and it deletes old personal copies of them, which would otherwise
+shadow the package's and go stale. In practice, only the Thunar actions are
+written.
 
-Para remover as integrações pessoais antes de apagar o binário:
+To remove the personal integrations before deleting the binary:
 
 ```bash
 bigiris uninstall-integrations
 ```
 
-Para desfazer tudo o que o `install.sh` instalou (integrações, binário, schema e
-traduções em `$PREFIX`), use o mesmo `PREFIX` da instalação:
+To undo everything `install.sh` installed (integrations, binary, schema and
+translations in `$PREFIX`), use the same `PREFIX` as the installation:
 
 ```bash
 ./install.sh --uninstall
 ```
 
-## Uso
+## Usage
 
 ```bash
-# Visualizador / pasta
-bigiris foto.jpg
+# Viewer / folder
+bigiris photo.jpg
 bigiris *.png
 bigiris
 
 # Prisma
-bigiris --dialog=batch pasta-com-fotos
+bigiris --dialog=batch folder-with-photos
 bigiris --dialog=convert *.jpg
 bigiris --dialog=resize *.png
-bigiris --dialog=crop foto.jpg
+bigiris --dialog=crop photo.jpg
 bigiris --dialog=adjust *.jpg
-bigiris --dialog=compare antes.png depois.png
-bigiris --dialog=remove-bg foto.jpg
-bigiris --dialog=upscale foto.jpg
+bigiris --dialog=compare before.png after.png
+bigiris --dialog=remove-bg photo.jpg
+bigiris --dialog=upscale photo.jpg
 
 # CLI
 bigiris convert --to avif --overwrite increment *.jpg
-bigiris convert --to webp --target menor *.png
-bigiris convert --to jpg --quality 90 foto.png
+bigiris convert --to webp --target smallest *.png
+bigiris convert --to jpg --quality 90 photo.png
 bigiris resize --max-edge 1080 *.png
-bigiris rotate --degrees 90 foto.jpg
-bigiris flip --axis horizontal foto.jpg
-bigiris crop --rect 800x600+100+50 foto.jpg
-bigiris adjust --brightness 15 --contrast 10 foto.jpg
-bigiris animate -o saida.gif --delay 100 frame_*.png
-bigiris remove-bg --overwrite increment foto.jpg
-bigiris upscale --factor 4 foto.jpg               # Real-ESRGAN, ou Lanczos3
-bigiris upscale --factor 2 --engine lanczos *.png  # sem IA
-bigiris denoise foto-ruidosa.jpg                  # <nome>_denoised.jpg
-bigiris inpaint --mask mascara.png foto.jpg       # branco = apagar
-bigiris to-pdf --overwrite replace --timeout 300 documento.docx
-bigiris batch --profile docs/batch-profile.example.toml pasta-com-fotos
+bigiris rotate --degrees 90 photo.jpg
+bigiris flip --axis horizontal photo.jpg
+bigiris crop --rect 800x600+100+50 photo.jpg
+bigiris adjust --brightness 15 --contrast 10 photo.jpg
+bigiris animate -o output.gif --delay 100 frame_*.png
+bigiris remove-bg --overwrite increment photo.jpg
+bigiris upscale --factor 4 photo.jpg               # Real-ESRGAN, or Lanczos3
+bigiris upscale --factor 2 --engine lanczos *.png  # no AI
+bigiris denoise noisy-photo.jpg                    # <name>_denoised.jpg
+bigiris inpaint --mask mask.png photo.jpg          # white = erase
+bigiris to-pdf --overwrite replace --timeout 300 document.docx
+bigiris batch --profile docs/batch-profile.example.toml folder-with-photos
 
-# Integrações e diagnóstico
+# Integrations and diagnostics
 bigiris install-integrations --user
 bigiris uninstall-integrations
 bigiris --self-test
 ```
 
-Todos os comandos que gravam arquivos aceitam
-`--overwrite skip|replace|increment` e, por padrão, **não sobrescrevem**
-(`skip`): o arquivo existente é mantido e a saída mostra `skip`. Isso vale
-também para `animate` (o `.gif` de destino), `remove-bg` (`<nome>_nobg.png`),
-`upscale` (`<nome>_<pct>pct.<ext>`), `denoise` (`<nome>_denoised.<ext>`),
-`inpaint` (`<nome>_inpaint.<ext>`) e `to-pdf`, que agora ignora o
-`<nome>.pdf` já existente em vez de substituí-lo. `upscale --engine` aceita
-`auto` (padrão: Real-ESRGAN se instalado, senão Lanczos3), `realesrgan` (falha
-se o pacote faltar) e `lanczos`. Em `inpaint`, a máscara tem o tamanho da
-imagem e o branco é preenchido a partir dos arredores. Além das áreas marcadas
-e de uma faixa estreita de transição em volta delas, os pixels ficam iguais em
-PNG e TIFF; JPEG, WebP e AVIF são recomprimidos na
-qualidade `maxima`, como em `denoise`. As saídas das ferramentas de IA são de
-8 bits e não levam o EXIF da origem. Sem o pacote do modelo, `remove-bg`, `denoise`, `inpaint` e
-`upscale --engine realesrgan` param com código 1 e dizem o que instalar.
-`to-pdf --timeout <segundos>` (1 a 3600, padrão 120) limita o tempo de cada
-documento no LibreOffice; ao estourar, o processo e seus filhos são encerrados
-e nenhum PDF parcial fica para trás. Saídas que colidiriam entre si no mesmo
-comando são recusadas antes de qualquer gravação. Com `--notify` (usado pelos
-menus de contexto, que não mostram o terminal), uma falha também aparece numa
-notificação do desktop, pelo `notify-send` do pacote `libnotify`. As
-mensagens, a notificação e o `--help` seguem o idioma do sistema; os prefixos
-de status `ok`, `skip`, `err` e `info` não mudam, para que scripts possam
-lê-los.
+Every command that writes files accepts `--overwrite skip|replace|increment`
+and, by default, **does not overwrite** (`skip`): the existing file is kept and
+the output shows `skip`. This also applies to `animate` (the target `.gif`),
+`remove-bg` (`<name>_nobg.png`), `upscale` (`<name>_<pct>pct.<ext>`),
+`denoise` (`<name>_denoised.<ext>`), `inpaint` (`<name>_inpaint.<ext>`) and
+`to-pdf`, which skips an existing `<name>.pdf` instead of replacing it.
+`upscale --engine` accepts `auto` (default: Real-ESRGAN if installed, otherwise
+Lanczos3), `realesrgan` (fails if the package is missing) and `lanczos`. In
+`inpaint`, the mask has the size of the image and the white area is filled from
+its surroundings. Apart from the marked areas and a narrow transition band
+around them, the pixels stay identical in PNG and TIFF; JPEG, WebP and AVIF are
+recompressed at the `maximum` quality target, as in `denoise`. The outputs of
+the AI tools are 8-bit and do not carry the source EXIF. Without the model
+package, `remove-bg`, `denoise`, `inpaint` and `upscale --engine realesrgan`
+stop with exit code 1 and say what to install. `to-pdf --timeout <seconds>`
+(1 to 3600, default 120) limits the time of each document in LibreOffice; when
+it runs out, the process and its children are terminated and no partial PDF is
+left behind. Outputs that would collide with each other in the same command are
+refused before anything is written. With `--notify` (used by the context menus,
+which do not show the terminal), a failure also shows in a desktop
+notification, through `notify-send` from the `libnotify` package. The messages,
+the notification and `--help` follow the system language; the status prefixes
+`ok`, `skip`, `err` and `info` do not change, so scripts can read them.
 
-### Códigos de saída
+### Exit codes
 
-| Código | Significado |
+| Code | Meaning |
 |---|---|
-| `0` | Sucesso, inclusive quando arquivos foram ignorados por já existirem |
-| `1` | Uso inválido ou erro fatal antes de processar; nada foi gravado |
-| `2` | Falha parcial: um ou mais arquivos de entrada não puderam ser processados |
+| `0` | Success, including when files were skipped because they already exist |
+| `1` | Invalid usage or fatal error before processing; nothing was written |
+| `2` | Partial failure: one or more input files could not be processed |
 
-Os mesmos códigos aparecem em `bigiris --help`.
+The same codes appear in `bigiris --help`.
 
-### Atalhos do visualizador
+### Viewer shortcuts
 
-| Atalho | Ação |
+| Shortcut | Action |
 |---|---|
-| `←` / `→`, `Home` / `End` | Navegar pela pasta |
-| roda do mouse, `+` / `-` | Zoom |
-| `0` / `1` | Ajustar / tamanho real |
-| arrastar | Pan |
-| `R` / `Shift+R` | Girar à direita / esquerda |
-| `Ctrl+R` | Recortar na própria imagem (`Enter` confirma, `Esc` cancela) |
-| `E` | Abrir / fechar o painel de edição (`Esc` fecha) |
-| `\` (segurar) | Ver a imagem original, sem as edições |
-| `Ctrl+Z` / `Ctrl+Shift+Z` | Desfazer / refazer |
-| `Ctrl+S` | Salvar edições com segurança |
+| `←` / `→`, `Home` / `End` | Navigate the folder |
+| mouse wheel, `+` / `-` | Zoom |
+| `0` / `1` | Fit / actual size |
+| drag | Pan |
+| `R` / `Shift+R` | Rotate right / left |
+| `Ctrl+R` | Crop on the image itself (`Enter` confirms, `Esc` cancels) |
+| `E` | Open / close the edit panel (`Esc` closes) |
+| `\` (hold) | View the original image, without the edits |
+| `Ctrl+Z` / `Ctrl+Shift+Z` | Undo / redo |
+| `Ctrl+S` | Save edits safely |
 | `Space` | Slideshow |
-| `F` / `G` / `T` | Miniaturas / histograma / modo teatro |
-| `H` | Fixar controles visíveis |
-| `F11` / `Esc` | Tela cheia / fechar |
+| `F` / `G` / `T` | Thumbnails / histogram / theater mode |
+| `H` | Keep controls visible |
+| `F11` / `Esc` | Full screen / close |
 
-## Arquitetura
+## Architecture
 
 ```text
 bigiris/
 ├── crates/
-│   ├── bigimage-core/          pipeline headless e transformações
-│   ├── bigimage-ai/            IA local (motores image-engine-native)
-│   ├── bigimage-integrations/  ServiceMenus e ações de gerenciadores
-│   └── bigiris/                CLI, viewer Íris e diálogos Prisma
-├── data/                       desktop, AppStream, GSettings, ícone e i18n
-├── packaging/openmandriva/     spec ABF e criação do vendor tarball
-└── pkgbuild/                   pacotes Arch/BigLinux
+│   ├── bigimage-core/          headless pipeline and transforms
+│   ├── bigimage-ai/            local AI (image-engine-native engines)
+│   ├── bigimage-integrations/  ServiceMenus and file manager actions
+│   └── bigiris/                CLI, Íris viewer and Prisma dialogs
+├── data/                       desktop entry, AppStream, GSettings, icon and i18n
+├── packaging/openmandriva/     ABF spec and vendor tarball creation
+└── pkgbuild/                   Arch/BigLinux packages
 ```
 
-Os lotes compartilham um único pool em
-[`batch_runner.rs`](crates/bigiris/src/gui/batch_runner.rs). A alocação global
-usa mimalloc, o resize usa SIMD por `fast_image_resize`, e o pool limita a concorrência
-conforme CPU, dimensões das imagens e memória disponível (até quatro jobs).
+Batches share a single pool in
+[`batch_runner.rs`](crates/bigiris/src/gui/batch_runner.rs). The global
+allocator is mimalloc, resizing uses SIMD through `fast_image_resize`, and the
+pool limits concurrency by CPU, image dimensions and available memory (up to
+four jobs).
 
-## Desenvolvimento e qualidade
+## Development and quality
 
-Rust stable 1.95 ou posterior e `glslc` (shaderc) para a feature `ai`:
+Rust stable 1.95 or later, and `glslc` (shaderc) for the `ai` feature:
 
 ```bash
 cargo fmt --all --check
@@ -384,28 +392,28 @@ appstreamcli validate --no-net data/com.biglinux.Iris.metainfo.xml
 glib-compile-schemas --strict --dry-run data
 ```
 
-Relatos e patches são bem-vindos: leia [CONTRIBUTING.md](CONTRIBUTING.md).
-Vulnerabilidades devem seguir [SECURITY.md](SECURITY.md), sem issue pública.
+Reports and patches are welcome: read [CONTRIBUTING.md](CONTRIBUTING.md).
+Vulnerabilities must follow [SECURITY.md](SECURITY.md), with no public issue.
 
-Os testes com os modelos reais são ignorados por padrão; com os pesos
-instalados (ou apontados pelas variáveis `BIGIRIS_*_WEIGHTS`):
+The tests with the real models are ignored by default; with the weights
+installed (or pointed to by the `BIGIRIS_*_WEIGHTS` variables):
 
 ```bash
 cargo test --release -p bigimage-ai --features native --test models -- \
   --ignored --test-threads=1 --nocapture
 ```
 
-## Licença
+## License
 
-GPL-3.0-or-later. Consulte [LICENSE](LICENSE). As licenças das bibliotecas
-embutidas no binário (crates Rust, mozjpeg, libwebp, libdeflate, mimalloc) estão
-em [THIRD_PARTY_LICENSES](THIRD_PARTY_LICENSES), gerado por
+GPL-3.0-or-later. See [LICENSE](LICENSE). The licenses of the libraries built
+into the binary (Rust crates, mozjpeg, libwebp, libdeflate, mimalloc) are in
+[THIRD_PARTY_LICENSES](THIRD_PARTY_LICENSES), generated by
 `scripts/third_party_licenses.py`.
 
-Os motores de IA vêm do
+The AI engines come from
 [image-engine-native](https://github.com/biglinux/image-engine-native)
-(MIT, de Bruno Gonçalves / BigLinux; o exponencial segue o XNNPACK, BSD-3-Clause).
-Os pesos não fazem parte do BigIris: são instalados pelos pacotes
-`*-native`, cada um com a licença do modelo original (BiRefNet: MIT;
-Real-ESRGAN: BSD-3-Clause; SCUNet e LaMa: Apache-2.0). Detalhes em
+(MIT, by Bruno Gonçalves / BigLinux; the exponential follows XNNPACK,
+BSD-3-Clause). The weights are not part of BigIris: they are installed by the
+`*-native` packages, each with the license of the original model (BiRefNet:
+MIT; Real-ESRGAN: BSD-3-Clause; SCUNet and LaMa: Apache-2.0). Details in
 [NOTICE](NOTICE).

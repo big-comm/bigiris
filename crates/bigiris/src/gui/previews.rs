@@ -96,6 +96,8 @@ struct PreviewRenderQueue {
 struct PreviewRenderer {
     queue: Arc<(Mutex<PreviewRenderQueue>, Condvar)>,
     revision: std::cell::Cell<u64>,
+    /// Signalled for each finished render; closed with the renderer.
+    rendered: viewer::Wake,
 }
 impl Drop for PreviewRenderer {
     fn drop(&mut self) {
@@ -105,6 +107,7 @@ impl Drop for PreviewRenderer {
         pending.next = None;
         pending.result = None;
         wake.notify_one();
+        self.rendered.close();
     }
 }
 thread_local! {
@@ -123,9 +126,14 @@ pub(super) fn refresh_preview(session: &PreviewSession, picture: &gtk::Picture, 
             Mutex::new(PreviewRenderQueue { stopped: false, next: None, result: None }),
             Condvar::new(),
         ));
-        let renderer =
-            Rc::new(PreviewRenderer { queue: queue.clone(), revision: std::cell::Cell::new(0) });
+        let rendered = viewer::Wake::default();
+        let renderer = Rc::new(PreviewRenderer {
+            queue: queue.clone(),
+            revision: std::cell::Cell::new(0),
+            rendered: rendered.clone(),
+        });
         let session = session.clone();
+        let worker_rendered = rendered.clone();
         std::thread::spawn(move || loop {
             let (lock, wake) = &*queue;
             let request = {
@@ -150,27 +158,37 @@ pub(super) fn refresh_preview(session: &PreviewSession, picture: &gtk::Picture, 
             let mut pending = lock.lock().unwrap();
             if !pending.stopped {
                 pending.result = Some((request.0, image));
+                worker_rendered.notify();
             }
         });
         let weak = picture.downgrade();
         let weak_renderer = Rc::downgrade(&renderer);
-        glib::timeout_add_local(Duration::from_millis(16), move || {
-            let Some(picture) = weak.upgrade() else {
-                PREVIEW_RENDERERS
-                    .with(|entries| entries.borrow_mut().retain(|(w, _)| w.upgrade().is_some()));
-                return glib::ControlFlow::Break;
-            };
-            let Some(renderer) = weak_renderer.upgrade() else { return glib::ControlFlow::Break };
-            let result = renderer.queue.0.lock().unwrap().result.take();
-            if let Some((revision, result)) = result {
-                if revision == renderer.revision.get() {
-                    match result {
-                        Ok(image) => picture.set_paintable(Some(&dynamic_image_to_texture(image))),
-                        Err(error) => tracing::warn!(%error, "preview: apply failed"),
+        glib::MainContext::default().spawn_local(async move {
+            while rendered.wait().await {
+                let (Some(picture), Some(renderer)) = (weak.upgrade(), weak_renderer.upgrade())
+                else {
+                    return;
+                };
+                let result = renderer.queue.0.lock().unwrap().result.take();
+                if let Some((revision, result)) = result {
+                    if revision == renderer.revision.get() {
+                        match result {
+                            Ok(image) => {
+                                picture.set_paintable(Some(&dynamic_image_to_texture(image)));
+                            }
+                            Err(error) => tracing::warn!(%error, "preview: apply failed"),
+                        }
                     }
                 }
             }
-            glib::ControlFlow::Continue
+        });
+        // The picture going away stops its renderer thread.
+        picture.add_weak_ref_notify_local(|| {
+            PREVIEW_RENDERERS.with(|entries| {
+                if let Ok(mut entries) = entries.try_borrow_mut() {
+                    entries.retain(|(w, _)| w.upgrade().is_some());
+                }
+            });
         });
         renderers.push((picture.downgrade(), renderer.clone()));
         renderer
@@ -216,24 +234,23 @@ pub(super) fn prepare_dialog(
     let closing = cancel.clone();
     window.connect_unrealize(move |_| closing.store(true, Ordering::Release));
     let input = files.first().cloned();
-    let (tx, rx) = std::sync::mpsc::sync_channel(1);
-    std::thread::spawn(move || {
-        let result = crate::codec::with_cancel(cancel, || {
+    let job = gio::spawn_blocking(move || {
+        crate::codec::with_cancel(cancel, || {
             input
                 .ok_or_else(|| gettext("Nenhuma imagem selecionada"))
                 .and_then(|path| PreviewSession::open(path).map_err(|e| e.to_string()))
-        });
-        let _ = tx.send(result);
+        })
     });
     let weak = window.downgrade();
-    glib::timeout_add_local(Duration::from_millis(16), move || {
-        let Some(window) = weak.upgrade() else { return glib::ControlFlow::Break };
+    glib::MainContext::default().spawn_local(async move {
+        let result = job.await;
+        let Some(window) = weak.upgrade() else { return };
         if !window.is_visible() {
-            return glib::ControlFlow::Break;
+            return;
         }
-        match rx.try_recv() {
+        match result {
             Ok(Ok(session)) => {
-                fill(window, files.clone(), Some(Rc::new(session)));
+                fill(window, files, Some(Rc::new(session)));
             }
             Ok(Err(error)) => {
                 let page = adw::StatusPage::builder()
@@ -243,13 +260,11 @@ pub(super) fn prepare_dialog(
                     .build();
                 window.set_content(Some(&page));
             }
-            Err(std::sync::mpsc::TryRecvError::Empty) => return glib::ControlFlow::Continue,
-            Err(std::sync::mpsc::TryRecvError::Disconnected) => {
+            Err(_) => {
                 window.set_content(Some(&gtk::Label::new(Some(&gettext(
                     "A preparação foi interrompida",
                 )))));
             }
         }
-        glib::ControlFlow::Break
     });
 }

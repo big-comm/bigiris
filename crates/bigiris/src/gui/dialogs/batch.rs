@@ -257,7 +257,7 @@ pub(in crate::gui) fn build_batch_dialog(
             progress.set_text(Some(&gettext("Iniciando…")));
             status.set_text(&gettext("Processando…"));
 
-            let rx = batch_runner::spawn_batch_workers(
+            let events = batch_runner::spawn_batch_workers(
                 files_owned,
                 move |path| convert_file_to(path, out_dir_snapshot.as_deref(), fmt, &opts, policy),
                 cancelled.clone(),
@@ -269,18 +269,19 @@ pub(in crate::gui) fn build_batch_dialog(
             let cancel_btn = cancel_btn.clone();
             let window = window.clone();
             let running = running.clone();
-            // Released with the poll closure, i.e. only after the pool
-            // reported back: closing the last window never kills a worker
-            // mid-write and strands `.part` files.
+            // Released with this task, i.e. only after the pool reported
+            // back: closing the last window never kills a worker mid-write
+            // and strands `.part` files.
             let hold = window.application().map(|app| app.hold());
-            glib::timeout_add_local(std::time::Duration::from_millis(50), move || loop {
-                let _hold = &hold;
-                match rx.try_recv() {
-                    Ok(batch_runner::AsyncBatchEvent::Progress { done, total, file }) => {
+            glib::MainContext::default().spawn_local(async move {
+                let _hold = hold;
+                loop {
+                match events.next().await {
+                    Some(batch_runner::AsyncBatchEvent::Progress { done, total, file }) => {
                         progress.set_fraction(done as f64 / total.max(1) as f64);
                         progress.set_text(Some(&format!("{done}/{total} · {file}")));
                     }
-                    Ok(batch_runner::AsyncBatchEvent::Done {
+                    Some(batch_runner::AsyncBatchEvent::Done {
                         ok,
                         skip,
                         fail,
@@ -295,7 +296,7 @@ pub(in crate::gui) fn build_batch_dialog(
                         running.set(false);
                         // Closed mid-run: nothing left to show or to close.
                         if cancelled && !window.is_visible() {
-                            return glib::ControlFlow::Break;
+                            return;
                         }
                         let timing = batch_runner::format_duration(elapsed);
                         let template = if cancelled {
@@ -351,15 +352,13 @@ pub(in crate::gui) fn build_batch_dialog(
                         if !cancelled && fail == 0 {
                             batch_runner::arm_auto_close(&window, 3);
                         }
-                        return glib::ControlFlow::Break;
+                        return;
                     }
-                    Err(std::sync::mpsc::TryRecvError::Empty) => {
-                        return glib::ControlFlow::Continue;
-                    }
-                    Err(std::sync::mpsc::TryRecvError::Disconnected) => {
+                    None => {
                         running.set(false);
-                        return glib::ControlFlow::Break;
+                        return;
                     }
+                }
                 }
             });
         });

@@ -4,8 +4,8 @@
 //! Each per-file Prisma dialog (Convert, Resize, Rotate, Flip, Crop,
 //! Adjust, Upscale) delegates its Apply handler to [`run_batch_async`],
 //! which fans the work out to a pool of worker threads (one per CPU core
-//! minus the one we leave for the GUI) and polls progress on the GTK
-//! main loop at 20 Hz. The Animate and remove-bg flows do not use this
+//! minus the one we leave for the GUI) and awaits their progress on the
+//! GTK main loop, woken by the workers rather than a timer. The Animate and remove-bg flows do not use this
 //! helper because they have one-shot or AI-specific shapes.
 //!
 //! Parallelism: the closure must be `Fn + Send + Sync` so multiple
@@ -249,6 +249,29 @@ pub(super) enum AsyncBatchEvent {
     },
 }
 
+/// Events of one run, awaited on the GTK loop without a timer.
+pub(super) struct BatchEvents {
+    rx: mpsc::Receiver<AsyncBatchEvent>,
+    wake: super::viewer::Wake,
+}
+
+impl BatchEvents {
+    /// The next event; `None` once the pool is gone and nothing is left.
+    pub(super) async fn next(&self) -> Option<AsyncBatchEvent> {
+        loop {
+            match self.rx.try_recv() {
+                Ok(event) => return Some(event),
+                Err(mpsc::TryRecvError::Disconnected) => return None,
+                Err(mpsc::TryRecvError::Empty) => {
+                    if !self.wake.wait().await {
+                        return self.rx.try_recv().ok();
+                    }
+                }
+            }
+        }
+    }
+}
+
 /// Spawn the GTK-independent worker pool. The generic dialog and the richer
 /// folder/batch window share this exact engine, so progress, cancellation,
 /// parallelism and accounting cannot drift apart again.
@@ -256,12 +279,22 @@ pub(super) fn spawn_batch_workers<W>(
     files: Vec<PathBuf>,
     work: W,
     cancelled: Arc<AtomicBool>,
-) -> mpsc::Receiver<AsyncBatchEvent>
+) -> BatchEvents
 where
     W: Fn(&Path) -> bigimage_core::Result<ConvertOutcome> + Send + Sync + 'static,
 {
     let (tx, rx) = mpsc::channel::<AsyncBatchEvent>();
+    let wake = super::viewer::Wake::default();
+    let events = BatchEvents { rx, wake: wake.clone() };
     std::thread::spawn(move || {
+        // Ends the wait on the GTK side after `Done`, or if this panics.
+        struct CloseOnDrop(super::viewer::Wake);
+        impl Drop for CloseOnDrop {
+            fn drop(&mut self) {
+                self.0.close();
+            }
+        }
+        let _close = CloseOnDrop(wake.clone());
         let total = files.len();
         let start = Instant::now();
         let bytes_in = Arc::new(AtomicU64::new(0));
@@ -282,6 +315,7 @@ where
                 let cancelled = cancelled.clone();
                 let work = work.clone();
                 let tx = tx.clone();
+                let wake = wake.clone();
                 std::thread::spawn(move || {
                     let mut ok = 0usize;
                     let mut skip = 0usize;
@@ -334,6 +368,7 @@ where
                         {
                             break;
                         }
+                        wake.notify();
                     }
                     (ok, skip, fail, first_err)
                 })
@@ -374,15 +409,15 @@ where
             cancelled: cancelled.load(Ordering::Relaxed),
         });
     });
-    rx
+    events
 }
 
-/// Run a per-file batch across a worker pool, polling progress on the
-/// GTK main loop. The `work` closure is the per-file CPU op (e.g.
+/// Run a per-file batch across a worker pool and show its progress. The
+/// `work` closure is the per-file CPU op (e.g.
 /// `bigimage_core::convert_file`); it must be `Fn + Send + Sync +
 /// 'static` so multiple threads can invoke it concurrently. Widgets
-/// (`status`, buttons, window) stay on the main thread — they're only
-/// touched inside the timeout closure, which runs locally.
+/// (`status`, buttons, window) are only touched by the task awaiting the
+/// events on the GTK main loop.
 ///
 /// Cancellation: closing the window flips an atomic flag the workers
 /// check between files and that aborts an in-flight isolated codec run.
@@ -414,77 +449,72 @@ pub(super) fn run_batch_async<W>(
         })
     });
 
-    let rx = spawn_batch_workers(files, work, cancelled);
-    // Released with the poll closure, i.e. only after the pool reported back.
+    let events = spawn_batch_workers(files, work, cancelled);
+    // Released with this task, i.e. only after the pool reported back.
     let hold = window.application().map(|app| app.hold());
 
-    gtk4::glib::timeout_add_local(std::time::Duration::from_millis(50), move || {
-        let _hold = &hold;
-        let flow = poll_batch(&rx, &busy_label, &status, &apply_btn, &cancel_btn, &window);
-        if flow.is_break() {
-            if let Some(handler) = close_handler.take() {
-                window.disconnect(handler);
-            }
-        }
-        flow
-    });
-}
-
-/// Drain pending batch events; `Break` once the run is over.
-fn poll_batch(
-    rx: &mpsc::Receiver<AsyncBatchEvent>,
-    busy_label: &str,
-    status: &gtk::Label,
-    apply_btn: &gtk::Button,
-    cancel_btn: &gtk::Button,
-    window: &adw::ApplicationWindow,
-) -> gtk4::glib::ControlFlow {
-    loop {
-        match rx.try_recv() {
-            Ok(AsyncBatchEvent::Progress { done, total, file }) => {
-                status.set_text(&format!("{busy_label} {done}/{total} — {file}"));
-            }
-            Ok(AsyncBatchEvent::Done {
-                ok,
-                skip,
-                fail,
-                first_err,
-                elapsed,
-                bytes_in,
-                bytes_out,
-                cancelled,
-                ..
-            }) => {
-                // Closed mid-run: nothing left to show or to auto-close.
-                if cancelled && !window.is_visible() {
-                    return gtk4::glib::ControlFlow::Break;
+    gtk4::glib::MainContext::default().spawn_local(async move {
+        let _hold = hold;
+        loop {
+            match events.next().await {
+                Some(AsyncBatchEvent::Progress { done, total, file }) => {
+                    status.set_text(&format!("{busy_label} {done}/{total} — {file}"));
                 }
-                finish_dialog(
-                    status, apply_btn, cancel_btn, window, ok, skip, fail, first_err, elapsed,
-                    bytes_in, bytes_out,
-                );
-                return gtk4::glib::ControlFlow::Break;
-            }
-            Err(mpsc::TryRecvError::Empty) => return gtk4::glib::ControlFlow::Continue,
-            Err(mpsc::TryRecvError::Disconnected) => {
-                abort_dialog(status, apply_btn, cancel_btn);
-                return gtk4::glib::ControlFlow::Break;
+                Some(AsyncBatchEvent::Done {
+                    ok,
+                    skip,
+                    fail,
+                    first_err,
+                    elapsed,
+                    bytes_in,
+                    bytes_out,
+                    cancelled,
+                    ..
+                }) => {
+                    // Closed mid-run: nothing left to show or to auto-close.
+                    if !(cancelled && !window.is_visible()) {
+                        finish_dialog(
+                            &status,
+                            &apply_btn,
+                            &cancel_btn,
+                            &window,
+                            ok,
+                            skip,
+                            fail,
+                            first_err,
+                            elapsed,
+                            bytes_in,
+                            bytes_out,
+                        );
+                    }
+                    break;
+                }
+                None => {
+                    abort_dialog(&status, &apply_btn, &cancel_btn);
+                    break;
+                }
             }
         }
-    }
+        if let Some(handler) = close_handler.take() {
+            window.disconnect(handler);
+        }
+    });
 }
 
 #[cfg(test)]
 mod worker_tests {
     use super::*;
 
-    fn summary(rx: mpsc::Receiver<AsyncBatchEvent>) -> AsyncBatchEvent {
-        loop {
-            let event = rx.recv_timeout(Duration::from_secs(5)).expect("workers failed to finish");
-            if matches!(event, AsyncBatchEvent::Done { .. }) {
-                return event;
+    /// Awaits the events the way the dialogs do, through the wake-up.
+    fn summary(events: BatchEvents) -> AsyncBatchEvent {
+        gtk4::glib::MainContext::new().block_on(async {
+            loop {
+                let event = events.next().await.expect("workers ended without a summary");
+                if matches!(event, AsyncBatchEvent::Done { .. }) {
+                    return event;
+                }
             }
-        }
+        })
     }
 
     #[test]

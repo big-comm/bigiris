@@ -77,7 +77,13 @@ fn fill_upscale_dialog(
             });
         });
     }
-    follow_device(&engine_row);
+    // Notified by a run once Real-ESRGAN has loaded; closed with the window.
+    let loaded = crate::gui::viewer::Wake::default();
+    follow_device(&engine_row, &loaded);
+    {
+        let loaded = loaded.clone();
+        window.connect_unrealize(move |_| loaded.close());
+    }
 
     let files_row = selection_row(&gettext("Arquivos selecionados"), &files);
 
@@ -205,6 +211,7 @@ fn fill_upscale_dialog(
             // One file at a time through the network: it already uses
             // every core, and parallel files would only add their buffers.
             let one_at_a_time = Arc::new(Mutex::new(()));
+            let loaded = loaded.clone();
             run_batch_async(
                 work_files,
                 move |f| {
@@ -217,7 +224,10 @@ fn fill_upscale_dialog(
                             &img,
                             factor,
                             bigimage_ai::upscale::Method::RealEsrgan,
-                            |_| {
+                            |stage| {
+                                if matches!(stage, bigimage_ai::Stage::Running(_)) {
+                                    loaded.notify();
+                                }
                                 if crate::codec::cancelled() {
                                     std::ops::ControlFlow::Break(())
                                 } else {
@@ -249,18 +259,21 @@ fn engine_subtitle() -> String {
 }
 
 /// Show the device in `row` once the model has loaded in this process.
-fn follow_device(row: &adw::SwitchRow) {
+fn follow_device(row: &adw::SwitchRow, loaded: &crate::gui::viewer::Wake) {
     // Unavailable: the subtitle keeps the install hint.
     if !row.is_sensitive() || bigimage_ai::upscale::device().is_some() {
         return;
     }
     let weak = row.downgrade();
-    glib::timeout_add_local(std::time::Duration::from_millis(500), move || {
-        let Some(row) = weak.upgrade() else { return glib::ControlFlow::Break };
-        if bigimage_ai::upscale::device().is_none() {
-            return glib::ControlFlow::Continue;
+    let loaded = loaded.clone();
+    glib::MainContext::default().spawn_local(async move {
+        while loaded.wait().await {
+            if bigimage_ai::upscale::device().is_some() {
+                if let Some(row) = weak.upgrade() {
+                    row.set_subtitle(&engine_subtitle());
+                }
+                return;
+            }
         }
-        row.set_subtitle(&engine_subtitle());
-        glib::ControlFlow::Break
     });
 }

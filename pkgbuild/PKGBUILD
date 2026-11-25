@@ -39,7 +39,10 @@ options=('!lto')
 pkgver=$(date +%y.%m.%d)
 pkgrel=$(date +%H%M)
 arch=('x86_64')
-license=('GPL-3.0-or-later')
+# The binary statically links the crates and vendored C libraries listed in
+# THIRD_PARTY_LICENSES (mozjpeg, libwebp, libdeflate and mimalloc among them).
+license=('GPL-3.0-or-later' 'Apache-2.0' 'BSD-2-Clause' 'BSD-3-Clause' 'IJG' 'MIT'
+         'MPL-2.0' 'Unicode-3.0' 'Zlib')
 url="https://github.com/big-comm/${pkgname}"
 source=("git+${url}.git")
 sha256sums=('SKIP')
@@ -103,6 +106,8 @@ package() {
   # Documentation and license
   install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
   install -Dm644 NOTICE "$pkgdir/usr/share/licenses/$pkgname/NOTICE"
+  install -Dm644 THIRD_PARTY_LICENSES \
+    "$pkgdir/usr/share/licenses/$pkgname/THIRD_PARTY_LICENSES"
   install -Dm644 README.md "$pkgdir/usr/share/doc/$pkgname/README.md"
 
   # Translation catalogs compiled in build().

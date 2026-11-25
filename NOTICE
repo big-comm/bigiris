@@ -1,6 +1,9 @@
 BigIris
 Copyright the BigIris authors. GPL-3.0-or-later (LICENSE).
 
+The licenses of every crate and vendored C library the binary links are
+in THIRD_PARTY_LICENSES.
+
 BigIris built with the `ai` feature includes image-engine-native
 (https://github.com/biglinux/image-engine-native, revision
 adbe1784bafd9329c8d667f28759aedfbf841d29): the native-engine,

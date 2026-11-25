@@ -268,6 +268,18 @@ jobs:
           sudo apt-get install -y --no-install-recommends desktop-file-utils
       - run: desktop-file-validate data/com.biglinux.Iris.desktop
 
+  licenses:
+    name: THIRD_PARTY_LICENSES matches Cargo.lock
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # master (2026-10-16)
+        with:
+          toolchain: stable
+      - run: python3 scripts/third_party_licenses.py --check
+
   makepkg:
     name: makepkg (Arch container, PKGBUILD.local)
     runs-on: ubuntu-latest

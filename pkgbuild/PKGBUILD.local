@@ -9,7 +9,10 @@ pkgname=bigiris
 pkgver=0.1.0.local
 pkgrel=4
 arch=('x86_64')
-license=('GPL-3.0-or-later')
+# The binary statically links the crates and vendored C libraries listed in
+# THIRD_PARTY_LICENSES (mozjpeg, libwebp, libdeflate and mimalloc among them).
+license=('GPL-3.0-or-later' 'Apache-2.0' 'BSD-2-Clause' 'BSD-3-Clause' 'IJG' 'MIT'
+         'MPL-2.0' 'Unicode-3.0' 'Zlib')
 url="https://github.com/big-comm/bigiris"
 pkgdesc="Modern image viewer and converter (local test build)"
 depends=(
@@ -108,6 +111,8 @@ package() {
 
   install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
   install -Dm644 NOTICE "$pkgdir/usr/share/licenses/$pkgname/NOTICE"
+  install -Dm644 THIRD_PARTY_LICENSES \
+    "$pkgdir/usr/share/licenses/$pkgname/THIRD_PARTY_LICENSES"
   install -Dm644 README.md "$pkgdir/usr/share/doc/$pkgname/README.md"
 
   while read -r lang; do

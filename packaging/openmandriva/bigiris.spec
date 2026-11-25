@@ -2,7 +2,9 @@ Name:           bigiris
 Version:        0.1.0
 Release:        1
 Summary:        Fast image viewer and batch converter for Linux
-License:        GPL-3.0-or-later
+# The binary statically links the crates and vendored C libraries listed in
+# THIRD_PARTY_LICENSES (mozjpeg, libwebp, libdeflate and mimalloc among them).
+License:        GPL-3.0-or-later AND Apache-2.0 AND BSD-2-Clause AND BSD-3-Clause AND IJG AND MIT AND MPL-2.0 AND Unicode-3.0 AND Zlib
 URL:            https://github.com/xathay/bigiris
 Source0:        %{url}/archive/refs/tags/v%{version}.tar.gz
 # Generated with packaging/openmandriva/make-vendor-tarball.sh. Keeping
@@ -103,7 +105,7 @@ if command -v thunar >/dev/null 2>&1; then
 fi
 
 %files
-%license LICENSE NOTICE
+%license LICENSE NOTICE THIRD_PARTY_LICENSES
 %doc README.md
 %{_bindir}/bigiris
 %{_datadir}/applications/com.biglinux.Iris.desktop

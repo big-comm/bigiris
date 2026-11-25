@@ -189,67 +189,70 @@ fn worker_executable() -> std::io::Result<(PathBuf, bool, Duration)> {
 /// reach the sandboxed codec (which refuses to run with any) or a launched
 /// BigIris window. Every descriptor above stdio is marked close-on-exec in
 /// the child just before `exec`, so the parent's own state is untouched.
-#[allow(unsafe_code)]
 pub(crate) fn close_inherited_descriptors(command: &mut Command) -> &mut Command {
+    install_descriptor_hook(command, None)
+}
+
+/// [`close_inherited_descriptors`], except that `fd` reaches the child as
+/// descriptor 3, the only one above stdio that survives `exec`.
+fn close_inherited_descriptors_passing(
+    command: &mut Command,
+    fd: std::os::fd::RawFd,
+) -> &mut Command {
+    install_descriptor_hook(command, Some(fd))
+}
+
+#[allow(unsafe_code)]
+fn install_descriptor_hook(
+    command: &mut Command,
+    pass_as_3: Option<std::os::fd::RawFd>,
+) -> &mut Command {
     use std::os::unix::process::CommandExt;
     // SAFETY: the hook runs in the forked child before `exec`. It only issues
-    // raw, async-signal-safe syscalls (close_range, getrlimit, fcntl): no
-    // allocation, no locks and no access to memory shared with other threads.
-    // Marking descriptors close-on-exec (rather than closing them) keeps the
-    // pipe std uses to report `exec` failures working until `exec` itself.
-    unsafe {
-        command.pre_exec(|| {
-            mark_descriptors_cloexec();
-            Ok(())
-        })
-    }
+    // raw, async-signal-safe syscalls (close_range, getrlimit, fcntl, dup2):
+    // no allocation, no locks and no access to memory shared with other
+    // threads. Marking descriptors close-on-exec (rather than closing them)
+    // keeps the pipe std uses to report `exec` failures working until `exec`
+    // itself. A passed descriptor stays open in the parent until `spawn`
+    // returns.
+    unsafe { command.pre_exec(move || prepare_descriptors(pass_as_3)) }
 }
 
-/// Body of the `pre_exec` hook; see [`close_inherited_descriptors`].
+/// Body of the `pre_exec` hook; see [`install_descriptor_hook`].
 #[allow(unsafe_code)]
-fn mark_descriptors_cloexec() {
-    // SAFETY: plain syscalls on integer descriptors; failures are ignored
-    // because the worker re-checks its descriptor table and fails closed.
+fn prepare_descriptors(pass_as_3: Option<std::os::fd::RawFd>) -> std::io::Result<()> {
+    // SAFETY: plain syscalls on integer descriptors. Marking failures are
+    // ignored because the worker re-checks its descriptor table and fails
+    // closed; a failed hand-over of descriptor 3 fails the spawn.
     unsafe {
         // Linux >= 5.11: one syscall for the whole range.
-        if libc::syscall(libc::SYS_close_range, 3u32, u32::MAX, libc::CLOSE_RANGE_CLOEXEC) == 0 {
-            return;
-        }
-        // Older kernels: walk the descriptor table up to the soft limit.
-        let mut limit = libc::rlimit { rlim_cur: 0, rlim_max: 0 };
-        let top = if libc::getrlimit(libc::RLIMIT_NOFILE, &mut limit) == 0 {
-            limit.rlim_cur.min(1 << 16) as libc::c_int
-        } else {
-            1024
-        };
-        for fd in 3..top {
-            let flags = libc::fcntl(fd, libc::F_GETFD);
-            if flags >= 0 && flags & libc::FD_CLOEXEC == 0 {
-                libc::fcntl(fd, libc::F_SETFD, flags | libc::FD_CLOEXEC);
-            }
-        }
-    }
-}
-
-/// Hand `fd` to the child as descriptor 3, the only one above stdio that
-/// survives `exec`. Must be installed after [`close_inherited_descriptors`],
-/// whose hook marks every descriptor (this one included) close-on-exec.
-#[allow(unsafe_code)]
-fn pass_as_fd3(command: &mut Command, fd: std::os::fd::RawFd) -> &mut Command {
-    use std::os::unix::process::CommandExt;
-    // SAFETY: runs in the forked child before `exec` and only issues the
-    // async-signal-safe dup2/fcntl syscalls on integer descriptors; `fd` stays
-    // open in the parent until `spawn` returns. dup2 clears close-on-exec on
-    // the copy; when `fd` already is 3 the flag is cleared directly.
-    unsafe {
-        command.pre_exec(move || {
-            let result = if fd == 3 { libc::fcntl(3, libc::F_SETFD, 0) } else { libc::dup2(fd, 3) };
-            if result < 0 {
-                Err(std::io::Error::last_os_error())
+        if libc::syscall(libc::SYS_close_range, 3u32, u32::MAX, libc::CLOSE_RANGE_CLOEXEC) != 0 {
+            // Older kernels: walk the descriptor table up to the soft limit.
+            let mut limit = libc::rlimit { rlim_cur: 0, rlim_max: 0 };
+            let top = if libc::getrlimit(libc::RLIMIT_NOFILE, &mut limit) == 0 {
+                limit.rlim_cur.min(1 << 16) as libc::c_int
             } else {
-                Ok(())
+                1024
+            };
+            for fd in 3..top {
+                let flags = libc::fcntl(fd, libc::F_GETFD);
+                if flags >= 0 && flags & libc::FD_CLOEXEC == 0 {
+                    libc::fcntl(fd, libc::F_SETFD, flags | libc::FD_CLOEXEC);
+                }
             }
-        })
+        }
+        // dup2 clears close-on-exec on the copy; a descriptor that already
+        // is 3 has its flag cleared directly.
+        let placed = match pass_as_3 {
+            None => 0,
+            Some(3) => libc::fcntl(3, libc::F_SETFD, 0),
+            Some(fd) => libc::dup2(fd, 3),
+        };
+        if placed < 0 {
+            Err(std::io::Error::last_os_error())
+        } else {
+            Ok(())
+        }
     }
 }
 
@@ -442,7 +445,10 @@ fn execute(path: &Path, mode: &str, replaced: &mut bool) -> ImageResult<std::fs:
     };
     let output = tempfile::tempfile()?;
     let mut command = Command::new("/usr/bin/prlimit");
-    close_inherited_descriptors(&mut command)
+    // Not stdin: a descriptor the codec keeps open would let it reopen the
+    // host file writable through /proc/self/fd, past the read-only mount.
+    // bwrap closes descriptor 3 once the bind is made.
+    close_inherited_descriptors_passing(&mut command, input.as_raw_fd())
         .env_clear()
         .args(["--as=2147483648", "--cpu=30", "--nofile=64", "--core=0"])
         .arg(format!("--fsize={output_limit}"))
@@ -505,10 +511,6 @@ fn execute(path: &Path, mode: &str, replaced: &mut bool) -> ImageResult<std::fs:
         .stdin(Stdio::null())
         .stdout(Stdio::from(output.try_clone()?))
         .stderr(Stdio::piped());
-    // Not stdin: a descriptor the codec keeps open would let it reopen the
-    // host file writable through /proc/self/fd, past the read-only mount.
-    // bwrap closes descriptor 3 once the bind is made.
-    pass_as_fd3(&mut command, input.as_raw_fd());
     let child = command.spawn().map_err(|error| {
         invalid(format!("sandbox indisponível: instale bubblewrap e util-linux; {error}"))
     })?;

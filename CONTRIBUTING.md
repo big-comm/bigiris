@@ -1,72 +1,71 @@
-# Contribuindo
+# Contributing
 
-BigIris é Rust + GTK4/libadwaita, single-binary com módulos `Íris`
-(viewer) e `Prisma` (transformações). Esse documento cobre o
-necessário pra você compilar, testar, traduzir e enviar mudanças
-sem fricção.
+BigIris is Rust + GTK4/libadwaita, a single binary with the `Íris` (viewer)
+and `Prisma` (transforms) modules. This document covers what you need to
+build, test, translate and send changes without friction.
 
-O diálogo Sobre e os metadados AppStream usam `BigCommunity Team` como equipe
-responsável e apontam para `big-comm/bigiris`. A autoria individual permanece
-no histórico Git.
+The About dialog and the AppStream metadata use `BigCommunity Team` as the
+responsible team and point to `big-comm/bigiris`. Individual authorship stays
+in the Git history.
 
-## Pré-requisitos
+## Prerequisites
 
-Distros baseadas em Arch/BigLinux:
+Arch/BigLinux-based distributions:
 
 ```bash
 sudo pacman -S --needed rust pkgconf gtk4 libadwaita dav1d gettext shaderc
 ```
 
-Distros Debian/Ubuntu:
+Debian/Ubuntu distributions:
 
 ```bash
 sudo apt-get install -y rustc cargo pkg-config libgtk-4-dev \
     libadwaita-1-dev libdav1d-dev gettext glslc
 ```
 
-Rust mínimo: **1.95** (declarado no `Cargo.toml`; `rust-toolchain.toml` seleciona stable).
-`glslc` (do shaderc) só é usado na compilação com a feature `ai`, para os
-shaders Vulkan dos motores de IA.
+Minimum Rust: **1.95** (declared in `Cargo.toml`; `rust-toolchain.toml`
+selects stable). `glslc` (from shaderc) is used only when building with the
+`ai` feature, for the Vulkan shaders of the AI engines.
 
-Para testar as ferramentas de IA sem instalar os pacotes de pesos, aponte as
-variáveis `BIGIRIS_BIREFNET_WEIGHTS`, `BIGIRIS_REALESRGAN_WEIGHTS`,
-`BIGIRIS_SCUNET_WEIGHTS` e `BIGIRIS_LAMA_WEIGHTS` para os arquivos extraídos
-dos pacotes `*-native` (veja [docs/IA-LOCAL.md](docs/IA-LOCAL.md)). Os testes
-que carregam modelos usam bastante memória: rode-os com
-`--test-threads=1`.
+To test the AI tools without installing the weight packages, point the
+`BIGIRIS_BIREFNET_WEIGHTS`, `BIGIRIS_REALESRGAN_WEIGHTS`,
+`BIGIRIS_SCUNET_WEIGHTS` and `BIGIRIS_LAMA_WEIGHTS` variables at the files
+extracted from the `*-native` packages (see
+[docs/LOCAL-AI.md](docs/LOCAL-AI.md)). The tests that load models use a lot of
+memory: run them with `--test-threads=1`.
 
-Os encoders mozjpeg, libwebp e libdeflate (oxipng) são compilados a partir
-das fontes C que vêm dentro dos crates, com o compilador C do sistema
-(`base-devel` no Arch, `build-essential` no Debian/Ubuntu). Não é preciso
-`nasm` nem `cmake`: o SIMD em assembly do mozjpeg fica desligado.
+The mozjpeg, libwebp and libdeflate (oxipng) encoders are built from the C
+sources shipped inside the crates, with the system C compiler (`base-devel` on
+Arch, `build-essential` on Debian/Ubuntu). Neither `nasm` nor `cmake` is
+needed: mozjpeg's assembly SIMD is turned off.
 
-## Compilando
+## Building
 
 ```bash
-# Build sem GUI (rápido, headless — o que CI roda):
+# Build without the GUI (fast, headless; what CI runs):
 cargo build
 
-# Build completo (viewer + diálogos + IA):
+# Full build (viewer + dialogs + AI):
 cargo build --features "gui ai" -p bigiris
 
 # Release:
 cargo build --release --features "gui ai" -p bigiris
 ```
 
-## Testando
+## Testing
 
 ```bash
-# Workspace inteiro (headless):
+# Whole workspace (headless):
 cargo test --workspace --all-targets --locked
 
-# GUI + IA em todo o workspace (precisa das libs de sistema acima):
+# GUI + AI across the workspace (needs the system libraries above):
 cargo test --workspace --all-features --all-targets --locked
 
-# Self-test do binário:
+# Binary self-test:
 ./target/release/bigiris --self-test
 ```
 
-## Qualidade — antes de cada commit
+## Quality before each commit
 
 ```bash
 cargo fmt --all
@@ -74,49 +73,50 @@ cargo clippy --workspace --all-targets --locked -- -D warnings
 cargo clippy --workspace --all-features --all-targets --locked -- -D warnings
 ```
 
-Os 3 são gates obrigatórios no CI (`.github/workflows/ci.yml`).
-Warnings viram erro, então PRs com clippy sujo não passam.
+All three are mandatory CI gates (`.github/workflows/ci.yml`). Warnings become
+errors, so pull requests with Clippy warnings do not pass.
 
-## Campanha de qualidade no GNOME
+## Quality campaign on GNOME
 
-O runner preserva logs, comandos, códigos de saída e duração de cada verificação
-em `target/quality/`. Falhas permanecem no histórico; uma nova execução gera
-novas evidências. A matriz e os resultados medidos estão em
+The runner keeps the logs, commands, exit codes and duration of each check in
+`target/quality/`. Failures stay in the record; a new run produces new
+evidence. The matrix and the measured results are in
 [docs/QUALITY.md](docs/QUALITY.md).
 
 ```bash
-# Contratos Rust/Python, Clippy e arquivos de integração:
+# Rust/Python contracts, Clippy and integration files:
 python3 scripts/quality.py --gui
 
-# Na sessão GNOME, inclui abrir e destruir janelas com imagens sintéticas:
+# In the GNOME session, also opens and destroys windows with synthetic images:
 python3 scripts/quality.py --gui --graphical
 
-# Benchmark release, 64 conversões concorrentes e estabilidade por 5 minutos:
+# Release benchmark, 64 concurrent conversions and 5 minutes of stability:
 python3 scripts/quality.py --gui --graphical --performance --soak-seconds 300
 
-# Instala o auditor apenas no diretório de build deste checkout:
+# Install the auditor only in this checkout's build directory:
 cargo install --locked cargo-audit --root target/quality/tools
 python3 scripts/quality.py --gui --audit
 
-# Depois de obter dependências e atualizar a base RustSec, repetição offline:
+# After fetching dependencies and updating the RustSec database, an offline rerun:
 python3 scripts/quality.py --gui --graphical --audit --offline
 ```
 
-O runner também exige `desktop-file-validate`, `appstreamcli`,
-`glib-compile-schemas` e `msgfmt`. `--graphical` exige Wayland/X11 disponível;
-no CI, usamos Xvfb e uma sessão D-Bus isolada. O backend GSettings é de memória
-durante os testes gráficos, para preservar as preferências pessoais. O teste
-recusa execução direta sem `GSETTINGS_BACKEND=memory`. Inclui preservação do
-ponto do cursor no zoom por geometria real e pixels renderizados, além de
-cancelamento na navegação e liberação de estado no fechamento.
+The runner also requires `desktop-file-validate`, `appstreamcli`,
+`glib-compile-schemas` and `msgfmt`. `--graphical` requires Wayland or X11; in
+CI we use Xvfb and an isolated D-Bus session. The GSettings backend is the
+memory backend during the graphical tests, to keep personal preferences
+intact. The test refuses to run directly without `GSETTINGS_BACKEND=memory`.
+It covers keeping the cursor point during zoom, checked by real geometry and
+rendered pixels, as well as cancellation during navigation and state release
+on close.
 
-A suíte CLI com a feature `ai` testa a recusa sob RLIMIT_AS de 512 MiB antes
-de carregar o modelo, sem saída e com o original preservado, e a mensagem de
-pacote ausente. Os testes que rodam os modelos de verdade só rodam com os
-pesos instalados ou apontados por `BIGIRIS_*_WEIGHTS`; veja
-[docs/IA-LOCAL.md](docs/IA-LOCAL.md) e `scripts/ai_smoke.py`.
+The CLI suite with the `ai` feature tests the refusal under a 512 MiB
+RLIMIT_AS before the model loads, with no output and the original preserved,
+and the missing-package message. The tests that run the real models only run
+with the weights installed or pointed to by `BIGIRIS_*_WEIGHTS`; see
+[docs/LOCAL-AI.md](docs/LOCAL-AI.md) and `scripts/ai_smoke.py`.
 
-Capturas opcionais registram somente os widgets das janelas sintéticas:
+Optional screenshots capture only the widgets of the synthetic windows:
 
 ```bash
 BIGIRIS_TEST_SCREENSHOTS_DIR="$PWD/target/quality/screenshots" \
@@ -124,8 +124,8 @@ BIGIRIS_TEST_COLOR_SCHEME=light \
 python3 scripts/quality.py --gui --graphical
 ```
 
-Repita com `BIGIRIS_TEST_COLOR_SCHEME=dark` para o tema escuro. Para Memcheck,
-compile o probe e use símbolos de depuração compatíveis com a glibc instalada:
+Repeat with `BIGIRIS_TEST_COLOR_SCHEME=dark` for the dark theme. For Memcheck,
+build the probe and use debug symbols matching the installed glibc:
 
 ```bash
 cargo build -p bigimage-core --example quality_probe --locked
@@ -134,79 +134,78 @@ valgrind --tool=memcheck --leak-check=full \
   ./target/debug/examples/quality_probe soak 1 320x240
 ```
 
-O probe mede o núcleo com o allocator padrão; o aplicativo usa mimalloc.
-Estabilidade de RSS e liberação das referências GTK são verificações diferentes
-de Memcheck e não demonstram, isoladamente, ausência de vazamentos.
+The probe measures the core with the default allocator; the application uses
+mimalloc. RSS stability and the release of GTK references are checks separate
+from Memcheck and do not, on their own, show the absence of leaks.
 
-## Estrutura
+## Layout
 
 ```
 crates/
-├── bigimage-core/         # decode/encode/transforms — pure Rust, headless
-├── bigimage-ai/           # IA local: motores image-engine-native (feature `native`)
-├── bigimage-integrations/ # service menus pros 6 file managers
-└── bigiris/               # binário (CLI + GUI via feature `gui`)
+├── bigimage-core/         # decode/encode/transforms, pure Rust, headless
+├── bigimage-ai/           # local AI: image-engine-native engines (feature `native`)
+├── bigimage-integrations/ # service menus for the 6 file managers
+└── bigiris/               # binary (CLI + GUI behind the `gui` feature)
 data/
 ├── com.biglinux.Iris.{desktop,metainfo.xml,gschema.xml}
 ├── icons/hicolor/scalable/apps/com.biglinux.Iris.svg
 ├── nautilus/bigiris-menu.py
-└── po/                    # catálogos i18n
+└── po/                    # i18n catalogs
 docs/
-└── ADR-00{1,2,3}-*.md     # decisões arquiteturais
+└── ADR-00{1,2,3}-*.md     # architecture decisions
 pkgbuild/
-├── PKGBUILD               # build do remoto
-└── PKGBUILD.local         # build do checkout
+├── PKGBUILD               # build from the remote
+└── PKGBUILD.local         # build from the checkout
 ```
 
-ADRs explicam *por que* o código está assim — leia antes de propor
-refatoração estrutural.
+The ADRs explain *why* the code is the way it is: read them before proposing a
+structural refactor.
 
 ## i18n
 
-O catálogo segue os idiomas do BigLinux. `data/po/LINGUAS` lista 30 códigos:
-bg, cs, da, de, el, en, es, et, fi, fr, he, hr, hu, is, it, ja, ko, nb, nl, pl,
-pt, pt_BR, ro, ru, sk, sv, tr, uk, zh_CN e zh_TW. Há um catálogo `en` porque o
-texto-fonte é português. O chinês tem dois catálogos, `zh_CN` (simplificado) e
-`zh_TW` (tradicional, com o vocabulário de Taiwan): um `zh` único mostraria a
-mesma escrita para os dois públicos.
-O norueguês fica em `nb`, não no `no` daqueles projetos: sistemas noruegueses
-usam `nb_NO`, que o gettext e os arquivos `.desktop` procuram como `nb_NO` e
-depois `nb`, nunca `no`.
-A linguagem-fonte é pt-BR; `pt` usa terminologia de português europeu.
+The catalog follows the BigLinux languages. English is the source language:
+every msgid is English and needs no catalog. `data/po/LINGUAS` lists 29 codes:
+bg, cs, da, de, el, es, et, fi, fr, he, hr, hu, is, it, ja, ko, nb, nl, pl,
+pt, pt_BR, ro, ru, sk, sv, tr, uk, zh_CN and zh_TW. Chinese has two catalogs,
+`zh_CN` (Simplified) and `zh_TW` (Traditional, with Taiwan's vocabulary): a
+single `zh` would show the same script to both audiences. Norwegian lives in
+`nb`, not in the `no` of the BigLinux list: Norwegian systems use `nb_NO`, which
+gettext and `.desktop` files look up as `nb_NO` and then `nb`, never `no`.
+`pt_BR` uses Brazilian Portuguese terminology; `pt` uses European Portuguese.
 
-Use `gettext("…")` na interface Rust e `_("…")` na extensão Nautilus. `n_("…")`
-marca rótulos constantes; a tradução ocorre na apresentação, preservando
-IDs, opções e argumentos de comandos. O domínio do Nautilus é local à
-extensão, sem substituir os textos do gerenciador de arquivos.
-Na CLI, a ajuda do clap usa `#[arg(help = gettext("…"))]` e
-`#[command(about = gettext("…"))]`: um comentário `///` vira texto fixo na
-compilação e nunca é traduzido. Os prefixos de status (`ok`, `skip`, `err`,
-`info`, `erro`) e a linha do `--self-test` ficam na língua-fonte, porque
-scripts os leem.
+Use `gettext("…")` in the Rust interface and `_("…")` in the Nautilus
+extension. `n_("…")` marks constant labels; translation happens at
+presentation time, so ids, options and command arguments stay unchanged. The
+Nautilus domain is local to the extension and does not replace the file
+manager's own texts. In the CLI, clap help uses `#[arg(help = gettext("…"))]`
+and `#[command(about = gettext("…"))]`: a `///` comment becomes fixed text at
+compile time and is never translated. The status prefixes (`ok`, `skip`,
+`err`, `info`, `erro`) and the `--self-test` line stay untranslated, because
+scripts read them.
 
 ```bash
-# Extrair mensagens novas e atualizar os catálogos:
+# Extract new messages and update the catalogs:
 data/po/regen-pot.sh
-# Preencher/revisar msgstr em data/po/<idioma>.po; depois:
+# Fill in or review msgstr in data/po/<language>.po; then:
 python3 scripts/translations.py generate
 python3 scripts/translations.py check --check-generated
 ```
 
-O validador exige todos os idiomas, o mesmo inventário de mensagens,
-traduções não vazias, ausência de fuzzy e preservação de argumentos nomeados.
-Executa `msgfmt --check` em cada catálogo e confere os arquivos gerados.
-As receitas compilam e instalam todos os `.mo` em
-`/usr/share/locale/<idioma>/LC_MESSAGES/bigiris.mo`. Os arquivos de menu
-recebem campos localizados; Thunar suporta nomes e descrições `xml:lang`,
-mas mantém o submenu na linguagem-fonte.
+The validator requires every language, the same message inventory, non-empty
+translations, no fuzzy entries and preserved named arguments. It runs
+`msgfmt --check` on each catalog and checks the generated files. The recipes
+build and install every `.mo` at
+`/usr/share/locale/<language>/LC_MESSAGES/bigiris.mo`. The menu files receive
+localized fields; Thunar supports `xml:lang` names and descriptions, but keeps
+the submenu in the source language.
 
-Os catálogos iniciais foram preparados com assistência local de tradução e
-termos reutilizados do GTK/libadwaita; revisão linguística por falantes é
-bem-vinda. A validação técnica não certifica fluência em todos os idiomas.
-Modelos e ferramentas de preparação ficam fora do pacote; não há tradução
-em rede nem inferência adicional durante o uso do aplicativo.
+The initial catalogs were prepared with local translation assistance and terms
+reused from GTK/libadwaita; linguistic review by native speakers is welcome.
+Technical validation does not certify fluency in every language. Preparation
+models and tools stay out of the package; there is no network translation and
+no additional inference while the application runs.
 
-Para conferir uma compilação local com catálogos isolados, sem instalar:
+To check a local build with isolated catalogs, without installing:
 
 ```bash
 python3 scripts/translations.py compile --destdir "$PWD/target/review-locale"
@@ -214,78 +213,82 @@ BIGIRIS_LOCALE_DIR="$PWD/target/review-locale" LANGUAGE=fr ./target/release/bigi
 ```
 
 
-## Convenções
+## Conventions
 
-- **Idioma**: pt-BR para conteúdo de usuário (UI, mensagens, docs);
-  inglês para código, identificadores e mensagens de commit.
-- **Commits**: estilo Conventional Commits sem ser dogmático —
-  `feat:`, `fix:`, `docs:`, `ci:`, `refactor:`, `security:`,
-  `i18n:`, `deps:`. Mensagens explicam *por quê*, não *o quê* (o
-  diff já mostra o quê).
-- **Comentários**: só quando o "por quê" não é óbvio do código.
-  Não documente o que um nome bem escolhido já comunica.
-- **Errors**: `bigimage-core` define `BigImageError`; binário
-  converte para `color_eyre::Result` na borda.
-- **Códigos de saída da CLI**: todo comando segue a mesma convenção
-  (`EXIT_CODES` em `crates/bigiris/src/main.rs`, exibida no `--help`):
-  `0` sucesso (arquivos ignorados por já existirem contam como sucesso),
-  `1` uso inválido ou erro fatal antes de gravar qualquer coisa, `2` um ou
-  mais arquivos de entrada falharam. Comandos novos que gravam arquivos
-  aceitam `--overwrite skip|replace|increment` com `skip` como padrão e são
-  cobertos em `crates/bigiris/tests/cli.rs`.
-- **Integrações do Thunar**: só existem no escopo do usuário
-  (`bigiris install-integrations --user` mescla em
-  `~/.config/Thunar/uca.xml`). Não empacote `/etc/xdg/Thunar/uca.xml`: ele
-  pertence ao pacote `thunar`, e os PKGBUILDs falham se ele aparecer. Um
-  `uca.xml` novo nasce como cópia do primeiro `Thunar/uca.xml` de
-  `$XDG_CONFIG_DIRS` (como o Thunar faz), e um arquivo sem `</actions>` é
-  recusado, nunca reescrito.
-- **Escopo do usuário com pacote instalado**: `install-integrations --user`
-  pula todo gerenciador cujos arquivos `bigiris-*` o pacote já instalou em
-  `/usr/share` e remove cópias pessoais antigas deles. Nos testes, use
-  `ScopePaths::rooted_at` (sem `package_data` nem `xdg_config_dirs`) para
-  nunca ler o `/usr/share` ou o `/etc/xdg` reais.
-- **No `unsafe`**: todos os crates têm `#![forbid(unsafe_code)]`.
-- **GPL-3.0-or-later**: todo arquivo `.rs`/`.py` começa com
+- **Language**: English for everything in the repository: source strings of
+  the interface and messages, docs, code, identifiers and commit messages.
+  Users read their own language through the catalogs.
+- **Commits**: Conventional Commits style without being dogmatic: `feat:`,
+  `fix:`, `docs:`, `ci:`, `refactor:`, `security:`, `i18n:`, `deps:`. Messages
+  explain *why*, not *what* (the diff already shows what).
+- **Comments**: only when the "why" is not obvious from the code. Do not
+  document what a well-chosen name already says.
+- **Errors**: `bigimage-core` defines `BigImageError`; the binary converts it
+  to `color_eyre::Result` at the edge.
+- **CLI exit codes**: every command follows the same convention (`EXIT_PARTIAL`
+  and the `after_help` text of `Cli` in `crates/bigiris/src/main.rs`, shown in
+  `--help`): `0` success (files skipped because they already exist count as
+  success), `1` invalid usage or fatal error before anything is written, `2`
+  one or more input files failed. New commands that write files accept
+  `--overwrite skip|replace|increment` with `skip` as the default and are
+  covered in `crates/bigiris/tests/cli.rs`.
+- **Thunar integrations**: they exist only in the user scope
+  (`bigiris install-integrations --user` merges into
+  `~/.config/Thunar/uca.xml`). Do not package `/etc/xdg/Thunar/uca.xml`: it
+  belongs to the `thunar` package, and the PKGBUILDs fail if it shows up. A new
+  `uca.xml` starts as a copy of the first `Thunar/uca.xml` in
+  `$XDG_CONFIG_DIRS` (as Thunar does), and a file without `</actions>` is
+  refused, never rewritten.
+- **User scope with the package installed**: `install-integrations --user`
+  skips every file manager whose `bigiris-*` files the package already
+  installed in `/usr/share`, and removes old personal copies of them. In tests,
+  use `ScopePaths::rooted_at` (without `package_data` or `xdg_config_dirs`) so
+  the real `/usr/share` and `/etc/xdg` are never read.
+- **`unsafe`**: the library crates have `#![forbid(unsafe_code)]`; the
+  `bigiris` binary has `#![deny(unsafe_code)]`, with audited exceptions only in
+  `crates/bigiris/src/main.rs` and `crates/bigiris/src/codec.rs`.
+- **GPL-3.0-or-later**: every `.rs`/`.py` file starts with
   `// SPDX-License-Identifier: GPL-3.0-or-later`.
 
-## Fluxo de PR
+## Pull request flow
 
-1. Abra issue antes pra mudanças não-triviais — alinha escopo.
-2. Branch a partir de `main`.
-3. Commits pequenos, mensagens informativas.
-4. Garanta `cargo fmt --check`, ambos `clippy -D warnings`, e `cargo
-   test` passando antes de pedir review.
-5. Se a mudança afeta a UI ou o pacote, descreva como testou
-   localmente (a CI valida sintaxe, não UX).
+1. Open an issue before non-trivial changes, to agree on scope.
+2. Branch from `main`.
+3. Small commits, informative messages.
+4. Make sure `cargo fmt --check`, both `clippy -D warnings` runs and
+   `cargo test` pass before asking for review.
+5. If the change affects the UI or the package, describe how you tested it
+   locally (CI checks syntax, not UX).
 
-## Reportando vulnerabilidades
+## Reporting vulnerabilities
 
-Não abra PR/issue pública. Veja [SECURITY.md](SECURITY.md).
+Do not open a public pull request or issue. See [SECURITY.md](SECURITY.md).
 
-### Fuzzing e estabilidade prolongada
+### Fuzzing and long-running stability
 
-`python3 scripts/fuzz.py --seconds 120` gera somente imagens sintéticas e
-instrumenta o core com ASan/LSan e cobertura LLVM. Use Rust nightly. Em hosts
-que fornecem Rust pelo sistema, `--allow-bootstrap` habilita explicitamente
-as opções experimentais só nesse build de desenvolvimento; o release não
-usa essas opções. O relatório fica em `target/quality/fuzz/summary.json`.
-A campanha limita a entrada mutada a 16 KiB e o decode completo a um milhão
-de pixels; cabeçalhos maiores continuam inspecionados. Testes de limites e
-o sandbox cobrem rejeições fora desse orçamento. Bibliotecas nativas ligadas
-externamente não são instrumentadas. Valgrind continua sendo um gate
-independente no CI.
+`python3 scripts/fuzz.py --seconds 120` generates only synthetic images and
+instruments the core with ASan/LSan and LLVM coverage. Use Rust nightly. On
+hosts that provide Rust through the system, `--allow-bootstrap` explicitly
+enables the experimental options for this development build only; the release
+does not use them. The report goes to `target/quality/fuzz/summary.json`. The
+campaign limits the mutated input to 16 KiB and the full decode to one million
+pixels; larger headers are still inspected. Limit tests and the sandbox cover
+rejections outside that budget. Externally linked native libraries are not
+instrumented. Valgrind remains an independent CI gate.
 
-`python3 scripts/release_smoke.py` verifica o sandbox e os 13 formatos no
-release. `python3 scripts/ai_smoke.py` executa a remoção de fundo real em duas
-imagens sintéticas com transparência, com os pesos do pacote `birefnet-native`
-(ou `--weights`), e registra tempo, RAM e preservação de RGB/alpha.
+`python3 scripts/release_smoke.py` checks the sandbox and the 13 formats in the
+release build. `python3 scripts/ai_smoke.py` runs the real background removal
+on two synthetic images with transparency, with the weights from the
+`birefnet-native` package (or `--weights`), and records time, RAM and RGB/alpha
+preservation.
 
-Após `cargo build --release -p bigimage-core --example quality_probe --locked`,
-`python3 scripts/soak.py --seconds 28800 --background` executa oito horas do
-probe em processo persistente. Consulte `target/quality/long-soak/status.json`:
-`running` significa pendente, nunca aprovação. O probe exercita o core;
-soak de sessão GNOME, GPU, slideshow e acessibilidade exige validação própria.
+After `cargo build --release -p bigimage-core --example quality_probe --locked`,
+`python3 scripts/soak.py --seconds 28800 --background` runs eight hours of the
+probe in a persistent process. Check `target/quality/long-soak/status.json`:
+`running` means pending, never approval. The probe exercises the core; a soak
+of the GNOME session, GPU, slideshow and accessibility needs its own
+validation.
 
-Para distribuir a candidata, confira `docs/RELEASE-CANDIDATE.md`. Instalação,
-associação MIME padrão e publicação são ações diferentes da criação do pacote.
+To distribute the candidate, read `docs/RELEASE-CANDIDATE.md`. Installation,
+default MIME association and publication are separate actions from building
+the package.

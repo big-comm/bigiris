@@ -43,7 +43,7 @@ msgstr "Jätka redigeerimist"
 
 #: crates/bigiris/src/gui.rs:1013
 msgid "Descartar"
-msgstr "Hülga muudatused"
+msgstr "Hülga"
 
 #: crates/bigiris/src/gui.rs:1083
 msgid "Imagem anterior"
@@ -51,7 +51,7 @@ msgstr "Eelmine pilt"
 
 #: crates/bigiris/src/gui.rs:1084
 msgid "Próxima imagem"
-msgstr "Järgmine pilt »"
+msgstr "Järgmine pilt"
 
 #: crates/bigiris/src/gui.rs:1100
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:292
@@ -84,7 +84,7 @@ msgstr "Tegelik suurus (100%)"
 
 #: crates/bigiris/src/gui.rs:1139 crates/bigiris/src/gui.rs:3949
 msgid "Zoom"
-msgstr "Suurenda"
+msgstr "Suurendus"
 
 #: crates/bigiris/src/gui.rs:1143
 msgid "Aproximar"
@@ -113,14 +113,14 @@ msgstr "Tühistatud"
 
 #: crates/bigiris/src/gui.rs:2418
 msgid "Falha na IA: {error}"
-msgstr "AI tõrge: {error}"
+msgstr "TI tõrge: {error}"
 
 #: crates/bigiris/src/gui.rs:2424
 msgid ""
 "Esta build não inclui IA. Recompile com `cargo build --features ai` (requer "
 "glslc, do pacote shaderc)."
 msgstr ""
-"See versioon ei sisalda AI-d. Kompileeri uuesti käsuga `cargo build --"
+"See versioon ei sisalda TI-d. Kompileeri uuesti käsuga `cargo build --"
 "features ai` (vajab glslc-d paketist shaderc)."
 
 #: crates/bigiris/src/gui.rs:2430
@@ -176,7 +176,7 @@ msgstr "Salvesta"
 
 #: crates/bigiris/src/gui.rs:2664
 msgid "Salvo"
-msgstr "Fail salvestati."
+msgstr "Salvestatud"
 
 #: crates/bigiris/src/gui.rs:2743
 msgid ""
@@ -247,7 +247,7 @@ msgstr "Salvestatud. Mõnda metaandmet ei õnnestunud säilitada: {list}"
 
 #: crates/bigiris/src/gui.rs:3132
 msgid "Salve ou desfaça as alterações antes de navegar"
-msgstr "Muudatuste salvestamine või tagasivõtmine enne navigeerimist"
+msgstr "Salvesta või võta muudatused tagasi enne liikumist"
 
 #: crates/bigiris/src/gui.rs:3215 crates/bigiris/src/gui.rs:4107
 #: crates/bigiris/src/gui.rs:5157 crates/bigiris/src/gui.rs:5292
@@ -269,7 +269,7 @@ msgstr "Prindi…"
 #: crates/bigiris/src/gui.rs:3221 crates/bigiris/src/gui.rs:4119
 #: crates/bigiris/src/gui.rs:5157
 msgid "Processar uma pasta…"
-msgstr "Töötle seda kausta…"
+msgstr "Töötle kausta…"
 
 #: crates/bigiris/src/gui.rs:3227
 msgid "Editar imagem"
@@ -297,7 +297,7 @@ msgstr "Klaviatuuri otseteed"
 
 #: crates/bigiris/src/gui.rs:3238
 msgid "Sobre o BigIris"
-msgstr "Informatsioon BigIris kohta"
+msgstr "Teave BigIrise kohta"
 
 #: crates/bigiris/src/gui.rs:3243
 msgid "Menu principal"
@@ -352,7 +352,7 @@ msgstr "Fail teisaldatakse prügikasti. Saate selle hiljem taastada."
 
 #: crates/bigiris/src/gui.rs:3858
 msgid "Mover"
-msgstr "Liiguta"
+msgstr "Teisalda"
 
 #: crates/bigiris/src/gui.rs:3880
 msgid "Não foi possível mover para a lixeira"
@@ -372,15 +372,15 @@ msgstr "Esimene / viimane"
 
 #: crates/bigiris/src/gui.rs:3945
 msgid "Slideshow (auto-avanço)"
-msgstr "Slaidiseanss"
+msgstr "Slaidiseanss (automaatne edasiliikumine)"
 
 #: crates/bigiris/src/gui.rs:3951
 msgid "Aproximar / afastar"
-msgstr "Zoom sisse / välja"
+msgstr "Suurenda / vähenda"
 
 #: crates/bigiris/src/gui.rs:3954
 msgid "Zoom contínuo"
-msgstr "Pidev suumimine"
+msgstr "Pidev suurendus"
 
 #: crates/bigiris/src/gui.rs:3958
 msgid "Janela"
@@ -396,15 +396,15 @@ msgstr "Teatrirežiim"
 
 #: crates/bigiris/src/gui.rs:3962
 msgid "Fita de miniaturas"
-msgstr "Pisipildid"
+msgstr "Pisipiltide riba"
 
 #: crates/bigiris/src/gui.rs:3963
 msgid "Histograma RGB"
-msgstr "RGB- histogramm"
+msgstr "RGB-histogramm"
 
 #: crates/bigiris/src/gui.rs:3964
 msgid "Fixar barras visíveis"
-msgstr "Hoidke juhtelemendid nähtaval"
+msgstr "Hoia ribad nähtaval"
 
 #: crates/bigiris/src/gui.rs:3965
 msgid "Sair da tela cheia ou fechar"
@@ -426,11 +426,11 @@ msgstr "Pööra vasakule"
 
 #: crates/bigiris/src/gui.rs:3975
 msgid "Recortar…"
-msgstr "Kärpimine…"
+msgstr "Kärbi…"
 
 #: crates/bigiris/src/gui.rs:3976
 msgid "Remover fundo (IA)…"
-msgstr "Eemalda taust (AI)…"
+msgstr "Eemalda taust (TI)…"
 
 #: crates/bigiris/src/gui.rs:3977
 #: crates/bigimage-integrations/src/action.rs:517
@@ -440,7 +440,7 @@ msgstr "Suurenda eraldusvõimet…"
 
 #: crates/bigiris/src/gui.rs:3979
 msgid "Painel de edição"
-msgstr "Muutmispaneel"
+msgstr "Redigeerimispaneel"
 
 #: crates/bigiris/src/gui.rs:3980
 msgid "Ver original (segure)"
@@ -453,7 +453,7 @@ msgstr "Fail"
 
 #: crates/bigiris/src/gui.rs:3989
 msgid "Imprimir"
-msgstr "Printimine"
+msgstr "Prindi"
 
 #: crates/bigiris/src/gui.rs:3990
 #: crates/bigiris/src/gui/dialogs/properties.rs:38
@@ -491,7 +491,7 @@ msgstr ""
 
 #: crates/bigiris/src/gui.rs:4093
 msgid "Abra suas imagens"
-msgstr "Avage oma pildid"
+msgstr "Ava oma pildid"
 
 #: crates/bigiris/src/gui.rs:4098
 msgid "Arraste imagens para cá ou cole arquivos com Ctrl+V."
@@ -499,11 +499,11 @@ msgstr "Lohista pildid siia või kleebi failid Ctrl+V abil."
 
 #: crates/bigiris/src/gui.rs:4141
 msgid "Selecionar pasta com imagens"
-msgstr "Valige piltidega kaust"
+msgstr "Vali piltidega kaust"
 
 #: crates/bigiris/src/gui.rs:4162
 msgid "Selecionar imagens"
-msgstr "Valige pildid"
+msgstr "Vali pildid"
 
 #: crates/bigiris/src/gui.rs:4209
 msgid "{current} de {total}"
@@ -539,21 +539,21 @@ msgstr "Töötlemine lõppes ootamatult. Proovi uuesti."
 
 #: crates/bigiris/src/gui/batch_runner.rs:311
 msgid "falha inesperada no worker"
-msgstr "ootamatu tõrge workeris"
+msgstr "ootamatu tõrge töötlejas"
 
 #: crates/bigiris/src/gui/batch_runner.rs:359
 msgid "um worker terminou inesperadamente"
-msgstr "üks worker lõppes ootamatult"
+msgstr "töötleja lõppes ootamatult"
 
 #: crates/bigiris/src/gui/dialogs/adjust.rs:20
 msgid "Ajustar cores — Prisma"
-msgstr "Värvide reguleerimine — Prisma"
+msgstr "Kohanda värve — Prisma"
 
 #: crates/bigiris/src/gui/dialogs/adjust.rs:35
 #: crates/bigimage-integrations/src/action.rs:91
 #: data/nautilus/bigiris-menu.py:153
 msgid "Ajustar cores"
-msgstr "Värvide reguleerimine"
+msgstr "Kohanda värve"
 
 #: crates/bigiris/src/gui/dialogs/adjust.rs:38
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:334
@@ -562,7 +562,7 @@ msgstr "Heledus"
 
 #: crates/bigiris/src/gui/dialogs/adjust.rs:39
 msgid "-100 escuro · 0 neutro · +100 claro"
-msgstr "-100 tume · 0 neutraalne · +101 hele"
+msgstr "-100 tume · 0 neutraalne · +100 hele"
 
 #: crates/bigiris/src/gui/dialogs/adjust.rs:43
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:335
@@ -571,7 +571,7 @@ msgstr "Kontrast"
 
 #: crates/bigiris/src/gui/dialogs/adjust.rs:44
 msgid "-100 plano · 0 neutro · +100 agressivo"
-msgstr "-100 tasane · 0 neutraalne · +101 tugev"
+msgstr "-100 lame · 0 neutraalne · +100 tugev"
 
 #: crates/bigiris/src/gui/dialogs/adjust.rs:48
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:336
@@ -580,7 +580,7 @@ msgstr "Küllastus"
 
 #: crates/bigiris/src/gui/dialogs/adjust.rs:49
 msgid "-100 cinza · 0 neutro · +100 vibrante"
-msgstr "-100 hall · 0 neutraalne · +101 elav"
+msgstr "-100 hall · 0 neutraalne · +100 elav"
 
 #: crates/bigiris/src/gui/dialogs/adjust.rs:53
 msgid "Gamma"
@@ -588,8 +588,7 @@ msgstr "Gamma"
 
 #: crates/bigiris/src/gui/dialogs/adjust.rs:55
 msgid "Abaixo de 1 clareia os meios-tons · 1 mantém · acima de 1 escurece"
-msgstr ""
-"Allpool 1 helendab kesktoone · 1 säilitab neid · üleval 1 tumendab neid"
+msgstr "Alla 1 helendab kesktoone · 1 säilitab · üle 1 tumendab"
 
 #: crates/bigiris/src/gui/dialogs/adjust.rs:64
 #: crates/bigiris/src/gui/dialogs/batch.rs:375
@@ -643,7 +642,7 @@ msgstr "Vali vähemalt 2 pilti"
 
 #: crates/bigiris/src/gui/dialogs/animate.rs:48
 msgid "Informe vários arquivos de uma vez para montar a animação."
-msgstr "Valige animatsiooni loomiseks mitu faili."
+msgstr "Animatsiooni koostamiseks anna korraga mitu faili."
 
 #: crates/bigiris/src/gui/dialogs/animate.rs:66
 msgid "Atraso por quadro (ms)"
@@ -651,11 +650,11 @@ msgstr "Kaadri viivitus (ms)"
 
 #: crates/bigiris/src/gui/dialogs/animate.rs:67
 msgid "100 ≈ 10 fps · 40 ≈ 25 fps · 1000 = 1 s"
-msgstr "100 ≈ 12 kaadrit sekundis · 40 = 25 kaadri sekundis"
+msgstr "100 ≈ 10 fps · 40 ≈ 25 fps · 1000 = 1 s"
 
 #: crates/bigiris/src/gui/dialogs/animate.rs:72
 msgid "Loop"
-msgstr "Animatsiooni kordamine"
+msgstr "Kordus"
 
 #: crates/bigiris/src/gui/dialogs/animate.rs:74
 msgid "Infinito (padrão)"
@@ -683,7 +682,7 @@ msgstr "Kodeerija kiirus"
 
 #: crates/bigiris/src/gui/dialogs/animate.rs:84
 msgid "maior = mais rápido, paleta um pouco pior · padrão 10"
-msgstr "kõrgem = kiirem, veidi madalam palett kvaliteet · vaikimisi 10"
+msgstr "suurem = kiirem, veidi halvem palett · vaikimisi 10"
 
 #: crates/bigiris/src/gui/dialogs/animate.rs:94
 msgid "Arquivo de saída (.gif)"
@@ -691,7 +690,7 @@ msgstr "Väljundfail (.gif)"
 
 #: crates/bigiris/src/gui/dialogs/animate.rs:98
 msgid "Quadros"
-msgstr "Raamid"
+msgstr "Kaadrid"
 
 #: crates/bigiris/src/gui/dialogs/animate.rs:111
 msgid "Criar GIF"
@@ -732,15 +731,15 @@ msgstr "Fail {file} tekkis vahepeal ja jäeti alles; midagi ei kirjutatud."
 
 #: crates/bigiris/src/gui/dialogs/animate.rs:309
 msgid "Falha"
-msgstr "Ebaõnnestumine"
+msgstr "Nurjus"
 
 #: crates/bigiris/src/gui/dialogs/batch.rs:35
 msgid "Prisma — Lote"
-msgstr "Prisma – Partii"
+msgstr "Prisma — hulgitöötlus"
 
 #: crates/bigiris/src/gui/dialogs/batch.rs:39
 msgid "Conversão em lote"
-msgstr "Partii teisendamine"
+msgstr "Hulgiteisendus"
 
 #: crates/bigiris/src/gui/dialogs/batch.rs:46
 msgid "Arquivos"
@@ -749,7 +748,7 @@ msgstr "Failid"
 #: crates/bigiris/src/gui/dialogs/batch.rs:50
 #: crates/bigiris/src/gui/dialogs/batch.rs:388
 msgid "Adicionar arquivos"
-msgstr "Failide lisamine"
+msgstr "Lisa failid"
 
 #: crates/bigiris/src/gui/dialogs/batch.rs:56
 msgid "Adicionar pasta (imagens)"
@@ -758,7 +757,7 @@ msgstr "Lisa kaust (pildid)"
 #: crates/bigiris/src/gui/dialogs/batch.rs:66
 #: crates/bigiris/src/gui/dialogs/convert.rs:45
 msgid "Conversão"
-msgstr "Ümberarvutamine"
+msgstr "Teisendus"
 
 #: crates/bigiris/src/gui/dialogs/batch.rs:77
 #: crates/bigiris/src/gui/dialogs/convert.rs:52
@@ -780,23 +779,23 @@ msgstr "Sama kaust kui lähtefail"
 #: crates/bigiris/src/gui/dialogs/batch.rs:93
 #: crates/bigiris/src/gui/dialogs/convert.rs:69
 msgid "Usar a mesma pasta do arquivo de origem"
-msgstr "Lähtefaili kausta kasutamine"
+msgstr "Kasuta lähtefaili kausta"
 
 #: crates/bigiris/src/gui/dialogs/batch.rs:108
 msgid "Aguardando. Clique em Processar para iniciar."
-msgstr "Alustamiseks klõpsake nuppu Protsess."
+msgstr "Ootel. Alustamiseks klõpsa nupul Töötle."
 
 #: crates/bigiris/src/gui/dialogs/batch.rs:119
 msgid "Processar"
-msgstr "Protsessi pildid"
+msgstr "Töötle"
 
 #: crates/bigiris/src/gui/dialogs/batch.rs:245
 msgid "Adicione ao menos uma imagem para processar."
-msgstr "Lisage töötlemiseks vähemalt üks pilt."
+msgstr "Lisa töötlemiseks vähemalt üks pilt."
 
 #: crates/bigiris/src/gui/dialogs/batch.rs:257
 msgid "Iniciando…"
-msgstr "Alustame…"
+msgstr "Alustamine…"
 
 #: crates/bigiris/src/gui/dialogs/batch.rs:258
 msgid "Processando…"
@@ -807,8 +806,8 @@ msgid ""
 "Cancelado após {done}/{total} em {timing}. {ok} gravado(s), {skip} "
 "ignorado(s), {fail} falha(s)."
 msgstr ""
-"Tühistatud pärast {done}/{total} ajaga {timing}. Kirjutatud: {ok}, vahele "
-"jäetud: {skip}, ebaõnnestunud: {fail}."
+"Tühistati pärast {done}/{total} faili ajaga {timing}. Kirjutatud: {ok}, "
+"vahele jäetud: {skip}, ebaõnnestunud: {fail}."
 
 #: crates/bigiris/src/gui/dialogs/batch.rs:304
 msgid ""
@@ -847,7 +846,7 @@ msgstr "Enne: {before}  ·  Pärast: {after}"
 
 #: crates/bigiris/src/gui/dialogs/compare.rs:69
 msgid "Arraste o divisor para comparar · Esc fecha"
-msgstr "Lohista eraldajat võrdlemiseks · Esc sulgemiseks"
+msgstr "Lohista eraldajat võrdlemiseks · Esc sulgeb"
 
 #: crates/bigiris/src/gui/dialogs/compare.rs:157
 msgid "Não foi possível abrir esta imagem"
@@ -855,22 +854,22 @@ msgstr "Seda pilti ei õnnestunud avada"
 
 #: crates/bigiris/src/gui/dialogs/convert.rs:20
 msgid "Converter imagens — Prisma"
-msgstr "Teisendada pilte — Prisma"
+msgstr "Teisenda pilte — Prisma"
 
 #: crates/bigiris/src/gui/dialogs/convert.rs:32
 #: crates/bigiris/src/gui/dialogs/convert.rs:79
 #: crates/bigimage-integrations/src/action.rs:75
 #: data/nautilus/bigiris-menu.py:100
 msgid "Converter"
-msgstr "Teisendada pilte"
+msgstr "Teisenda"
 
 #: crates/bigiris/src/gui/dialogs/convert.rs:85
 msgid ""
 "Esta imagem tem transparência — JPEG perde o canal alfa. Considere PNG ou "
 "WebP."
 msgstr ""
-"Sellel pildil on läbipaistvus – JPEG-pilt kaotab alfakanali. Kaaluge PNG- "
-"või WebP-pilti."
+"Sellel pildil on läbipaistvus — JPEG kaotab alfakanali. Kaalu PNG- või WebP-"
+"vormingut."
 
 #: crates/bigiris/src/gui/dialogs/convert.rs:106
 msgid ""
@@ -886,7 +885,7 @@ msgstr "Teisendamine…"
 
 #: crates/bigiris/src/gui/dialogs/convert.rs:201
 msgid "Convertendo"
-msgstr "Muundamine"
+msgstr "Teisendamine"
 
 #: crates/bigiris/src/gui/dialogs/crop.rs:284
 #: crates/bigiris/src/gui/viewer/crop.rs:658
@@ -899,14 +898,14 @@ msgstr ""
 
 #: crates/bigiris/src/gui/dialogs/crop.rs:309
 msgid "Recortar — Prisma"
-msgstr "Crop – Prisma"
+msgstr "Kärbi — Prisma"
 
 #: crates/bigiris/src/gui/dialogs/crop.rs:321
 #: crates/bigiris/src/gui/dialogs/crop.rs:389
 #: crates/bigiris/src/gui/viewer/crop.rs:375
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:326
 msgid "Recortar"
-msgstr "Pildi kärpimine"
+msgstr "Kärbi"
 
 #: crates/bigiris/src/gui/dialogs/crop.rs:348
 #: crates/bigiris/src/gui/dialogs/extent.rs:96
@@ -922,7 +921,7 @@ msgstr "Esimene fail"
 
 #: crates/bigiris/src/gui/dialogs/crop.rs:355
 msgid "X (px)"
-msgstr "X (pikslit)"
+msgstr "X (px)"
 
 #: crates/bigiris/src/gui/dialogs/crop.rs:359
 msgid "Y (px)"
@@ -986,8 +985,8 @@ msgid ""
 "Aumentar resolução usa Lanczos3. Para IA (Real-ESRGAN): sudo pacman -S "
 "{package}"
 msgstr ""
-"Suurendamine kasutab Lanczos3. AI jaoks (Real-ESRGAN): sudo pacman -S "
-"{package}"
+"Eraldusvõime suurendamine kasutab Lanczos3. TI jaoks (Real-ESRGAN): sudo "
+"pacman -S {package}"
 
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:275
 #: crates/bigiris/src/gui/dialogs/upscale.rs:246
@@ -1008,15 +1007,15 @@ msgstr "Näitab pilti ilma muudatusteta (hoia \\ all)"
 
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:307
 msgid "Transformar"
-msgstr "Teisenda"
+msgstr "Teisendused"
 
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:313
 msgid "Espelhar horizontal"
-msgstr "Pööra horisontaalselt"
+msgstr "Peegelda horisontaalselt"
 
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:314
 msgid "Espelhar vertical"
-msgstr "Vertikaalne ümberpööramine"
+msgstr "Peegelda vertikaalselt"
 
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:319
 msgid "Endireitar"
@@ -1068,7 +1067,7 @@ msgstr "Eemalda taust (TI)"
 
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:379
 msgid "Remover ruído (IA)"
-msgstr "Eemalda müra (AI)"
+msgstr "Eemalda müra (TI)"
 
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:383
 #: crates/bigiris/src/gui/dialogs/upscale.rs:97
@@ -1090,7 +1089,7 @@ msgstr "Salvesta kui…"
 
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:424
 msgid "Qualidade ao salvar como"
-msgstr "Kvaliteet funktsioonis Salvesta kui"
+msgstr "Kvaliteet (Salvesta kui)"
 
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:978
 msgid "Recorta o objeto principal com BiRefNet-lite, no seu computador"
@@ -1102,11 +1101,11 @@ msgstr "Puhastab müra ja tihendusartefaktid SCUNet abil, sinu arvutis"
 
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:989
 msgid "Real-ESRGAN (IA), no seu computador"
-msgstr "Real-ESRGAN (AI), sinu arvutis"
+msgstr "Real-ESRGAN (TI), sinu arvutis"
 
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:991
 msgid "Lanczos3 (sem IA)"
-msgstr "Lanczos3 (ilma AI-ta)"
+msgstr "Lanczos3 (ilma TI-ta)"
 
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:1507
 #: crates/bigiris/src/gui/dialogs/remove_bg.rs:224
@@ -1165,7 +1164,7 @@ msgstr "Instagrami voog (4:5)"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:14
 msgid "Stories / Shorts (9:16)"
-msgstr "Jutud / lühijutud (9:16)"
+msgstr "Stories / Shorts (9:16)"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:15
 msgid "Widescreen (16:9)"
@@ -1181,11 +1180,11 @@ msgstr "Pehme must (#0d0e12)"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:23
 msgid "Preto puro (#000000)"
-msgstr "Puhas must (#000.00)"
+msgstr "Puhas must (#000000)"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:24
 msgid "Branco (#ffffff)"
-msgstr "Valge (# ffffff)"
+msgstr "Valge (#ffffff)"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:25
 msgid "Transparente"
@@ -1193,27 +1192,27 @@ msgstr "Läbipaistev"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:26
 msgid "Personalizada (hex)"
-msgstr "Kohandatud (kuueteistkümnendarv)"
+msgstr "Kohandatud (hex)"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:33
 msgid "Centro"
-msgstr "Keskmine"
+msgstr "Keskel"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:33
 msgid "Topo"
-msgstr "Ülemine serv"
+msgstr "Üleval"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:33
 msgid "Base"
-msgstr "Alumine serv"
+msgstr "All"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:49
 msgid "Letterbox — Prisma"
-msgstr "Postkast — Prisma"
+msgstr "Sobita ribadega — Prisma"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:62
 msgid "Letterbox"
-msgstr "Letterbox"
+msgstr "Sobita ribadega"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:63
 msgid "Prisma · sem corte"
@@ -1226,13 +1225,12 @@ msgid ""
 "original é centralizada e o resto é preenchido com a cor escolhida."
 msgstr ""
 "Laiendab pildi ümber olevat lõuendit, et see sobiks kindlasse formaati "
-"(YouTube'i postitused, Instagrami vood, Stories...), kärpimata ühtegi "
-"pikslit.Algne pilt on keskele paigutatud ja ülejäänud ala täidetakse valitud "
-"värviga."
+"(YouTube'i postitus, Instagrami voog, Stories…), kärpimata ühtegi pikslit. "
+"Algne pilt paigutatakse keskele ja ülejäänu täidetakse valitud värviga."
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:104
 msgid "Proporção alvo"
-msgstr "Sihtmärgi kuvasuhe"
+msgstr "Sihtkuvasuhe"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:111
 msgid "Razão W"
@@ -1248,7 +1246,7 @@ msgstr "Tausta värv"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:130
 msgid "Hex (#RRGGBB)"
-msgstr "Kuueteistkümnendsüsteem (# RRGGBB)"
+msgstr "Hex (#RRGGBB)"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:138
 msgid "Posição da imagem"
@@ -1257,7 +1255,7 @@ msgstr "Pildi asukoht"
 #: crates/bigiris/src/gui/dialogs/extent.rs:144
 #: crates/bigiris/src/gui/dialogs/upscale.rs:103
 msgid "Destino previsto"
-msgstr "Eeldatav sihtkoht"
+msgstr "Eeldatav tulemus"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:171
 msgid "Estender"
@@ -1277,14 +1275,14 @@ msgstr "Laiendamine"
 
 #: crates/bigiris/src/gui/dialogs/flip.rs:20
 msgid "Espelhar imagens — Prisma"
-msgstr "Flip pildid — Prisma"
+msgstr "Peegelda pilte — Prisma"
 
 #: crates/bigiris/src/gui/dialogs/flip.rs:24
 #: crates/bigiris/src/gui/dialogs/flip.rs:47
 #: crates/bigimage-integrations/src/action.rs:87
 #: data/nautilus/bigiris-menu.py:142
 msgid "Espelhar"
-msgstr "Pööra pilt ümber"
+msgstr "Peegelda"
 
 #: crates/bigiris/src/gui/dialogs/flip.rs:26
 msgid "Horizontal (esquerda ↔ direita)"
@@ -1292,7 +1290,7 @@ msgstr "Horisontaalne (vasak ↔ parem)"
 
 #: crates/bigiris/src/gui/dialogs/flip.rs:26
 msgid "Vertical (cima ↔ baixo)"
-msgstr "Vertikaalne (ülevalt ↔ alt)"
+msgstr "Vertikaalne (üles ↔ alla)"
 
 #: crates/bigiris/src/gui/dialogs/flip.rs:29
 msgid "Eixo"
@@ -1300,11 +1298,11 @@ msgstr "Telg"
 
 #: crates/bigiris/src/gui/dialogs/flip.rs:87
 msgid "Espelhando…"
-msgstr "Ümberpööramine…"
+msgstr "Peegeldamine…"
 
 #: crates/bigiris/src/gui/dialogs/flip.rs:93
 msgid "Espelhando"
-msgstr "Ümberpööramine"
+msgstr "Peegeldamine"
 
 #: crates/bigiris/src/gui/dialogs/mod.rs:64
 #: crates/bigimage-integrations/src/action.rs:151
@@ -1344,7 +1342,7 @@ msgstr "GIF"
 
 #: crates/bigiris/src/gui/dialogs/mod.rs:71
 msgid "ICO (até 256 × 256)"
-msgstr "ICO (kuni 256 × 240)"
+msgstr "ICO (kuni 256 × 256)"
 
 #: crates/bigiris/src/gui/dialogs/mod.rs:72
 msgid "PNM (Netpbm)"
@@ -1389,11 +1387,11 @@ msgstr "Kvaliteet (JPEG/WebP/AVIF)"
 
 #: crates/bigiris/src/gui/dialogs/mod.rs:115
 msgid "1 menor qualidade · 85 equilíbrio · 100 maior qualidade"
-msgstr "1 madalam kvaliteet · 85 tasakaalustatud · 100 kõrgem kvaliteet"
+msgstr "1 madalaim kvaliteet · 85 tasakaal · 100 kõrgeim kvaliteet"
 
 #: crates/bigiris/src/gui/dialogs/mod.rs:119
 msgid "Otimizar tamanho"
-msgstr "Suuruse optimeerimine"
+msgstr "Optimeeri suurust"
 
 #: crates/bigiris/src/gui/dialogs/mod.rs:120
 msgid "PNG com compressão máxima; AVIF mais lento; arquivo menor"
@@ -1401,7 +1399,7 @@ msgstr "PNG maksimaalse tihendusega; AVIF aeglasem; väiksem fail"
 
 #: crates/bigiris/src/gui/dialogs/mod.rs:124
 msgid "Avançado"
-msgstr "Laiendatud"
+msgstr "Täpsemalt"
 
 #: crates/bigiris/src/gui/dialogs/mod.rs:125
 msgid "Otimização do encoder"
@@ -1409,7 +1407,7 @@ msgstr "Kodeerija optimeerimine"
 
 #: crates/bigiris/src/gui/dialogs/mod.rs:167
 msgid "Pular se já existir"
-msgstr "Olemasolevate failide vahelejätmine"
+msgstr "Jäta vahele, kui on olemas"
 
 #: crates/bigiris/src/gui/dialogs/mod.rs:168
 msgid "Sobrescrever o arquivo"
@@ -1417,7 +1415,7 @@ msgstr "Kirjuta fail üle"
 
 #: crates/bigiris/src/gui/dialogs/mod.rs:169
 msgid "Incrementar (_1, _2, …)"
-msgstr "Lisa järelliide (_1, _2, …)"
+msgstr "Lisa number (_1, _2, …)"
 
 #: crates/bigiris/src/gui/dialogs/mod.rs:190
 #: crates/bigiris/src/gui/dialogs/mod.rs:205
@@ -1438,7 +1436,7 @@ msgstr "{first} ja veel {count}"
 
 #: crates/bigiris/src/gui/dialogs/mod.rs:298
 msgid "Escolher pasta de saída"
-msgstr "Valige väljundi kausta"
+msgstr "Vali väljundkaust"
 
 #: crates/bigiris/src/gui/dialogs/properties.rs:60
 msgid "Não foi possível ler as informações do arquivo"
@@ -1446,7 +1444,7 @@ msgstr "Faili teavet ei õnnestunud lugeda"
 
 #: crates/bigiris/src/gui/dialogs/properties.rs:90
 msgid "Privacidade"
-msgstr "Eraelu puutumatus"
+msgstr "Privaatsus"
 
 #: crates/bigiris/src/gui/dialogs/properties.rs:94
 msgid "Coordenadas GPS presentes"
@@ -1521,7 +1519,7 @@ msgstr "EXIF-i suund"
 
 #: crates/bigiris/src/gui/dialogs/properties.rs:227
 msgid "{orientation} · use Girar ▸ Automático pra corrigir"
-msgstr "{orientation} · parandamiseks kasuta Pööra pilti ▸ Automaatne"
+msgstr "{orientation} · parandamiseks kasuta Pööra ▸ Automaatne"
 
 #: crates/bigiris/src/gui/dialogs/properties.rs:242
 msgid "Tons de cinza"
@@ -1565,11 +1563,11 @@ msgstr "Pilti pole valitud"
 
 #: crates/bigiris/src/gui/dialogs/remove_bg.rs:97
 msgid "Informe um ou mais arquivos ao abrir o diálogo."
-msgstr "Valige dialoogiboksi avamisel üks või mitu faili."
+msgstr "Anna dialoogi avamisel üks või mitu faili."
 
 #: crates/bigiris/src/gui/dialogs/remove_bg.rs:127
 msgid "Modelo"
-msgstr "AI mudel"
+msgstr "Mudel"
 
 #: crates/bigiris/src/gui/dialogs/remove_bg.rs:140
 msgid ""
@@ -1580,7 +1578,7 @@ msgstr ""
 
 #: crates/bigiris/src/gui/dialogs/remove_bg.rs:147
 msgid "Remover fundo com IA local"
-msgstr "Eemalda taust kohaliku AI abil"
+msgstr "Eemalda taust kohaliku TI abil"
 
 #: crates/bigiris/src/gui/dialogs/remove_bg.rs:148
 msgid ""
@@ -1601,7 +1599,7 @@ msgstr "Salvestatud pildid"
 
 #: crates/bigiris/src/gui/dialogs/remove_bg.rs:376
 msgid "Falhas"
-msgstr "Ebaõnnestumised"
+msgstr "Nurjunud"
 
 #: crates/bigiris/src/gui/dialogs/remove_bg.rs:378
 msgid "Com erros"
@@ -1622,7 +1620,7 @@ msgstr "BiRefNet-lite (MIT) · töötab võrguühenduseta sinu arvutis"
 #: crates/bigiris/src/gui/dialogs/remove_bg.rs:538
 #: crates/bigiris/src/gui/dialogs/upscale.rs:142
 msgid "Aumentar"
-msgstr "Suurenda pilti"
+msgstr "Suurenda"
 
 #: crates/bigiris/src/gui/dialogs/resize.rs:8
 msgid "Lanczos3 (padrão)"
@@ -1642,11 +1640,11 @@ msgstr "Bilinear"
 
 #: crates/bigiris/src/gui/dialogs/resize.rs:12
 msgid "Nearest (sem anti-aliasing)"
-msgstr "Lähim (tasajoonistus puudub)"
+msgstr "Lähim naaber (ilma sakitõrjeta)"
 
 #: crates/bigiris/src/gui/dialogs/resize.rs:29
 msgid "Redimensionar imagens — Prisma"
-msgstr "Piltide suuruse muutmine — Prisma"
+msgstr "Muuda piltide suurust — Prisma"
 
 #: crates/bigiris/src/gui/dialogs/resize.rs:41
 #: crates/bigiris/src/gui/dialogs/resize.rs:144
@@ -1654,12 +1652,12 @@ msgstr "Piltide suuruse muutmine — Prisma"
 #: crates/bigimage-integrations/src/action.rs:79
 #: data/nautilus/bigiris-menu.py:115
 msgid "Redimensionar"
-msgstr "Piltide suuruse muutmine"
+msgstr "Muuda suurust"
 
 #: crates/bigiris/src/gui/dialogs/resize.rs:47
 #: crates/bigiris/src/gui/dialogs/resize.rs:61
 msgid "Aresta máxima"
-msgstr "Maksimaalne serv"
+msgstr "Pikim külg"
 
 #: crates/bigiris/src/gui/dialogs/resize.rs:49
 msgid "Dimensão exata (WxH)"
@@ -1667,7 +1665,7 @@ msgstr "Täpne suurus (WxH)"
 
 #: crates/bigiris/src/gui/dialogs/resize.rs:50
 msgid "Encaixar em (WxH)"
-msgstr "Sobib sees (WxH)"
+msgstr "Mahuta (WxH)"
 
 #: crates/bigiris/src/gui/dialogs/resize.rs:54
 msgid "Modo"
@@ -1675,7 +1673,7 @@ msgstr "Režiim"
 
 #: crates/bigiris/src/gui/dialogs/resize.rs:62
 msgid "pixels (lado maior)"
-msgstr "pikslit (pikim serv)"
+msgstr "pikslit (pikem külg)"
 
 #: crates/bigiris/src/gui/dialogs/resize.rs:66
 msgid "Porcentagem"
@@ -1703,7 +1701,7 @@ msgstr "Maksimaalne kõrgus"
 
 #: crates/bigiris/src/gui/dialogs/resize.rs:120
 msgid "Kernel de interpolação"
-msgstr "Interpoleerimise tuum"
+msgstr "Interpolatsioonimeetod"
 
 #: crates/bigiris/src/gui/dialogs/resize.rs:134
 msgid "Modo de redimensionamento"
@@ -1730,11 +1728,11 @@ msgstr "Pööra pilte — Prisma"
 #: crates/bigimage-integrations/src/action.rs:83
 #: data/nautilus/bigiris-menu.py:129
 msgid "Girar"
-msgstr "Pööra pilti"
+msgstr "Pööra"
 
 #: crates/bigiris/src/gui/dialogs/rotate.rs:31
 msgid "90° (horário)"
-msgstr "90° (kellaosuti suunas)"
+msgstr "90° (päripäeva)"
 
 #: crates/bigiris/src/gui/dialogs/rotate.rs:31
 #: crates/bigimage-integrations/src/action.rs:260
@@ -1744,7 +1742,7 @@ msgstr "180°"
 
 #: crates/bigiris/src/gui/dialogs/rotate.rs:31
 msgid "270° (anti-horário)"
-msgstr "270° (vastassuunas kellaajale)"
+msgstr "270° (vastupäeva)"
 
 #: crates/bigiris/src/gui/dialogs/rotate.rs:34
 msgid "Rotação"
@@ -1752,19 +1750,19 @@ msgstr "Pööramine"
 
 #: crates/bigiris/src/gui/dialogs/rotate.rs:93
 msgid "Girando…"
-msgstr "Pöörlemine…"
+msgstr "Pööramine…"
 
 #: crates/bigiris/src/gui/dialogs/rotate.rs:99
 msgid "Girando"
-msgstr "Pöörlemine"
+msgstr "Pööramine"
 
 #: crates/bigiris/src/gui/dialogs/upscale.rs:26
 msgid "Aumentar resolução — Prisma"
-msgstr "Upscale — Prisma OÜ"
+msgstr "Suurenda eraldusvõimet — Prisma"
 
 #: crates/bigiris/src/gui/dialogs/upscale.rs:65
 msgid "Usar IA (Real-ESRGAN)"
-msgstr "Kasuta AI-d (Real-ESRGAN)"
+msgstr "Kasuta TI-d (Real-ESRGAN)"
 
 #: crates/bigiris/src/gui/dialogs/upscale.rs:112
 msgid "× {factor} (tamanho indisponível)"
@@ -1796,27 +1794,27 @@ msgstr "Ettevalmistamine katkestati"
 
 #: crates/bigiris/src/gui/transfers.rs:86
 msgid "A seleção é muito grande. Abra menos arquivos por vez."
-msgstr "Valik on liiga suur. Avage korraga vähem faile."
+msgstr "Valik on liiga suur. Ava korraga vähem faile."
 
 #: crates/bigiris/src/gui/transfers.rs:88
 msgid "Arraste ou copie arquivos locais de imagem."
-msgstr "Drop või kopeerida kohalikke pildifaile."
+msgstr "Lohista või kopeeri kohalikke pildifaile."
 
 #: crates/bigiris/src/gui/transfers.rs:89
 msgid "A transferência demorou demais. Tente novamente."
-msgstr "Ülekande aeg lõppes. Proovige uuesti."
+msgstr "Ülekanne võttis liiga kaua aega. Proovi uuesti."
 
 #: crates/bigiris/src/gui/transfers.rs:91
 msgid "Não foi possível iniciar o visualizador. Tente novamente."
-msgstr "Vaaturi käivitamine nurjus. Proovige uuesti."
+msgstr "Vaaturi käivitamine nurjus. Proovi uuesti."
 
 #: crates/bigiris/src/gui/transfers.rs:93
 msgid "Copie arquivos de imagem no gerenciador e tente novamente."
-msgstr "Kopeerige pildifailid oma failihaldurisse ja proovige uuesti."
+msgstr "Kopeeri pildifailid failihalduris ja proovi uuesti."
 
 #: crates/bigiris/src/gui/transfers.rs:96
 msgid "Não foi possível abrir os arquivos"
-msgstr "Faile ei saa avada"
+msgstr "Faile ei õnnestunud avada"
 
 #: crates/bigimage-integrations/src/action.rs:97
 #: data/nautilus/bigiris-menu.py:167
@@ -1831,12 +1829,12 @@ msgstr "Metaandmed"
 #: crates/bigimage-integrations/src/action.rs:105
 #: data/nautilus/bigiris-menu.py:223
 msgid "Utilidades"
-msgstr "Utiliidid"
+msgstr "Abivahendid"
 
 #: crates/bigimage-integrations/src/action.rs:111
 #: data/nautilus/bigiris-menu.py:234
 msgid "IA"
-msgstr "AI"
+msgstr "TI"
 
 #: crates/bigimage-integrations/src/action.rs:116
 #: data/nautilus/bigiris-menu.py:244
@@ -1846,7 +1844,7 @@ msgstr "PDF"
 #: crates/bigimage-integrations/src/action.rs:134
 #: data/nautilus/bigiris-menu.py:255
 msgid "Visualizar em BigIris"
-msgstr "Vaata BigIris"
+msgstr "Vaata BigIrisega"
 
 #: crates/bigimage-integrations/src/action.rs:142
 msgid "Processar esta pasta…"
@@ -1866,7 +1864,7 @@ msgstr "JPG"
 #: data/nautilus/bigiris-menu.py:137 data/nautilus/bigiris-menu.py:148
 #: data/nautilus/bigiris-menu.py:162
 msgid "Mais opções…"
-msgstr "Rohkem valikuid …"
+msgstr "Rohkem valikuid…"
 
 #: crates/bigimage-integrations/src/action.rs:203
 #: data/nautilus/bigiris-menu.py:119
@@ -1886,12 +1884,12 @@ msgstr "200%"
 #: crates/bigimage-integrations/src/action.rs:227
 #: data/nautilus/bigiris-menu.py:122
 msgid "HD (1920 px)"
-msgstr "HD (1920 pikslit)"
+msgstr "HD (1920 px)"
 
 #: crates/bigimage-integrations/src/action.rs:235
 #: data/nautilus/bigiris-menu.py:123
 msgid "4K (3840 px)"
-msgstr "4K (3840 pikslit)"
+msgstr "4K (3840 px)"
 
 #: crates/bigimage-integrations/src/action.rs:252
 #: data/nautilus/bigiris-menu.py:133
@@ -1916,7 +1914,7 @@ msgstr "Horisontaalselt"
 #: crates/bigimage-integrations/src/action.rs:301
 #: data/nautilus/bigiris-menu.py:147
 msgid "Vertical"
-msgstr "Vertikaalne"
+msgstr "Vertikaalselt"
 
 #: crates/bigimage-integrations/src/action.rs:318
 #: data/nautilus/bigiris-menu.py:157
@@ -1931,12 +1929,12 @@ msgstr "− Heledus (-10)"
 #: crates/bigimage-integrations/src/action.rs:334
 #: data/nautilus/bigiris-menu.py:159
 msgid "+ Contraste (+20)"
-msgstr "+ Kontrastsus (+20)"
+msgstr "+ Kontrast (+20)"
 
 #: crates/bigimage-integrations/src/action.rs:342
 #: data/nautilus/bigiris-menu.py:160
 msgid "Preto e branco"
-msgstr "Must ja valge"
+msgstr "Mustvalge"
 
 #: crates/bigimage-integrations/src/action.rs:350
 #: data/nautilus/bigiris-menu.py:161
@@ -1976,27 +1974,27 @@ msgstr "Discord (2048 px · JPG q80)"
 #: crates/bigimage-integrations/src/action.rs:418
 #: data/nautilus/bigiris-menu.py:195
 msgid "Otimizar PNG (compressão máxima)"
-msgstr "PNG optimeerimine (maksimaalne tihendamine)"
+msgstr "Optimeeri PNG (maksimaalne tihendus)"
 
 #: crates/bigimage-integrations/src/action.rs:430
 #: data/nautilus/bigiris-menu.py:199
 msgid "Letterbox YouTube post (1:1)"
-msgstr "YouTube'i postitus (1:1)"
+msgstr "Sobita ribadega: YouTube'i postitus (1:1)"
 
 #: crates/bigimage-integrations/src/action.rs:438
 #: data/nautilus/bigiris-menu.py:202
 msgid "Letterbox Instagram feed (4:5)"
-msgstr "Postkast Instagrami kanal (4:5)"
+msgstr "Sobita ribadega: Instagrami voog (4:5)"
 
 #: crates/bigimage-integrations/src/action.rs:446
 #: data/nautilus/bigiris-menu.py:205
 msgid "Letterbox Stories / Shorts (9:16)"
-msgstr "Postkasti lood / lühijutud (9:16)"
+msgstr "Sobita ribadega: Stories / Shorts (9:16)"
 
 #: crates/bigimage-integrations/src/action.rs:454
 #: data/nautilus/bigiris-menu.py:208
 msgid "Letterbox personalizado…"
-msgstr "Kohandatud postkast…"
+msgstr "Sobita ribadega, kohandatud…"
 
 #: crates/bigimage-integrations/src/action.rs:463
 #: data/nautilus/bigiris-menu.py:217
@@ -2011,7 +2009,7 @@ msgstr "Eemalda kõik metaandmed (puhas ümberkodeerimine)"
 #: crates/bigimage-integrations/src/action.rs:482
 #: data/nautilus/bigiris-menu.py:227
 msgid "Converter em lote (Prisma)…"
-msgstr "Partii teisendamine (Prisma)…"
+msgstr "Hulgiteisendus (Prisma)…"
 
 #: crates/bigimage-integrations/src/action.rs:490
 #: data/nautilus/bigiris-menu.py:228
@@ -2031,11 +2029,11 @@ msgstr "Eemalda taust (BiRefNet)"
 #: crates/bigimage-integrations/src/action.rs:528
 #: data/nautilus/bigiris-menu.py:248
 msgid "Converter para PDF (LibreOffice)"
-msgstr "Teisendamine PDF-iks (LibreOffice)"
+msgstr "Teisenda PDF-iks (LibreOffice)"
 
 #: data/nautilus/bigiris-menu.py:295
 msgid "Operações BigIris"
-msgstr "BigIris toimingud"
+msgstr "BigIrise toimingud"
 
 #: data/nautilus/bigiris-menu.py:374
 msgid "BigIris: Processar esta pasta…"
@@ -2043,7 +2041,7 @@ msgstr "BigIris: Töötle seda kausta…"
 
 #: data/nautilus/bigiris-menu.py:375
 msgid "Converter imagens da pasta com o Prisma"
-msgstr "Teisendage kaustapildid Prismaga"
+msgstr "Teisenda kausta pildid Prismaga"
 
 #: scripts/translations.py:20
 msgid "Visualizador de imagens"
@@ -2051,8 +2049,8 @@ msgstr "Pildivaatur"
 
 #: scripts/translations.py:21
 msgid "Visualize e converta imagens com integração ao gerenciador de arquivos"
-msgstr "Vaata ja teisendada pilte koos failihaldur integratsiooni"
+msgstr "Vaata ja teisenda pilte, failihalduriga integreeritud"
 
 #: scripts/translations.py:24
 msgid "Visualizador e conversor de imagens moderno"
-msgstr "Kaasaegne pildi vaataja ja muundur"
+msgstr "Kaasaegne pildivaatur ja -muundur"

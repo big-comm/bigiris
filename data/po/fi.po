@@ -39,19 +39,19 @@ msgstr "Kuvassa on tallentamattomia muutoksia."
 
 #: crates/bigiris/src/gui.rs:1012
 msgid "Continuar editando"
-msgstr "Jatka muokkaamista »"
+msgstr "Jatka muokkausta"
 
 #: crates/bigiris/src/gui.rs:1013
 msgid "Descartar"
-msgstr "Hylkää muutokset"
+msgstr "Hylkää"
 
 #: crates/bigiris/src/gui.rs:1083
 msgid "Imagem anterior"
-msgstr "« Edellinen kuva"
+msgstr "Edellinen kuva"
 
 #: crates/bigiris/src/gui.rs:1084
 msgid "Próxima imagem"
-msgstr "Seuraava kuva »"
+msgstr "Seuraava kuva"
 
 #: crates/bigiris/src/gui.rs:1100
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:292
@@ -68,7 +68,7 @@ msgstr "Kuvan ominaisuudet (Ctrl+I)"
 
 #: crates/bigiris/src/gui.rs:1116
 msgid "Tela cheia (F11)"
-msgstr "Koko näytön tila (F11)"
+msgstr "Koko näyttö (F11)"
 
 #: crates/bigiris/src/gui.rs:1125
 msgid "Afastar"
@@ -84,11 +84,11 @@ msgstr "Todellinen koko (100%)"
 
 #: crates/bigiris/src/gui.rs:1139 crates/bigiris/src/gui.rs:3949
 msgid "Zoom"
-msgstr "Suurenna"
+msgstr "Zoomaus"
 
 #: crates/bigiris/src/gui.rs:1143
 msgid "Aproximar"
-msgstr "Lähennä kuvaa"
+msgstr "Lähennä"
 
 #: crates/bigiris/src/gui.rs:2189
 msgid "Slideshow: pausado"
@@ -113,15 +113,15 @@ msgstr "Peruutettu"
 
 #: crates/bigiris/src/gui.rs:2418
 msgid "Falha na IA: {error}"
-msgstr "AI-virhe: {error}"
+msgstr "Tekoälyvirhe: {error}"
 
 #: crates/bigiris/src/gui.rs:2424
 msgid ""
 "Esta build não inclui IA. Recompile com `cargo build --features ai` (requer "
 "glslc, do pacote shaderc)."
 msgstr ""
-"Tämä koontiversio ei sisällä AI:ta. Käännä uudelleen komennolla `cargo build "
-"--features ai` (vaatii glslc:n shaderc-paketista)."
+"Tämä koontiversio ei sisällä tekoälyominaisuuksia. Käännä uudelleen "
+"komennolla `cargo build --features ai` (vaatii glslc:n shaderc-paketista)."
 
 #: crates/bigiris/src/gui.rs:2430
 msgid "{model} não está instalado. Instale com: sudo pacman -S {package}"
@@ -176,7 +176,7 @@ msgstr "Tallenna"
 
 #: crates/bigiris/src/gui.rs:2664
 msgid "Salvo"
-msgstr "Tiedosto on tallennettu."
+msgstr "Tallennettu"
 
 #: crates/bigiris/src/gui.rs:2743
 msgid ""
@@ -186,7 +186,7 @@ msgid ""
 msgstr ""
 "Tämä tiedosto on animoitu, siinä on useita sivuja tai sitä ei voitu "
 "tarkistaa. Kiertäminen tai peilaaminen ja tallentaminen hävittäisi muut "
-"kehykset, joten sitä ei muutettu."
+"ruudut, joten tiedostoa ei muutettu."
 
 #: crates/bigiris/src/gui.rs:2744
 msgid ""
@@ -247,7 +247,7 @@ msgstr "Tallennettu. Joitakin metatietoja ei voitu säilyttää: {list}"
 
 #: crates/bigiris/src/gui.rs:3132
 msgid "Salve ou desfaça as alterações antes de navegar"
-msgstr "Muutosten tallentaminen tai kumoaminen ennen navigointia"
+msgstr "Tallenna tai kumoa muutokset ennen siirtymistä"
 
 #: crates/bigiris/src/gui.rs:3215 crates/bigiris/src/gui.rs:4107
 #: crates/bigiris/src/gui.rs:5157 crates/bigiris/src/gui.rs:5292
@@ -269,7 +269,7 @@ msgstr "Tulosta…"
 #: crates/bigiris/src/gui.rs:3221 crates/bigiris/src/gui.rs:4119
 #: crates/bigiris/src/gui.rs:5157
 msgid "Processar uma pasta…"
-msgstr "Käsittele tämä kansio…"
+msgstr "Käsittele kansio…"
 
 #: crates/bigiris/src/gui.rs:3227
 msgid "Editar imagem"
@@ -297,7 +297,7 @@ msgstr "Pikanäppäimet"
 
 #: crates/bigiris/src/gui.rs:3238
 msgid "Sobre o BigIris"
-msgstr "Tietoja kohteesta BigIris"
+msgstr "Tietoja BigIrisistä"
 
 #: crates/bigiris/src/gui.rs:3243
 msgid "Menu principal"
@@ -364,7 +364,7 @@ msgstr "Navigointi"
 
 #: crates/bigiris/src/gui.rs:3943
 msgid "Anterior / próximo"
-msgstr "Edellinen / Seuraava"
+msgstr "Edellinen / seuraava"
 
 #: crates/bigiris/src/gui.rs:3944
 msgid "Primeiro / último"
@@ -372,11 +372,11 @@ msgstr "Ensimmäinen / viimeinen"
 
 #: crates/bigiris/src/gui.rs:3945
 msgid "Slideshow (auto-avanço)"
-msgstr "Kuvaesitys"
+msgstr "Kuvaesitys (automaattinen siirtyminen)"
 
 #: crates/bigiris/src/gui.rs:3951
 msgid "Aproximar / afastar"
-msgstr "Zoomaus sisään / ulos"
+msgstr "Lähennä / loitonna"
 
 #: crates/bigiris/src/gui.rs:3954
 msgid "Zoom contínuo"
@@ -396,15 +396,15 @@ msgstr "Teatteritila"
 
 #: crates/bigiris/src/gui.rs:3962
 msgid "Fita de miniaturas"
-msgstr "Pikkukuvat"
+msgstr "Pikkukuvanauha"
 
 #: crates/bigiris/src/gui.rs:3963
 msgid "Histograma RGB"
-msgstr "RGB- histogrammi"
+msgstr "RGB-histogrammi"
 
 #: crates/bigiris/src/gui.rs:3964
 msgid "Fixar barras visíveis"
-msgstr "Pidä säätimet näkyvissä"
+msgstr "Pidä palkit näkyvissä"
 
 #: crates/bigiris/src/gui.rs:3965
 msgid "Sair da tela cheia ou fechar"
@@ -430,7 +430,7 @@ msgstr "Rajaa…"
 
 #: crates/bigiris/src/gui.rs:3976
 msgid "Remover fundo (IA)…"
-msgstr "Poista tausta (AI)…"
+msgstr "Poista tausta (tekoäly)…"
 
 #: crates/bigiris/src/gui.rs:3977
 #: crates/bigimage-integrations/src/action.rs:517
@@ -486,7 +486,7 @@ msgid ""
 "Visualizador e conversor de imagens para Linux. Rápido, acessível por "
 "teclado e integrado ao gerenciador de arquivos."
 msgstr ""
-"Kuvakatseluohjelma ja muunnin Linuxille. Nopea, näppäimistöllä käytettävä ja "
+"Kuvakatselin ja -muunnin Linuxille. Nopea, näppäimistöllä käytettävä ja "
 "integroitu tiedostonhallintaan."
 
 #: crates/bigiris/src/gui.rs:4093
@@ -538,11 +538,11 @@ msgstr "Käsittely päättyi odottamatta. Yritä uudelleen."
 
 #: crates/bigiris/src/gui/batch_runner.rs:311
 msgid "falha inesperada no worker"
-msgstr "odottamaton virhe workerissa"
+msgstr "odottamaton virhe työprosessissa"
 
 #: crates/bigiris/src/gui/batch_runner.rs:359
 msgid "um worker terminou inesperadamente"
-msgstr "worker päättyi odottamatta"
+msgstr "työprosessi päättyi odottamatta"
 
 #: crates/bigiris/src/gui/dialogs/adjust.rs:20
 msgid "Ajustar cores — Prisma"
@@ -561,7 +561,7 @@ msgstr "Kirkkaus"
 
 #: crates/bigiris/src/gui/dialogs/adjust.rs:39
 msgid "-100 escuro · 0 neutro · +100 claro"
-msgstr "-100 tumma · 0 neutraali · +101 vaalea"
+msgstr "-100 tumma · 0 neutraali · +100 vaalea"
 
 #: crates/bigiris/src/gui/dialogs/adjust.rs:43
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:335
@@ -570,7 +570,7 @@ msgstr "Kontrasti"
 
 #: crates/bigiris/src/gui/dialogs/adjust.rs:44
 msgid "-100 plano · 0 neutro · +100 agressivo"
-msgstr "-100 tasainen · 0 neutraali · +101 vahva"
+msgstr "-100 tasainen · 0 neutraali · +100 voimakas"
 
 #: crates/bigiris/src/gui/dialogs/adjust.rs:48
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:336
@@ -579,7 +579,7 @@ msgstr "Kylläisyys"
 
 #: crates/bigiris/src/gui/dialogs/adjust.rs:49
 msgid "-100 cinza · 0 neutro · +100 vibrante"
-msgstr "-100 harmaa · 0 neutraali · +101 kirkas"
+msgstr "-100 harmaa · 0 neutraali · +100 eloisa"
 
 #: crates/bigiris/src/gui/dialogs/adjust.rs:53
 msgid "Gamma"
@@ -587,8 +587,7 @@ msgstr "Gamma"
 
 #: crates/bigiris/src/gui/dialogs/adjust.rs:55
 msgid "Abaixo de 1 clareia os meios-tons · 1 mantém · acima de 1 escurece"
-msgstr ""
-"Alle 1 vaalentaa keskisävyjä · 1 säilyttää ne · yläpuolella 1 tummentaa ne"
+msgstr "Alle 1 vaalentaa keskisävyjä · 1 säilyttää · yli 1 tummentaa"
 
 #: crates/bigiris/src/gui/dialogs/adjust.rs:64
 #: crates/bigiris/src/gui/dialogs/batch.rs:375
@@ -604,7 +603,7 @@ msgstr "Valitut tiedostot"
 
 #: crates/bigiris/src/gui/dialogs/adjust.rs:69
 msgid "Tom"
-msgstr "Tone"
+msgstr "Sävy"
 
 #: crates/bigiris/src/gui/dialogs/adjust.rs:74
 msgid "Cor"
@@ -613,12 +612,12 @@ msgstr "Väri"
 #: crates/bigiris/src/gui/dialogs/adjust.rs:77
 #: crates/bigiris/src/gui/dialogs/remove_bg.rs:138
 msgid "Saída"
-msgstr "Tuotos"
+msgstr "Tulos"
 
 #: crates/bigiris/src/gui/dialogs/adjust.rs:83
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:366
 msgid "Aplicar"
-msgstr "Toteuta"
+msgstr "Käytä"
 
 #: crates/bigiris/src/gui/dialogs/adjust.rs:190
 msgid "Ajustando…"
@@ -626,7 +625,7 @@ msgstr "Säädetään…"
 
 #: crates/bigiris/src/gui/dialogs/adjust.rs:196
 msgid "Ajustando"
-msgstr "Säätö"
+msgstr "Säädetään"
 
 #: crates/bigiris/src/gui/dialogs/animate.rs:29
 msgid "Criar GIF animado — Prisma"
@@ -642,19 +641,19 @@ msgstr "Valitse vähintään 2 kuvaa"
 
 #: crates/bigiris/src/gui/dialogs/animate.rs:48
 msgid "Informe vários arquivos de uma vez para montar a animação."
-msgstr "Valitse useita tiedostoja rakentaa animaatio."
+msgstr "Valitse useita tiedostoja kerralla animaation koostamiseksi."
 
 #: crates/bigiris/src/gui/dialogs/animate.rs:66
 msgid "Atraso por quadro (ms)"
-msgstr "Kehyksen viive (ms)"
+msgstr "Ruudun viive (ms)"
 
 #: crates/bigiris/src/gui/dialogs/animate.rs:67
 msgid "100 ≈ 10 fps · 40 ≈ 25 fps · 1000 = 1 s"
-msgstr "100 ≈ 12 fps · 40 = 25 fps"
+msgstr "100 ≈ 10 fps · 40 ≈ 25 fps · 1000 = 1 s"
 
 #: crates/bigiris/src/gui/dialogs/animate.rs:72
 msgid "Loop"
-msgstr "Toista animaatio"
+msgstr "Toisto"
 
 #: crates/bigiris/src/gui/dialogs/animate.rs:74
 msgid "Infinito (padrão)"
@@ -686,15 +685,15 @@ msgstr "korkeampi = nopeampi, hieman heikompi paletin laatu · oletus 10"
 
 #: crates/bigiris/src/gui/dialogs/animate.rs:94
 msgid "Arquivo de saída (.gif)"
-msgstr "Tulostustiedosto (.gif)"
+msgstr "Kohdetiedosto (.gif)"
 
 #: crates/bigiris/src/gui/dialogs/animate.rs:98
 msgid "Quadros"
-msgstr "Kehykset"
+msgstr "Ruudut"
 
 #: crates/bigiris/src/gui/dialogs/animate.rs:111
 msgid "Criar GIF"
-msgstr "Luo GIF-kuva"
+msgstr "Luo GIF"
 
 #: crates/bigiris/src/gui/dialogs/animate.rs:184
 msgid "Substituir arquivo existente?"
@@ -706,19 +705,19 @@ msgstr "Korvaa"
 
 #: crates/bigiris/src/gui/dialogs/animate.rs:206
 msgid "Informe o arquivo de saída."
-msgstr "Anna tulostiedosto."
+msgstr "Anna kohdetiedosto."
 
 #: crates/bigiris/src/gui/dialogs/animate.rs:215
 msgid "O arquivo de saída não pode ser uma pasta."
-msgstr "Tulostiedosto ei voi olla kansio."
+msgstr "Kohdetiedosto ei voi olla kansio."
 
 #: crates/bigiris/src/gui/dialogs/animate.rs:219
 msgid "O arquivo de saída não pode ser um dos quadros."
-msgstr "Tulostiedosto ei voi olla yksi kehyksistä."
+msgstr "Kohdetiedosto ei voi olla mikään ruuduista."
 
 #: crates/bigiris/src/gui/dialogs/animate.rs:255
 msgid "Montando GIF…"
-msgstr "Building GIF…"
+msgstr "Koostetaan GIF…"
 
 #: crates/bigiris/src/gui/dialogs/animate.rs:297
 #: crates/bigiris/src/gui/dialogs/batch.rs:102
@@ -732,11 +731,11 @@ msgstr ""
 
 #: crates/bigiris/src/gui/dialogs/animate.rs:309
 msgid "Falha"
-msgstr "Epäonnistuminen"
+msgstr "Epäonnistui"
 
 #: crates/bigiris/src/gui/dialogs/batch.rs:35
 msgid "Prisma — Lote"
-msgstr "Prisma – Erä"
+msgstr "Prisma — eräkäsittely"
 
 #: crates/bigiris/src/gui/dialogs/batch.rs:39
 msgid "Conversão em lote"
@@ -758,7 +757,7 @@ msgstr "Lisää kansio (kuvat)"
 #: crates/bigiris/src/gui/dialogs/batch.rs:66
 #: crates/bigiris/src/gui/dialogs/convert.rs:45
 msgid "Conversão"
-msgstr "Muuntaminen"
+msgstr "Muunnos"
 
 #: crates/bigiris/src/gui/dialogs/batch.rs:77
 #: crates/bigiris/src/gui/dialogs/convert.rs:52
@@ -768,7 +767,7 @@ msgstr "Kohde"
 #: crates/bigiris/src/gui/dialogs/batch.rs:84
 #: crates/bigiris/src/gui/dialogs/convert.rs:60
 msgid "Pasta de saída"
-msgstr "Tulostuskansio"
+msgstr "Kohdekansio"
 
 #: crates/bigiris/src/gui/dialogs/batch.rs:85
 #: crates/bigiris/src/gui/dialogs/batch.rs:207
@@ -780,15 +779,15 @@ msgstr "Sama kansio kuin lähdetiedosto"
 #: crates/bigiris/src/gui/dialogs/batch.rs:93
 #: crates/bigiris/src/gui/dialogs/convert.rs:69
 msgid "Usar a mesma pasta do arquivo de origem"
-msgstr "Käytä lähdetiedostokansiota"
+msgstr "Käytä lähdetiedoston kansiota"
 
 #: crates/bigiris/src/gui/dialogs/batch.rs:108
 msgid "Aguardando. Clique em Processar para iniciar."
-msgstr "Valmis. Napsauta Käsittele aloittaaksesi."
+msgstr "Odotetaan. Aloita napsauttamalla Käsittele."
 
 #: crates/bigiris/src/gui/dialogs/batch.rs:119
 msgid "Processar"
-msgstr "Prosessikuvat"
+msgstr "Käsittele"
 
 #: crates/bigiris/src/gui/dialogs/batch.rs:245
 msgid "Adicione ao menos uma imagem para processar."
@@ -807,8 +806,8 @@ msgid ""
 "Cancelado após {done}/{total} em {timing}. {ok} gravado(s), {skip} "
 "ignorado(s), {fail} falha(s)."
 msgstr ""
-"Peruttu {done}/{total} jälkeen ajassa {timing}. Kirjoitettu: {ok}, ohitettu: "
-"{skip}, epäonnistui: {fail}."
+"Peruttu, käsitelty {done}/{total} ajassa {timing}. Kirjoitettu: {ok}, "
+"ohitettu: {skip}, epäonnistui: {fail}."
 
 #: crates/bigiris/src/gui/dialogs/batch.rs:304
 msgid ""
@@ -847,7 +846,7 @@ msgstr "Ennen: {before}  ·  Jälkeen: {after}"
 
 #: crates/bigiris/src/gui/dialogs/compare.rs:69
 msgid "Arraste o divisor para comparar · Esc fecha"
-msgstr "Vedä erotinta vertaillaksesi · Esc sulkeaksesi"
+msgstr "Vedä erotinta vertaillaksesi · Esc sulkee"
 
 #: crates/bigiris/src/gui/dialogs/compare.rs:157
 msgid "Não foi possível abrir esta imagem"
@@ -862,15 +861,15 @@ msgstr "Muunna kuvia — Prisma"
 #: crates/bigimage-integrations/src/action.rs:75
 #: data/nautilus/bigiris-menu.py:100
 msgid "Converter"
-msgstr "Muunna kuvia"
+msgstr "Muunna"
 
 #: crates/bigiris/src/gui/dialogs/convert.rs:85
 msgid ""
 "Esta imagem tem transparência — JPEG perde o canal alfa. Considere PNG ou "
 "WebP."
 msgstr ""
-"Tässä kuvassa on läpinäkyvyyttä — JPEG-kuvasta puuttuu alfakanava. Harkitse "
-"PNG- tai WebP-kuvaa."
+"Tässä kuvassa on läpinäkyvyyttä — JPEG menettää alfakanavan. Harkitse PNG- "
+"tai WebP-muotoa."
 
 #: crates/bigiris/src/gui/dialogs/convert.rs:106
 msgid ""
@@ -887,7 +886,7 @@ msgstr "Muunnetaan…"
 
 #: crates/bigiris/src/gui/dialogs/convert.rs:201
 msgid "Convertendo"
-msgstr "Muuntaminen"
+msgstr "Muunnetaan"
 
 #: crates/bigiris/src/gui/dialogs/crop.rs:284
 #: crates/bigiris/src/gui/viewer/crop.rs:658
@@ -900,14 +899,14 @@ msgstr ""
 
 #: crates/bigiris/src/gui/dialogs/crop.rs:309
 msgid "Recortar — Prisma"
-msgstr "Crop — Prisma"
+msgstr "Rajaa — Prisma"
 
 #: crates/bigiris/src/gui/dialogs/crop.rs:321
 #: crates/bigiris/src/gui/dialogs/crop.rs:389
 #: crates/bigiris/src/gui/viewer/crop.rs:375
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:326
 msgid "Recortar"
-msgstr "Rajaa kuva"
+msgstr "Rajaa"
 
 #: crates/bigiris/src/gui/dialogs/crop.rs:348
 #: crates/bigiris/src/gui/dialogs/extent.rs:96
@@ -932,7 +931,7 @@ msgstr "Y (px)"
 #: crates/bigiris/src/gui/dialogs/crop.rs:363
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:347
 msgid "Largura (px)"
-msgstr "Kuvan leveys (px)"
+msgstr "Leveys (px)"
 
 #: crates/bigiris/src/gui/dialogs/crop.rs:367
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:348
@@ -941,7 +940,7 @@ msgstr "Korkeus (px)"
 
 #: crates/bigiris/src/gui/dialogs/crop.rs:388
 msgid "Centro 50%"
-msgstr "Keskellä oleva 50%"
+msgstr "Keskitetty 50%"
 
 #: crates/bigiris/src/gui/dialogs/crop.rs:449
 msgid "Recortando…"
@@ -949,7 +948,7 @@ msgstr "Rajataan…"
 
 #: crates/bigiris/src/gui/dialogs/crop.rs:455
 msgid "Recortando"
-msgstr "Rajaus"
+msgstr "Rajataan"
 
 #: crates/bigiris/src/gui/viewer/crop.rs:361
 msgid "Livre"
@@ -987,8 +986,8 @@ msgid ""
 "Aumentar resolução usa Lanczos3. Para IA (Real-ESRGAN): sudo pacman -S "
 "{package}"
 msgstr ""
-"Skaalaus käyttää Lanczos3:a. AI-skaalaukseen (Real-ESRGAN): sudo pacman -S "
-"{package}"
+"Suurenna tarkkuutta käyttää Lanczos3:a. Tekoälyä varten (Real-ESRGAN): sudo "
+"pacman -S {package}"
 
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:275
 #: crates/bigiris/src/gui/dialogs/upscale.rs:246
@@ -1009,15 +1008,15 @@ msgstr "Näyttää kuvan ilman muokkauksia (pidä \\ painettuna)"
 
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:307
 msgid "Transformar"
-msgstr "Muunna"
+msgstr "Muunnokset"
 
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:313
 msgid "Espelhar horizontal"
-msgstr "Käännä vaakasuunnassa"
+msgstr "Peilaa vaakasuunnassa"
 
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:314
 msgid "Espelhar vertical"
-msgstr "Käännä pystysuunnassa"
+msgstr "Peilaa pystysuunnassa"
 
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:319
 msgid "Endireitar"
@@ -1029,7 +1028,7 @@ msgstr "Kiertää kuvaa ja rajaa tyhjät reunat pois horisontin suoristamiseksi"
 
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:327
 msgid "Recortar na própria imagem (Ctrl+R)"
-msgstr "Rajaa kuvassa (Ctrl+R)"
+msgstr "Rajaa suoraan kuvaan (Ctrl+R)"
 
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:333
 msgid "Ajustes"
@@ -1057,7 +1056,7 @@ msgstr "Säilytä kuvasuhde"
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:364
 #: crates/bigiris/src/gui/dialogs/resize.rs:48
 msgid "Escala (%)"
-msgstr "Mittakaava (%)"
+msgstr "Skaalaus (%)"
 
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:376
 msgid "Ferramentas"
@@ -1069,7 +1068,7 @@ msgstr "Poista tausta (tekoäly)"
 
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:379
 msgid "Remover ruído (IA)"
-msgstr "Poista kohina (AI)"
+msgstr "Poista kohina (tekoäly)"
 
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:383
 #: crates/bigiris/src/gui/dialogs/upscale.rs:97
@@ -1091,7 +1090,7 @@ msgstr "Tallenna nimellä…"
 
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:424
 msgid "Qualidade ao salvar como"
-msgstr "Laatu Tallenna nimellä -toiminnossa"
+msgstr "Laatu (Tallenna nimellä)"
 
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:978
 msgid "Recorta o objeto principal com BiRefNet-lite, no seu computador"
@@ -1103,11 +1102,11 @@ msgstr "Poistaa kohinan ja pakkausartefaktit SCUNet-mallilla, tietokoneellasi"
 
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:989
 msgid "Real-ESRGAN (IA), no seu computador"
-msgstr "Real-ESRGAN (AI), tietokoneellasi"
+msgstr "Real-ESRGAN (tekoäly), tietokoneellasi"
 
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:991
 msgid "Lanczos3 (sem IA)"
-msgstr "Lanczos3 (ilman AI:ta)"
+msgstr "Lanczos3 (ilman tekoälyä)"
 
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:1507
 #: crates/bigiris/src/gui/dialogs/remove_bg.rs:224
@@ -1130,7 +1129,7 @@ msgstr "Poistetaan kohinaa…"
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:1619
 #: crates/bigiris/src/gui/dialogs/upscale.rs:197
 msgid "Aumentando…"
-msgstr "Skaalataan ylös…"
+msgstr "Suurennetaan…"
 
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:1649
 msgid "{name}-editada"
@@ -1166,11 +1165,11 @@ msgstr "Instagram-syöte (4:5)"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:14
 msgid "Stories / Shorts (9:16)"
-msgstr "Tarinoita / lyhyitä (9:16)"
+msgstr "Stories / Shorts (9:16)"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:15
 msgid "Widescreen (16:9)"
-msgstr "Laajakuvanäyttö (16:9)"
+msgstr "Laajakuva (16:9)"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:16
 msgid "Personalizado…"
@@ -1182,7 +1181,7 @@ msgstr "Pehmeä musta (#0d0e12)"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:23
 msgid "Preto puro (#000000)"
-msgstr "Puhdas musta (#000100)"
+msgstr "Puhdas musta (#000000)"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:24
 msgid "Branco (#ffffff)"
@@ -1210,11 +1209,11 @@ msgstr "Alareuna"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:49
 msgid "Letterbox — Prisma"
-msgstr "Kirjelaatikko — Prisma"
+msgstr "Sovita palkeilla — Prisma"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:62
 msgid "Letterbox"
-msgstr "Letterbox"
+msgstr "Sovita palkeilla"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:63
 msgid "Prisma · sem corte"
@@ -1226,10 +1225,9 @@ msgid ""
 "YouTube, feed do Instagram, Stories…) sem cortar nenhum pixel. A imagem "
 "original é centralizada e o resto é preenchido com a cor escolhida."
 msgstr ""
-"Laajentamalla kuvan ympärillä olevaa työpintaa, jotta se sopii kiinteään "
-"muotoon (YouTube-julkaisut, Instagram-syötteet, tarinat jne.) rajaamatta "
-"pikseleitä, alkuperäinen kuva keskitetään ja jäljelle jäävä alue täytetään "
-"valitulla värillä."
+"Laajentaa kuvan pohjaa sen ympäriltä, jotta kuva sopii kiinteään muotoon "
+"(YouTube-julkaisu, Instagram-syöte, Stories…) rajaamatta yhtään pikseliä. "
+"Alkuperäinen kuva keskitetään ja loput täytetään valitulla värillä."
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:104
 msgid "Proporção alvo"
@@ -1258,7 +1256,7 @@ msgstr "Kuvan sijainti"
 #: crates/bigiris/src/gui/dialogs/extent.rs:144
 #: crates/bigiris/src/gui/dialogs/upscale.rs:103
 msgid "Destino previsto"
-msgstr "Ennakoitu määränpää"
+msgstr "Arvioitu tulos"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:171
 msgid "Estender"
@@ -1274,18 +1272,18 @@ msgstr "Laajennetaan…"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:332
 msgid "Estendendo"
-msgstr "Laajentaminen"
+msgstr "Laajennetaan"
 
 #: crates/bigiris/src/gui/dialogs/flip.rs:20
 msgid "Espelhar imagens — Prisma"
-msgstr "Käännä kuvia — Prisma"
+msgstr "Peilaa kuvia — Prisma"
 
 #: crates/bigiris/src/gui/dialogs/flip.rs:24
 #: crates/bigiris/src/gui/dialogs/flip.rs:47
 #: crates/bigimage-integrations/src/action.rs:87
 #: data/nautilus/bigiris-menu.py:142
 msgid "Espelhar"
-msgstr "Käännä kuva"
+msgstr "Peilaa"
 
 #: crates/bigiris/src/gui/dialogs/flip.rs:26
 msgid "Horizontal (esquerda ↔ direita)"
@@ -1293,7 +1291,7 @@ msgstr "Vaakasuora (vasen ↔ oikea)"
 
 #: crates/bigiris/src/gui/dialogs/flip.rs:26
 msgid "Vertical (cima ↔ baixo)"
-msgstr "Pystysuora (ylä ↔ ala)"
+msgstr "Pystysuora (ylös ↔ alas)"
 
 #: crates/bigiris/src/gui/dialogs/flip.rs:29
 msgid "Eixo"
@@ -1301,11 +1299,11 @@ msgstr "Akseli"
 
 #: crates/bigiris/src/gui/dialogs/flip.rs:87
 msgid "Espelhando…"
-msgstr "Käännetään…"
+msgstr "Peilataan…"
 
 #: crates/bigiris/src/gui/dialogs/flip.rs:93
 msgid "Espelhando"
-msgstr "Kääntäminen"
+msgstr "Peilataan"
 
 #: crates/bigiris/src/gui/dialogs/mod.rs:64
 #: crates/bigimage-integrations/src/action.rs:151
@@ -1345,7 +1343,7 @@ msgstr "GIF"
 
 #: crates/bigiris/src/gui/dialogs/mod.rs:71
 msgid "ICO (até 256 × 256)"
-msgstr "ICO (enintään 256 × 240)"
+msgstr "ICO (enintään 256 × 256)"
 
 #: crates/bigiris/src/gui/dialogs/mod.rs:72
 msgid "PNM (Netpbm)"
@@ -1390,7 +1388,7 @@ msgstr "Laatu (JPEG/WebP/AVIF)"
 
 #: crates/bigiris/src/gui/dialogs/mod.rs:115
 msgid "1 menor qualidade · 85 equilíbrio · 100 maior qualidade"
-msgstr "1 alempi laatu · 85 tasapainoinen · 100 korkeampi laatu"
+msgstr "1 heikoin laatu · 85 tasapaino · 100 paras laatu"
 
 #: crates/bigiris/src/gui/dialogs/mod.rs:119
 msgid "Otimizar tamanho"
@@ -1410,7 +1408,7 @@ msgstr "Enkooderin optimointi"
 
 #: crates/bigiris/src/gui/dialogs/mod.rs:167
 msgid "Pular se já existir"
-msgstr "Ohita olemassa olevat tiedostot"
+msgstr "Ohita, jos on jo olemassa"
 
 #: crates/bigiris/src/gui/dialogs/mod.rs:168
 msgid "Sobrescrever o arquivo"
@@ -1418,7 +1416,7 @@ msgstr "Korvaa tiedosto"
 
 #: crates/bigiris/src/gui/dialogs/mod.rs:169
 msgid "Incrementar (_1, _2, …)"
-msgstr "Lisää liite (_1, _2, …)"
+msgstr "Lisää numero (_1, _2, …)"
 
 #: crates/bigiris/src/gui/dialogs/mod.rs:190
 #: crates/bigiris/src/gui/dialogs/mod.rs:205
@@ -1431,7 +1429,7 @@ msgstr "Säilytä alkuperäinen muoto"
 
 #: crates/bigiris/src/gui/dialogs/mod.rs:223
 msgid "Se o arquivo de saída existir"
-msgstr "Jos tulostustiedosto on olemassa"
+msgstr "Jos kohdetiedosto on olemassa"
 
 #: crates/bigiris/src/gui/dialogs/mod.rs:283
 msgid "{first} e mais {count}"
@@ -1439,7 +1437,7 @@ msgstr "{first} ja {count} muuta"
 
 #: crates/bigiris/src/gui/dialogs/mod.rs:298
 msgid "Escolher pasta de saída"
-msgstr "Valitse tulostuskansio"
+msgstr "Valitse kohdekansio"
 
 #: crates/bigiris/src/gui/dialogs/properties.rs:60
 msgid "Não foi possível ler as informações do arquivo"
@@ -1542,7 +1540,7 @@ msgstr "Kuvaa ei voitu lukea: {error}"
 
 #: crates/bigiris/src/gui/dialogs/remove_bg.rs:39
 msgid "Não foi possível gravar o resultado: {error}"
-msgstr "Tulosta ei voitu kirjoittaa: {error}"
+msgstr "Tuloksen kirjoittaminen epäonnistui: {error}"
 
 #: crates/bigiris/src/gui/dialogs/remove_bg.rs:73
 msgid "Remover fundo — Prisma"
@@ -1562,11 +1560,11 @@ msgstr "Prisma · BiRefNet-lite"
 #: crates/bigiris/src/gui/dialogs/remove_bg.rs:96
 #: crates/bigiris/src/gui/previews.rs:223
 msgid "Nenhuma imagem selecionada"
-msgstr "Kuvaa ei valittu"
+msgstr "Ei valittuja kuvia"
 
 #: crates/bigiris/src/gui/dialogs/remove_bg.rs:97
 msgid "Informe um ou mais arquivos ao abrir o diálogo."
-msgstr "Valitse yksi tai useampi tiedosto, kun avaat valintaikkunan."
+msgstr "Anna yksi tai useampi tiedosto valintaikkunaa avattaessa."
 
 #: crates/bigiris/src/gui/dialogs/remove_bg.rs:127
 msgid "Modelo"
@@ -1576,8 +1574,7 @@ msgstr "Malli"
 msgid ""
 "«origem»_nobg.png · PNG com alfa, sem sobrescrever (_1, _2… se já existir)"
 msgstr ""
-"”lähde”_nobg.png · PNG alfakanavalla, ei korvausta (_1, _2… jos se on jo "
-"olemassa)"
+"«lähde»_nobg.png · PNG alfakanavalla, ei korvaa (_1, _2…, jos on jo olemassa)"
 
 #: crates/bigiris/src/gui/dialogs/remove_bg.rs:147
 msgid "Remover fundo com IA local"
@@ -1602,11 +1599,11 @@ msgstr "Tallennetut kuvat"
 
 #: crates/bigiris/src/gui/dialogs/remove_bg.rs:376
 msgid "Falhas"
-msgstr "Epäonnistumiset"
+msgstr "Epäonnistuneet"
 
 #: crates/bigiris/src/gui/dialogs/remove_bg.rs:378
 msgid "Com erros"
-msgstr "Virheiden kanssa"
+msgstr "Virheitä"
 
 #: crates/bigiris/src/gui/dialogs/remove_bg.rs:402
 msgid "Processando {current}/{total} — {file}"
@@ -1623,7 +1620,7 @@ msgstr "BiRefNet-lite (MIT) · toimii ilman verkkoyhteyttä tietokoneellasi"
 #: crates/bigiris/src/gui/dialogs/remove_bg.rs:538
 #: crates/bigiris/src/gui/dialogs/upscale.rs:142
 msgid "Aumentar"
-msgstr "Upscale-kuva"
+msgstr "Suurenna"
 
 #: crates/bigiris/src/gui/dialogs/resize.rs:8
 msgid "Lanczos3 (padrão)"
@@ -1643,7 +1640,7 @@ msgstr "Bilinear"
 
 #: crates/bigiris/src/gui/dialogs/resize.rs:12
 msgid "Nearest (sem anti-aliasing)"
-msgstr "Lähin (ei peilaus)"
+msgstr "Lähin naapuri (ei reunanpehmennystä)"
 
 #: crates/bigiris/src/gui/dialogs/resize.rs:29
 msgid "Redimensionar imagens — Prisma"
@@ -1655,12 +1652,12 @@ msgstr "Muuta kuvien kokoa — Prisma"
 #: crates/bigimage-integrations/src/action.rs:79
 #: data/nautilus/bigiris-menu.py:115
 msgid "Redimensionar"
-msgstr "Muuta kuvien kokoa"
+msgstr "Muuta kokoa"
 
 #: crates/bigiris/src/gui/dialogs/resize.rs:47
 #: crates/bigiris/src/gui/dialogs/resize.rs:61
 msgid "Aresta máxima"
-msgstr "Max reuna"
+msgstr "Pisin sivu"
 
 #: crates/bigiris/src/gui/dialogs/resize.rs:49
 msgid "Dimensão exata (WxH)"
@@ -1668,7 +1665,7 @@ msgstr "Tarkka koko (WxH)"
 
 #: crates/bigiris/src/gui/dialogs/resize.rs:50
 msgid "Encaixar em (WxH)"
-msgstr "Sopii sisälle (WxH)"
+msgstr "Sovita kokoon (WxH)"
 
 #: crates/bigiris/src/gui/dialogs/resize.rs:54
 msgid "Modo"
@@ -1676,11 +1673,11 @@ msgstr "Tila"
 
 #: crates/bigiris/src/gui/dialogs/resize.rs:62
 msgid "pixels (lado maior)"
-msgstr "1920 x 1080 pikseliä (pituin reuna)"
+msgstr "pikseliä (pidempi sivu)"
 
 #: crates/bigiris/src/gui/dialogs/resize.rs:66
 msgid "Porcentagem"
-msgstr "Prosenttiosuus"
+msgstr "Prosentti"
 
 #: crates/bigiris/src/gui/dialogs/resize.rs:67
 msgid "100 = tamanho original"
@@ -1700,11 +1697,11 @@ msgstr "Suurin leveys"
 
 #: crates/bigiris/src/gui/dialogs/resize.rs:81
 msgid "Altura máxima"
-msgstr "Max. korkeus 120 cm"
+msgstr "Suurin korkeus"
 
 #: crates/bigiris/src/gui/dialogs/resize.rs:120
 msgid "Kernel de interpolação"
-msgstr "Interpolointiydin"
+msgstr "Interpolointimenetelmä"
 
 #: crates/bigiris/src/gui/dialogs/resize.rs:134
 msgid "Modo de redimensionamento"
@@ -1712,19 +1709,19 @@ msgstr "Koon muutostila"
 
 #: crates/bigiris/src/gui/dialogs/resize.rs:137
 msgid "Opções"
-msgstr "Vaihtoehdot"
+msgstr "Asetukset"
 
 #: crates/bigiris/src/gui/dialogs/resize.rs:292
 msgid "Redimensionando…"
-msgstr "Koon muuttaminen…"
+msgstr "Muutetaan kokoa…"
 
 #: crates/bigiris/src/gui/dialogs/resize.rs:298
 msgid "Redimensionando"
-msgstr "Koon muuttaminen"
+msgstr "Muutetaan kokoa"
 
 #: crates/bigiris/src/gui/dialogs/rotate.rs:25
 msgid "Girar imagens — Prisma"
-msgstr "Pyöritä kuvia — Prisma"
+msgstr "Kierrä kuvia — Prisma"
 
 #: crates/bigiris/src/gui/dialogs/rotate.rs:29
 #: crates/bigiris/src/gui/dialogs/rotate.rs:52
@@ -1753,19 +1750,19 @@ msgstr "Kierto"
 
 #: crates/bigiris/src/gui/dialogs/rotate.rs:93
 msgid "Girando…"
-msgstr "Pyörii…"
+msgstr "Kierretään…"
 
 #: crates/bigiris/src/gui/dialogs/rotate.rs:99
 msgid "Girando"
-msgstr "Pyörivä"
+msgstr "Kierretään"
 
 #: crates/bigiris/src/gui/dialogs/upscale.rs:26
 msgid "Aumentar resolução — Prisma"
-msgstr "Ylellisyyttä — Prisma"
+msgstr "Suurenna tarkkuutta — Prisma"
 
 #: crates/bigiris/src/gui/dialogs/upscale.rs:65
 msgid "Usar IA (Real-ESRGAN)"
-msgstr "Käytä AI:ta (Real-ESRGAN)"
+msgstr "Käytä tekoälyä (Real-ESRGAN)"
 
 #: crates/bigiris/src/gui/dialogs/upscale.rs:112
 msgid "× {factor} (tamanho indisponível)"
@@ -1773,7 +1770,7 @@ msgstr "× {factor} (koko ei saatavilla)"
 
 #: crates/bigiris/src/gui/dialogs/upscale.rs:231
 msgid "Aumentando"
-msgstr "Suurentaminen"
+msgstr "Suurennetaan"
 
 #: crates/bigiris/src/gui/dialogs/upscale.rs:247
 msgid "Detalhes mais nítidos que Lanczos3; roda no seu computador"
@@ -1805,7 +1802,7 @@ msgstr "Pudota tai kopioi paikallisia kuvatiedostoja."
 
 #: crates/bigiris/src/gui/transfers.rs:89
 msgid "A transferência demorou demais. Tente novamente."
-msgstr "Siirron aikakatkaisu. Yritä uudelleen."
+msgstr "Siirto kesti liian kauan. Yritä uudelleen."
 
 #: crates/bigiris/src/gui/transfers.rs:91
 msgid "Não foi possível iniciar o visualizador. Tente novamente."
@@ -1813,7 +1810,7 @@ msgstr "Katseluohjelmaa ei voitu käynnistää. Yritä uudelleen."
 
 #: crates/bigiris/src/gui/transfers.rs:93
 msgid "Copie arquivos de imagem no gerenciador e tente novamente."
-msgstr "Kopioi kuvatiedostot tiedostonhallintaan ja yritä uudelleen."
+msgstr "Kopioi kuvatiedostot tiedostonhallinnassa ja yritä uudelleen."
 
 #: crates/bigiris/src/gui/transfers.rs:96
 msgid "Não foi possível abrir os arquivos"
@@ -1822,12 +1819,12 @@ msgstr "Tiedostoja ei voitu avata"
 #: crates/bigimage-integrations/src/action.rs:97
 #: data/nautilus/bigiris-menu.py:167
 msgid "Para web"
-msgstr "Verkkoa varten"
+msgstr "Verkkoon"
 
 #: crates/bigimage-integrations/src/action.rs:101
 #: data/nautilus/bigiris-menu.py:213
 msgid "Metadados"
-msgstr "Metadata"
+msgstr "Metatiedot"
 
 #: crates/bigimage-integrations/src/action.rs:105
 #: data/nautilus/bigiris-menu.py:223
@@ -1837,7 +1834,7 @@ msgstr "Apuohjelmat"
 #: crates/bigimage-integrations/src/action.rs:111
 #: data/nautilus/bigiris-menu.py:234
 msgid "IA"
-msgstr "AI"
+msgstr "Tekoäly"
 
 #: crates/bigimage-integrations/src/action.rs:116
 #: data/nautilus/bigiris-menu.py:244
@@ -1887,12 +1884,12 @@ msgstr "200%"
 #: crates/bigimage-integrations/src/action.rs:227
 #: data/nautilus/bigiris-menu.py:122
 msgid "HD (1920 px)"
-msgstr "HD (1920 pikseliä)"
+msgstr "HD (1920 px)"
 
 #: crates/bigimage-integrations/src/action.rs:235
 #: data/nautilus/bigiris-menu.py:123
 msgid "4K (3840 px)"
-msgstr "4K (3840 pikseliä)"
+msgstr "4K (3840 px)"
 
 #: crates/bigimage-integrations/src/action.rs:252
 #: data/nautilus/bigiris-menu.py:133
@@ -1922,12 +1919,12 @@ msgstr "Pystysuora"
 #: crates/bigimage-integrations/src/action.rs:318
 #: data/nautilus/bigiris-menu.py:157
 msgid "+ Brilho (+10)"
-msgstr "+ kirkkaus (+10)"
+msgstr "+ Kirkkaus (+10)"
 
 #: crates/bigimage-integrations/src/action.rs:326
 #: data/nautilus/bigiris-menu.py:158
 msgid "− Brilho (-10)"
-msgstr "− Kirkkauden säätö (-10)"
+msgstr "− Kirkkaus (-10)"
 
 #: crates/bigimage-integrations/src/action.rs:334
 #: data/nautilus/bigiris-menu.py:159
@@ -1937,12 +1934,12 @@ msgstr "+ Kontrasti (+20)"
 #: crates/bigimage-integrations/src/action.rs:342
 #: data/nautilus/bigiris-menu.py:160
 msgid "Preto e branco"
-msgstr "Musta ja valkoinen"
+msgstr "Mustavalkoinen"
 
 #: crates/bigimage-integrations/src/action.rs:350
 #: data/nautilus/bigiris-menu.py:161
 msgid "Cores vivas (+40)"
-msgstr "Elävät värit (+40)"
+msgstr "Eloisat värit (+40)"
 
 #: crates/bigimage-integrations/src/action.rs:370
 #: data/nautilus/bigiris-menu.py:171
@@ -1982,22 +1979,22 @@ msgstr "Optimoi PNG (suurin pakkaus)"
 #: crates/bigimage-integrations/src/action.rs:430
 #: data/nautilus/bigiris-menu.py:199
 msgid "Letterbox YouTube post (1:1)"
-msgstr "Kirjelaatikko YouTube-julkaisu (1:1)"
+msgstr "Sovita palkeilla: YouTube-julkaisu (1:1)"
 
 #: crates/bigimage-integrations/src/action.rs:438
 #: data/nautilus/bigiris-menu.py:202
 msgid "Letterbox Instagram feed (4:5)"
-msgstr "Kirjelaatikko Instagram-syöte (4:5)"
+msgstr "Sovita palkeilla: Instagram-syöte (4:5)"
 
 #: crates/bigimage-integrations/src/action.rs:446
 #: data/nautilus/bigiris-menu.py:205
 msgid "Letterbox Stories / Shorts (9:16)"
-msgstr "Kirjelaatikkotarinoita / lyhyitä tarinoita (9:16)"
+msgstr "Sovita palkeilla: Stories / Shorts (9:16)"
 
 #: crates/bigimage-integrations/src/action.rs:454
 #: data/nautilus/bigiris-menu.py:208
 msgid "Letterbox personalizado…"
-msgstr "Mukautettu postilaatikko…"
+msgstr "Sovita palkeilla, mukautettu…"
 
 #: crates/bigimage-integrations/src/action.rs:463
 #: data/nautilus/bigiris-menu.py:217
@@ -2044,16 +2041,16 @@ msgstr "BigIris: Käsittele tämä kansio…"
 
 #: data/nautilus/bigiris-menu.py:375
 msgid "Converter imagens da pasta com o Prisma"
-msgstr "Muunna kansiokuvia Prismalla"
+msgstr "Muunna kansion kuvat Prismalla"
 
 #: scripts/translations.py:20
 msgid "Visualizador de imagens"
-msgstr "Kuvakatseluohjelma"
+msgstr "Kuvakatselin"
 
 #: scripts/translations.py:21
 msgid "Visualize e converta imagens com integração ao gerenciador de arquivos"
-msgstr "Tarkastele ja muunna kuvia tiedostonhallinnan integroinnilla"
+msgstr "Katsele ja muunna kuvia, integroitu tiedostonhallintaan"
 
 #: scripts/translations.py:24
 msgid "Visualizador e conversor de imagens moderno"
-msgstr "Moderni kuvakatseluohjelma ja muunnin"
+msgstr "Moderni kuvakatselin ja -muunnin"

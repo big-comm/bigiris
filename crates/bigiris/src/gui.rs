@@ -100,6 +100,15 @@ fn translated_strings(source: &[&str]) -> gtk::StringList {
     gtk::StringList::new(&translated.iter().map(String::as_str).collect::<Vec<_>>())
 }
 
+/// Accessible name for a drop-down without a visible label. GTK names a
+/// combo box after its selected item and ignores its `label` property, so
+/// the name comes from this hidden label, which the caller places beside it.
+fn name_drop_down(drop_down: &gtk::DropDown, name: &str) -> gtk::Label {
+    let label = gtk::Label::builder().label(name).visible(false).build();
+    drop_down.update_relation(&[gtk::accessible::Relation::LabelledBy(&[label.upcast_ref()])]);
+    label
+}
+
 /// Start the viewer event loop. Returns the exit code GTK produced.
 pub fn run_viewer(files: Vec<PathBuf>) -> i32 {
     // Um clique no gerenciador de arquivos entrega um caminho só. Sem isto,
@@ -1628,11 +1637,13 @@ fn refresh_film_strip_active(state: &Rc<RefCell<ViewerState>>) {
         s.film_strip_active = Some(s.idx);
         let active = s.idx.checked_sub(s.film_strip_start);
         for (i, btn) in s.film_strip_buttons.iter().enumerate() {
-            if Some(i) == active {
+            let selected = Some(i) == active;
+            if selected {
                 btn.add_css_class("active-thumb");
             } else {
                 btn.remove_css_class("active-thumb");
             }
+            btn.update_state(&[gtk::accessible::State::Selected(Some(selected))]);
         }
     }
     if !centre_film_strip(state) {
@@ -2071,13 +2082,20 @@ fn handle_key(
                 win.set_fullscreened(!win.is_fullscreen());
                 glib::Propagation::Stop
             }
+            Key::Left | Key::Right | Key::Up | Key::Down => {
+                let dirs = match key {
+                    Key::Left => (-1.0, 0.0),
+                    Key::Right => (1.0, 0.0),
+                    Key::Up => (0.0, -1.0),
+                    _ => (0.0, 1.0),
+                };
+                let resize = _modifier.contains(gdk::ModifierType::SHIFT_MASK);
+                viewer::crop::nudge_selection(state, dirs, resize);
+                glib::Propagation::Stop
+            }
             // Navigation, zoom and view toggles would move the picture
             // under the selection; keep Tab and the bar's own keys working.
-            Key::Left
-            | Key::Right
-            | Key::Up
-            | Key::Down
-            | Key::Page_Up
+            Key::Page_Up
             | Key::Page_Down
             | Key::Home
             | Key::End
@@ -4157,6 +4175,11 @@ fn present_shortcuts_dialog(parent: &adw::ApplicationWindow) {
                 ("R", gettext("Girar à direita")),
                 ("<Shift>R", gettext("Girar à esquerda")),
                 ("<ctrl>R", gettext("Recortar…")),
+                ("Left Right Up Down", gettext("Recorte: mover a seleção")),
+                (
+                    "<shift>Left <shift>Right <shift>Up <shift>Down",
+                    gettext("Recorte: redimensionar a seleção"),
+                ),
                 ("<ctrl>B", gettext("Remover fundo (IA)…")),
                 ("<ctrl>U", gettext("Aumentar resolução…")),
                 ("<ctrl>S", gettext("Salvar alterações")),

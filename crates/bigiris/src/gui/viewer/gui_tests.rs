@@ -595,6 +595,24 @@ fn viewer_inline_crop() {
     assert!(wheel_is_consumed(&window));
     assert!(matches!(state.borrow().zoom, ZoomState::Fit), "zoomed while cropping");
 
+    // Keyboard selection: Shift+arrows move the bottom-right corner and
+    // arrows move the selection, one step being 1 % of 400 px.
+    let selection = || {
+        super::crop::to_pixels(state.borrow().crop.as_ref().map(|c| c.rect()).unwrap(), (400, 300))
+    };
+    assert_eq!(selection(), (0, 0, 400, 300), "Right moved a whole-image selection");
+    handle_key(&state, gdk::Key::Left, gdk::ModifierType::SHIFT_MASK);
+    handle_key(&state, gdk::Key::Up, gdk::ModifierType::SHIFT_MASK);
+    assert_eq!(selection(), (0, 0, 396, 296));
+    handle_key(&state, gdk::Key::Right, gdk::ModifierType::empty());
+    handle_key(&state, gdk::Key::Down, gdk::ModifierType::empty());
+    assert_eq!(selection(), (4, 4, 396, 296));
+    handle_key(&state, gdk::Key::Down, gdk::ModifierType::empty());
+    assert_eq!(selection(), (4, 4, 396, 296), "moved out of the image");
+    handle_key(&state, gdk::Key::Right, gdk::ModifierType::SHIFT_MASK);
+    assert_eq!(selection(), (4, 4, 396, 296), "grew out of the image");
+    crate::gui::lifecycle_tests::capture_window(&window, "crop-keyboard");
+
     // Esc cancels without touching the image (and does not close the window).
     handle_key(&state, gdk::Key::Escape, gdk::ModifierType::empty());
     settle(&context, 50);

@@ -212,10 +212,12 @@ fn slider(title: &str, min: f64, max: f64, step: f64, neutral: f64) -> (gtk::Box
     let value = gtk::Label::builder().xalign(1.0).width_chars(6).build();
     value.add_css_class("numeric");
     value.add_css_class("dim-label");
+    let reset_label = fill(&gettext("Restaurar {setting}"), &[("setting", title)]);
     let reset = gtk::Button::from_icon_name("edit-undo-symbolic");
     reset.add_css_class("flat");
     reset.add_css_class("circular");
-    reset.set_tooltip_text(Some(&gettext("Restaurar")));
+    reset.set_tooltip_text(Some(&reset_label));
+    reset.update_property(&[gtk::accessible::Property::Label(&reset_label)]);
     reset.set_sensitive(false);
     let head = gtk::Box::new(gtk::Orientation::Horizontal, 6);
     head.append(&name);
@@ -303,6 +305,7 @@ pub(in crate::gui) fn build() -> EditPanelUi {
     close.add_css_class("flat");
     close.add_css_class("circular");
     close.set_tooltip_text(Some(&gettext("Fechar (Esc)")));
+    close.update_property(&[gtk::accessible::Property::Label(&gettext("Fechar"))]);
     close.set_action_name(Some("win.edit-panel"));
     let head = gtk::Box::new(gtk::Orientation::Horizontal, 6);
     head.append(&title);
@@ -360,6 +363,7 @@ pub(in crate::gui) fn build() -> EditPanelUi {
         .tooltip_text(gettext("Manter proporção"))
         .build();
     lock.add_css_class("flat");
+    lock.update_property(&[gtk::accessible::Property::Label(&gettext("Manter proporção"))]);
     let dims = gtk::Box::new(gtk::Orientation::Horizontal, 4);
     dims.append(&width);
     dims.append(&lock);
@@ -394,6 +398,7 @@ pub(in crate::gui) fn build() -> EditPanelUi {
     let upscale_row = gtk::Box::new(gtk::Orientation::Horizontal, 6);
     upscale_row.append(&upscale);
     upscale_row.append(&factor);
+    upscale_row.append(&name_drop_down(&factor, &gettext("Fator")));
     tools.append(&upscale_row);
     let ai_note = gtk::Label::builder().wrap(true).xalign(0.0).visible(false).build();
     ai_note.add_css_class("dim-label");
@@ -402,6 +407,7 @@ pub(in crate::gui) fn build() -> EditPanelUi {
     let tool_progress = gtk::ProgressBar::builder().show_text(true).hexpand(true).build();
     let tool_cancel = gtk::Button::from_icon_name("process-stop-symbolic");
     tool_cancel.set_tooltip_text(Some(&gettext("Cancelar")));
+    tool_cancel.update_property(&[gtk::accessible::Property::Label(&gettext("Cancelar"))]);
     tool_cancel.add_css_class("flat");
     let tool_box = gtk::Box::new(gtk::Orientation::Horizontal, 6);
     tool_box.set_visible(false);
@@ -431,6 +437,7 @@ pub(in crate::gui) fn build() -> EditPanelUi {
     quality.set_selected(1);
     quality.set_tooltip_text(Some(&gettext("Qualidade ao salvar como")));
     save.append(&quality);
+    save.append(&name_drop_down(&quality, &gettext("Qualidade ao salvar como")));
 
     content.append(&head);
     content.append(&original);
@@ -681,32 +688,42 @@ pub(in crate::gui) fn connect(state: &Rc<RefCell<ViewerState>>, window: &adw::Ap
         });
         scale.add_controller(pointer);
     }
-    let resets: Vec<(gtk::Button, Option<usize>)> = {
+    // A reset turns itself insensitive, which drops keyboard focus: hand it
+    // to the slider it reset (the first one for "Restaurar ajustes").
+    let resets: Vec<(gtk::Button, Option<usize>, gtk::Scale)> = {
         let s = state.borrow();
-        let mut resets: Vec<_> = s
-            .edit_ui
-            .sliders
+        let sliders = &s.edit_ui.sliders;
+        let mut resets: Vec<_> = sliders
             .iter()
             .enumerate()
-            .map(|(i, slider)| (slider.reset.clone(), Some(i)))
+            .map(|(i, slider)| (slider.reset.clone(), Some(i), slider.scale.clone()))
             .collect();
-        resets.push((s.edit_ui.reset_all.clone(), None));
+        resets.push((s.edit_ui.reset_all.clone(), None, sliders[0].scale.clone()));
         resets
     };
-    for (button, index) in resets {
+    for (button, index, scale) in resets {
         let weak = Rc::downgrade(state);
-        button.connect_clicked(move |_| {
-            if let Some(state) = weak.upgrade() {
-                reset_adjust(&state, index);
+        button.connect_clicked(move |button| {
+            let Some(state) = weak.upgrade() else { return };
+            let had_focus = button.has_focus();
+            reset_adjust(&state, index);
+            if had_focus && !button.is_sensitive() {
+                scale.grab_focus();
             }
         });
     }
     {
         let weak = Rc::downgrade(state);
-        let reset = state.borrow().edit_ui.straighten.reset.clone();
-        reset.connect_clicked(move |_| {
-            if let Some(state) = weak.upgrade() {
-                reset_straighten(&state);
+        let (reset, scale) = {
+            let s = state.borrow();
+            (s.edit_ui.straighten.reset.clone(), s.edit_ui.straighten.scale.clone())
+        };
+        reset.connect_clicked(move |button| {
+            let Some(state) = weak.upgrade() else { return };
+            let had_focus = button.has_focus();
+            reset_straighten(&state);
+            if had_focus && !button.is_sensitive() {
+                scale.grab_focus();
             }
         });
     }
@@ -1873,6 +1890,10 @@ impl EditPanelState {
 impl EditPanelUi {
     pub(in crate::gui) fn scale(&self, index: usize) -> gtk::Scale {
         self.sliders[index].scale.clone()
+    }
+
+    pub(in crate::gui) fn reset(&self, index: usize) -> gtk::Button {
+        self.sliders[index].reset.clone()
     }
 
     pub(in crate::gui) fn straighten_scale(&self) -> gtk::Scale {

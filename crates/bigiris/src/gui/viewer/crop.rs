@@ -275,6 +275,26 @@ pub(in crate::gui) fn drag_to(
     }
 }
 
+/// The selection after one arrow key: `dirs` is the arrow (-1, 0 or 1 per
+/// axis); `resize` (Shift) moves the bottom-right corner instead of the
+/// whole selection. A step is 1 % of the longer image side.
+pub(in crate::gui) fn nudge(
+    rect: Rect,
+    dirs: (f64, f64),
+    resize: bool,
+    natural: (u32, u32),
+    ratio: Option<f64>,
+) -> Rect {
+    let step = (f64::from(natural.0.max(natural.1)) / 100.0).max(1.0);
+    let delta = (dirs.0 * step, dirs.1 * step);
+    if !resize {
+        return drag_to(Drag::Move { start: rect }, delta, natural, ratio);
+    }
+    // Shrinking stops at one pixel instead of flipping past the anchor.
+    let delta = (delta.0.max(1.0 - rect.w), delta.1.max(1.0 - rect.h));
+    drag_to(Drag::Resize { start: rect, handle: Handle::SE }, delta, natural, ratio)
+}
+
 /// Largest selection with `ratio` (width / height) centred in the image;
 /// the whole image when `ratio` is `None`.
 pub(in crate::gui) fn ratio_rect(natural: (u32, u32), ratio: Option<f64>) -> Rect {
@@ -383,6 +403,7 @@ pub(in crate::gui) fn build() -> CropUi {
         .margin_end(8)
         .build();
     row.append(&aspect);
+    row.append(&name_drop_down(&aspect, &gettext("Proporção")));
     row.append(&size_label);
     row.append(&cancel);
     row.append(&apply);
@@ -688,6 +709,21 @@ fn leave(state: &Rc<RefCell<ViewerState>>) -> Option<CropSession> {
 
 pub(in crate::gui) fn cancel(state: &Rc<RefCell<ViewerState>>) {
     leave(state);
+}
+
+/// Arrow keys: move the selection, or resize it with Shift.
+pub(in crate::gui) fn nudge_selection(
+    state: &Rc<RefCell<ViewerState>>,
+    dirs: (f64, f64),
+    resize: bool,
+) {
+    let mut s = state.borrow_mut();
+    let Some(session) = s.crop.as_mut() else { return };
+    if session.drag.is_some() {
+        return;
+    }
+    session.rect = nudge(session.rect, dirs, resize, session.natural, session.ratio);
+    refresh(&s);
 }
 
 /// Crop the opened image to the selection (as an undoable edit).

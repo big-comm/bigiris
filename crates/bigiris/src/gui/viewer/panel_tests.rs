@@ -317,6 +317,21 @@ fn viewer_edit_panel() {
     wait(&context, "adjustments undone", &|| state.borrow().pending_ops.is_empty());
     wait_frame(&context, &state, (640, 480));
     assert_eq!(state.borrow().edit_ui.slider_values(), super::edits::AdjustValues::NEUTRAL);
+    // A reset pressed from the keyboard turns insensitive and hands the
+    // focus to its slider instead of dropping it.
+    brightness.set_value(20.0);
+    wait(&context, "brightness committed", &|| state.borrow().pending_ops.len() == 1);
+    let reset = state.borrow().edit_ui.reset(0);
+    assert!(reset.is_sensitive());
+    assert!(reset.grab_focus(), "reset button not focusable");
+    reset.emit_clicked();
+    assert!(!reset.is_sensitive());
+    assert!(brightness.has_focus(), "focus lost after the reset");
+    wait(&context, "reset committed", &|| state.borrow().pending_ops.len() == 2);
+    undo_edit(&state);
+    undo_edit(&state);
+    wait(&context, "reset undone", &|| state.borrow().pending_ops.is_empty());
+    wait_frame(&context, &state, (640, 480));
 
     // Resize: the lock keeps the proportion; unlocked sides are free.
     let (width, height, lock, percent, apply) = state.borrow().edit_ui.size_controls();

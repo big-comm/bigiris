@@ -86,35 +86,79 @@ fn all_eight_embedded_exif_orientations_are_applied_once() {
     }
 }
 
+/// CRC-32 (ISO-HDLC) of a PNG chunk's type and data.
+fn crc32(bytes: &[u8]) -> u32 {
+    let mut crc = !0u32;
+    for &byte in bytes {
+        crc ^= u32::from(byte);
+        for _ in 0..8 {
+            crc = if crc & 1 == 0 { crc >> 1 } else { (crc >> 1) ^ 0xedb8_8320 };
+        }
+    }
+    !crc
+}
+
+/// Guards: data loss: each animation or page container the decode path
+/// must refuse before a static edit drops its other frames.
 #[test]
-fn static_edits_refuse_animated_gif_and_preserve_destination() {
+fn static_edits_refuse_animations_and_pages() {
     let dir = tempfile::tempdir().unwrap();
-    let input = dir.path().join("animated.gif");
-    let output = dir.path().join("keep.png");
-    let mut encoder = image::codecs::gif::GifEncoder::new(std::fs::File::create(&input).unwrap());
-    for v in [50, 150] {
-        encoder
-            .encode_frame(image::Frame::new(image::RgbaImage::from_pixel(
-                2,
-                2,
-                image::Rgba([v, 0, 0, 255]),
-            )))
-            .unwrap();
+    let out = dir.path().join("out");
+    std::fs::create_dir(&out).unwrap();
+    let frames =
+        [50u8, 150].map(|v| image::RgbaImage::from_pixel(2, 2, image::Rgba([v, 0, 0, 255])));
+
+    let gif = dir.path().join("gif.gif");
+    let mut encoder = image::codecs::gif::GifEncoder::new(std::fs::File::create(&gif).unwrap());
+    for frame in &frames {
+        encoder.encode_frame(image::Frame::new(frame.clone())).unwrap();
     }
     drop(encoder);
-    assert!(open_image(&input).is_ok(), "viewer can still inspect the first frame");
-    std::fs::write(&output, b"previous file").unwrap();
-    assert!(
-        convert_file_to(
+
+    // A PNG whose acTL chunk (after the 33 bytes of signature and IHDR)
+    // announces two frames.
+    let apng = dir.path().join("apng.png");
+    let mut png = Vec::new();
+    image::codecs::png::PngEncoder::new(&mut png)
+        .write_image(frames[0].as_raw(), 2, 2, image::ExtendedColorType::Rgba8)
+        .unwrap();
+    let actl = [&b"acTL"[..], &2u32.to_be_bytes(), &0u32.to_be_bytes()].concat();
+    let chunk = [&8u32.to_be_bytes()[..], &actl, &crc32(&actl).to_be_bytes()].concat();
+    std::fs::write(&apng, [&png[..33], &chunk, &png[33..]].concat()).unwrap();
+
+    let webp = dir.path().join("webp.webp");
+    let config = webp::WebPConfig::new().unwrap();
+    let mut animation = webp::AnimEncoder::new(2, 2, &config);
+    for (i, frame) in frames.iter().enumerate() {
+        animation.add_frame(webp::AnimFrame::from_rgba(frame.as_raw(), 2, 2, 100 * i as i32));
+    }
+    std::fs::write(&webp, &*animation.try_encode().unwrap()).unwrap();
+
+    let tiff = dir.path().join("tiff.tiff");
+    let mut encoder =
+        tiff::encoder::TiffEncoder::new(std::fs::File::create(&tiff).unwrap()).unwrap();
+    for frame in &frames {
+        encoder.write_image::<tiff::encoder::colortype::RGBA8>(2, 2, frame.as_raw()).unwrap();
+    }
+    drop(encoder);
+
+    for input in [gif, apng, webp, tiff] {
+        assert!(open_image(&input).is_ok(), "{input:?}: the viewer still shows the first frame");
+        let output = out.join(input.with_extension("png").file_name().unwrap());
+        std::fs::write(&output, b"previous file").unwrap();
+        let result = convert_file_to(
             &input,
-            Some(&output),
+            Some(&out),
             Format::Png,
             &EncodeOptions::default(),
-            OverwritePolicy::Replace
-        )
-        .is_err()
-    );
-    assert_eq!(std::fs::read(output).unwrap(), b"previous file");
+            OverwritePolicy::Replace,
+        );
+        assert!(
+            matches!(result, Err(bigimage_core::BigImageError::InvalidInput(_))),
+            "{input:?}: {result:?}"
+        );
+        assert_eq!(std::fs::read(output).unwrap(), b"previous file");
+    }
 }
 
 #[test]

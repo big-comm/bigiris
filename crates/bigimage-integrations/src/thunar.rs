@@ -62,7 +62,9 @@ pub fn install(paths: &ScopePaths) -> io::Result<Installed> {
 /// system defaults we seeded it with, or nothing when there are none), the
 /// file is removed so Thunar falls back to the system defaults again. A
 /// file that is a symbolic link (a dotfile manager's) is rewritten instead,
-/// since removing the link would leave our actions in the real file.
+/// since removing the link would leave our actions in the real file. A file
+/// left with no actions while the system has defaults stays: one the user
+/// emptied cannot be told from one an install made before seeding existed.
 ///
 /// The CLI only runs this in user scope. The system-scope branch (strip
 /// actions an old BigIris package merged into `/etc/xdg/Thunar/uca.xml`,

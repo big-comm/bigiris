@@ -240,6 +240,9 @@ you already had. If you do not have that file yet, it starts as a copy of
 actions are not hidden. The packages do not install `/etc/xdg/Thunar/uca.xml`:
 that file belongs to the `thunar` package. Thunar users must run the command
 above once per user (`install.sh` already does).
+`bigiris uninstall-integrations` removes only the BigIris actions; a
+`uca.xml` left without any action keeps hiding the system's defaults until
+you delete it.
 
 With the package installed, `install-integrations --user` does not write
 personal copies of the integrations the package already provides in

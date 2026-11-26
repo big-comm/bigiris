@@ -126,24 +126,19 @@ pub(super) fn format_counts(ok: usize, skip: usize, fail: usize) -> String {
         .replace("{failed}", &fail.to_string())
 }
 
-/// Render the final state of a Prisma dialog after a batch finishes.
-/// Re-enables the Apply button, prints the final summary
-/// (`ok/skip/fail` counts + elapsed time + before/after size delta when
-/// available), and triggers a 2-second auto-close on clean success so
-/// service-menu callers don't need to dismiss the window manually.
-#[allow(clippy::too_many_arguments)]
+/// Render the final state of a Prisma dialog after a batch finishes:
+/// counts, time and size change, the output of a one-file run and the
+/// first failure. Apply is enabled again, and a run that wrote everything
+/// it was given closes the dialog after 2 s, so service-menu callers need
+/// not dismiss it; one that skipped or failed anything stays open.
 pub(super) fn finish_dialog(
     status: &gtk::Label,
     apply_btn: &gtk::Button,
     window: &adw::ApplicationWindow,
-    ok: usize,
-    skip: usize,
-    fail: usize,
-    first_err: Option<String>,
-    elapsed: Duration,
-    bytes_in: u64,
-    bytes_out: u64,
+    summary: RunSummary,
 ) {
+    let RunSummary { ok, skip, fail, first_err, elapsed, bytes_in, bytes_out, single, .. } =
+        summary;
     // Headline: counts and elapsed time; the size delta follows when files
     // were written (both totals count written files only).
     let counts = format_counts(ok, skip, fail);
@@ -165,22 +160,52 @@ pub(super) fn finish_dialog(
                 .replace("{average_after}", &gtk4::glib::format_size(avg_out)),
         );
     }
+    let single = match &single {
+        Some(ConvertOutcome::Written { output }) => Some((gettext("Saved: {path}"), output)),
+        Some(ConvertOutcome::Skipped { output }) => {
+            Some((gettext("Already exists, nothing written: {path}"), output))
+        }
+        None => None,
+    };
+    if let Some((template, output)) = single {
+        msg.push('\n');
+        msg.push_str(&crate::fill(&template, &[("path", &crate::codec::printable_path(output))]));
+    }
     if let Some(err) = first_err {
         msg.push('\n');
         msg.push_str(&err);
     }
     status.set_text(&msg);
     apply_btn.set_sensitive(true);
-    if fail == 0 {
+    if ok > 0 && skip == 0 && fail == 0 {
         arm_auto_close(window, 2);
     }
 }
 
 /// The worker pool vanished without its summary: say so and let the user
 /// retry instead of leaving Apply disabled forever.
-fn abort_dialog(status: &gtk::Label, apply_btn: &gtk::Button) {
+pub(super) fn abort_dialog(status: &gtk::Label, apply_btn: &gtk::Button) {
     status.set_text(&gettext("Processing ended unexpectedly. Please try again."));
     apply_btn.set_sensitive(true);
+}
+
+/// What a finished run did, merged over its workers.
+pub(super) struct RunSummary {
+    pub(super) ok: usize,
+    pub(super) skip: usize,
+    pub(super) fail: usize,
+    pub(super) first_err: Option<String>,
+    /// Wall-clock time of the run.
+    pub(super) elapsed: Duration,
+    /// Sizes of the written files and of their inputs.
+    pub(super) bytes_in: u64,
+    pub(super) bytes_out: u64,
+    /// Inputs finished, of `total`.
+    pub(super) done: usize,
+    pub(super) total: usize,
+    pub(super) cancelled: bool,
+    /// The outcome of the only input of a one-file run.
+    pub(super) single: Option<ConvertOutcome>,
 }
 
 /// Progress message sent from the worker pool to the UI poll.
@@ -193,22 +218,8 @@ pub(super) enum AsyncBatchEvent {
     /// the start. `file` is the bare file name (no directory) of the
     /// most recently completed input.
     Progress { done: usize, total: usize, file: String },
-    /// All workers exited (cleanly or via cancel). Carries the merged
-    /// summary for [`finish_dialog`] plus the elapsed wall-clock time
-    /// and total bytes in / out so the dialog can display "12 s · 8.5
-    /// MB → 1.2 MB (−85%)".
-    Done {
-        ok: usize,
-        skip: usize,
-        fail: usize,
-        first_err: Option<String>,
-        elapsed: Duration,
-        bytes_in: u64,
-        bytes_out: u64,
-        done: usize,
-        total: usize,
-        cancelled: bool,
-    },
+    /// All workers exited (cleanly or via cancel).
+    Done(RunSummary),
 }
 
 /// Events of one run, awaited on the GTK loop without a timer.
@@ -300,7 +311,7 @@ where
             }
             tally
         });
-        let _ = tx.send(AsyncBatchEvent::Done {
+        let _ = tx.send(AsyncBatchEvent::Done(RunSummary {
             ok: tally.ok,
             skip: tally.skip,
             fail: tally.fail,
@@ -311,7 +322,8 @@ where
             done: queue.done.load(Ordering::Relaxed),
             total: queue.total,
             cancelled: queue.cancelled.load(Ordering::Relaxed),
-        });
+            single: tally.last.filter(|_| queue.total == 1),
+        }));
     });
     events
 }
@@ -338,6 +350,8 @@ struct Tally {
     fail: usize,
     /// The first failure, shown in the summary.
     first_err: Option<String>,
+    /// The outcome of the last input this tally finished.
+    last: Option<ConvertOutcome>,
 }
 
 impl Tally {
@@ -348,6 +362,7 @@ impl Tally {
         if self.first_err.is_none() {
             self.first_err = other.first_err;
         }
+        self.last = other.last.or(self.last.take());
     }
 }
 
@@ -385,6 +400,9 @@ where
             .unwrap_or_else(|_| {
                 Err(bigimage_core::BigImageError::Other(gettext("unexpected worker failure")))
             });
+            if let Ok(outcome) = &result {
+                tally.last = Some(outcome.clone());
+            }
             let failure = match result {
                 Ok(ConvertOutcome::Written { output }) if written.contains(&output) => {
                     Some(crate::fill(
@@ -467,23 +485,10 @@ pub(super) fn run_batch_async<W>(
                     apply_btn.set_sensitive(true);
                     break;
                 }
-                Some(AsyncBatchEvent::Done {
-                    ok,
-                    skip,
-                    fail,
-                    first_err,
-                    elapsed,
-                    bytes_in,
-                    bytes_out,
-                    cancelled,
-                    ..
-                }) => {
+                Some(AsyncBatchEvent::Done(summary)) => {
                     // Closed mid-run: nothing left to show or to auto-close.
-                    if !(cancelled && !window.is_visible()) {
-                        finish_dialog(
-                            &status, &apply_btn, &window, ok, skip, fail, first_err, elapsed,
-                            bytes_in, bytes_out,
-                        );
+                    if !(summary.cancelled && !window.is_visible()) {
+                        finish_dialog(&status, &apply_btn, &window, summary);
                     }
                     break;
                 }
@@ -513,7 +518,7 @@ mod worker_tests {
         gtk4::glib::MainContext::new().block_on(async {
             loop {
                 let event = events.next().await.expect("workers ended without a summary");
-                if matches!(event, AsyncBatchEvent::Done { .. } | AsyncBatchEvent::Refused(_)) {
+                if matches!(event, AsyncBatchEvent::Done(_) | AsyncBatchEvent::Refused(_)) {
                     return event;
                 }
             }
@@ -529,7 +534,10 @@ mod worker_tests {
             |_| panic!("work after cancellation"),
             cancelled,
         );
-        assert!(matches!(summary(rx), AsyncBatchEvent::Done { done: 0, cancelled: true, .. }));
+        assert!(matches!(
+            summary(rx),
+            AsyncBatchEvent::Done(RunSummary { done: 0, cancelled: true, .. })
+        ));
     }
 
     #[test]
@@ -548,7 +556,53 @@ mod worker_tests {
             },
             cancelled,
         );
-        assert!(matches!(summary(rx), AsyncBatchEvent::Done { skip: 1, cancelled: true, .. }));
+        assert!(matches!(
+            summary(rx),
+            AsyncBatchEvent::Done(RunSummary { skip: 1, cancelled: true, .. })
+        ));
+    }
+
+    /// A run that skipped its only file says which output already exists and
+    /// stays open; one that wrote it names the output and closes itself.
+    #[test]
+    #[ignore = "requires a graphical display; run alone with GSETTINGS_BACKEND=memory"]
+    fn summary_names_the_output_and_closes_only_after_writing() {
+        adw::init().expect("GTK display required");
+        let app = adw::Application::builder()
+            .application_id("com.biglinux.Iris.SummaryProbe")
+            .flags(gtk4::gio::ApplicationFlags::NON_UNIQUE)
+            .build();
+        app.register(None::<&gtk4::gio::Cancellable>).unwrap();
+        let window = adw::ApplicationWindow::builder().application(&app).build();
+        window.present();
+        let (status, apply) = (gtk::Label::new(None), gtk::Button::new());
+        let summary = |ok, skip, single| RunSummary {
+            ok,
+            skip,
+            fail: 0,
+            first_err: None,
+            elapsed: Duration::from_millis(10),
+            bytes_in: 0,
+            bytes_out: 0,
+            done: 1,
+            total: 1,
+            cancelled: false,
+            single: Some(single),
+        };
+        let output = PathBuf::from("/photos/a.png");
+        finish_dialog(
+            &status,
+            &apply,
+            &window,
+            summary(0, 1, ConvertOutcome::Skipped { output: output.clone() }),
+        );
+        assert!(status.text().contains("/photos/a.png"), "{}", status.text());
+        assert!(!auto_close_armed(&window), "a skipped run closed itself");
+        finish_dialog(&status, &apply, &window, summary(1, 0, ConvertOutcome::Written { output }));
+        assert!(status.text().contains("/photos/a.png"), "{}", status.text());
+        assert!(auto_close_armed(&window));
+        disarm_auto_close(&window);
+        window.destroy();
     }
 
     #[test]
@@ -577,7 +631,10 @@ mod worker_tests {
             },
             Arc::new(AtomicBool::new(false)),
         );
-        assert!(matches!(summary(rx), AsyncBatchEvent::Done { fail: 1, skip: 9, done: 10, .. }));
+        assert!(matches!(
+            summary(rx),
+            AsyncBatchEvent::Done(RunSummary { fail: 1, skip: 9, done: 10, .. })
+        ));
     }
 
     #[test]
@@ -601,7 +658,7 @@ mod worker_tests {
         );
         assert!(matches!(
             summary(rx),
-            AsyncBatchEvent::Done { ok: 1, skip: 1, bytes_in: 10, bytes_out: 10, .. }
+            AsyncBatchEvent::Done(RunSummary { ok: 1, skip: 1, bytes_in: 10, bytes_out: 10, .. })
         ));
     }
 
@@ -639,7 +696,10 @@ mod worker_tests {
             convert(policy),
             Arc::new(AtomicBool::new(false)),
         );
-        assert!(matches!(summary(events), AsyncBatchEvent::Done { ok: 2, fail: 0, .. }));
+        assert!(matches!(
+            summary(events),
+            AsyncBatchEvent::Done(RunSummary { ok: 2, fail: 0, .. })
+        ));
         let size = |name: &str| image::image_dimensions(dir.path().join(name)).unwrap();
         assert_eq!(size("a.webp"), (32, 24));
         assert_eq!(size("a_1.webp"), (16, 12));

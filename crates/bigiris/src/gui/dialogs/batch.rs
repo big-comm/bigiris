@@ -281,18 +281,20 @@ async fn follow_run(
                 cancel_btn.set_label(&gettext("Close"));
                 return;
             }
-            Some(batch_runner::AsyncBatchEvent::Done {
-                ok,
-                skip,
-                fail,
-                first_err,
-                done,
-                total,
-                cancelled,
-                elapsed,
-                bytes_in,
-                bytes_out,
-            }) => {
+            Some(batch_runner::AsyncBatchEvent::Done(summary)) => {
+                let batch_runner::RunSummary {
+                    ok,
+                    skip,
+                    fail,
+                    first_err,
+                    done,
+                    total,
+                    cancelled,
+                    elapsed,
+                    bytes_in,
+                    bytes_out,
+                    ..
+                } = summary;
                 running.set(false);
                 // Closed mid-run: nothing left to show or to close.
                 if cancelled && !window.is_visible() {
@@ -359,13 +361,17 @@ async fn follow_run(
                 let cancel_label =
                     if !cancelled && done == total { gettext("Close") } else { gettext("Cancel") };
                 cancel_btn.set_label(&cancel_label);
-                if !cancelled && fail == 0 {
+                // Only a run that wrote every input closes by itself: skips
+                // and failures stay on screen to be read.
+                if !cancelled && ok > 0 && skip + earlier_outputs.len() == 0 && fail == 0 {
                     batch_runner::arm_auto_close(&window, 3);
                 }
                 return;
             }
             None => {
                 running.set(false);
+                progress.set_text(None);
+                batch_runner::abort_dialog(&status, &apply_btn);
                 return;
             }
         }

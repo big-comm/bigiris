@@ -1810,8 +1810,7 @@ pub(in crate::gui) fn write_copy(
     format: Format,
     options: &EncodeOptions,
 ) -> Result<Vec<bigimage_core::MetadataLoss>, SaveFailure> {
-    let (img, metadata, _) =
-        crate::codec::open_for_resave(source).map_err(SaveFailure::from_image)?;
+    let (img, extras) = crate::codec::open_for_resave(source).map_err(SaveFailure::from_image)?;
     let edited = render_edits(img, ops).map_err(SaveFailure::Other)?;
     let report = bigimage_core::save_image_preserving_metadata_report(
         edited,
@@ -1819,10 +1818,10 @@ pub(in crate::gui) fn write_copy(
         format,
         options,
         OverwritePolicy::Replace,
-        &metadata,
+        &extras.source,
     )
     .map_err(SaveFailure::from_core)?;
-    Ok(report.dropped)
+    Ok([extras.losses(), report.dropped].concat())
 }
 
 fn present_copy_failure(state: &Rc<RefCell<ViewerState>>, failure: &SaveFailure) {

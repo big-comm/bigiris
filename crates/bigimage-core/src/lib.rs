@@ -242,8 +242,7 @@ pub fn save_image_preserving_metadata_report(
     policy: OverwritePolicy,
     source: &SourceMetadata,
 ) -> Result<ResaveOutcome> {
-    use metadata::MetadataLoss;
-    const MAX_BLOB: usize = 4 * 1024 * 1024;
+    use metadata::{MAX_RESAVE_BLOB, MetadataLoss};
     // JPEG APP1 segments hold at most 65533 bytes, including `Exif\0\0`.
     const MAX_JPEG_EXIF: usize = 65_533 - 6;
     let mut image = image;
@@ -257,7 +256,7 @@ pub fn save_image_preserving_metadata_report(
             Some(b"GRAY") => gray,
             _ => false,
         };
-        if support.icc && matches_pixels && icc.len() <= MAX_BLOB {
+        if support.icc && matches_pixels && icc.len() <= MAX_RESAVE_BLOB {
             extras.icc = Some(icc.to_vec());
         } else {
             let loss = match color::normalize_srgb_applied(&mut image, icc) {
@@ -273,7 +272,7 @@ pub fn save_image_preserving_metadata_report(
         }
     }
     if let Some(exif) = source.exif.as_deref().filter(|exif| !exif.is_empty()) {
-        let limit = if target == Format::Jpeg { MAX_JPEG_EXIF } else { MAX_BLOB };
+        let limit = if target == Format::Jpeg { MAX_JPEG_EXIF } else { MAX_RESAVE_BLOB };
         match metadata::resave_exif(exif, Some((image.width(), image.height()))) {
             _ if !support.exif => dropped.push(MetadataLoss::ExifUnsupported),
             None => dropped.push(MetadataLoss::ExifInvalid),

@@ -2964,19 +2964,18 @@ fn write_edits_to_disk(
             tracing::warn!(%error, "save: file is not a static image");
             SaveFailure::NotStatic
         })?;
-    let (img, source, quality) =
-        crate::codec::open_for_resave(&target).map_err(SaveFailure::from_image)?;
+    let (img, extras) = crate::codec::open_for_resave(&target).map_err(SaveFailure::from_image)?;
     let edited = render_edits(img, ops).map_err(SaveFailure::Other)?;
     let report = bigimage_core::save_image_preserving_metadata_report(
         edited,
         target,
         format,
-        &resave_options(format, quality),
+        &resave_options(format, extras.quality),
         OverwritePolicy::Replace,
-        &source,
+        &extras.source,
     )
     .map_err(SaveFailure::from_core)?;
-    Ok(report.dropped)
+    Ok([extras.losses(), report.dropped].concat())
 }
 
 /// Encoder options for an in-place save, which may be repeated on the

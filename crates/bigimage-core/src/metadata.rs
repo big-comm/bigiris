@@ -36,6 +36,10 @@ impl Metadata {
     }
 }
 
+/// Largest EXIF block (outside JPEG) or ICC profile, in bytes, that
+/// [`crate::save_image_preserving_metadata`] writes back.
+pub const MAX_RESAVE_BLOB: usize = 4 * 1024 * 1024;
+
 /// Raw metadata blobs of a source image, kept so an in-place save can write
 /// them back (see [`crate::save_image_preserving_metadata`]).
 #[derive(Debug, Clone, Default, PartialEq, Eq)]

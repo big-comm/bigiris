@@ -21,13 +21,14 @@ const HEADER: usize = 36;
 const MAX_BYTES: u64 = 512 * 1024 * 1024;
 const MAX_INPUT: u64 = 1024 * 1024 * 1024;
 const MAX_METADATA: u64 = 1024 * 1024;
-/// EXIF kept for an in-place re-save (a JPEG holds at most 64 KiB anyway).
-const MAX_RESAVE_EXIF: u64 = 1024 * 1024;
-/// ICC profiles kept for an in-place re-save; matches the core's cap.
-const MAX_RESAVE_ICC: u64 = 4 * 1024 * 1024;
+/// EXIF block or ICC profile a re-save carries: what core writes back.
+const MAX_RESAVE_BLOB: u64 = bigimage_core::metadata::MAX_RESAVE_BLOB as u64;
 /// Re-save trailer after the pixels: EXIF and ICC lengths (u64 LE each),
-/// then the estimated JPEG quality (one byte, 0 = unknown, else 1..=100).
-const RESAVE_TRAILER: usize = 17;
+/// the estimated JPEG quality (one byte, 0 = unknown, else 1..=100), then
+/// the blobs the worker dropped (one byte of `DROPPED_*` bits).
+const RESAVE_TRAILER: usize = 18;
+const DROPPED_EXIF: u8 = 1;
+const DROPPED_ICC: u8 = 2;
 thread_local! { static CANCEL: RefCell<Option<Arc<AtomicBool>>> = const { RefCell::new(None) }; }
 
 pub fn configure() {
@@ -520,7 +521,7 @@ fn run<T>(
 fn output_limit(mode: &str) -> u64 {
     match mode {
         "pixels" | "preview" => MAX_BYTES + HEADER as u64,
-        "resave" => MAX_BYTES + (HEADER + RESAVE_TRAILER) as u64 + MAX_RESAVE_EXIF + MAX_RESAVE_ICC,
+        "resave" => MAX_BYTES + (HEADER + RESAVE_TRAILER) as u64 + 2 * MAX_RESAVE_BLOB,
         _ => MAX_METADATA + 4096,
     }
 }
@@ -670,12 +671,25 @@ struct Pixels {
     natural: (u32, u32),
     gps: bool,
 }
-/// What a re-save decode adds to the pixels: the source EXIF/ICC and, for
-/// JPEG sources, the estimated encoder quality.
+/// What a re-save decode adds to the pixels: the source EXIF/ICC, for JPEG
+/// sources the estimated encoder quality, and the blobs over
+/// [`MAX_RESAVE_BLOB`] the worker dropped.
 #[derive(Debug, Default, PartialEq, Eq)]
-struct ResaveExtras {
-    source: bigimage_core::SourceMetadata,
-    quality: Option<u8>,
+pub(crate) struct ResaveExtras {
+    pub(crate) source: bigimage_core::SourceMetadata,
+    pub(crate) quality: Option<u8>,
+    exif_dropped: bool,
+    icc_dropped: bool,
+}
+impl ResaveExtras {
+    /// Source metadata lost before the save began, as a save would report it.
+    #[cfg(any(feature = "gui", test))]
+    pub(crate) fn losses(&self) -> Vec<bigimage_core::MetadataLoss> {
+        use bigimage_core::MetadataLoss;
+        let exif = self.exif_dropped.then_some(MetadataLoss::ExifTooLarge);
+        let icc = self.icc_dropped.then_some(MetadataLoss::IccDiscarded);
+        exif.into_iter().chain(icc).collect()
+    }
 }
 fn receive(output: std::fs::File) -> ImageResult<Pixels> {
     receive_with(output, false).map(|(pixels, _)| pixels)
@@ -706,7 +720,8 @@ fn receive_with(mut output: std::fs::File, trailer: bool) -> ImageResult<(Pixels
     }
     let total = output.metadata()?.len();
     let pixels_end = HEADER as u64 + length;
-    let (exif_length, icc_length, quality) = if trailer {
+    let mut extras = ResaveExtras::default();
+    let (exif_length, icc_length) = if trailer {
         if total < pixels_end + RESAVE_TRAILER as u64 {
             return Err(invalid("invalid protocol dimensions or size"));
         }
@@ -716,17 +731,22 @@ fn receive_with(mut output: std::fs::File, trailer: bool) -> ImageResult<(Pixels
         output.seek(SeekFrom::Start(HEADER as u64))?;
         let exif = u64::from_le_bytes(lengths[..8].try_into().unwrap());
         let icc = u64::from_le_bytes(lengths[8..16].try_into().unwrap());
-        if exif > MAX_RESAVE_EXIF || icc > MAX_RESAVE_ICC {
+        if exif > MAX_RESAVE_BLOB || icc > MAX_RESAVE_BLOB {
             return Err(invalid("excessive metadata"));
         }
-        let quality = match lengths[16] {
+        extras.quality = match lengths[16] {
             0 => None,
             q @ 1..=100 => Some(q),
             _ => return Err(invalid("invalid JPEG quality")),
         };
-        (exif, icc, quality)
+        if lengths[17] & !(DROPPED_EXIF | DROPPED_ICC) != 0 {
+            return Err(invalid("invalid codec protocol"));
+        }
+        extras.exif_dropped = lengths[17] & DROPPED_EXIF != 0;
+        extras.icc_dropped = lengths[17] & DROPPED_ICC != 0;
+        (exif, icc)
     } else {
-        (0, 0, None)
+        (0, 0)
     };
     let expected =
         pixels_end + if trailer { RESAVE_TRAILER as u64 + exif_length + icc_length } else { 0 };
@@ -778,7 +798,6 @@ fn receive_with(mut output: std::fs::File, trailer: bool) -> ImageResult<(Pixels
         ColorType::Rgba32F => buffer!(floats!(), ImageRgba32F),
         _ => return Err(invalid("invalid pixel type")),
     };
-    let mut extras = ResaveExtras { quality, ..ResaveExtras::default() };
     if trailer {
         // Skip the lengths already validated above.
         output.seek(SeekFrom::Current(RESAVE_TRAILER as i64))?;
@@ -822,29 +841,28 @@ fn decode(path: &Path) -> ImageResult<backend::Decoded> {
 }
 /// Pixels in the source colour space plus its EXIF/ICC, for in-place saves.
 fn resave(path: &Path) -> ImageResult<backend::ResaveDecoded> {
-    resave_with_quality(path).map(|(decoded, _)| decoded)
+    let (pixels, extras) = resave_with_extras(path)?;
+    Ok((pixels.image, pixels.format, extras.source))
 }
-/// [`resave`] plus the source JPEG quality, estimated inside the sandbox.
-fn resave_with_quality(path: &Path) -> ImageResult<(backend::ResaveDecoded, Option<u8>)> {
-    let (pixels, extras) = run(path, "resave", |output| receive_with(output, true))?;
-    Ok(((pixels.image, pixels.format, extras.source), extras.quality))
+/// [`resave`] plus what the worker estimated and dropped.
+fn resave_with_extras(path: &Path) -> ImageResult<(Pixels, ResaveExtras)> {
+    run(path, "resave", |output| receive_with(output, true))
 }
 
-/// Decode `path` for an in-place save: what
-/// [`bigimage_core::open_image_for_resave`] returns, plus the quality of a
-/// JPEG source so re-encoding keeps it instead of searching for the
-/// perceptual target, which can degrade the photo on every save. The JPEG
-/// markers are parsed by the sandboxed worker; without the sandboxed backend
-/// (unit tests) the quality is unknown.
+/// Decode `path` for an in-place save: upright pixels in the source colour
+/// space, its EXIF and ICC, the quality a JPEG source was estimated at (so
+/// re-encoding keeps it rather than running the perceptual search, which can
+/// lower it on every save), and the metadata the worker dropped. Without the
+/// sandboxed backend (unit tests) the quality is unknown and a JPEG save runs
+/// the perceptual search.
 #[cfg(feature = "gui")]
-pub fn open_for_resave(
-    path: &Path,
-) -> ImageResult<(DynamicImage, bigimage_core::SourceMetadata, Option<u8>)> {
+pub(crate) fn open_for_resave(path: &Path) -> ImageResult<(DynamicImage, ResaveExtras)> {
     if SANDBOXED.load(Ordering::Acquire) {
-        let ((image, _, source), quality) = resave_with_quality(path)?;
-        return Ok((image, source, quality));
+        let (pixels, extras) = resave_with_extras(path)?;
+        return Ok((pixels.image, extras));
     }
-    bigimage_core::open_image_for_resave(path).map(|(image, source)| (image, source, None))
+    let (image, source) = bigimage_core::open_image_for_resave(path)?;
+    Ok((image, ResaveExtras { source, ..ResaveExtras::default() }))
 }
 fn dimensions(path: &Path) -> ImageResult<(u32, u32)> {
     run(path, "dimensions", read_dimensions)
@@ -1022,33 +1040,66 @@ fn send_resave(
     output: &mut impl Write,
     image: &DynamicImage,
     format: Option<Format>,
-    source: &bigimage_core::SourceMetadata,
-    quality: Option<u8>,
+    extras: &ResaveExtras,
 ) -> ImageResult<()> {
     send_to(output, image, format, image.dimensions(), false)?;
-    let exif = source.exif.as_deref().unwrap_or_default();
-    let icc = source.icc.as_deref().unwrap_or_default();
+    let exif = extras.source.exif.as_deref().unwrap_or_default();
+    let icc = extras.source.icc.as_deref().unwrap_or_default();
     output.write_all(&(exif.len() as u64).to_le_bytes())?;
     output.write_all(&(icc.len() as u64).to_le_bytes())?;
-    output.write_all(&[quality.filter(|q| (1..=100).contains(q)).unwrap_or(0)])?;
+    let quality = extras.quality.filter(|q| (1..=100).contains(q)).unwrap_or(0);
+    let mut dropped = 0;
+    if extras.exif_dropped {
+        dropped |= DROPPED_EXIF;
+    }
+    if extras.icc_dropped {
+        dropped |= DROPPED_ICC;
+    }
+    output.write_all(&[quality, dropped])?;
     output.write_all(exif)?;
     output.write_all(icc)?;
     Ok(())
 }
-/// Keep re-save metadata inside the protocol caps. EXIF over the cap is
-/// dropped (no JPEG could carry it); an oversized ICC profile is applied to
-/// the pixels instead, so colours stay right without it.
-fn bound_resave_metadata(
-    image: &mut DynamicImage,
-    source: &mut bigimage_core::SourceMetadata,
-) -> ImageResult<()> {
-    if source.exif.as_ref().is_some_and(|exif| exif.len() as u64 > MAX_RESAVE_EXIF) {
-        source.exif = None;
+/// Keep re-save metadata inside the protocol caps, which are core's: a blob
+/// over them could not be written back, so it is dropped and reported (a
+/// profile that large cannot even be parsed to convert the pixels). A kept
+/// profile goes through [`vouch_for_profile`].
+fn bound_resave_metadata(source: bigimage_core::SourceMetadata) -> ResaveExtras {
+    let mut extras = ResaveExtras { source, ..ResaveExtras::default() };
+    let too_large = |blob: &mut Vec<u8>| blob.len() as u64 > MAX_RESAVE_BLOB;
+    extras.exif_dropped = extras.source.exif.take_if(too_large).is_some();
+    extras.icc_dropped = extras.source.icc.take_if(too_large).is_some();
+    if let Some(icc) = &extras.source.icc {
+        vouch_for_profile(icc);
     }
-    if let Some(icc) = source.icc.take_if(|icc| icc.len() as u64 > MAX_RESAVE_ICC) {
-        bigimage_core::color::normalize_srgb(image, &icc)?;
+    extras
+}
+/// Run every conversion to sRGB the parent may apply to `icc` (when the
+/// target cannot embed it) on a probe of each pixel layout, so a profile
+/// that crashes or exhausts the parser does so in this process. Parsing and
+/// building a transform depend only on the profile and the layout: the
+/// parent repeats work this worker finished.
+fn vouch_for_profile(icc: &[u8]) {
+    let ramp = image::RgbaImage::from_fn(256, 1, |x, _| image::Rgba([x as u8; 4]));
+    let ramp = DynamicImage::ImageRgba8(ramp);
+    let probes = [
+        DynamicImage::ImageLuma8(ramp.to_luma8()),
+        DynamicImage::ImageLumaA8(ramp.to_luma_alpha8()),
+        DynamicImage::ImageRgb8(ramp.to_rgb8()),
+        DynamicImage::ImageLuma16(ramp.to_luma16()),
+        DynamicImage::ImageLumaA16(ramp.to_luma_alpha16()),
+        DynamicImage::ImageRgb16(ramp.to_rgb16()),
+        DynamicImage::ImageRgba16(ramp.to_rgba16()),
+        DynamicImage::ImageRgb32F(ramp.to_rgb32f()),
+        DynamicImage::ImageRgba32F(ramp.to_rgba32f()),
+        ramp,
+    ];
+    for mut probe in probes {
+        // A malformed profile fails the parent's parse the same way.
+        if bigimage_core::color::normalize_srgb(&mut probe, icc).is_err() {
+            return;
+        }
     }
-    Ok(())
 }
 /// Descriptors above stdio that leaked into the sandbox. bwrap does not close
 /// inherited descriptors; the parent marks them close-on-exec before
@@ -1089,14 +1140,14 @@ pub fn worker() -> color_eyre::Result<()> {
             send(&image, format, image.dimensions(), false)?;
         }
         "resave" => {
-            let (mut image, format, mut source) = backend::decode_for_resave_in_process(&path)?;
-            bound_resave_metadata(&mut image, &mut source)?;
+            let (image, format, source) = backend::decode_for_resave_in_process(&path)?;
+            let mut extras = bound_resave_metadata(source);
             // Marker parsing only, and only of the file just decoded here.
-            let quality = (format == Some(Format::Jpeg))
+            extras.quality = (format == Some(Format::Jpeg))
                 .then(|| bigimage_core::metadata::estimate_jpeg_quality(&path))
                 .flatten();
             let mut output = std::io::stdout().lock();
-            send_resave(&mut output, &image, format, &source, quality)?;
+            send_resave(&mut output, &image, format, &extras)?;
             output.flush()?;
         }
         "preview" => {
@@ -1375,7 +1426,8 @@ mod tests {
 
     fn resave_payload(image: &DynamicImage, source: &bigimage_core::SourceMetadata) -> Vec<u8> {
         let mut payload = Vec::new();
-        send_resave(&mut payload, image, Some(Format::Jpeg), source, None).unwrap();
+        let extras = ResaveExtras { source: source.clone(), ..ResaveExtras::default() };
+        send_resave(&mut payload, image, Some(Format::Jpeg), &extras).unwrap();
         payload
     }
 
@@ -1402,7 +1454,7 @@ mod tests {
         let (pixels, received) = receive_with(file, true).unwrap();
         assert_eq!(pixels.image, image);
         assert_eq!(pixels.format, Some(Format::Jpeg));
-        assert_eq!(received, ResaveExtras { source: source.clone(), quality: None });
+        assert_eq!(received, ResaveExtras { source: source.clone(), ..ResaveExtras::default() });
         // Empty metadata stays empty, and the plain protocol rejects a trailer.
         let bare = resave_payload(&image, &bigimage_core::SourceMetadata::default());
         assert_eq!(receive_bytes(&bare, true).unwrap(), Default::default());
@@ -1411,10 +1463,23 @@ mod tests {
         // values are never sent.
         for (sent, expected) in [(Some(92), Some(92)), (Some(0), None), (Some(101), None)] {
             let mut bytes = Vec::new();
-            send_resave(&mut bytes, &image, Some(Format::Jpeg), &source, sent).unwrap();
+            let extras =
+                ResaveExtras { source: source.clone(), quality: sent, ..Default::default() };
+            send_resave(&mut bytes, &image, Some(Format::Jpeg), &extras).unwrap();
             let extras = receive_extras(&bytes, true).unwrap();
-            assert_eq!(extras, ResaveExtras { source: source.clone(), quality: expected });
+            assert_eq!(extras, ResaveExtras { quality: expected, ..extras_for(&source) });
         }
+        // So do the blobs the worker dropped, as the losses a save reports.
+        let dropped = ResaveExtras { exif_dropped: true, icc_dropped: true, ..Default::default() };
+        let mut bytes = Vec::new();
+        send_resave(&mut bytes, &image, None, &dropped).unwrap();
+        let losses = receive_extras(&bytes, true).unwrap().losses();
+        use bigimage_core::MetadataLoss::{ExifTooLarge, IccDiscarded};
+        assert_eq!(losses, [ExifTooLarge, IccDiscarded]);
+    }
+
+    fn extras_for(source: &bigimage_core::SourceMetadata) -> ResaveExtras {
+        ResaveExtras { source: source.clone(), ..ResaveExtras::default() }
     }
 
     #[test]
@@ -1428,12 +1493,17 @@ mod tests {
         forged[trailer + 16] = 101;
         let error = receive_bytes(&forged, true).unwrap_err().to_string();
         assert!(error.contains("quality"), "{error}");
+        // So is a dropped-blob bit the protocol does not define.
+        let mut forged = payload.clone();
+        forged[trailer + 17] = 4;
+        let error = receive_bytes(&forged, true).unwrap_err().to_string();
+        assert!(error.contains("invalid codec protocol"), "{error}");
         // Truncated blob, extra bytes and a missing trailer.
         assert!(receive_bytes(&payload[..payload.len() - 1], true).is_err());
         assert!(receive_bytes(&[payload.as_slice(), &[0]].concat(), true).is_err());
         assert!(receive_bytes(&payload[..trailer], true).is_err());
         // Claimed blobs above the caps are refused before allocating them.
-        for (offset, claim) in [(0, MAX_RESAVE_EXIF + 1), (8, MAX_RESAVE_ICC + 1), (0, u64::MAX)] {
+        for (offset, claim) in [(0, MAX_RESAVE_BLOB + 1), (8, MAX_RESAVE_BLOB + 1), (0, u64::MAX)] {
             let mut forged = payload.clone();
             forged[trailer + offset..trailer + offset + 8].copy_from_slice(&claim.to_le_bytes());
             let error = receive_bytes(&forged, true).unwrap_err().to_string();
@@ -1441,16 +1511,28 @@ mod tests {
         }
     }
 
+    /// Core keeps EXIF and ICC blobs up to its cap: the worker hands those
+    /// over whole and reports a larger one as a save would.
     #[test]
-    fn oversized_resave_metadata_is_bounded_in_the_worker() {
-        let mut image = DynamicImage::ImageRgb8(ImageBuffer::from_pixel(1, 1, image::Rgb([1; 3])));
-        let mut source = bigimage_core::SourceMetadata {
-            exif: Some(vec![0; MAX_RESAVE_EXIF as usize + 1]),
-            icc: Some(vec![0; 64]),
+    fn resave_metadata_is_kept_up_to_cores_cap() {
+        let cap = MAX_RESAVE_BLOB as usize;
+        let at_cap =
+            bigimage_core::SourceMetadata { exif: Some(vec![1; cap]), icc: Some(vec![0; 64]) };
+        let extras = bound_resave_metadata(at_cap.clone());
+        assert_eq!(extras, extras_for(&at_cap));
+        let image = DynamicImage::new_rgb8(1, 1);
+        assert_eq!(receive_extras(&resave_payload(&image, &at_cap), true).unwrap(), extras);
+
+        // A profile past the cap cannot be parsed to convert the pixels;
+        // dropping it must not fail the save.
+        let past_cap = bigimage_core::SourceMetadata {
+            exif: Some(vec![1; cap + 1]),
+            icc: Some(vec![0; cap + 1]),
         };
-        bound_resave_metadata(&mut image, &mut source).unwrap();
-        assert_eq!(source.exif, None);
-        assert_eq!(source.icc.map(|icc| icc.len()), Some(64));
+        let extras = bound_resave_metadata(past_cap);
+        assert_eq!(extras.source, bigimage_core::SourceMetadata::default());
+        use bigimage_core::MetadataLoss::{ExifTooLarge, IccDiscarded};
+        assert_eq!(extras.losses(), [ExifTooLarge, IccDiscarded]);
     }
 
     #[test]
@@ -1553,7 +1635,7 @@ mod tests {
         let image = DynamicImage::ImageRgb8(ImageBuffer::from_pixel(2, 2, image::Rgb([9, 9, 9])));
         let mut payload = resave_payload(&image, &bigimage_core::SourceMetadata::default());
         let trailer = HEADER + 12;
-        payload[trailer..trailer + 8].copy_from_slice(&(MAX_RESAVE_EXIF + 1).to_le_bytes());
+        payload[trailer..trailer + 8].copy_from_slice(&(MAX_RESAVE_BLOB + 1).to_le_bytes());
         let file = tempfile::Builder::new().suffix(".png").tempfile().unwrap();
         std::fs::write(file.path(), &payload).unwrap();
         let Some(result) =
@@ -1629,18 +1711,18 @@ mod tests {
         image::codecs::jpeg::JpegEncoder::new_with_quality(file, 92).encode_image(&stored).unwrap();
         stored.save(&png).unwrap();
 
-        let Some(result) = with_executable(binary.clone(), DEADLINE, || resave_with_quality(&path))
+        let Some(result) = with_executable(binary.clone(), DEADLINE, || resave_with_extras(&path))
         else {
             return;
         };
-        let ((image, format, source), quality) = result.unwrap();
-        assert_eq!(format, Some(Format::Jpeg));
+        let (pixels, ResaveExtras { source, quality, .. }) = result.ok().unwrap();
+        assert_eq!(pixels.format, Some(Format::Jpeg));
         let estimate = quality.expect("a JPEG source reports its quality");
         assert!(estimate.abs_diff(92) <= 2, "estimated {estimate}");
         // What the viewer does on Ctrl+S: re-encode with the estimate, so the
         // file keeps its quality instead of the perceptual target's.
         bigimage_core::save_image_preserving_metadata_report(
-            image.fliph(),
+            pixels.image.fliph(),
             &path,
             Format::Jpeg,
             &EncodeOptions { quality, ..EncodeOptions::default() },
@@ -1651,8 +1733,8 @@ mod tests {
         let resaved = bigimage_core::metadata::estimate_jpeg_quality(&path).unwrap();
         assert!(resaved.abs_diff(92) <= 2, "resaved at {resaved}");
         // Non-JPEG sources carry no estimate.
-        let png = with_executable(binary, DEADLINE, || resave_with_quality(&png)).unwrap();
-        assert_eq!(png.unwrap().1, None);
+        let png = with_executable(binary, DEADLINE, || resave_with_extras(&png)).unwrap();
+        assert_eq!(png.ok().unwrap().1.quality, None);
     }
 
     #[test]

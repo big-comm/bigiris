@@ -290,6 +290,13 @@ pub(in crate::gui) fn nudge(
     if !resize {
         return drag_to(Drag::Move { start: rect }, delta, natural, ratio);
     }
+    // Under a fixed ratio the corner moves along the diagonal: a one-axis
+    // step would be undone, since the ratio keeps the larger side.
+    let delta = match ratio {
+        Some(r) if dirs.0 != 0.0 => (delta.0, delta.0 / r),
+        Some(r) => (delta.1 * r, delta.1),
+        None => delta,
+    };
     // Shrinking stops at one pixel instead of flipping past the anchor.
     let delta = (delta.0.max(1.0 - rect.w), delta.1.max(1.0 - rect.h));
     drag_to(Drag::Resize { start: rect, handle: Handle::SE }, delta, natural, ratio)
@@ -867,6 +874,19 @@ mod tests {
         let r = Rect { x: 100.0, y: 50.0, w: 200.0, h: 100.0 };
         let moved = drag_to(Drag::Move { start: r }, (1000.0, -1000.0), NAT, None);
         assert!(close(moved, Rect { x: 200.0, y: 0.0, w: 200.0, h: 100.0 }));
+    }
+
+    /// Shift+Left or Shift+Up shrinks a selection under a fixed ratio by one
+    /// step (1 % of 400 px) on both sides, the ratio kept.
+    #[test]
+    fn ratio_nudge_shrinks_both_sides() {
+        let r = Rect { x: 50.0, y: 0.0, w: 300.0, h: 300.0 };
+        for dirs in [(-1.0, 0.0), (0.0, -1.0)] {
+            let shrunk = nudge(r, dirs, true, NAT, Some(1.0));
+            assert!(close(shrunk, Rect { x: 50.0, y: 0.0, w: 296.0, h: 296.0 }), "{shrunk:?}");
+        }
+        let free = nudge(r, (-1.0, 0.0), true, NAT, None);
+        assert!(close(free, Rect { x: 50.0, y: 0.0, w: 296.0, h: 300.0 }), "{free:?}");
     }
 
     #[test]

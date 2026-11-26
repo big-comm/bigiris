@@ -393,6 +393,10 @@ fn replaced_file(output: &Path, policy: OverwritePolicy) -> Option<std::fs::Meta
         .filter(std::fs::Metadata::is_file)
 }
 
+/// Name prefix of the hidden file an output is written to before it is
+/// published; one left behind means a crash mid-write.
+pub const TEMP_FILE_PREFIX: &str = ".bigiris-";
+
 /// A unique sibling temporary file, cleaned up on every error path.
 ///
 /// The file is created with the mode a plain `open(2)` would use (`0o666`,
@@ -400,10 +404,6 @@ fn replaced_file(output: &Path, policy: OverwritePolicy) -> Option<std::fs::Meta
 /// kernel applies the umask and any default ACL at creation. No `chmod` is
 /// needed for new outputs, which keeps writes working on FUSE/gvfs/SMB
 /// mounts that refuse `chmod`.
-/// Name prefix of the hidden file an output is written to before it is
-/// published; one left behind means a crash mid-write.
-pub const TEMP_FILE_PREFIX: &str = ".bigiris-";
-
 pub(crate) fn output_temp(
     output: &Path,
     policy: OverwritePolicy,

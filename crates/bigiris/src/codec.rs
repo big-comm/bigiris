@@ -1132,12 +1132,10 @@ fn bound_resave_metadata(source: bigimage_core::SourceMetadata) -> ResaveExtras 
     }
     extras
 }
-/// Run every conversion to sRGB the parent may apply to `icc` (when the
-/// target cannot embed it) on a probe of each pixel layout, so a profile
-/// that crashes or exhausts the parser does so in this process. Parsing and
-/// building a transform depend only on the profile and the layout: the
-/// parent repeats work this worker finished.
-fn vouch_for_profile(icc: &[u8]) {
+/// Convert probe pixels of every layout with `icc`, so a profile that crashes
+/// or exhausts moxcms does so here rather than in the parent, which repeats
+/// only this work. Returns how many layouts converted.
+fn vouch_for_profile(icc: &[u8]) -> usize {
     let ramp = image::RgbaImage::from_fn(256, 1, |x, _| image::Rgba([x as u8; 4]));
     let ramp = DynamicImage::ImageRgba8(ramp);
     let probes = [
@@ -1152,12 +1150,11 @@ fn vouch_for_profile(icc: &[u8]) {
         DynamicImage::ImageRgba32F(ramp.to_rgba32f()),
         ramp,
     ];
-    for mut probe in probes {
-        // A malformed profile fails the parent's parse the same way.
-        if bigimage_core::color::normalize_srgb(&mut probe, icc).is_err() {
-            return;
-        }
-    }
+    // A layout that fails here fails the same way in the parent.
+    probes
+        .into_iter()
+        .filter_map(|mut probe| bigimage_core::color::normalize_srgb(&mut probe, icc).ok())
+        .count()
 }
 /// Descriptors above stdio that leaked into the sandbox. bwrap does not close
 /// inherited descriptors; the parent marks them close-on-exec before
@@ -1705,6 +1702,17 @@ mod tests {
             assert!(tags.iter().all(|(name, value)| clean(name) && clean(value)));
             assert_eq!((tags.len(), tags[0].1.len()), (MAX_TAGS, MAX_TAG_VALUE));
         }
+    }
+
+    /// A gray profile without a tone curve fails on gray pixels only; the
+    /// RGB layouts after them must still be converted.
+    #[test]
+    fn vouching_tries_every_pixel_layout() {
+        let mut gray = moxcms::ColorProfile::new_gray_with_gamma(2.2);
+        gray.gray_trc = None;
+        assert_eq!(vouch_for_profile(&gray.encode().unwrap()), 6);
+        let p3 = moxcms::ColorProfile::new_display_p3().encode().unwrap();
+        assert_eq!(vouch_for_profile(&p3), 10);
     }
 
     #[test]

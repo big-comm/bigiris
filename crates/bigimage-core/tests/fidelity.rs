@@ -393,13 +393,44 @@ fn in_place_avif_save_keeps_exif() {
         )
         .unwrap();
     };
-    save(rgb, &SourceMetadata { exif: Some(camera_exif()), icc: None });
+    save(rgb, &SourceMetadata { exif: Some(camera_exif()), icc: None, ..Default::default() });
 
     let (image, source) = open_image_for_resave(&path).unwrap();
     assert_eq!(source.exif.as_deref().and_then(|e| e.get(..2)), Some(&b"II"[..]));
     save(image.fliph(), &source);
     let meta = bigimage_core::metadata::read(&path).unwrap();
     assert!(meta.has_camera_info, "Make lost: {:?}", meta.tags);
+}
+
+/// An Exif item over what the container reader accepts (64 KiB) cannot be
+/// kept; the save says so instead of dropping it silently.
+#[test]
+fn unreadable_avif_exif_is_reported() {
+    use bigimage_core::{
+        MetadataLoss, SourceMetadata, open_image_for_resave, save_image_preserving_metadata_report,
+    };
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("photo.avif");
+    let mut large = camera_exif();
+    large.resize(70_000, 0);
+    let opts = EncodeOptions { quality: Some(80), ..EncodeOptions::default() };
+    let save = |source: &SourceMetadata| {
+        let image = DynamicImage::new_rgb8(8, 8);
+        save_image_preserving_metadata_report(
+            image,
+            &path,
+            Format::Avif,
+            &opts,
+            OverwritePolicy::Replace,
+            source,
+        )
+        .unwrap()
+        .dropped
+    };
+    assert_eq!(save(&SourceMetadata { exif: Some(large), ..Default::default() }), []);
+    let (_, source) = open_image_for_resave(&path).unwrap();
+    assert!(source.exif.is_none() && source.exif_unreadable, "{source:?}");
+    assert_eq!(save(&source), [MetadataLoss::ExifInvalid]);
 }
 
 #[test]
@@ -410,7 +441,11 @@ fn preserving_save_matches_profile_to_pixels_or_falls_back_to_srgb() {
     let gray = moxcms::ColorProfile::new_gray_with_gamma(1.8).encode().unwrap();
     let save = |image: DynamicImage, name: &str, format: Format, icc: &[u8]| {
         let path = dir.path().join(name);
-        let source = SourceMetadata { exif: Some(camera_exif()), icc: Some(icc.to_vec()) };
+        let source = SourceMetadata {
+            exif: Some(camera_exif()),
+            icc: Some(icc.to_vec()),
+            ..Default::default()
+        };
         save_image_preserving_metadata(
             image,
             &path,
@@ -468,7 +503,7 @@ fn preserving_save_reports_what_it_dropped() {
     cmyk[16..20].copy_from_slice(b"CMYK");
     let rgb = DynamicImage::ImageRgb8(image::RgbImage::from_pixel(4, 3, image::Rgb([90, 90, 90])));
     let report = |name: &str, format: Format, exif: Option<Vec<u8>>, icc: &[u8]| {
-        let source = SourceMetadata { exif, icc: Some(icc.to_vec()) };
+        let source = SourceMetadata { exif, icc: Some(icc.to_vec()), ..Default::default() };
         let result = save_image_preserving_metadata_report(
             rgb.clone(),
             dir.path().join(name),

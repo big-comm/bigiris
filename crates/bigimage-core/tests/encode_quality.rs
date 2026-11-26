@@ -210,7 +210,8 @@ fn searched_outputs_still_embed_exif_and_icc() {
     use image::ImageDecoder;
     let dir = tempfile::tempdir().unwrap();
     let p3 = moxcms::ColorProfile::new_display_p3().encode().unwrap();
-    let source = SourceMetadata { exif: Some(tiff_exif()), icc: Some(p3.clone()) };
+    let source =
+        SourceMetadata { exif: Some(tiff_exif()), icc: Some(p3.clone()), ..Default::default() };
     for format in [Format::Jpeg, Format::Png, Format::WebP] {
         let path = dir.path().join(format!("meta.{}", format.extension()));
         save_image_preserving_metadata(

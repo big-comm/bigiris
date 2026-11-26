@@ -157,6 +157,7 @@ pub(crate) fn decode_local_with(
     }
     let mut avif_transform = crate::container_bounds::ItemTransform::default();
     let mut avif_exif = None;
+    let mut exif_unreadable = false;
     if format == Some(Format::Avif) {
         use std::io::{Seek, SeekFrom};
         let mut data = reader.into_inner();
@@ -164,7 +165,13 @@ pub(crate) fn decode_local_with(
         if !normalize {
             // The AVIF decoder does not expose EXIF; the container reader does.
             data.seek(SeekFrom::Start(0))?;
-            avif_exif = avif_exif_block(&mut data);
+            match avif_exif_block(&mut data) {
+                Ok(exif) => avif_exif = exif,
+                Err(reason) => {
+                    tracing::warn!(%reason, "AVIF EXIF item unreadable; not preserved");
+                    exif_unreadable = true;
+                }
+            }
         }
         data.seek(SeekFrom::Start(0))?;
         reader = ImageReader::with_format(data, image::ImageFormat::Avif);
@@ -199,23 +206,33 @@ pub(crate) fn decode_local_with(
         return Ok((image, format, crate::metadata::SourceMetadata::default()));
     }
     let exif = exif.filter(|exif| !exif.is_empty());
-    Ok((image, format, crate::metadata::SourceMetadata { exif, icc }))
+    Ok((image, format, crate::metadata::SourceMetadata { exif, icc, exif_unreadable }))
 }
 
-/// Raw TIFF block of an AVIF's `Exif` item, or `None` when it has none or
-/// the container cannot be read.
-fn avif_exif_block(data: &mut (impl std::io::BufRead + std::io::Seek)) -> Option<Vec<u8>> {
+/// Raw TIFF block of an AVIF's `Exif` item, `None` when it has none, or
+/// why an item that may be there cannot be read (a `meta` box over
+/// [`crate::container_bounds::MAX_META`], an item the reader refuses).
+fn avif_exif_block(
+    data: &mut (impl std::io::BufRead + std::io::Seek),
+) -> std::result::Result<Option<Vec<u8>>, String> {
+    use std::io::SeekFrom;
+    let meta = crate::container_bounds::top_level_meta(data).map_err(|error| error.to_string())?;
+    match meta {
+        None => return Ok(None),
+        Some(size) if size > crate::container_bounds::MAX_META => {
+            return Err(format!("meta box of {size} bytes"));
+        }
+        Some(_) => {}
+    }
+    data.seek(SeekFrom::Start(0)).map_err(|error| error.to_string())?;
     let exif = match exif::Reader::new().continue_on_error(true).read_from_container(data) {
         Ok(exif) => exif,
         // Unparsable tags still leave the block; the re-save reports it invalid.
         Err(exif::Error::PartialResult(partial)) => partial.into_inner().0,
-        Err(exif::Error::NotFound(_)) => return None,
-        Err(error) => {
-            tracing::warn!(%error, "AVIF EXIF item unreadable; not preserved");
-            return None;
-        }
+        Err(exif::Error::NotFound(_)) => return Ok(None),
+        Err(error) => return Err(error.to_string()),
     };
-    Some(exif.buf().to_vec())
+    Ok(Some(exif.buf().to_vec()))
 }
 
 /// Open and decode an upright image with shared resource bounds.

@@ -280,6 +280,8 @@ pub fn save_image_preserving_metadata_report(
             Some(exif) if exif.len() > limit => dropped.push(MetadataLoss::ExifTooLarge),
             Some(exif) => extras.exif = Some(exif),
         }
+    } else if source.exif_unreadable {
+        dropped.push(MetadataLoss::ExifInvalid);
     }
     let outcome = pipeline::encode_and_cleanup_with(
         image,

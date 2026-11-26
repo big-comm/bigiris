@@ -107,13 +107,26 @@ impl ItemTransform {
     }
 }
 
+/// Largest top-level `meta` box loaded to read item properties or EXIF.
+pub(crate) const MAX_META: u64 = 1024 * 1024;
+
 /// Read the primary item's transform. Only the top-level `meta` box is
-/// loaded (bounded to 1 MiB); malformed or absent properties mean "no
+/// loaded (bounded to [`MAX_META`]); malformed or absent properties mean "no
 /// transform" rather than an error, since pixels can still be shown.
 pub(crate) fn primary_item_transform(
     reader: &mut (impl Read + Seek),
 ) -> std::io::Result<ItemTransform> {
-    const MAX_META: u64 = 1024 * 1024;
+    let Some(size) = top_level_meta(reader)?.filter(|size| *size <= MAX_META) else {
+        return Ok(ItemTransform::default());
+    };
+    let mut meta = vec![0; usize::try_from(size).map_err(|_| invalid())?];
+    reader.read_exact(&mut meta)?;
+    Ok(parse_meta(&meta).unwrap_or_default())
+}
+
+/// Content size of the first top-level `meta` box, with `reader` left at
+/// its content; `None` when the top-level walk finds none.
+pub(crate) fn top_level_meta(reader: &mut (impl Read + Seek)) -> std::io::Result<Option<u64>> {
     let end = reader.seek(SeekFrom::End(0))?;
     let mut position = 0;
     while end - position >= 8 {
@@ -133,16 +146,11 @@ pub(crate) fn primary_item_transform(
             break;
         }
         if &header[4..8] == b"meta" {
-            if size - header_size > MAX_META {
-                break;
-            }
-            let mut meta = vec![0; (size - header_size) as usize];
-            reader.read_exact(&mut meta)?;
-            return Ok(parse_meta(&meta).unwrap_or_default());
+            return Ok(Some(size - header_size));
         }
         position += size;
     }
-    Ok(ItemTransform::default())
+    Ok(None)
 }
 
 /// Child boxes of `data` as `(type, content)` pairs; `None` if malformed.

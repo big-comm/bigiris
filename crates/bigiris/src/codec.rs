@@ -25,10 +25,13 @@ const MAX_METADATA: u64 = 1024 * 1024;
 const MAX_RESAVE_BLOB: u64 = bigimage_core::metadata::MAX_RESAVE_BLOB as u64;
 /// Re-save trailer after the pixels: EXIF and ICC lengths (u64 LE each),
 /// the estimated JPEG quality (one byte, 0 = unknown, else 1..=100), then
-/// the blobs the worker dropped (one byte of `DROPPED_*` bits).
+/// the blobs the worker dropped or could not read (one byte of
+/// `DROPPED_*` and `UNREADABLE_EXIF` bits).
 const RESAVE_TRAILER: usize = 18;
 const DROPPED_EXIF: u8 = 1;
 const DROPPED_ICC: u8 = 2;
+/// The source's EXIF item exists but could not be read.
+const UNREADABLE_EXIF: u8 = 4;
 thread_local! { static CANCEL: RefCell<Option<Arc<AtomicBool>>> = const { RefCell::new(None) }; }
 
 pub fn configure() {
@@ -739,11 +742,12 @@ fn receive_with(mut output: std::fs::File, trailer: bool) -> ImageResult<(Pixels
             q @ 1..=100 => Some(q),
             _ => return Err(invalid("invalid JPEG quality")),
         };
-        if lengths[17] & !(DROPPED_EXIF | DROPPED_ICC) != 0 {
+        if lengths[17] & !(DROPPED_EXIF | DROPPED_ICC | UNREADABLE_EXIF) != 0 {
             return Err(invalid("invalid codec protocol"));
         }
         extras.exif_dropped = lengths[17] & DROPPED_EXIF != 0;
         extras.icc_dropped = lengths[17] & DROPPED_ICC != 0;
+        extras.source.exif_unreadable = lengths[17] & UNREADABLE_EXIF != 0;
         (exif, icc)
     } else {
         (0, 0)
@@ -1054,6 +1058,9 @@ fn send_resave(
     }
     if extras.icc_dropped {
         dropped |= DROPPED_ICC;
+    }
+    if extras.source.exif_unreadable {
+        dropped |= UNREADABLE_EXIF;
     }
     output.write_all(&[quality, dropped])?;
     output.write_all(exif)?;
@@ -1445,8 +1452,11 @@ mod tests {
     #[test]
     fn resave_protocol_round_trips_pixels_and_metadata() {
         let image = DynamicImage::ImageRgb16(ImageBuffer::from_pixel(3, 2, image::Rgb([1, 2, 3])));
-        let source =
-            bigimage_core::SourceMetadata { exif: Some(camera_exif()), icc: Some(vec![7; 300]) };
+        let source = bigimage_core::SourceMetadata {
+            exif: Some(camera_exif()),
+            icc: Some(vec![7; 300]),
+            ..Default::default()
+        };
         let payload = resave_payload(&image, &source);
         let mut file = tempfile::tempfile().unwrap();
         file.write_all(&payload).unwrap();
@@ -1476,6 +1486,12 @@ mod tests {
         let losses = receive_extras(&bytes, true).unwrap().losses();
         use bigimage_core::MetadataLoss::{ExifTooLarge, IccDiscarded};
         assert_eq!(losses, [ExifTooLarge, IccDiscarded]);
+        // An EXIF item the worker could not read reaches the save.
+        let unreadable =
+            bigimage_core::SourceMetadata { exif_unreadable: true, ..Default::default() };
+        let mut bytes = Vec::new();
+        send_resave(&mut bytes, &image, None, &extras_for(&unreadable)).unwrap();
+        assert_eq!(receive_extras(&bytes, true).unwrap(), extras_for(&unreadable));
     }
 
     fn extras_for(source: &bigimage_core::SourceMetadata) -> ResaveExtras {
@@ -1485,7 +1501,11 @@ mod tests {
     #[test]
     fn resave_protocol_rejects_hostile_trailers() {
         let image = DynamicImage::ImageRgb8(ImageBuffer::from_pixel(2, 2, image::Rgb([9, 9, 9])));
-        let source = bigimage_core::SourceMetadata { exif: Some(vec![1; 10]), icc: None };
+        let source = bigimage_core::SourceMetadata {
+            exif: Some(vec![1; 10]),
+            icc: None,
+            ..Default::default()
+        };
         let payload = resave_payload(&image, &source);
         let trailer = HEADER + 12;
         // A forged quality byte outside 1..=100 is refused.
@@ -1495,7 +1515,7 @@ mod tests {
         assert!(error.contains("quality"), "{error}");
         // So is a dropped-blob bit the protocol does not define.
         let mut forged = payload.clone();
-        forged[trailer + 17] = 4;
+        forged[trailer + 17] = 8;
         let error = receive_bytes(&forged, true).unwrap_err().to_string();
         assert!(error.contains("invalid codec protocol"), "{error}");
         // Truncated blob, extra bytes and a missing trailer.
@@ -1516,8 +1536,11 @@ mod tests {
     #[test]
     fn resave_metadata_is_kept_up_to_cores_cap() {
         let cap = MAX_RESAVE_BLOB as usize;
-        let at_cap =
-            bigimage_core::SourceMetadata { exif: Some(vec![1; cap]), icc: Some(vec![0; 64]) };
+        let at_cap = bigimage_core::SourceMetadata {
+            exif: Some(vec![1; cap]),
+            icc: Some(vec![0; 64]),
+            ..Default::default()
+        };
         let extras = bound_resave_metadata(at_cap.clone());
         assert_eq!(extras, extras_for(&at_cap));
         let image = DynamicImage::new_rgb8(1, 1);
@@ -1528,6 +1551,7 @@ mod tests {
         let past_cap = bigimage_core::SourceMetadata {
             exif: Some(vec![1; cap + 1]),
             icc: Some(vec![0; cap + 1]),
+            ..Default::default()
         };
         let extras = bound_resave_metadata(past_cap);
         assert_eq!(extras.source, bigimage_core::SourceMetadata::default());

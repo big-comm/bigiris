@@ -705,6 +705,7 @@ fn every_colour_type_saves_to_every_format() {
         let source = bigimage_core::SourceMetadata {
             exif: None,
             icc: Some(if gray { gray_icc.clone() } else { rgb_icc.clone() }),
+            ..Default::default()
         };
         for &format in Format::all() {
             let name = format!("{:?}-{format:?}.{}", image.color(), format.extension());

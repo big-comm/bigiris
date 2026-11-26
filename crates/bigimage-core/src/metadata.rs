@@ -49,6 +49,9 @@ pub struct SourceMetadata {
     pub exif: Option<Vec<u8>>,
     /// Embedded ICC profile describing the source pixels.
     pub icc: Option<Vec<u8>>,
+    /// The source has an EXIF block that could not be read, so a save
+    /// reports [`MetadataLoss::ExifInvalid`].
+    pub exif_unreadable: bool,
 }
 
 /// Which metadata a target format can carry through

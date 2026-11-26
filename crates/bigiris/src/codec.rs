@@ -577,11 +577,15 @@ fn drain_diagnostics(stderr: std::process::ChildStderr) -> std::sync::mpsc::Rece
 }
 
 /// Worker output is untrusted: drop terminal control sequences and bidi
-/// overrides so it cannot rewrite the user's terminal or the GUI text.
+/// controls (embeddings, overrides, isolates and the strong marks) so it
+/// cannot rewrite the user's terminal or turn the GUI text around.
 pub(crate) fn sanitize_text(text: &str) -> String {
     text.chars()
         .map(|c| {
-            let bidi = matches!(c, '\u{202A}'..='\u{202E}' | '\u{2066}'..='\u{2069}');
+            let bidi = matches!(
+                c,
+                '\u{202A}'..='\u{202E}' | '\u{2066}'..='\u{2069}' | '\u{200E}' | '\u{200F}' | '\u{061C}'
+            );
             if (c.is_control() && c != '\n') || bidi { '\u{FFFD}' } else { c }
         })
         .collect()
@@ -1463,9 +1467,12 @@ mod tests {
 
     #[test]
     fn untrusted_text_cannot_drive_the_terminal() {
-        let text = sanitize_text("ok\x1b]0;pwned\x07\r\u{202E}line\u{2066}a\u{2069}\nnext\u{9b}2J");
+        let text = sanitize_text(
+            "ok\x1b]0;pwned\x07\r\u{202E}line\u{2066}a\u{2069}\u{200F}b\u{200E}\u{061C}\nnext\u{9b}2J",
+        );
         assert!(!text.chars().any(|c| c.is_control() && c != '\n'), "{text:?}");
-        assert!(!text.contains(['\u{202E}', '\u{2066}', '\u{2069}']), "{text:?}");
+        let bidi = ['\u{202E}', '\u{2066}', '\u{2069}', '\u{200F}', '\u{200E}', '\u{061C}'];
+        assert!(!text.contains(bidi), "{text:?}");
         assert!(text.contains("\nnext"));
     }
 

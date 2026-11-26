@@ -288,6 +288,32 @@ fn in_place_save_keeps_exif_and_wide_gamut_profile() {
 }
 
 #[test]
+fn in_place_avif_save_keeps_exif() {
+    use bigimage_core::{SourceMetadata, open_image_for_resave, save_image_preserving_metadata};
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("photo.avif");
+    let rgb = DynamicImage::ImageRgb8(image::RgbImage::from_pixel(8, 8, image::Rgb([90, 120, 30])));
+    let save = |image: DynamicImage, source: &SourceMetadata| {
+        save_image_preserving_metadata(
+            image,
+            &path,
+            Format::Avif,
+            &EncodeOptions { quality: Some(80), ..EncodeOptions::default() },
+            OverwritePolicy::Replace,
+            source,
+        )
+        .unwrap();
+    };
+    save(rgb, &SourceMetadata { exif: Some(camera_exif()), icc: None });
+
+    let (image, source) = open_image_for_resave(&path).unwrap();
+    assert_eq!(source.exif.as_deref().and_then(|e| e.get(..2)), Some(&b"II"[..]));
+    save(image.fliph(), &source);
+    let meta = bigimage_core::metadata::read(&path).unwrap();
+    assert!(meta.has_camera_info, "Make lost: {:?}", meta.tags);
+}
+
+#[test]
 fn preserving_save_matches_profile_to_pixels_or_falls_back_to_srgb() {
     use bigimage_core::{SourceMetadata, metadata, save_image_preserving_metadata};
     let dir = tempfile::tempdir().unwrap();

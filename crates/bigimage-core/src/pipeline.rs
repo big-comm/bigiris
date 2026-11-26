@@ -156,10 +156,16 @@ pub(crate) fn decode_local_with(
         reader.limits(limits.clone());
     }
     let mut avif_transform = crate::container_bounds::ItemTransform::default();
+    let mut avif_exif = None;
     if format == Some(Format::Avif) {
         use std::io::{Seek, SeekFrom};
         let mut data = reader.into_inner();
         avif_transform = crate::container_bounds::primary_item_transform(&mut data)?;
+        if !normalize {
+            // The AVIF decoder does not expose EXIF; the container reader does.
+            data.seek(SeekFrom::Start(0))?;
+            avif_exif = avif_exif_block(&mut data);
+        }
         data.seek(SeekFrom::Start(0))?;
         reader = ImageReader::with_format(data, image::ImageFormat::Avif);
         reader.limits(limits.clone());
@@ -171,7 +177,11 @@ pub(crate) fn decode_local_with(
     }
     limits.reserve(decoder.total_bytes())?;
     decoder.set_limits(limits)?;
-    let exif = if normalize { None } else { decoder.exif_metadata().ok().flatten() };
+    let exif = match avif_exif {
+        Some(exif) => Some(exif),
+        None if normalize => None,
+        None => decoder.exif_metadata().ok().flatten(),
+    };
     let orientation = decoder.orientation().unwrap_or(image::metadata::Orientation::NoTransforms);
     let icc = decoder.icc_profile()?.filter(|profile| !profile.is_empty());
     let mut image = DynamicImage::from_decoder(decoder)?;
@@ -190,6 +200,22 @@ pub(crate) fn decode_local_with(
     }
     let exif = exif.filter(|exif| !exif.is_empty());
     Ok((image, format, crate::metadata::SourceMetadata { exif, icc }))
+}
+
+/// Raw TIFF block of an AVIF's `Exif` item, or `None` when it has none or
+/// the container cannot be read.
+fn avif_exif_block(data: &mut (impl std::io::BufRead + std::io::Seek)) -> Option<Vec<u8>> {
+    let exif = match exif::Reader::new().continue_on_error(true).read_from_container(data) {
+        Ok(exif) => exif,
+        // Unparsable tags still leave the block; the re-save reports it invalid.
+        Err(exif::Error::PartialResult(partial)) => partial.into_inner().0,
+        Err(exif::Error::NotFound(_)) => return None,
+        Err(error) => {
+            tracing::warn!(%error, "AVIF EXIF item unreadable; not preserved");
+            return None;
+        }
+    };
+    Some(exif.buf().to_vec())
 }
 
 /// Open and decode an upright image with shared resource bounds.

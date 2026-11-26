@@ -16,7 +16,7 @@ const LO: u8 = 30;
 const HI: u8 = 95;
 /// rav1e speed used while searching.
 const SEARCH_SPEED: u8 = 10;
-/// Slowest speed used for the final encode in target mode.
+/// Fastest speed allowed for the final encode in target mode.
 const FINAL_SPEED: u8 = 6;
 /// Quality steps tried when the final encode misses the target.
 const NUDGES: [u8; 2] = [3, 6];

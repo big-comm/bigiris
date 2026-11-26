@@ -1,10 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-//! Encoder-side tuning knobs shared across every `*_file` pipeline:
-//! JPEG quality, PNG compression level, progressive flag, etc.
-//!
-//! Kept as a single bundle so the CLI, dialogs and "Para web" presets can
-//! build it once and pass a reference through the rest of the pipeline
-//! without every call site exploding into positional arguments.
+//! Encoder settings shared by every `*_file` pipeline: a fixed quality or
+//! the perceptual target, AVIF speed, compression effort and the metadata
+//! policy, built once by the CLI or a dialog and passed by reference.
 
 /// Perceptual quality the encoders aim for when no explicit
 /// [`EncodeOptions::quality`] is given.
@@ -75,19 +72,17 @@ pub struct EncodeOptions {
     /// Apply stronger compression: PNG runs a slower oxipng preset, AVIF
     /// a slower encoder speed. Lossless — the same pixels.
     pub optimize: bool,
-    /// Strip EXIF/IPTC/XMP/GPS on encode. **Default `true`.** Today our
-    /// pipeline already drops metadata as a side-effect of decoding to
-    /// `DynamicImage` (which has no metadata carrier) before re-encoding,
-    /// so this flag is documentation of intent — but it's the contract a
-    /// future "preserve metadata" feature must override explicitly. The
-    /// regression test in `tests::default_options_strip_metadata` exists
-    /// to fail if the default ever silently flips to `false`.
+    /// Never publish source metadata (EXIF, IPTC, XMP, GPS, comments).
+    /// **Default `true`.** The encoders write none of it anyway; this flag
+    /// decides whether a same-format conversion may publish the smaller
+    /// original bytes when they carry metadata (see
+    /// [`crate::convert_file_report`]).
     pub strip_metadata: bool,
     /// AVIF encoder speed `1..=10` (1 = slowest / smallest file, 10 =
-    /// fastest / larger file). We default to 8, favoring throughput.
-    /// Actual time depends on image content, dimensions and hardware.
-    /// The `optimize` flag clamps the effective speed at 4 to favor
-    /// stronger compression when the user opts in.
+    /// fastest / larger file), default 8. With a fixed `quality` it is the
+    /// encoder speed; with `quality: None` the search runs at speed 10 and
+    /// the final encode at this speed capped at 6. The `optimize` flag
+    /// caps it at 4 in both cases.
     pub avif_speed: u8,
     /// Visual quality the encoders aim for when `quality` is `None`.
     /// Default [`QualityTarget::Balanced`].

@@ -2444,8 +2444,10 @@ fn edit_history(s: &ViewerState) -> (Vec<EditOp>, Vec<EditOp>) {
     (s.pending_ops.clone(), s.redo_ops.clone())
 }
 
-fn apply_op_to_image(img: image::DynamicImage, op: EditOp) -> image::DynamicImage {
-    match op {
+/// `img` with the light edit `op` applied; `Err` with core's reason when the
+/// result would pass the processing limits, so a save never drops an edit.
+fn apply_op_to_image(img: image::DynamicImage, op: EditOp) -> Result<image::DynamicImage, String> {
+    Ok(match op {
         EditOp::RotateCw => img.rotate90(),
         EditOp::RotateCcw => img.rotate270(),
         EditOp::Rotate180 => img.rotate180(),
@@ -2456,7 +2458,7 @@ fn apply_op_to_image(img: image::DynamicImage, op: EditOp) -> image::DynamicImag
             // a stale op can never ask for pixels outside it.
             let (iw, ih) = (img.width(), img.height());
             if iw == 0 || ih == 0 {
-                return img;
+                return Ok(img);
             }
             let x = x.min(iw - 1);
             let y = y.min(ih - 1);
@@ -2468,26 +2470,16 @@ fn apply_op_to_image(img: image::DynamicImage, op: EditOp) -> image::DynamicImag
         },
         EditOp::Resize { w, h } => {
             let mode = ResizeMode::Exact { width: w.max(1), height: h.max(1) };
-            match bigimage_core::resize::apply_to(&img, mode, Filter::Lanczos3) {
-                Ok(resized) => resized,
-                Err(error) => {
-                    tracing::warn!(%error, "resize edit refused; image kept as is");
-                    img
-                }
-            }
+            bigimage_core::resize::apply_to(&img, mode, Filter::Lanczos3)
+                .map_err(|error| error.to_string())?
         }
         EditOp::Straighten { tenths } => {
-            match bigimage_core::rotate::straighten(&img, f64::from(tenths) / 10.0) {
-                Ok(straightened) => straightened,
-                Err(error) => {
-                    tracing::warn!(%error, "straighten edit refused; image kept as is");
-                    img
-                }
-            }
+            bigimage_core::rotate::straighten(&img, f64::from(tenths) / 10.0)
+                .map_err(|error| error.to_string())?
         }
         // Fallible and slow: see `apply_op`.
         EditOp::RemoveBackground | EditOp::Upscale { .. } | EditOp::Denoise => img,
-    }
+    })
 }
 
 /// Heavy operations actually computed, for tests of the edit cache.
@@ -2530,7 +2522,7 @@ fn apply_heavy(
             bigimage_ai::upscale::upscale(&img, factor.clamp(2, 4), method, &mut control)
         }
         EditOp::Denoise => bigimage_ai::denoise::denoise(&img, &mut control),
-        other => return Ok(apply_op_to_image(img, other)),
+        other => return apply_op_to_image(img, other),
     };
     result.map_err(|error| ai_error_text(&error))
 }
@@ -2580,7 +2572,7 @@ fn apply_op(img: image::DynamicImage, op: EditOp) -> Result<image::DynamicImage,
     if viewer::edits::is_heavy(&op) {
         apply_heavy(img, op, &mut |_| {})
     } else {
-        Ok(apply_op_to_image(img, op))
+        apply_op_to_image(img, op)
     }
 }
 
@@ -4516,26 +4508,26 @@ mod anchor_tests {
         src.put_pixel(1, 0, Rgba([0, 255, 0, 255]));
         let img = DynamicImage::ImageRgba8(src);
 
-        let cw = apply_op_to_image(img.clone(), EditOp::RotateCw).to_rgba8();
+        let cw = apply_op_to_image(img.clone(), EditOp::RotateCw).unwrap().to_rgba8();
         assert_eq!(cw.dimensions(), (1, 2));
         assert_eq!(cw.get_pixel(0, 0).0, [255, 0, 0, 255]);
         assert_eq!(cw.get_pixel(0, 1).0, [0, 255, 0, 255]);
 
-        let ccw = apply_op_to_image(img.clone(), EditOp::RotateCcw).to_rgba8();
+        let ccw = apply_op_to_image(img.clone(), EditOp::RotateCcw).unwrap().to_rgba8();
         assert_eq!(ccw.dimensions(), (1, 2));
         assert_eq!(ccw.get_pixel(0, 0).0, [0, 255, 0, 255]);
         assert_eq!(ccw.get_pixel(0, 1).0, [255, 0, 0, 255]);
 
-        let r180 = apply_op_to_image(img.clone(), EditOp::Rotate180).to_rgba8();
+        let r180 = apply_op_to_image(img.clone(), EditOp::Rotate180).unwrap().to_rgba8();
         assert_eq!(r180.dimensions(), (2, 1));
         assert_eq!(r180.get_pixel(0, 0).0, [0, 255, 0, 255]);
         assert_eq!(r180.get_pixel(1, 0).0, [255, 0, 0, 255]);
 
-        let fh = apply_op_to_image(img.clone(), EditOp::FlipH).to_rgba8();
+        let fh = apply_op_to_image(img.clone(), EditOp::FlipH).unwrap().to_rgba8();
         assert_eq!(fh.get_pixel(0, 0).0, [0, 255, 0, 255]);
         assert_eq!(fh.get_pixel(1, 0).0, [255, 0, 0, 255]);
 
-        let fv = apply_op_to_image(img, EditOp::FlipV).to_rgba8();
+        let fv = apply_op_to_image(img, EditOp::FlipV).unwrap().to_rgba8();
         // One pixel tall: a vertical flip changes nothing.
         assert_eq!(fv.dimensions(), (2, 1));
         assert_eq!(fv.get_pixel(0, 0).0, [255, 0, 0, 255]);
@@ -4594,6 +4586,20 @@ mod anchor_tests {
             })
             .collect();
         assert!(leftovers.is_empty(), "atomic save left a temporary file behind");
+    }
+
+    #[test]
+    fn refused_edit_fails_the_save() {
+        use super::{EditOp, SaveFailure, write_edits_to_disk};
+        let dir = tempfile::TempDir::new().unwrap();
+        let path = dir.path().join("photo.png");
+        image::RgbImage::from_pixel(3, 2, image::Rgb([10, 20, 30])).save(&path).unwrap();
+        let before = std::fs::read(&path).unwrap();
+        // Past the processing limits: core refuses before allocating.
+        let huge = EditOp::Resize { w: 100_000, h: 100_000 };
+        let result = write_edits_to_disk(&path, &[EditOp::RotateCw, huge]);
+        assert!(matches!(result, Err(SaveFailure::Other(_))));
+        assert_eq!(std::fs::read(&path).unwrap(), before);
     }
 
     #[test]

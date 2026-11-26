@@ -236,6 +236,13 @@ pub(crate) fn srgb_profile() -> ImageResult<Vec<u8>> {
     }
     let mut srgb = ColorProfile::new_srgb();
     srgb.white_point = PCS_D50;
+    // ICC.1 9.2.36: a v4 display profile's media white point is the PCS
+    // D50, and `chad` adapts the D65 display white to it (moxcms stores
+    // the bare Bradford cone matrix there).
+    srgb.media_white_point = Some(PCS_D50);
+    let pcs = moxcms::Xyz { x: 0.9642, y: 1.0, z: 0.8249 };
+    srgb.chromatic_adaptation =
+        Some(moxcms::adaption_matrix_d(moxcms::WHITE_POINT_D65.to_xyz(), pcs));
     let encoded = srgb.encode().map_err(error)?;
     let mut icc = align_tags(&encoded).ok_or_else(|| error("generated sRGB tag table"))?;
     icc[24..36].copy_from_slice(&PROFILE_DATE);
@@ -298,6 +305,30 @@ mod tests {
             let (offset, size) = (be(entry + 4) as usize, be(entry + 8) as usize);
             assert_eq!(offset % 4, 0, "tag {:?}", &icc[entry..entry + 4]);
             assert!(offset + size <= icc.len());
+        }
+        let tag = |signature: &[u8; 4]| {
+            let entry = (132..132 + 12 * count).step_by(12).find(|&e| &icc[e..e + 4] == signature);
+            be(entry.unwrap_or_else(|| panic!("no {signature:?} tag")) + 4) as usize
+        };
+        // ICC.1 9.2.36: the media white point of a display profile is D50.
+        let wtpt = tag(b"wtpt") + 8;
+        assert_eq!([be(wtpt), be(wtpt + 4), be(wtpt + 8)], [0xf6d6, 0x1_0000, 0xd32d]);
+        // Bradford D65 to D50 (Lindbloom), as s15Fixed16 numbers.
+        let bradford = [
+            1.047_811_2,
+            0.022_886_6,
+            -0.050_127_0,
+            0.029_542_4,
+            0.990_484_4,
+            -0.017_049_1,
+            -0.009_234_5,
+            0.015_043_6,
+            0.752_131_6,
+        ];
+        let chad = tag(b"chad") + 8;
+        for (i, expected) in bradford.into_iter().enumerate() {
+            let value = f64::from(be(chad + 4 * i).cast_signed()) / 65536.0;
+            assert!((value - expected).abs() < 2e-3, "chad[{i}] = {value}, want {expected}");
         }
     }
 

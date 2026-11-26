@@ -1544,21 +1544,71 @@ fn unreadable(path: &Path, error: &std::io::Error) -> color_eyre::Report {
     ))
 }
 
-/// The files named on the command line, and the supported images directly inside named folders.
-fn batch_files(inputs: &[PathBuf]) -> color_eyre::Result<Vec<PathBuf>> {
-    let mut files = Vec::new();
+/// Inputs of a batch, and the folder entries left out of them.
+struct BatchFiles {
+    /// The files named on the command line, and the supported images
+    /// directly inside named folders.
+    inputs: Vec<PathBuf>,
+    /// `(entry, source)`: a folder entry named like the output `source`
+    /// writes beside itself (`x.webp`, or `x_1.webp`, next to `x.png` in a
+    /// WebP batch). It is an earlier run's output, or a file this run skips
+    /// or replaces anyway; converting it again would multiply outputs.
+    outputs_of_inputs: Vec<(PathBuf, PathBuf)>,
+}
+
+fn batch_files(
+    inputs: &[PathBuf],
+    format: Format,
+    output_dir: Option<&Path>,
+) -> color_eyre::Result<BatchFiles> {
+    let mut files = BatchFiles { inputs: Vec::new(), outputs_of_inputs: Vec::new() };
     for input in inputs {
-        if input.is_dir() {
-            let entries = std::fs::read_dir(input).map_err(|e| unreadable(input, &e))?;
-            files.extend(entries.flatten().map(|entry| entry.path()).filter(|path| {
+        if !input.is_dir() {
+            files.inputs.push(input.clone());
+            continue;
+        }
+        let entries = std::fs::read_dir(input).map_err(|e| unreadable(input, &e))?;
+        let images: Vec<PathBuf> = entries
+            .flatten()
+            .map(|entry| entry.path())
+            .filter(|path| {
                 path.is_file()
                     && path
                         .extension()
                         .and_then(|ext| ext.to_str())
                         .is_some_and(|ext| Format::parse(ext).is_ok())
-            }));
-        } else {
-            files.push(input.clone());
+            })
+            .collect();
+        let writes_here = output_dir
+            .is_none_or(|dir| std::fs::canonicalize(dir).ok() == std::fs::canonicalize(input).ok());
+        if !writes_here {
+            files.inputs.extend(images);
+            continue;
+        }
+        let is_target = |path: &Path| {
+            path.extension().is_some_and(|ext| ext.eq_ignore_ascii_case(format.extension()))
+        };
+        let sources: std::collections::HashMap<_, _> = images
+            .iter()
+            .filter(|path| !is_target(path))
+            .map(|path| (path.file_stem().unwrap_or_default().to_os_string(), path))
+            .collect();
+        for image in &images {
+            // `x_2.webp` -> `x_1` -> `x`, as `increment` numbers them.
+            let mut source = None;
+            let mut stem =
+                is_target(image).then(|| image.file_stem().unwrap_or_default().to_os_string());
+            while let Some(current) = stem {
+                if let Some(found) = sources.get(&current) {
+                    source = Some(*found);
+                    break;
+                }
+                stem = output_plan::numbered_base(&current);
+            }
+            match source {
+                Some(source) => files.outputs_of_inputs.push((image.clone(), source.clone())),
+                None => files.inputs.push(image.clone()),
+            }
         }
     }
     Ok(files)
@@ -1593,16 +1643,8 @@ fn run_batch(profile: &std::path::Path, inputs: &[PathBuf]) -> color_eyre::Resul
             )));
         }
     };
-    if let Some(dir) = &profile.output_dir {
-        std::fs::create_dir_all(dir).map_err(|e| {
-            color_eyre::eyre::eyre!(fill(
-                &gettext("could not create {path}: {error}"),
-                &[("path", &codec::printable_path(dir)), ("error", &e.to_string())],
-            ))
-        })?;
-    }
-
-    let mut files = batch_files(inputs)?;
+    let BatchFiles { inputs: mut files, outputs_of_inputs } =
+        batch_files(inputs, format, profile.output_dir.as_deref())?;
     files.sort();
     if files.is_empty() {
         return Err(color_eyre::eyre::eyre!(gettext("no images found for the batch")));
@@ -1617,6 +1659,15 @@ fn run_batch(profile: &std::path::Path, inputs: &[PathBuf]) -> color_eyre::Resul
     // which keeps `increment` numbering deterministic.
     let groups =
         plan_outputs(&files, &naming).map_err(|message| color_eyre::eyre::eyre!(message))?;
+    // Only now: a refused run leaves no new folder behind.
+    if let Some(dir) = &profile.output_dir {
+        std::fs::create_dir_all(dir).map_err(|e| {
+            color_eyre::eyre::eyre!(fill(
+                &gettext("could not create {path}: {error}"),
+                &[("path", &codec::printable_path(dir)), ("error", &e.to_string())],
+            ))
+        })?;
+    }
 
     let total: usize = groups.iter().map(Vec::len).sum();
     let opts = EncodeOptions {
@@ -1665,8 +1716,15 @@ fn run_batch(profile: &std::path::Path, inputs: &[PathBuf]) -> color_eyre::Resul
     drop(tx);
 
     let mut ok = 0usize;
-    let mut skipped = 0usize;
+    let mut skipped = outputs_of_inputs.len();
     let mut failed = 0usize;
+    for (entry, source) in &outputs_of_inputs {
+        let note = fill(
+            &gettext("the output of {path} in this batch"),
+            &[("path", &codec::printable_path(source))],
+        );
+        println!("skip {} ({note})", codec::printable_path(entry));
+    }
     for (done, (input, result, ignored_profile)) in rx.into_iter().enumerate() {
         if ignored_profile {
             note_ignored_profile(&input);

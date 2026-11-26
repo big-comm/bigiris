@@ -240,6 +240,33 @@ fn batch_profile_converts_folder_and_skip_is_idempotent() {
     }
 }
 
+/// Outputs written beside their sources are not inputs of the next run:
+/// a rerun skips, and `increment` adds one file per run, never doubling.
+#[test]
+fn batch_reruns_beside_sources_stay_stable() {
+    if !sandbox_available() {
+        return;
+    }
+    let dir = tempfile::tempdir().unwrap();
+    let folder = dir.path().join("f");
+    std::fs::create_dir(&folder).unwrap();
+    fixture(&folder, "x.png");
+    std::fs::write(dir.path().join("skip.toml"), "format = 'webp'\n").unwrap();
+    std::fs::write(dir.path().join("inc.toml"), "format = 'webp'\noverwrite = 'increment'\n")
+        .unwrap();
+    let count = || std::fs::read_dir(&folder).unwrap().count();
+    success(run(dir.path(), &["batch", "--profile", "skip.toml", "f"]));
+    let output = run(dir.path(), &["batch", "--profile", "skip.toml", "f"]);
+    success(output.clone());
+    assert!(String::from_utf8_lossy(&output.stdout).contains("skip f/x.webp"));
+    assert_eq!(count(), 2);
+    for expected in [3, 4] {
+        success(run(dir.path(), &["batch", "--profile", "inc.toml", "f"]));
+        assert_eq!(count(), expected);
+    }
+    assert!(folder.join("x_2.webp").exists());
+}
+
 fn sized_fixture(dir: &Path, name: &str, width: u32, height: u32) {
     image::RgbImage::from_pixel(width, height, image::Rgb([200, 40, 10]))
         .save(dir.join(name))
@@ -368,7 +395,8 @@ fn colliding_outputs_are_refused_before_any_work() {
     let output = run(dir.path(), &["batch", "--profile", "p.toml", "one", "two"]);
     assert_eq!(output.status.code(), Some(1));
     assert_eq!(std::fs::read(dir.path().join("a.webp")).unwrap(), b"existing");
-    assert!(!dir.path().join("out/photo.webp").exists());
+    // A refused run creates no output folder either.
+    assert!(!dir.path().join("out").exists());
 }
 
 #[test]

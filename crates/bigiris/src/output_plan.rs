@@ -134,7 +134,7 @@ pub(crate) fn plan_outputs(
 
 /// `x` for a stem `x_N` as written by the `increment` policy (N >= 1, no
 /// leading zero).
-fn numbered_base(stem: &std::ffi::OsStr) -> Option<std::ffi::OsString> {
+pub(crate) fn numbered_base(stem: &std::ffi::OsStr) -> Option<std::ffi::OsString> {
     use std::os::unix::ffi::{OsStrExt, OsStringExt};
     let bytes = stem.as_bytes();
     let split = bytes.iter().rposition(|&byte| byte == b'_')?;

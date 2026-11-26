@@ -8,5 +8,7 @@ progressive = false
 optimize = false
 overwrite = "increment" # skip | replace | increment
 
-# Optional. Without it, outputs are written beside each source image.
+# Optional. Without it, outputs are written beside each source image, and a
+# folder's image named like another one's output (x.webp or x_1.webp beside
+# x.png here) is skipped as an earlier output.
 # output_dir = "/home/user/Pictures/export"

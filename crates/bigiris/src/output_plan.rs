@@ -106,19 +106,24 @@ pub(crate) fn plan_outputs(
         && naming.policy != OverwritePolicy::Increment
         && !naming.per_image_suffix
     {
-        let mut message = gettext("several inputs would write the same output file:");
-        for group in collisions {
-            let names: Vec<_> = group.iter().map(|path| printable_path(path)).collect();
-            message.push_str("\n  ");
-            message.push_str(&names.join(", "));
-        }
-        message.push('\n');
-        message.push_str(&gettext(
-            "Rename the inputs, process them separately or use the increment policy.",
-        ));
-        return Err(message);
+        return Err(collision_refusal(&collisions));
     }
     Ok(groups)
+}
+
+/// The refusal naming each group of inputs that would write one file.
+fn collision_refusal(collisions: &[&Vec<PathBuf>]) -> String {
+    let mut message = gettext("several inputs would write the same output file:");
+    for group in collisions {
+        let names: Vec<_> = group.iter().map(|path| printable_path(path)).collect();
+        message.push_str("\n  ");
+        message.push_str(&names.join(", "));
+    }
+    message.push('\n');
+    message.push_str(&gettext(
+        "Rename the inputs, process them separately or use the increment policy.",
+    ));
+    message
 }
 
 type OutputKey = (PathBuf, OsString, OsString);
@@ -193,11 +198,9 @@ pub(crate) struct BatchFiles {
     /// Files named as inputs, and the supported images directly inside named
     /// folders.
     pub(crate) inputs: Vec<PathBuf>,
-    /// `(entry, source)`: a folder image named like the output `source`
-    /// writes beside itself (`x.webp`, or `x_1.webp`, beside `x.png` in a
-    /// WebP batch; `x_1.png` beside `x.png` in a PNG one). It is an earlier
-    /// run's output, or a file this run skips or replaces anyway; converting
-    /// it again would multiply outputs.
+    /// `(entry, source)`: a folder image named like an output of `source`
+    /// (`x.webp` or `x_1.webp` beside `x.png` in a WebP batch, `x_1.png` in
+    /// a PNG one); converting it again would multiply outputs.
     pub(crate) earlier_outputs: Vec<(PathBuf, PathBuf)>,
 }
 

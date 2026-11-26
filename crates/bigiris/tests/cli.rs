@@ -466,11 +466,9 @@ fn linked_input_in_another_folder_runs() {
     assert_eq!(String::from_utf8_lossy(&output.stdout).lines().count(), 2);
 }
 
-/// On a folder that folds case (vfat, exFAT, NTFS, casefolded ext4 or
-/// tmpfs), `IMG.webp` and `img.webp` are one file, and `a.jpg`'s `a.png`
-/// is the input `a.PNG`: both are refused before any work. The folder is a
-/// casefolded tmpfs in a user namespace; the test is skipped where the
-/// kernel or the sandbox forbids one.
+/// On a casefolded tmpfs (in a user namespace; skipped where none mounts),
+/// `IMG.webp` and `img.webp`, or `a.jpg`'s `a.png` and the input `a.PNG`,
+/// are one file, refused before any work.
 #[test]
 fn case_folding_collisions_are_refused() {
     let dir = tempfile::tempdir().unwrap();

@@ -59,15 +59,16 @@ const CURSOR_HIDE_MS: u64 = 2000;
 /// Slideshow step between auto-advances (Space toggles).
 const DEFAULT_SLIDESHOW_INTERVAL_S: u32 = 5;
 
-/// CSS applied app-wide. Theater is on by default (see `build_window`);
-/// `.theater-off` is the escape hatch that restores Adwaita chrome when
-/// the user toggles theater off.
+/// CSS applied app-wide. Theater is on by default for images (see
+/// `build_window`); T removes the `.theater` class and restores the
+/// Adwaita chrome.
 const THEATER_CSS: &str = "
+.theater { background-color: #101216; }
 /* The canvas is dark in either color scheme, so the chrome drawn on it
-   (header, error page, loading notices) takes the dark palette's colors;
-   popovers and dialogs keep the scheme's own. */
-.theater {
-    background-color: #101216;
+   (header, error page, loading notices) takes the dark palette's colors.
+   Dialogs sit beside the window content, not in it, and keep the scheme. */
+.theater .viewer-chrome {
+    color: #ffffff;
     --window-bg-color: #222226;
     --window-fg-color: #ffffff;
     --headerbar-bg-color: #2e2e32;
@@ -956,6 +957,7 @@ fn build_window_preloaded(
     }
 
     let toolbar_view = adw::ToolbarView::new();
+    toolbar_view.add_css_class("viewer-chrome");
     toolbar_view.add_top_bar(&header);
     toolbar_view.set_content(Some(&overlay));
     // The first contact exposes the controls. It auto-hides shortly after

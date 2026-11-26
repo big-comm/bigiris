@@ -1045,7 +1045,8 @@ fn run_convert(
     let target = parse_format(to)?;
     let policy = if in_place { OverwritePolicy::Replace } else { policy };
     tracing::info!(?target, ?opts, ?policy, in_place, count = files.len(), "convert");
-    run_per_file(files, "convert", Naming::image(Some(target), policy), |f| {
+    let naming = Naming { suffixed: false, ..Naming::image(Some(target), policy) };
+    run_per_file(files, "convert", naming, |f| {
         // Publishing replaces the link itself and leaves its target as it was.
         if in_place && std::fs::symlink_metadata(f).is_ok_and(|meta| meta.is_symlink()) {
             return Err(bigimage_core::BigImageError::InvalidInput(fill(
@@ -1073,7 +1074,8 @@ fn run_convert(
 fn run_strip_metadata(policy: OverwritePolicy, files: &[PathBuf]) -> color_eyre::Result<()> {
     let opts = EncodeOptions::default();
     tracing::info!(?policy, count = files.len(), "strip-metadata");
-    run_per_file(files, "strip-metadata", Naming::image(None, policy), |f| {
+    let naming = Naming { suffixed: false, ..Naming::image(None, policy) };
+    run_per_file(files, "strip-metadata", naming, |f| {
         let format = bigimage_core::sniff_format(f).ok_or_else(|| {
             bigimage_core::BigImageError::UnsupportedFormat(codec::printable_path(f))
         })?;
@@ -1629,7 +1631,7 @@ fn run_batch(profile: &std::path::Path, inputs: &[PathBuf]) -> color_eyre::Resul
         }
     };
     let output_plan::BatchFiles { inputs: mut files, earlier_outputs } =
-        output_plan::batch_files(inputs, format, profile.output_dir.as_deref())
+        output_plan::batch_files(inputs, format, profile.output_dir.as_deref(), policy)
             .map_err(|message| color_eyre::eyre::eyre!(message))?;
     files.sort();
     if files.is_empty() {
@@ -1640,6 +1642,7 @@ fn run_batch(profile: &std::path::Path, inputs: &[PathBuf]) -> color_eyre::Resul
         extension: Some(format.extension()),
         policy,
         per_image_suffix: false,
+        suffixed: false,
     };
     // Each group shares one destination and runs in order on one worker,
     // which keeps `increment` numbering deterministic.
@@ -1775,8 +1778,13 @@ fn run_to_pdf(
             "LibreOffice (`soffice`) not found in PATH. Install `libreoffice-fresh` (recommended) or `libreoffice-still` (e.g. `sudo pacman -S libreoffice-fresh`)."
         ))
     })?;
-    let naming =
-        Naming { output_dir: None, extension: Some("pdf"), policy, per_image_suffix: false };
+    let naming = Naming {
+        output_dir: None,
+        extension: Some("pdf"),
+        policy,
+        per_image_suffix: false,
+        suffixed: false,
+    };
     let groups =
         plan_outputs(files, &naming).map_err(|message| color_eyre::eyre::eyre!(message))?;
 

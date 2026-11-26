@@ -310,6 +310,34 @@ fn batch_reruns_beside_sources_stay_stable() {
     assert_eq!(count(&pnm), 2);
 }
 
+/// Under skip and replace no folder image is taken for an earlier output:
+/// a real `trip_2.png` beside `trip.png` is processed, and two PNM images
+/// sharing a stem both stay inputs.
+#[test]
+fn batch_keeps_every_image_without_increment() {
+    if !sandbox_available() {
+        return;
+    }
+    let dir = tempfile::tempdir().unwrap();
+    std::fs::create_dir(dir.path().join("trip")).unwrap();
+    fixture(&dir.path().join("trip"), "trip.png");
+    fixture(&dir.path().join("trip"), "trip_2.png");
+    std::fs::write(dir.path().join("png.toml"), "format = 'png'\noverwrite = 'replace'\n").unwrap();
+    let output = run(dir.path(), &["batch", "--profile", "png.toml", "trip"]);
+    success(output.clone());
+    let report = String::from_utf8_lossy(&output.stdout);
+    assert!(!report.contains("the output of"), "{report}");
+    assert!(String::from_utf8_lossy(&output.stderr).contains("batch: 2 written"));
+
+    std::fs::create_dir(dir.path().join("pnm")).unwrap();
+    image::GrayImage::new(4, 4).save(dir.path().join("pnm/a.pgm")).unwrap();
+    image::RgbImage::new(4, 4).save(dir.path().join("pnm/a.ppm")).unwrap();
+    std::fs::write(dir.path().join("pnm.toml"), "format = 'pnm'\n").unwrap();
+    let output = run(dir.path(), &["batch", "--profile", "pnm.toml", "pnm"]);
+    success(output.clone());
+    assert!(String::from_utf8_lossy(&output.stderr).contains("batch: 0 written, 2 skipped"));
+}
+
 fn sized_fixture(dir: &Path, name: &str, width: u32, height: u32) {
     image::RgbImage::from_pixel(width, height, image::Rgb([200, 40, 10]))
         .save(dir.join(name))

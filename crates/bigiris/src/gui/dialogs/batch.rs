@@ -179,8 +179,12 @@ pub(in crate::gui) fn build_batch_dialog(
             let policy = selected_overwrite(&overwrite_row);
             let opts = encode.options();
             let out_dir_snapshot = output_dir.borrow().clone();
-            let scanned =
-                crate::output_plan::batch_files(&files.borrow(), fmt, out_dir_snapshot.as_deref());
+            let scanned = crate::output_plan::batch_files(
+                &files.borrow(),
+                fmt,
+                out_dir_snapshot.as_deref(),
+                policy,
+            );
             let crate::output_plan::BatchFiles { inputs, earlier_outputs } = match scanned {
                 Ok(scanned) => scanned,
                 Err(message) => {
@@ -198,6 +202,7 @@ pub(in crate::gui) fn build_batch_dialog(
                 extension: Some(fmt.extension()),
                 policy,
                 per_image_suffix: false,
+                suffixed: false,
             };
             let controls = RunControls {
                 window: window.clone(),
@@ -516,7 +521,8 @@ mod folder_tests {
         let app = probe_app("com.biglinux.Iris.BatchFolderProbe");
         let dir = tempfile::tempdir().unwrap();
         image::RgbImage::new(8, 8).save(dir.path().join("a.png")).unwrap();
-        std::fs::write(dir.path().join("a.webp"), b"earlier output").unwrap();
+        image::RgbImage::new(4, 4).save(dir.path().join("a.webp")).unwrap();
+        let earlier = std::fs::read(dir.path().join("a.webp")).unwrap();
         let other = tempfile::tempdir().unwrap();
         let colliding = ["b.png", "b.jpg"].map(|name| other.path().join(name));
         for file in &colliding {
@@ -552,11 +558,26 @@ mod folder_tests {
         assert!(text.contains("several inputs would write the same output file"), "{text}");
         assert_eq!(cancel.label().as_deref(), Some(gettext("Close").as_str()));
 
+        // Only `increment` names outputs that a rerun could take as inputs.
+        let overwrite_title = gettext("If the output file exists");
+        let overwrite: adw::ComboRow =
+            find_widget(root, &|row: &adw::ComboRow| row.title() == overwrite_title).unwrap();
+        let choose = |policy| {
+            let index = OVERWRITE_CHOICES.iter().position(|(_, choice)| *choice == policy);
+            overwrite.set_selected(u32::try_from(index.unwrap()).unwrap());
+        };
         *inputs.borrow_mut() = vec![dir.path().to_path_buf()];
+        choose(OverwritePolicy::Increment);
         let text = run();
-        assert!(text.contains("skipped: 2"), "{text}");
+        assert!(text.contains("Written: 1, skipped: 1"), "{text}");
         assert!(text.contains("Skipped as outputs of earlier runs: "), "{text}");
-        assert_eq!(std::fs::read(dir.path().join("a.webp")).unwrap(), b"earlier output");
+        assert_eq!(std::fs::read(dir.path().join("a.webp")).unwrap(), earlier);
+        assert!(dir.path().join("a_1.webp").exists());
+        // Under skip every image is an input, each left as it is.
+        choose(OverwritePolicy::Skip);
+        let text = run();
+        assert!(text.contains("Written: 0, skipped: 3"), "{text}");
+        assert!(!text.contains("Skipped as outputs of earlier runs"), "{text}");
         window.destroy();
     }
 }

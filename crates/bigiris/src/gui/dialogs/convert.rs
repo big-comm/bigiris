@@ -131,6 +131,7 @@ fn fill_convert_dialog(
                 extension: Some(fmt.extension()),
                 policy,
                 per_image_suffix: false,
+                suffixed: false,
             };
             let start = {
                 let (files, naming) = (files.clone(), naming.clone());

@@ -28,16 +28,21 @@ pub(crate) struct Naming {
     /// collision: it is not refused up front, and the runner reports an
     /// input that really replaced an earlier output.
     pub(crate) per_image_suffix: bool,
+    /// Outputs add a suffix to the input's stem (`_1920`, `_rot90`). Without
+    /// one, an output in the input's own format is the input itself.
+    pub(crate) suffixed: bool,
 }
 
 impl Naming {
-    /// Outputs next to their inputs, in `target` or each input's own format.
+    /// Suffixed outputs next to their inputs, in `target` or each input's
+    /// own format.
     pub(crate) fn image(target: Option<Format>, policy: OverwritePolicy) -> Naming {
         Naming {
             output_dir: None,
             extension: target.map(|format| format.extension()),
             policy,
             per_image_suffix: false,
+            suffixed: true,
         }
     }
 }
@@ -101,7 +106,17 @@ pub(crate) fn plan_outputs(
             }
         }
     }
-    let collisions: Vec<_> = groups.iter().filter(|group| group.len() > 1).collect();
+    // Under skip, inputs writing over one of themselves all leave it as it
+    // is (`x.png` and `x.webp` converted to WebP): nothing to refuse.
+    let collisions: Vec<_> = groups
+        .iter()
+        .filter(|group| group.len() > 1)
+        .filter(|group| {
+            naming.policy != OverwritePolicy::Skip
+                || naming.suffixed
+                || !group.iter().any(|file| writes_itself(file, naming))
+        })
+        .collect();
     if !collisions.is_empty()
         && naming.policy != OverwritePolicy::Increment
         && !naming.per_image_suffix
@@ -134,6 +149,24 @@ pub(crate) fn replaced_inputs(files: &[PathBuf], naming: &Naming) -> usize {
         .filter(|output| inputs.contains(output))
         .collect();
     replaced.len()
+}
+
+/// Whether the output of `file` under the unsuffixed `naming` is `file`. A
+/// PNM output is `.pgm` or `.ppm` by its pixels, so any PNM spelling of the
+/// input's own name may be it.
+fn writes_itself(file: &Path, naming: &Naming) -> bool {
+    let (dir, stem, extension) = output_key(file, naming);
+    let is_pnm = |ext: &std::ffi::OsStr| {
+        ext.to_str().is_some_and(|ext| Format::parse(ext).is_ok_and(|f| f == Format::Pnm))
+    };
+    let mut name = stem;
+    name.push(".");
+    match file.extension().filter(|own| is_pnm(&extension) && is_pnm(own)) {
+        Some(own) => name.push(own),
+        None => name.push(extension),
+    }
+    std::fs::canonicalize(dir.join(name))
+        .is_ok_and(|output| std::fs::canonicalize(file).is_ok_and(|input| input == output))
 }
 
 /// The refusal naming each group of inputs that would write one file.
@@ -248,13 +281,15 @@ pub(crate) fn folder_images(dir: &Path) -> std::io::Result<Vec<PathBuf>> {
 }
 
 /// The inputs of a batch converting to `format`: files as given, folders as
-/// their [`folder_images`], minus the earlier outputs found in a folder the
-/// outputs are written to. The error is the translated refusal of a folder
-/// that cannot be listed.
+/// their [`folder_images`]. Under `increment`, which numbers its outputs, a
+/// folder the outputs are written to loses its earlier outputs; under skip
+/// and replace every image stays an input. The error is the translated
+/// refusal of a folder that cannot be listed.
 pub(crate) fn batch_files(
     inputs: &[PathBuf],
     format: Format,
     output_dir: Option<&Path>,
+    policy: OverwritePolicy,
 ) -> Result<BatchFiles, String> {
     let mut files = BatchFiles { inputs: Vec::new(), earlier_outputs: Vec::new() };
     for input in inputs {
@@ -270,20 +305,18 @@ pub(crate) fn batch_files(
         })?;
         let writes_here = output_dir
             .is_none_or(|dir| std::fs::canonicalize(dir).ok() == std::fs::canonicalize(input).ok());
-        if !writes_here {
+        if !writes_here || policy != OverwritePolicy::Increment {
             files.inputs.extend(images);
             continue;
         }
-        let mut by_stem: HashMap<OsString, Vec<&PathBuf>> = HashMap::new();
-        for image in &images {
-            by_stem
-                .entry(image.file_stem().unwrap_or_default().to_os_string())
-                .or_default()
-                .push(image);
-        }
-        for image in &images {
-            match earlier_output_source(image, &by_stem, format) {
-                Some(source) => files.earlier_outputs.push((image.clone(), source.clone())),
+        let sources = earlier_output_sources(&images, format);
+        for (index, image) in images.iter().enumerate() {
+            // Two images naming each other (`a.pgm` and `a.ppm` in a PNM
+            // batch): the first in sort order stays an input.
+            let source =
+                sources[index].filter(|&source| sources[source] != Some(index) || source < index);
+            match source {
+                Some(source) => files.earlier_outputs.push((image.clone(), images[source].clone())),
                 None => files.inputs.push(image.clone()),
             }
         }
@@ -291,35 +324,43 @@ pub(crate) fn batch_files(
     Ok(files)
 }
 
-/// The other image of the folder whose output in `format` is named like
-/// `image`: the same stem, or `x` for `x_2` and `x_2_1` as `increment`
-/// numbers them, with the extension that output takes. An image is never
-/// its own earlier output, though a same-format output keeps its name.
-fn earlier_output_source<'a>(
-    image: &Path,
-    by_stem: &HashMap<OsString, Vec<&'a PathBuf>>,
-    format: Format,
-) -> Option<&'a PathBuf> {
-    let named_like_output_of = |source: &Path| match format {
-        // A PNM output is `.pgm` or `.ppm` by its pixels, unknown before decoding.
-        Format::Pnm => image
-            .extension()
-            .and_then(|ext| ext.to_str())
-            .is_some_and(|ext| Format::parse(ext).is_ok_and(|parsed| parsed == Format::Pnm)),
-        _ => image.extension() == Some(format.output_extension(source)),
-    };
-    let mut stem = Some(image.file_stem().unwrap_or_default().to_os_string());
-    let mut numbered = false;
-    while let Some(current) = stem {
-        let candidates = by_stem.get(&current).into_iter().flatten();
-        let mut sources = candidates.filter(|source| numbered || source.as_path() != image);
-        if let Some(source) = sources.find(|source| named_like_output_of(source)) {
-            return Some(source);
-        }
-        stem = numbered_base(&current);
-        numbered = true;
+/// For each of `images` (sorted), the index of the other image whose output
+/// in `format` is named like it: the same stem, or `x` for `x_2` and `x_2_1`
+/// as `increment` numbers them, with the extension that output takes. An
+/// image is never its own earlier output, though a same-format output keeps
+/// its name.
+fn earlier_output_sources(images: &[PathBuf], format: Format) -> Vec<Option<usize>> {
+    let mut by_stem: HashMap<OsString, Vec<usize>> = HashMap::new();
+    for (index, image) in images.iter().enumerate() {
+        by_stem
+            .entry(image.file_stem().unwrap_or_default().to_os_string())
+            .or_default()
+            .push(index);
     }
-    None
+    let source_of = |index: usize| {
+        let image = &images[index];
+        let named_like_output_of = |source: &Path| match format {
+            // A PNM output is `.pgm` or `.ppm` by its pixels, unknown before decoding.
+            Format::Pnm => image
+                .extension()
+                .and_then(|ext| ext.to_str())
+                .is_some_and(|ext| Format::parse(ext).is_ok_and(|parsed| parsed == Format::Pnm)),
+            _ => image.extension() == Some(format.output_extension(source)),
+        };
+        let mut stem = Some(image.file_stem().unwrap_or_default().to_os_string());
+        let mut numbered = false;
+        while let Some(current) = stem {
+            let candidates = by_stem.get(&current).into_iter().flatten().copied();
+            let mut found = candidates.filter(|&source| numbered || source != index);
+            if let Some(source) = found.find(|&source| named_like_output_of(&images[source])) {
+                return Some(source);
+            }
+            stem = numbered_base(&current);
+            numbered = true;
+        }
+        None
+    };
+    (0..images.len()).map(source_of).collect()
 }
 
 /// `x` for a stem `x_N` as written by the `increment` policy (N >= 1, no
@@ -413,12 +454,23 @@ mod tests {
     #[test]
     fn earlier_outputs_follow_output_names() {
         let dir = tempfile::tempdir().unwrap();
-        let names = ["x.png", "x_1.png", "x_1_1.png", "y.jpg", "y.png", "g.png", "g.pgm", "Z.PNG"];
+        let names = [
+            "x.png",
+            "x_1.png",
+            "x_1_1.png",
+            "y.jpg",
+            "y.png",
+            "g.png",
+            "g.pgm",
+            "Z.PNG",
+            "a.pgm",
+            "a.ppm",
+        ];
         for name in names {
             std::fs::write(dir.path().join(name), b"").unwrap();
         }
-        let scan = |format| {
-            let files = batch_files(&[dir.path().to_path_buf()], format, None).unwrap();
+        let scan = |format, policy| {
+            let files = batch_files(&[dir.path().to_path_buf()], format, None, policy).unwrap();
             let name = |path: &PathBuf| path.file_name().unwrap().to_str().unwrap().to_owned();
             let inputs: Vec<_> = files.inputs.iter().map(name).collect();
             let earlier: Vec<_> = files
@@ -428,21 +480,38 @@ mod tests {
                 .collect();
             (inputs, earlier)
         };
-        let (inputs, earlier) = scan(Format::Png);
-        assert_eq!(inputs, ["Z.PNG", "g.pgm", "x.png", "y.jpg"]);
-        let pairs = [
+        let pairs = |pairs: &[(&str, &str)]| -> Vec<(String, String)> {
+            pairs.iter().map(|(a, b)| ((*a).to_owned(), (*b).to_owned())).collect()
+        };
+        let increment = OverwritePolicy::Increment;
+        let (inputs, earlier) = scan(Format::Png, increment);
+        assert_eq!(inputs, ["Z.PNG", "a.pgm", "a.ppm", "g.pgm", "x.png", "y.jpg"]);
+        let expected = [
             ("g.png", "g.pgm"),
             ("x_1.png", "x.png"),
             ("x_1_1.png", "x_1.png"),
             ("y.png", "y.jpg"),
         ];
-        assert_eq!(earlier, pairs.map(|(a, b)| (a.to_owned(), b.to_owned())));
-        let (inputs, earlier) = scan(Format::Pnm);
-        assert_eq!(earlier, [("g.pgm".to_owned(), "g.png".to_owned())]);
-        assert_eq!(inputs.len(), names.len() - 1);
+        assert_eq!(earlier, pairs(&expected));
+        // Two PNM images naming each other: the first in sort order stays.
+        let (inputs, earlier) = scan(Format::Pnm, increment);
+        assert_eq!(earlier, pairs(&[("a.ppm", "a.pgm"), ("g.pgm", "g.png")]));
+        assert_eq!(inputs.len(), names.len() - 2);
+        // Only `increment` writes numbered names: under skip and replace
+        // every image is an input, a real `x_1.png` included.
+        for policy in [OverwritePolicy::Skip, OverwritePolicy::Replace] {
+            let (inputs, earlier) = scan(Format::Png, policy);
+            assert!(earlier.is_empty(), "{policy:?}: {earlier:?}");
+            assert_eq!(inputs.len(), names.len());
+        }
         // An output folder elsewhere: every image is an input.
         let elsewhere = tempfile::tempdir().unwrap();
-        let files = batch_files(&[dir.path().to_path_buf()], Format::Png, Some(elsewhere.path()));
+        let files = batch_files(
+            &[dir.path().to_path_buf()],
+            Format::Png,
+            Some(elsewhere.path()),
+            increment,
+        );
         assert_eq!(files.unwrap().inputs.len(), names.len());
     }
 }

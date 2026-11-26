@@ -87,11 +87,8 @@ impl<W: Write> GifAnimation<W> {
             None => self.full_frame(rgba, opaque)?,
         };
         if let Some(mut pending) = self.pending.take() {
-            // A difference frame draws over this one; anything else replaces
-            // it. Background disposal clears only the frame's own rectangle,
-            // so a pending difference frame is first rewritten whole: the
-            // frames under it must not show through the next one's
-            // transparency.
+            // Background disposal clears only the frame's own rectangle, so a
+            // difference frame followed by a full one is first written whole.
             if difference {
                 pending.frame.dispose = gif::DisposalMethod::Keep;
             } else {
@@ -260,7 +257,7 @@ mod tests {
     }
 
     #[test]
-    fn transparent_frame_after_a_difference_frame_shows_nothing_older() {
+    fn transparent_frame_hides_older_frames() {
         let red = RgbaImage::from_pixel(16, 16, image::Rgba([255, 0, 0, 255]));
         let mut changed = red.clone();
         changed.put_pixel(3, 3, image::Rgba([0, 255, 0, 255]));

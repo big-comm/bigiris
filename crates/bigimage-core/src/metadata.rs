@@ -109,18 +109,10 @@ pub fn preserved_by(format: crate::Format) -> MetadataSupport {
     }
 }
 
-/// Normalise an EXIF blob for re-attachment: drop an `Exif\0\0` prefix and
-/// reset IFD0 `Orientation` to 1, because the pixels being saved are already
-/// upright. Returns `None` for blobs that are not TIFF-structured.
-///
-/// With `size` (the saved pixels, after rotate/crop/extent),
-/// `PixelXDimension`/`PixelYDimension` in the Exif IFD are set to it and
-/// the IFD1 thumbnail is erased: it shows the image before the edit, which
-/// file managers display instead of the real pixels and which a crop must
-/// not keep; values other IFDs reference are never touched, and previews
-/// inside maker notes stay. Returns `None` when the thumbnail's offsets
-/// cannot be read. With `size = None` only the
-/// orientation changes.
+/// An EXIF blob for upright pixels: no `Exif\0\0` prefix, IFD0 `Orientation`
+/// 1 and, with the saved `size`, the pixel dimensions set and the pre-edit
+/// IFD1 thumbnail erased (what other IFDs reference stays). `None` when the
+/// blob is not TIFF or the thumbnail's offsets cannot be read.
 pub(crate) fn resave_exif(exif: &[u8], size: Option<(u32, u32)>) -> Option<Vec<u8>> {
     let mut tiff = Tiff::new(exif.strip_prefix(b"Exif\0\0").unwrap_or(exif))?;
     let ifd0 = usize::try_from(tiff.long(4)?).ok()?;
@@ -259,11 +251,9 @@ impl Tiff {
         ranges
     }
 
-    /// Zero the thumbnail IFD at `ifd1` and the image data it points to (a
-    /// JPEG through `JPEGInterchangeFormat`, or strips), never inside a
-    /// `referenced` range, and cut what ends the blob. A JPEG offset without
-    /// its length leaves the data in place. `None` when the thumbnail's
-    /// offsets cannot be read.
+    /// Zero the IFD1 table and its JPEG or strips outside the `referenced`
+    /// ranges, cutting what ends the blob; data without a length stays.
+    /// `None` when the thumbnail's offsets cannot be read.
     fn erase_thumbnail(
         &mut self,
         ifd1: usize,

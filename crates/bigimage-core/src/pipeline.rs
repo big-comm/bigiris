@@ -289,7 +289,7 @@ pub(crate) fn read_head(input: &Path) -> Option<Vec<u8>> {
 }
 
 /// Source format from magic bytes (extension as fallback) without running
-/// any decoder — the same answer `decode_with_source_format` reports.
+/// any decoder; [`decode_with_source_format`] reports the same.
 pub(crate) fn sniff_format(input: &Path) -> Option<Format> {
     let head = read_head(input)?;
     image::guess_format(&head)

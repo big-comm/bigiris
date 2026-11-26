@@ -4,6 +4,18 @@
 //! Brand-agnostic on purpose: this crate must stay usable if the project ever
 //! splits into multiple binaries. It owns decode/encode/transform pipelines;
 //! GUI code never lives here.
+//!
+//! - `pipeline`: decode, output naming, `Skip` checks and atomic publication
+//!   every transform shares; `backend`: the sandboxed decoder the binary
+//!   installs; `container_bounds` and `content`: refusals before a codec
+//!   allocates or a static edit drops frames, pages or entries.
+//! - Transforms: `convert`, `resize`, `rotate`, `flip`, `crop`, `extent`,
+//!   `adjust`, `animate`; `preview` replays them on a thumbnail.
+//! - Encoding: `format`, `encode` (settings), `optimize` (the encoders and
+//!   their quality search), `color` (ICC normalization and the sRGB profile).
+//! - Metadata: `metadata` (EXIF reading, in-place re-save), `metadata_scan`
+//!   (whether original bytes may be republished); `resources`: batch
+//!   concurrency.
 
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]

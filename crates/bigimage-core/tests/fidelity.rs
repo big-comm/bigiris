@@ -197,7 +197,7 @@ fn oversized_gif_frame_is_rejected_without_allocating_its_pixels() {
 
 /// A well-formed GIF whose only frame is wider than its logical screen.
 #[test]
-fn gif_frame_outside_the_screen_is_refused() {
+fn gif_frame_past_screen_refused() {
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().join("wide-frame.gif");
     let mut bytes = Vec::new();
@@ -230,7 +230,7 @@ fn avif_declared_box_beyond_file_is_rejected_before_allocation() {
 /// A box structure the AV1 container parser tolerates (an unknown
 /// top-level box nested past the depth limit) is still refused up front.
 #[test]
-fn avif_box_nesting_past_the_limit_is_refused() {
+fn avif_deep_box_nesting_refused() {
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().join("nested.avif");
     bigimage_core::save_image(

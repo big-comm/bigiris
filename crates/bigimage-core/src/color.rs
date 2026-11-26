@@ -260,11 +260,11 @@ fn align_tags(icc: &[u8]) -> Option<Vec<u8>> {
     for entry in (132..table_end).step_by(12) {
         let offset = usize::try_from(be(entry + 4)?).ok()?;
         let size = usize::try_from(be(entry + 8)?).ok()?;
-        let data = icc.get(offset..offset.checked_add(size)?)?;
+        let tag_data = icc.get(offset..offset.checked_add(size)?)?;
         out.resize(out.len().next_multiple_of(4), 0);
         let start = u32::try_from(out.len()).ok()?;
         out[entry + 4..entry + 8].copy_from_slice(&start.to_be_bytes());
-        out.extend_from_slice(data);
+        out.extend_from_slice(tag_data);
     }
     out.resize(out.len().next_multiple_of(4), 0);
     let size = u32::try_from(out.len()).ok()?;

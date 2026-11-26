@@ -172,7 +172,7 @@ fn oversized_file_and_pixel_headers_are_rejected_by_viewer() {
 }
 
 #[test]
-fn encode_refuses_a_target_buffer_past_the_limit() {
+fn encode_refuses_oversized_buffer() {
     // 36 MB of gray becomes 576 MB of RGBA float for OpenEXR.
     let dir = tempfile::tempdir().unwrap();
     let gray = DynamicImage::ImageLuma8(image::GrayImage::new(6000, 6000));
@@ -838,23 +838,11 @@ fn avif_irot_property_of_primary_item_is_applied_on_decode() {
     assert!(bottom[0] > 200 && bottom[2] < 60, "bottom {bottom:?}");
 }
 
-/// Guards: data loss: the decoder returns one entry of these containers, so
-/// writing one back as its own format would drop the others.
-#[test]
-fn multi_entry_containers_refuse_own_format() {
-    use bigimage_core::*;
-    use exr::prelude::{
-        Encoding, Image, ImageAttributes, IntegerBounds, Layer, LayerAttributes, SpecificChannels,
-        Vec2, WritableImage,
-    };
-    let dir = tempfile::tempdir().unwrap();
-    let opts = EncodeOptions::default();
-    let replace = OverwritePolicy::Replace;
-
-    let icon = dir.path().join("icon.ico");
-    let entries: Vec<_> = [16u32, 32, 64]
-        .into_iter()
-        .map(|size| {
+/// An icon holding one PNG entry per size in `sizes`.
+fn write_multi_size_icon(path: &Path, sizes: &[u32]) {
+    let entries: Vec<_> = sizes
+        .iter()
+        .map(|&size| {
             let pixels = image::RgbaImage::from_pixel(size, size, image::Rgba([9, 90, 200, 255]));
             image::codecs::ico::IcoFrame::as_png(
                 pixels.as_raw(),
@@ -865,11 +853,17 @@ fn multi_entry_containers_refuse_own_format() {
             .unwrap()
         })
         .collect();
-    image::codecs::ico::IcoEncoder::new(std::fs::File::create(&icon).unwrap())
+    image::codecs::ico::IcoEncoder::new(std::fs::File::create(path).unwrap())
         .encode_images(&entries)
         .unwrap();
+}
 
-    let parts = dir.path().join("parts.exr");
+/// A 4x4 OpenEXR with two parts.
+fn write_two_part_exr(path: &Path) {
+    use exr::prelude::{
+        Encoding, Image, ImageAttributes, IntegerBounds, Layer, LayerAttributes, SpecificChannels,
+        Vec2, WritableImage,
+    };
     let layer = |name: &str| {
         Layer::new(
             (4, 4),
@@ -883,8 +877,22 @@ fn multi_entry_containers_refuse_own_format() {
         vec![layer("a"), layer("b")],
     )
     .write()
-    .to_file(&parts)
+    .to_file(path)
     .unwrap();
+}
+
+/// Guards: data loss: the decoder returns one entry of these containers, so
+/// writing one back as its own format would drop the others.
+#[test]
+fn multi_entry_containers_refuse_own_format() {
+    use bigimage_core::*;
+    let dir = tempfile::tempdir().unwrap();
+    let opts = EncodeOptions::default();
+    let replace = OverwritePolicy::Replace;
+    let icon = dir.path().join("icon.ico");
+    write_multi_size_icon(&icon, &[16, 32, 64]);
+    let parts = dir.path().join("parts.exr");
+    write_two_part_exr(&parts);
 
     for (source, own) in [(&icon, Format::Ico), (&parts, Format::OpenExr)] {
         let before = std::fs::read(source).unwrap();

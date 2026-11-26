@@ -218,6 +218,41 @@ fn selected_overwrite(row: &adw::ComboRow) -> OverwritePolicy {
     OVERWRITE_CHOICES[row.selected() as usize].1
 }
 
+/// Run `start` once the user agrees to overwrite the inputs that `naming`
+/// would replace (see [`crate::output_plan::replaced_inputs`]); at once
+/// when it replaces none. Cancel is the default answer.
+fn confirm_replacing_originals(
+    window: &adw::ApplicationWindow,
+    files: &[PathBuf],
+    naming: &crate::output_plan::Naming,
+    start: impl FnOnce() + 'static,
+) {
+    let count = crate::output_plan::replaced_inputs(files, naming);
+    if count == 0 {
+        start();
+        return;
+    }
+    let alert = adw::AlertDialog::builder()
+        .heading(gettext("Replace the original files?"))
+        .body(fill(
+            &gettext("Originals that will be overwritten: {count}. This cannot be undone."),
+            &[("count", &count.to_string())],
+        ))
+        .build();
+    alert.add_response("cancel", &gettext("Cancel"));
+    alert.add_response("replace", &gettext("Replace"));
+    alert.set_response_appearance("replace", adw::ResponseAppearance::Destructive);
+    alert.set_default_response(Some("cancel"));
+    alert.set_close_response("cancel");
+    let start = Cell::new(Some(start));
+    alert.connect_response(Some("replace"), move |_, _| {
+        if let Some(start) = start.take() {
+            start();
+        }
+    });
+    alert.present(Some(window));
+}
+
 /// "<title>: N" row summarizing the selected files.
 fn selection_row(title: &str, files: &[PathBuf]) -> adw::ActionRow {
     let row = adw::ActionRow::builder()

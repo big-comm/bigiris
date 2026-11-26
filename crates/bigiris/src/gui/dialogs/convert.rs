@@ -132,27 +132,98 @@ fn fill_convert_dialog(
             // picker can change while the worker is running and the
             // worker thread mustn't peek into Rc<RefCell<...>>.
             let out_dir_snapshot = output_dir.borrow().clone();
-
-            apply_btn.set_sensitive(false);
-            status.set_text(&gettext("Converting…"));
-
-            let work_files: Vec<PathBuf> = (*files).clone();
-            run_batch_async(
-                work_files,
-                crate::output_plan::Naming {
-                    output_dir: out_dir_snapshot.clone(),
-                    extension: Some(fmt.extension()),
-                    policy,
-                    per_image_suffix: false,
-                },
-                move |f| convert_file_to(f, out_dir_snapshot.as_deref(), fmt, &opts, policy),
-                gettext("Converting"),
-                status.clone(),
-                apply_btn.clone(),
-                window.clone(),
-            );
+            let naming = crate::output_plan::Naming {
+                output_dir: out_dir_snapshot.clone(),
+                extension: Some(fmt.extension()),
+                policy,
+                per_image_suffix: false,
+            };
+            let start = {
+                let (files, naming) = (files.clone(), naming.clone());
+                let (status, apply_btn, window) =
+                    (status.clone(), apply_btn.clone(), window.clone());
+                move || {
+                    apply_btn.set_sensitive(false);
+                    status.set_text(&gettext("Converting…"));
+                    run_batch_async(
+                        (*files).clone(),
+                        naming,
+                        move |f| {
+                            convert_file_to(f, out_dir_snapshot.as_deref(), fmt, &opts, policy)
+                        },
+                        gettext("Converting"),
+                        status,
+                        apply_btn,
+                        window,
+                    );
+                }
+            };
+            confirm_replacing_originals(&window, &files, &naming, start);
         });
     }
 
     window
+}
+
+#[cfg(test)]
+mod replace_tests {
+    use super::*;
+
+    /// JPEG to JPEG next to the source under "Overwrite the file" names the
+    /// output like the source: Convert asks first, and Cancel (the default)
+    /// leaves the original as it was.
+    #[test]
+    #[ignore = "requires a graphical display; run alone with GSETTINGS_BACKEND=memory"]
+    fn replacing_an_original_asks_first() {
+        adw::init().expect("GTK display required");
+        let app = adw::Application::builder()
+            .application_id("com.biglinux.Iris.ReplaceProbe")
+            .flags(gio::ApplicationFlags::NON_UNIQUE)
+            .build();
+        app.register(None::<&gio::Cancellable>).unwrap();
+        let context = glib::MainContext::default();
+        let pump = |what: &str, done: &dyn Fn() -> bool| {
+            let deadline = std::time::Instant::now() + Duration::from_secs(30);
+            while !done() {
+                while context.pending() {
+                    context.iteration(false);
+                }
+                assert!(std::time::Instant::now() < deadline, "timed out: {what}");
+                std::thread::sleep(Duration::from_millis(5));
+            }
+        };
+        let dir = tempfile::tempdir().unwrap();
+        let photo = dir.path().join("photo.jpg");
+        image::RgbImage::from_pixel(64, 48, image::Rgb([200, 30, 30])).save(&photo).unwrap();
+        let original = std::fs::read(&photo).unwrap();
+
+        let window = build_convert_dialog(&app, Rc::new(vec![photo.clone()]));
+        window.present();
+        let root: gtk::Widget = window.clone().upcast();
+        let convert = gettext("Convert");
+        let apply = || {
+            find_widget(&root, &|button: &gtk::Button| {
+                button.label().as_deref() == Some(convert.as_str())
+            })
+        };
+        pump("convert form", &|| apply().is_some());
+        let row = |title: &str| {
+            let title = gettext(title);
+            find_widget(&root, &|row: &adw::ComboRow| row.title() == title).unwrap()
+        };
+        let jpeg = CONVERT_FORMATS.iter().position(|(_, format)| *format == Format::Jpeg);
+        row("Target format").set_selected(u32::try_from(jpeg.unwrap()).unwrap());
+        let replace = OVERWRITE_CHOICES.iter().position(|(_, p)| *p == OverwritePolicy::Replace);
+        row("If the output file exists").set_selected(u32::try_from(replace.unwrap()).unwrap());
+
+        apply().unwrap().emit_clicked();
+        pump("confirmation", &|| window.visible_dialog().is_some());
+        let alert = window.visible_dialog().and_downcast::<adw::AlertDialog>().unwrap();
+        assert_eq!(alert.default_response().as_deref(), Some("cancel"));
+        alert.close();
+        pump("confirmation closed", &|| window.visible_dialog().is_none());
+        assert!(apply().unwrap().is_sensitive(), "nothing runs after Cancel");
+        assert_eq!(std::fs::read(&photo).unwrap(), original);
+        window.destroy();
+    }
 }

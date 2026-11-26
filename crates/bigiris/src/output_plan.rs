@@ -111,6 +111,31 @@ pub(crate) fn plan_outputs(
     Ok(groups)
 }
 
+/// How many inputs a run under `replace` would write over: a same-format
+/// conversion next to its source is named like the source. Valid for
+/// namings without a suffix, as convert and batch name their outputs.
+#[cfg(feature = "gui")]
+pub(crate) fn replaced_inputs(files: &[PathBuf], naming: &Naming) -> usize {
+    use std::collections::HashSet;
+    if naming.policy != OverwritePolicy::Replace {
+        return 0;
+    }
+    let inputs: HashSet<PathBuf> =
+        files.iter().filter_map(|file| std::fs::canonicalize(file).ok()).collect();
+    let replaced: HashSet<PathBuf> = files
+        .iter()
+        .filter_map(|file| {
+            let (dir, stem, extension) = output_key(file, naming);
+            let mut name = stem;
+            name.push(".");
+            name.push(extension);
+            std::fs::canonicalize(dir.join(name)).ok()
+        })
+        .filter(|output| inputs.contains(output))
+        .collect();
+    replaced.len()
+}
+
 /// The refusal naming each group of inputs that would write one file.
 fn collision_refusal(collisions: &[&Vec<PathBuf>]) -> String {
     let mut message = gettext("several inputs would write the same output file:");
@@ -356,6 +381,30 @@ mod tests {
         assert_eq!(png(&["photo.PNG", "photo.png"]).unwrap().len(), 2);
         assert!(png(&["photo.jpeg", "photo.jpg"]).is_err());
         assert!(png(&["noext", "noext.png"]).is_err(), "an extensionless PNG writes noext.png");
+    }
+
+    /// Only `replace` writes over an input, and only one named like its
+    /// output: `b.jpg` to JPEG next to itself, never `b.jpg` to PNG or a
+    /// run into another folder.
+    #[cfg(feature = "gui")]
+    #[test]
+    fn counts_inputs_a_replace_would_overwrite() {
+        let dir = tempfile::tempdir().unwrap();
+        let files: Vec<_> = ["b.jpg", "c.JPEG", "d.png"].map(|name| dir.path().join(name)).into();
+        for file in &files {
+            std::fs::write(file, b"").unwrap();
+        }
+        let naming = |format, policy| Naming::image(Some(format), policy);
+        assert_eq!(replaced_inputs(&files, &naming(Format::Jpeg, OverwritePolicy::Replace)), 2);
+        assert_eq!(replaced_inputs(&files, &naming(Format::Png, OverwritePolicy::Replace)), 1);
+        assert_eq!(replaced_inputs(&files, &naming(Format::WebP, OverwritePolicy::Replace)), 0);
+        assert_eq!(replaced_inputs(&files, &naming(Format::Jpeg, OverwritePolicy::Skip)), 0);
+        let elsewhere = tempfile::tempdir().unwrap();
+        let other_folder = Naming {
+            output_dir: Some(elsewhere.path().to_path_buf()),
+            ..naming(Format::Jpeg, OverwritePolicy::Replace)
+        };
+        assert_eq!(replaced_inputs(&files, &other_folder), 0);
     }
 
     /// Earlier outputs are matched by the name the source's output takes:

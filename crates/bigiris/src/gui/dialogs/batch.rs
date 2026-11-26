@@ -193,152 +193,183 @@ pub(in crate::gui) fn build_batch_dialog(
                 return;
             }
 
-            // Reset cancel for a re-run, mark a worker as live. A pending
-            // auto-close from the previous run must not end this one.
-            batch_runner::disarm_auto_close(&window);
-            cancelled.store(false, std::sync::atomic::Ordering::Relaxed);
-            running.set(true);
-            apply_btn.set_sensitive(false);
-            cancel_btn.set_label(&gettext("Cancel"));
-            progress.set_fraction(0.0);
-            progress.set_text(Some(&gettext("Starting…")));
-            status.set_text(&gettext("Processing…"));
-
             let naming = crate::output_plan::Naming {
                 output_dir: out_dir_snapshot.clone(),
                 extension: Some(fmt.extension()),
                 policy,
                 per_image_suffix: false,
             };
-            let events = batch_runner::spawn_batch_workers(
-                inputs,
-                naming,
-                move |path| convert_file_to(path, out_dir_snapshot.as_deref(), fmt, &opts, policy),
-                cancelled.clone(),
-            );
-
-            let progress = progress.clone();
-            let status = status.clone();
-            let apply_btn = apply_btn.clone();
-            let cancel_btn = cancel_btn.clone();
-            let window = window.clone();
-            let running = running.clone();
-            // Released with this task, i.e. only after the pool reported
-            // back: closing the last window never kills a worker mid-write
-            // and strands `.part` files.
-            let hold = window.application().map(|app| app.hold());
-            glib::MainContext::default().spawn_local(async move {
-                let _hold = hold;
-                loop {
-                match events.next().await {
-                    Some(batch_runner::AsyncBatchEvent::Progress { done, total, file }) => {
-                        progress.set_fraction(done as f64 / total.max(1) as f64);
-                        progress.set_text(Some(&format!("{done}/{total} · {file}")));
-                    }
-                    Some(batch_runner::AsyncBatchEvent::Refused(message)) => {
-                        running.set(false);
-                        progress.set_text(None);
-                        status.set_text(&message);
-                        apply_btn.set_sensitive(true);
-                        // Nothing runs, so the button closes the window.
-                        cancel_btn.set_label(&gettext("Close"));
-                        return;
-                    }
-                    Some(batch_runner::AsyncBatchEvent::Done {
-                        ok,
-                        skip,
-                        fail,
-                        first_err,
-                        done,
-                        total,
+            let controls = RunControls {
+                window: window.clone(),
+                progress: progress.clone(),
+                status: status.clone(),
+                apply_btn: apply_btn.clone(),
+                cancel_btn: cancel_btn.clone(),
+                running: running.clone(),
+            };
+            let start = {
+                let (cancelled, inputs, naming) =
+                    (cancelled.clone(), inputs.clone(), naming.clone());
+                move || {
+                    // Reset cancel for a re-run, mark a worker as live. A pending
+                    // auto-close from the previous run must not end this one.
+                    batch_runner::disarm_auto_close(&controls.window);
+                    cancelled.store(false, std::sync::atomic::Ordering::Relaxed);
+                    controls.running.set(true);
+                    controls.apply_btn.set_sensitive(false);
+                    controls.cancel_btn.set_label(&gettext("Cancel"));
+                    controls.progress.set_fraction(0.0);
+                    controls.progress.set_text(Some(&gettext("Starting…")));
+                    controls.status.set_text(&gettext("Processing…"));
+                    let events = batch_runner::spawn_batch_workers(
+                        inputs,
+                        naming,
+                        move |path| {
+                            convert_file_to(path, out_dir_snapshot.as_deref(), fmt, &opts, policy)
+                        },
                         cancelled,
-                        elapsed,
-                        bytes_in,
-                        bytes_out,
-                    }) => {
-                        running.set(false);
-                        // Closed mid-run: nothing left to show or to close.
-                        if cancelled && !window.is_visible() {
-                            return;
-                        }
-                        let timing = batch_runner::format_duration(elapsed);
-                        let template = if cancelled {
-                            gettext("Canceled after {done}/{total} in {timing}. Written: {ok}, skipped: {skip}, failed: {fail}.")
-                        } else {
-                            gettext("Finished in {timing}. Written: {ok}, skipped: {skip}, failed: {fail}.")
-                        };
-                        let mut msg = fill(
-                            &template,
-                            &[
-                                ("done", &done.to_string()),
-                                ("total", &total.to_string()),
-                                ("timing", &timing),
-                                ("ok", &ok.to_string()),
-                                ("skip", &(skip + earlier_outputs.len()).to_string()),
-                                ("fail", &fail.to_string()),
-                            ],
-                        );
-                        if !earlier_outputs.is_empty() {
-                            let names: Vec<_> = earlier_outputs
-                                .iter()
-                                .map(|(entry, _)| crate::codec::printable_path(entry))
-                                .collect();
-                            msg.push('\n');
-                            msg.push_str(&fill(
-                                &gettext("Skipped as outputs of earlier runs: {files}"),
-                                &[("files", &names.join(", "))],
-                            ));
-                        }
-                        if ok > 0 && bytes_in > 0 && bytes_out > 0 {
-                            let delta = batch_runner::format_size_delta(bytes_in, bytes_out);
-                            let avg_in = bytes_in / (ok as u64).max(1);
-                            let avg_out = bytes_out / (ok as u64).max(1);
-                            msg.push('\n');
-                            msg.push_str(
-                                &fill(
-                                    &gettext("{before} → {after} ({delta}) · average per file {avg_before} → {avg_after}"),
-                                    &[
-                                        ("before", &glib::format_size(bytes_in)),
-                                        ("after", &glib::format_size(bytes_out)),
-                                        ("delta", &delta),
-                                        ("avg_before", &glib::format_size(avg_in)),
-                                        ("avg_after", &glib::format_size(avg_out)),
-                                    ],
-                                ),
-                            );
-                        }
-                        status.set_text(&msg);
-                        if let Some(err) = first_err {
-                            status.set_text(&format!("{msg}\n{err}"));
-                        }
-                        progress.set_text(Some(&gettext(if cancelled {
-                            n_("Canceled")
-                        } else {
-                            n_("Done")
-                        })));
-                        apply_btn.set_sensitive(true);
-                        let cancel_label = if !cancelled && done == total {
-                            gettext("Close")
-                        } else {
-                            gettext("Cancel")
-                        };
-                        cancel_btn.set_label(&cancel_label);
-                        if !cancelled && fail == 0 {
-                            batch_runner::arm_auto_close(&window, 3);
-                        }
-                        return;
-                    }
-                    None => {
-                        running.set(false);
-                        return;
-                    }
+                    );
+                    // Released with this task, i.e. only after the pool reported
+                    // back: closing the last window never kills a worker mid-write
+                    // and strands `.part` files.
+                    let hold = controls.window.application().map(|app| app.hold());
+                    glib::MainContext::default().spawn_local(async move {
+                        let _hold = hold;
+                        follow_run(events, earlier_outputs, controls).await;
+                    });
                 }
-                }
-            });
+            };
+            confirm_replacing_originals(&window, &inputs, &naming, start);
         });
     }
 
     window
+}
+
+/// The controls of the batch window one run updates.
+struct RunControls {
+    window: adw::ApplicationWindow,
+    progress: gtk::ProgressBar,
+    status: gtk::Label,
+    apply_btn: gtk::Button,
+    cancel_btn: gtk::Button,
+    /// True while a run is in flight: Cancel then stops it instead of
+    /// closing the window.
+    running: Rc<Cell<bool>>,
+}
+
+/// Show the progress and the summary of one run; `earlier_outputs` are the
+/// folder entries left out of it.
+async fn follow_run(
+    events: batch_runner::BatchEvents,
+    earlier_outputs: Vec<(PathBuf, PathBuf)>,
+    controls: RunControls,
+) {
+    let RunControls { window, progress, status, apply_btn, cancel_btn, running } = controls;
+    loop {
+        match events.next().await {
+            Some(batch_runner::AsyncBatchEvent::Progress { done, total, file }) => {
+                progress.set_fraction(done as f64 / total.max(1) as f64);
+                progress.set_text(Some(&format!("{done}/{total} · {file}")));
+            }
+            Some(batch_runner::AsyncBatchEvent::Refused(message)) => {
+                running.set(false);
+                progress.set_text(None);
+                status.set_text(&message);
+                apply_btn.set_sensitive(true);
+                // Nothing runs, so the button closes the window.
+                cancel_btn.set_label(&gettext("Close"));
+                return;
+            }
+            Some(batch_runner::AsyncBatchEvent::Done {
+                ok,
+                skip,
+                fail,
+                first_err,
+                done,
+                total,
+                cancelled,
+                elapsed,
+                bytes_in,
+                bytes_out,
+            }) => {
+                running.set(false);
+                // Closed mid-run: nothing left to show or to close.
+                if cancelled && !window.is_visible() {
+                    return;
+                }
+                let timing = batch_runner::format_duration(elapsed);
+                let template = if cancelled {
+                    gettext(
+                        "Canceled after {done}/{total} in {timing}. Written: {ok}, skipped: {skip}, failed: {fail}.",
+                    )
+                } else {
+                    gettext("Finished in {timing}. Written: {ok}, skipped: {skip}, failed: {fail}.")
+                };
+                let mut msg = fill(
+                    &template,
+                    &[
+                        ("done", &done.to_string()),
+                        ("total", &total.to_string()),
+                        ("timing", &timing),
+                        ("ok", &ok.to_string()),
+                        ("skip", &(skip + earlier_outputs.len()).to_string()),
+                        ("fail", &fail.to_string()),
+                    ],
+                );
+                if !earlier_outputs.is_empty() {
+                    let names: Vec<_> = earlier_outputs
+                        .iter()
+                        .map(|(entry, _)| crate::codec::printable_path(entry))
+                        .collect();
+                    msg.push('\n');
+                    msg.push_str(&fill(
+                        &gettext("Skipped as outputs of earlier runs: {files}"),
+                        &[("files", &names.join(", "))],
+                    ));
+                }
+                if ok > 0 && bytes_in > 0 && bytes_out > 0 {
+                    let delta = batch_runner::format_size_delta(bytes_in, bytes_out);
+                    let avg_in = bytes_in / (ok as u64).max(1);
+                    let avg_out = bytes_out / (ok as u64).max(1);
+                    msg.push('\n');
+                    msg.push_str(
+                        &fill(
+                            &gettext("{before} → {after} ({delta}) · average per file {avg_before} → {avg_after}"),
+                            &[
+                                ("before", &glib::format_size(bytes_in)),
+                                ("after", &glib::format_size(bytes_out)),
+                                ("delta", &delta),
+                                ("avg_before", &glib::format_size(avg_in)),
+                                ("avg_after", &glib::format_size(avg_out)),
+                            ],
+                        ),
+                    );
+                }
+                status.set_text(&msg);
+                if let Some(err) = first_err {
+                    status.set_text(&format!("{msg}\n{err}"));
+                }
+                progress.set_text(Some(&gettext(if cancelled {
+                    n_("Canceled")
+                } else {
+                    n_("Done")
+                })));
+                apply_btn.set_sensitive(true);
+                let cancel_label =
+                    if !cancelled && done == total { gettext("Close") } else { gettext("Cancel") };
+                cancel_btn.set_label(&cancel_label);
+                if !cancelled && fail == 0 {
+                    batch_runner::arm_auto_close(&window, 3);
+                }
+                return;
+            }
+            None => {
+                running.set(false);
+                return;
+            }
+        }
+    }
 }
 
 /// `inputs` are files and folders; a folder counts as its images.

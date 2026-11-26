@@ -134,11 +134,12 @@ impl std::fmt::Display for Device {
 /// What a run is doing, for progress bars.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Stage {
-    /// Loading the weights (and, the first time on a GPU, building its
-    /// shaders, which can take seconds). Not cancellable.
+    /// About to load the weights (and, the first time on a GPU, build its
+    /// shaders, which can take seconds). Breaking here cancels before the
+    /// load starts; the load itself cannot be interrupted.
     Loading,
     /// The network runs; the share done, from 0 to 1. Models without
-    /// progress inside (BiRefNet) report 0 once.
+    /// progress inside (BiRefNet) report only 0 and 1.
     Running(f32),
 }
 
@@ -343,10 +344,17 @@ impl<M> Slot<M> {
     /// Drop the loaded model (waits for a run in progress).
     pub(crate) fn unload(&self) {
         #[cfg(feature = "native")]
-        {
-            lock(&self.loaded).take();
-        }
+        self.forget(&mut lock(&self.loaded));
+        #[cfg(not(feature = "native"))]
         lock(&self.device).take();
+    }
+
+    /// Drop the loaded model and the device it ran on, so [`Slot::device`]
+    /// never names a model that is gone.
+    #[cfg(feature = "native")]
+    fn forget(&self, loaded: &mut Option<Loaded<M>>) {
+        *loaded = None;
+        *lock(&self.device) = None;
     }
 }
 
@@ -367,7 +375,7 @@ impl<M: NativeModel> Slot<M> {
         let _running = lock(&RUN);
         let mut loaded = lock(&self.loaded);
         if loaded.as_ref().is_some_and(|l| l.path != path) {
-            *loaded = None;
+            self.forget(&mut loaded);
         }
         let need = if loaded.is_some() { budget.run } else { budget.load + budget.run };
         crate::memory::admit(info.name, need)?;
@@ -381,7 +389,7 @@ impl<M: NativeModel> Slot<M> {
             Err(AiError::Gpu(error)) => {
                 tracing::warn!(model = info.name, %error, "GPU failed; retrying on the CPU");
                 self.cpu_only.store(true, Ordering::Relaxed);
-                *loaded = None;
+                self.forget(&mut loaded);
                 crate::memory::admit(info.name, budget.load + budget.run)?;
                 check(progress(Stage::Loading))?;
                 let mut cpu = Loaded { model: self.load(info, &path, true)?, path };
@@ -503,7 +511,11 @@ mod tests {
         let dir = tempdir();
         let missing = dir.join("absent.weights");
         assert_eq!(check_weights(&missing), Availability::Missing { path: missing.clone() });
-        assert!(matches!(check_weights(&dir), Availability::Unreadable { .. }));
+        // Not empty, so its length is not 0 on any file system.
+        std::fs::write(dir.join("other"), b"x").unwrap();
+        let not_a_file =
+            Availability::Unreadable { path: dir.clone(), error: "not a weights file".into() };
+        assert_eq!(check_weights(&dir), not_a_file);
         let empty = dir.join("empty.weights");
         std::fs::write(&empty, b"").unwrap();
         assert!(matches!(check_weights(&empty), Availability::Unreadable { .. }));
@@ -591,5 +603,116 @@ mod tests {
         ));
         std::fs::create_dir_all(&dir).unwrap();
         dir
+    }
+
+    /// [`Slot::run`] driven by a fake engine; each test runs on its own
+    /// thread, so the thread-local counters start at zero.
+    #[cfg(feature = "native")]
+    mod slot {
+        use super::*;
+        use std::cell::Cell;
+
+        thread_local! {
+            /// Loads of the fake engine on this thread: (GPU, CPU).
+            static LOADS: Cell<(u32, u32)> = const { Cell::new((0, 0)) };
+            static CPU_LOAD_FAILS: Cell<bool> = const { Cell::new(false) };
+        }
+
+        struct Fake {
+            gpu: bool,
+            path: PathBuf,
+        }
+
+        impl NativeModel for Fake {
+            fn load(path: &Path, _threads: usize) -> Result<Self, birefnet_native::Error> {
+                LOADS.set((LOADS.get().0 + 1, LOADS.get().1));
+                Ok(Fake { gpu: true, path: path.to_owned() })
+            }
+            fn load_cpu(path: &Path, _threads: usize) -> Result<Self, birefnet_native::Error> {
+                if CPU_LOAD_FAILS.get() {
+                    return Err(birefnet_native::Error::Weights("unreadable".into()));
+                }
+                LOADS.set((LOADS.get().0, LOADS.get().1 + 1));
+                Ok(Fake { gpu: false, path: path.to_owned() })
+            }
+            fn gpu(&self) -> Option<&str> {
+                self.gpu.then_some("Fake GPU")
+            }
+        }
+
+        /// A model whose weights are the file `name` in this thread's directory.
+        fn model(name: &str) -> ModelInfo {
+            let path = tempdir().join(name);
+            std::fs::write(&path, b"weights").unwrap();
+            ModelInfo {
+                name: "Fake",
+                package: "fake-native",
+                weights: Box::leak(path.to_string_lossy().into_owned().into_boxed_str()),
+                env: "BIGIRIS_FAKE_UNSET_WEIGHTS",
+                license: "MIT",
+            }
+        }
+
+        const SMALL: Budget = Budget { load: 1, run: 1 };
+        const HUGE_LOAD: Budget = Budget { load: u64::MAX / 2, run: 1 };
+
+        fn run(slot: &Slot<Fake>, info: &ModelInfo, budget: Budget) -> Result<PathBuf, AiError> {
+            slot.run(info, budget, &mut |_| ControlFlow::Continue(()), |model, _| {
+                Ok(model.path.clone())
+            })
+        }
+
+        #[test]
+        fn loading_is_admitted_once_and_can_be_canceled_before_it_starts() {
+            let (slot, info) = (Slot::<Fake>::new(), model("a"));
+            let cancel = slot.run(&info, SMALL, &mut |_| ControlFlow::Break(()), |_, _| Ok(()));
+            assert!(matches!(cancel, Err(AiError::Cancelled)));
+            assert!(matches!(run(&slot, &info, HUGE_LOAD), Err(AiError::Memory(_))));
+            assert_eq!((LOADS.get(), slot.device()), ((0, 0), None));
+            run(&slot, &info, SMALL).unwrap();
+            // Loaded: only the run's share is admitted, and no reload.
+            run(&slot, &info, HUGE_LOAD).unwrap();
+            assert_eq!(
+                (LOADS.get(), slot.device()),
+                ((1, 0), Some(Device::Gpu("Fake GPU".into())))
+            );
+        }
+
+        #[test]
+        fn changed_weights_reload_the_model() {
+            let (slot, a, b) = (Slot::<Fake>::new(), model("a"), model("b"));
+            assert_eq!(run(&slot, &a, SMALL).unwrap(), Path::new(a.weights));
+            assert_eq!(run(&slot, &b, SMALL).unwrap(), Path::new(b.weights));
+            run(&slot, &b, SMALL).unwrap();
+            assert_eq!(LOADS.get(), (2, 0));
+        }
+
+        #[test]
+        fn a_gpu_failure_retries_on_the_cpu_and_stays_there() {
+            let (slot, a, b) = (Slot::<Fake>::new(), model("a"), model("b"));
+            let fail_on_gpu = |model: &mut Fake, _: Progress<'_>| {
+                if model.gpu { Err(AiError::Gpu("lost".into())) } else { Ok(()) }
+            };
+            let go = &mut |_| ControlFlow::Continue(());
+            slot.run(&a, SMALL, go, fail_on_gpu).unwrap();
+            assert_eq!((LOADS.get(), slot.device()), ((1, 1), Some(Device::Cpu)));
+            run(&slot, &b, SMALL).unwrap();
+            assert_eq!(LOADS.get(), (1, 2));
+        }
+
+        #[test]
+        fn device_is_cleared_with_the_model() {
+            let (slot, a, b) = (Slot::<Fake>::new(), model("a"), model("b"));
+            run(&slot, &a, SMALL).unwrap();
+            assert!(matches!(run(&slot, &b, HUGE_LOAD), Err(AiError::Memory(_))));
+            assert_eq!(slot.device(), None);
+
+            run(&slot, &a, SMALL).unwrap();
+            CPU_LOAD_FAILS.set(true);
+            let go = &mut |_| ControlFlow::Continue(());
+            let failed = slot.run(&a, SMALL, go, |_, _| Err::<(), _>(AiError::Gpu("lost".into())));
+            assert!(matches!(failed, Err(AiError::Inference(_))));
+            assert_eq!(slot.device(), None);
+        }
     }
 }

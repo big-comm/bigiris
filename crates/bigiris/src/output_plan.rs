@@ -280,11 +280,8 @@ pub(crate) fn folder_images(dir: &Path) -> std::io::Result<Vec<PathBuf>> {
     Ok(images)
 }
 
-/// The inputs of a batch converting to `format`: files as given, folders as
-/// their [`folder_images`]. Under `increment`, which numbers its outputs, a
-/// folder the outputs are written to loses its earlier outputs; under skip
-/// and replace every image stays an input. The error is the translated
-/// refusal of a folder that cannot be listed.
+/// Files as given, folders as their [`folder_images`]; only under `increment`
+/// does a folder receiving the outputs lose its earlier ones.
 pub(crate) fn batch_files(
     inputs: &[PathBuf],
     format: Format,
@@ -324,11 +321,8 @@ pub(crate) fn batch_files(
     Ok(files)
 }
 
-/// For each of `images` (sorted), the index of the other image whose output
-/// in `format` is named like it: the same stem, or `x` for `x_2` and `x_2_1`
-/// as `increment` numbers them, with the extension that output takes. An
-/// image is never its own earlier output, though a same-format output keeps
-/// its name.
+/// For each of `images`, the other image whose output in `format` it is
+/// named like, at its stem or a numbered one (`x` for `x_2_1`); never itself.
 fn earlier_output_sources(images: &[PathBuf], format: Format) -> Vec<Option<usize>> {
     let mut by_stem: HashMap<OsString, Vec<usize>> = HashMap::new();
     for (index, image) in images.iter().enumerate() {
@@ -448,43 +442,45 @@ mod tests {
         assert_eq!(replaced_inputs(&files, &other_folder), 0);
     }
 
-    /// Earlier outputs are matched by the name the source's output takes:
-    /// a same-format source keeps its name, so only its numbered copies are
-    /// outputs, and a PNM output may be `.pgm` or `.ppm`.
-    #[test]
-    fn earlier_outputs_follow_output_names() {
+    const EARLIER_NAMES: [&str; 10] = [
+        "x.png",
+        "x_1.png",
+        "x_1_1.png",
+        "y.jpg",
+        "y.png",
+        "g.png",
+        "g.pgm",
+        "Z.PNG",
+        "a.pgm",
+        "a.ppm",
+    ];
+
+    /// A folder of [`EARLIER_NAMES`] scanned by [`batch_files`]: its input
+    /// names and its `(earlier output, source)` names.
+    fn scan_earlier(
+        format: Format,
+        policy: OverwritePolicy,
+    ) -> (Vec<String>, Vec<(String, String)>) {
         let dir = tempfile::tempdir().unwrap();
-        let names = [
-            "x.png",
-            "x_1.png",
-            "x_1_1.png",
-            "y.jpg",
-            "y.png",
-            "g.png",
-            "g.pgm",
-            "Z.PNG",
-            "a.pgm",
-            "a.ppm",
-        ];
-        for name in names {
+        for name in EARLIER_NAMES {
             std::fs::write(dir.path().join(name), b"").unwrap();
         }
-        let scan = |format, policy| {
-            let files = batch_files(&[dir.path().to_path_buf()], format, None, policy).unwrap();
-            let name = |path: &PathBuf| path.file_name().unwrap().to_str().unwrap().to_owned();
-            let inputs: Vec<_> = files.inputs.iter().map(name).collect();
-            let earlier: Vec<_> = files
-                .earlier_outputs
-                .iter()
-                .map(|(entry, source)| (name(entry), name(source)))
-                .collect();
-            (inputs, earlier)
-        };
-        let pairs = |pairs: &[(&str, &str)]| -> Vec<(String, String)> {
-            pairs.iter().map(|(a, b)| ((*a).to_owned(), (*b).to_owned())).collect()
-        };
-        let increment = OverwritePolicy::Increment;
-        let (inputs, earlier) = scan(Format::Png, increment);
+        let files = batch_files(&[dir.path().to_path_buf()], format, None, policy).unwrap();
+        let name = |path: &PathBuf| path.file_name().unwrap().to_str().unwrap().to_owned();
+        let earlier = files.earlier_outputs.iter().map(|(a, b)| (name(a), name(b))).collect();
+        (files.inputs.iter().map(name).collect(), earlier)
+    }
+
+    fn pairs(pairs: &[(&str, &str)]) -> Vec<(String, String)> {
+        pairs.iter().map(|(a, b)| ((*a).to_owned(), (*b).to_owned())).collect()
+    }
+
+    /// Under increment, earlier outputs are matched by the name the source's
+    /// output takes: a same-format source keeps its name, so only its
+    /// numbered copies are outputs, and a PNM output may be `.pgm` or `.ppm`.
+    #[test]
+    fn earlier_outputs_follow_output_names() {
+        let (inputs, earlier) = scan_earlier(Format::Png, OverwritePolicy::Increment);
         assert_eq!(inputs, ["Z.PNG", "a.pgm", "a.ppm", "g.pgm", "x.png", "y.jpg"]);
         let expected = [
             ("g.png", "g.pgm"),
@@ -494,24 +490,27 @@ mod tests {
         ];
         assert_eq!(earlier, pairs(&expected));
         // Two PNM images naming each other: the first in sort order stays.
-        let (inputs, earlier) = scan(Format::Pnm, increment);
+        let (inputs, earlier) = scan_earlier(Format::Pnm, OverwritePolicy::Increment);
         assert_eq!(earlier, pairs(&[("a.ppm", "a.pgm"), ("g.pgm", "g.png")]));
-        assert_eq!(inputs.len(), names.len() - 2);
-        // Only `increment` writes numbered names: under skip and replace
-        // every image is an input, a real `x_1.png` included.
+        assert_eq!(inputs.len(), EARLIER_NAMES.len() - 2);
+    }
+
+    /// Only `increment` writes numbered names: under skip and replace, or
+    /// with the outputs in another folder, every image is an input.
+    #[test]
+    fn other_policies_keep_every_image() {
         for policy in [OverwritePolicy::Skip, OverwritePolicy::Replace] {
-            let (inputs, earlier) = scan(Format::Png, policy);
+            let (inputs, earlier) = scan_earlier(Format::Png, policy);
             assert!(earlier.is_empty(), "{policy:?}: {earlier:?}");
-            assert_eq!(inputs.len(), names.len());
+            assert_eq!(inputs.len(), EARLIER_NAMES.len());
         }
-        // An output folder elsewhere: every image is an input.
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(dir.path().join("x.png"), b"").unwrap();
+        std::fs::write(dir.path().join("x_1.png"), b"").unwrap();
         let elsewhere = tempfile::tempdir().unwrap();
-        let files = batch_files(
-            &[dir.path().to_path_buf()],
-            Format::Png,
-            Some(elsewhere.path()),
-            increment,
-        );
-        assert_eq!(files.unwrap().inputs.len(), names.len());
+        let folder = [dir.path().to_path_buf()];
+        let files =
+            batch_files(&folder, Format::Png, Some(elsewhere.path()), OverwritePolicy::Increment);
+        assert_eq!(files.unwrap().inputs.len(), 2);
     }
 }

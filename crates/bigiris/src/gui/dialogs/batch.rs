@@ -511,73 +511,96 @@ mod auto_close_tests {
 mod folder_tests {
     use super::*;
 
+    /// A batch window on some inputs, set to WebP, driven like a person.
+    struct Probe {
+        window: adw::ApplicationWindow,
+        status: gtk::Label,
+        apply: gtk::Button,
+        overwrite: adw::ComboRow,
+    }
+
+    impl Probe {
+        fn new(app_id: &str, inputs: Vec<PathBuf>) -> Probe {
+            let app = probe_app(app_id);
+            let inputs = Rc::new(RefCell::new(inputs));
+            let window = build_batch_dialog(&app, inputs);
+            window.present();
+            let root: &gtk::Widget = window.upcast_ref();
+            let row = |title: String| {
+                find_widget(root, &|row: &adw::ComboRow| row.title() == title).unwrap()
+            };
+            let webp = CONVERT_FORMATS.iter().position(|(_, format)| *format == Format::WebP);
+            let format: adw::ComboRow = row(gettext("Target format"));
+            format.set_selected(u32::try_from(webp.unwrap()).unwrap());
+            let ready = gettext("Ready. Click Process to start.");
+            let process = gettext("Process");
+            Probe {
+                status: find_widget(root, &|label: &gtk::Label| label.text() == ready).unwrap(),
+                apply: find_widget(root, &|button: &gtk::Button| {
+                    button.label().as_deref() == Some(&process)
+                })
+                .unwrap(),
+                overwrite: row(gettext("If the output file exists")),
+                window,
+            }
+        }
+
+        fn choose(&self, policy: OverwritePolicy) {
+            let index = OVERWRITE_CHOICES.iter().position(|(_, choice)| *choice == policy);
+            self.overwrite.set_selected(u32::try_from(index.unwrap()).unwrap());
+        }
+
+        /// Process, wait for the run to end, and return the status text.
+        fn run(&self) -> glib::GString {
+            self.apply.emit_clicked();
+            pump_until("batch run", &|| {
+                self.apply.is_sensitive() && self.status.text() != gettext("Processing…")
+            });
+            self.status.text()
+        }
+    }
+
     /// Colliding files are refused with nothing run, which leaves Close on
-    /// the button. A folder converted beside itself does not take its own
-    /// earlier output as an input: `a.webp` next to `a.png` in a WebP batch
-    /// is listed as skipped, never refused as a collision or converted again.
+    /// the button.
+    #[test]
+    #[ignore = "requires a graphical display; run alone with GSETTINGS_BACKEND=memory"]
+    fn refused_batch_offers_close() {
+        let dir = tempfile::tempdir().unwrap();
+        let colliding = ["b.png", "b.jpg"].map(|name| dir.path().join(name));
+        for file in &colliding {
+            image::RgbImage::new(8, 8).save(file).unwrap();
+        }
+        let probe = Probe::new("com.biglinux.Iris.BatchRefusalProbe", colliding.to_vec());
+        let text = probe.run();
+        assert!(text.contains("several inputs would write the same output file"), "{text}");
+        let cancel = probe.apply.prev_sibling().and_downcast::<gtk::Button>().unwrap();
+        assert_eq!(cancel.label().as_deref(), Some(gettext("Close").as_str()));
+        probe.window.destroy();
+    }
+
+    /// Under increment a folder converted beside itself leaves its earlier
+    /// output out and lists it; under skip every image is an input.
     #[test]
     #[ignore = "requires a graphical display; run alone with GSETTINGS_BACKEND=memory"]
     fn folder_batch_skips_earlier_outputs() {
-        let app = probe_app("com.biglinux.Iris.BatchFolderProbe");
         let dir = tempfile::tempdir().unwrap();
         image::RgbImage::new(8, 8).save(dir.path().join("a.png")).unwrap();
         image::RgbImage::new(4, 4).save(dir.path().join("a.webp")).unwrap();
         let earlier = std::fs::read(dir.path().join("a.webp")).unwrap();
-        let other = tempfile::tempdir().unwrap();
-        let colliding = ["b.png", "b.jpg"].map(|name| other.path().join(name));
-        for file in &colliding {
-            image::RgbImage::new(8, 8).save(file).unwrap();
-        }
+        let probe =
+            Probe::new("com.biglinux.Iris.BatchFolderProbe", vec![dir.path().to_path_buf()]);
 
-        let inputs = Rc::new(RefCell::new(colliding.to_vec()));
-        let window = build_batch_dialog(&app, inputs.clone());
-        window.present();
-        let root: &gtk::Widget = window.upcast_ref();
-        let ready = gettext("Ready. Click Process to start.");
-        let status: gtk::Label =
-            find_widget(root, &|label: &gtk::Label| label.text() == ready).unwrap();
-        let webp = CONVERT_FORMATS.iter().position(|(_, format)| *format == Format::WebP).unwrap();
-        let title = gettext("Target format");
-        let format: adw::ComboRow =
-            find_widget(root, &|row: &adw::ComboRow| row.title() == title).unwrap();
-        format.set_selected(u32::try_from(webp).unwrap());
-        let process = gettext("Process");
-        let apply: gtk::Button =
-            find_widget(root, &|button: &gtk::Button| button.label().as_deref() == Some(&process))
-                .unwrap();
-        let cancel = apply.prev_sibling().and_downcast::<gtk::Button>().unwrap();
-        let run = || {
-            apply.emit_clicked();
-            pump_until("batch run", &|| {
-                apply.is_sensitive() && status.text() != gettext("Processing…")
-            });
-            status.text()
-        };
-
-        let text = run();
-        assert!(text.contains("several inputs would write the same output file"), "{text}");
-        assert_eq!(cancel.label().as_deref(), Some(gettext("Close").as_str()));
-
-        // Only `increment` names outputs that a rerun could take as inputs.
-        let overwrite_title = gettext("If the output file exists");
-        let overwrite: adw::ComboRow =
-            find_widget(root, &|row: &adw::ComboRow| row.title() == overwrite_title).unwrap();
-        let choose = |policy| {
-            let index = OVERWRITE_CHOICES.iter().position(|(_, choice)| *choice == policy);
-            overwrite.set_selected(u32::try_from(index.unwrap()).unwrap());
-        };
-        *inputs.borrow_mut() = vec![dir.path().to_path_buf()];
-        choose(OverwritePolicy::Increment);
-        let text = run();
+        probe.choose(OverwritePolicy::Increment);
+        let text = probe.run();
         assert!(text.contains("Written: 1, skipped: 1"), "{text}");
         assert!(text.contains("Skipped as outputs of earlier runs: "), "{text}");
         assert_eq!(std::fs::read(dir.path().join("a.webp")).unwrap(), earlier);
         assert!(dir.path().join("a_1.webp").exists());
-        // Under skip every image is an input, each left as it is.
-        choose(OverwritePolicy::Skip);
-        let text = run();
+
+        probe.choose(OverwritePolicy::Skip);
+        let text = probe.run();
         assert!(text.contains("Written: 0, skipped: 3"), "{text}");
         assert!(!text.contains("Skipped as outputs of earlier runs"), "{text}");
-        window.destroy();
+        probe.window.destroy();
     }
 }

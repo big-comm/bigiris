@@ -2994,7 +2994,7 @@ fn metadata_loss_notice(dropped: &[bigimage_core::MetadataLoss]) -> Option<Strin
     for loss in dropped {
         let reason = match loss {
             MetadataLoss::ExifUnsupported => gettext("the format does not store EXIF"),
-            MetadataLoss::ExifTooLarge => gettext("EXIF too large for JPEG"),
+            MetadataLoss::ExifTooLarge => gettext("EXIF too large for this format"),
             MetadataLoss::ExifInvalid => gettext("invalid EXIF"),
             MetadataLoss::IccUnsupported | MetadataLoss::IccMismatched => {
                 gettext("color profile converted to sRGB")
@@ -4660,7 +4660,7 @@ mod anchor_tests {
         assert_eq!(
             notice,
             "Saved. Some metadata could not be kept: \
-             color profile converted to sRGB; EXIF too large for JPEG"
+             color profile converted to sRGB; EXIF too large for this format"
         );
     }
 

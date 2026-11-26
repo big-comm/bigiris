@@ -246,7 +246,7 @@ pub struct ResaveOutcome {
 
 /// [`save_image_preserving_metadata`], also reporting which source
 /// metadata could not be written, so the UI can tell the user (e.g. "the
-/// colour profile was converted to sRGB", "EXIF too large for JPEG").
+/// colour profile was converted to sRGB", "EXIF too large for this format").
 pub fn save_image_preserving_metadata_report(
     image: image::DynamicImage,
     output: impl AsRef<std::path::Path>,

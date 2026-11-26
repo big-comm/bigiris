@@ -294,9 +294,6 @@ pub(super) fn install(
         );
     });
     window.add_action(&paste);
-    if let Some(app) = window.application() {
-        app.set_accels_for_action("win.paste", &["<Ctrl>v"]);
-    }
     let target = gtk4::DropTargetAsync::new(
         Some(gdk::ContentFormats::new(MIME_TYPES)),
         gdk::DragAction::COPY,

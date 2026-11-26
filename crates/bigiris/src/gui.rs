@@ -3571,7 +3571,6 @@ fn install_viewer_actions(
         });
     }
     window.add_action(&undo);
-    app.set_accels_for_action("win.undo", &["<Ctrl>z"]);
 
     let redo = gio::SimpleAction::new("redo", None);
     redo.set_enabled(false);
@@ -3585,16 +3584,15 @@ fn install_viewer_actions(
         });
     }
     window.add_action(&redo);
-    app.set_accels_for_action("win.redo", &["<Ctrl><Shift>z", "<Ctrl>y"]);
 
-    let edits: [(&str, EditOp, &[&str]); 5] = [
-        ("rotate-cw", EditOp::RotateCw, &["R"]),
-        ("rotate-ccw", EditOp::RotateCcw, &["<Shift>R"]),
-        ("rotate-180", EditOp::Rotate180, &[]),
-        ("flip-h", EditOp::FlipH, &[]),
-        ("flip-v", EditOp::FlipV, &[]),
+    let edits = [
+        ("rotate-cw", EditOp::RotateCw),
+        ("rotate-ccw", EditOp::RotateCcw),
+        ("rotate-180", EditOp::Rotate180),
+        ("flip-h", EditOp::FlipH),
+        ("flip-v", EditOp::FlipV),
     ];
-    for (name, op, accels) in edits {
+    for (name, op) in edits {
         let action = gio::SimpleAction::new(name, None);
         action.set_enabled(has_files);
         {
@@ -3607,9 +3605,6 @@ fn install_viewer_actions(
             });
         }
         window.add_action(&action);
-        if !accels.is_empty() {
-            app.set_accels_for_action(&format!("win.{name}"), accels);
-        }
     }
 
     // Enabled by `sync_edit_actions` once there is something to save.
@@ -3718,16 +3713,41 @@ fn install_viewer_actions(
     window.add_action(&shortcuts);
 
     app.set_accels_for_action("win.open", &["<Ctrl>o"]);
-    app.set_accels_for_action("win.copy", &["<Ctrl>c"]);
     app.set_accels_for_action("win.print", &["<Ctrl>p"]);
     app.set_accels_for_action("win.info", &["<Ctrl>i"]);
     app.set_accels_for_action("win.crop", &["<Ctrl>r"]);
     app.set_accels_for_action("win.remove-bg", &["<Ctrl>b"]);
     app.set_accels_for_action("win.upscale", &["<Ctrl>u"]);
-    app.set_accels_for_action("win.trash", &["Delete"]);
     app.set_accels_for_action("win.shortcuts", &["<Ctrl>question"]);
     app.set_accels_for_action("win.fullscreen", &["F11"]);
     app.set_accels_for_action("app.about", &["F1"]);
+    install_field_key_shortcuts(window);
+}
+
+/// Shortcuts whose keys a focused text field also uses. Application
+/// accelerators run before the focused widget, so these sit on the window
+/// in the bubble phase: a size field gets Delete, R, Ctrl+C, Ctrl+V and
+/// Ctrl+Z first, and the viewer only what the field leaves.
+const FIELD_KEY_SHORTCUTS: [(&str, &str); 8] = [
+    ("win.trash", "Delete"),
+    ("win.rotate-cw", "R"),
+    ("win.rotate-ccw", "<Shift>R"),
+    ("win.copy", "<Ctrl>c"),
+    ("win.paste", "<Ctrl>v"),
+    ("win.undo", "<Ctrl>z"),
+    // The menu shows the last shortcut added for an action.
+    ("win.redo", "<Ctrl>y"),
+    ("win.redo", "<Ctrl><Shift>z"),
+];
+
+fn install_field_key_shortcuts(window: &adw::ApplicationWindow) {
+    let controller = gtk::ShortcutController::new();
+    for (action, trigger) in FIELD_KEY_SHORTCUTS {
+        let trigger = gtk::ShortcutTrigger::parse_string(trigger).expect("valid shortcut literal");
+        controller
+            .add_shortcut(gtk::Shortcut::new(Some(trigger), Some(gtk::NamedAction::new(action))));
+    }
+    window.add_controller(controller);
 }
 
 /// File for the crop / remove-background / upscale dialogs. They run in

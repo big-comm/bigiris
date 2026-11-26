@@ -52,10 +52,12 @@ impl ConvertOutcome {
 /// target's canonical extension.
 ///
 /// The input is decoded with format auto-detection (by header when possible,
-/// extension as fallback) and re-encoded into the target format. Colour space
-/// and metadata preservation will land in a later iteration — today the
-/// pipeline decodes into the image crate's internal 8-bit representation and
-/// encodes straight back out.
+/// extension as fallback), its pixels converted to sRGB when it carries a
+/// colour profile, and re-encoded into the target format at the depth the
+/// [`crate::save_image`] table gives (16-bit and float sources keep their
+/// depth where the target can store it). The encode carries no source
+/// metadata; [`convert_file_report`] says when the original bytes are
+/// published instead.
 pub fn convert_file(
     input: impl AsRef<Path>,
     target: Format,
@@ -131,16 +133,6 @@ pub fn convert_file_report(
     Ok(ConvertReport { outcome, kept_original })
 }
 
-/// Coerce a `DynamicImage` into a colour/bit-depth that the target encoder is
-/// willing to accept, avoiding encoder-side `UnsupportedError` from formats
-/// that reject common inputs (OpenEXR won't take 8-bit integer; HDR wants
-/// RGB floats). The resulting per-format policy is documented on
-/// [`crate::save_image`].
-///
-/// Float images (OpenEXR/HDR) hold scene-linear light while every integer
-/// format stores sRGB-encoded values, so crossing that boundary applies the
-/// sRGB transfer function (and its inverse) instead of a bare rescale, which
-/// would make linear images look far too dark and vice versa.
 /// Bytes per pixel of the buffer [`prepare_for_target`] makes from a `color`
 /// source, so a too-large result is refused before it is allocated.
 pub(crate) fn prepared_bytes_per_pixel(color: image::ColorType, target: Format) -> u8 {
@@ -148,7 +140,13 @@ pub(crate) fn prepared_bytes_per_pixel(color: image::ColorType, target: Format) 
     match target {
         Format::OpenExr => 16,
         Format::Hdr => 12,
-        Format::Ico | Format::WebP | Format::Gif | Format::Bmp | Format::Tga | Format::Qoi => 4,
+        Format::Ico
+        | Format::WebP
+        | Format::Avif
+        | Format::Gif
+        | Format::Bmp
+        | Format::Tga
+        | Format::Qoi => 4,
         Format::Jpeg => 3,
         Format::Png => match color {
             C::Rgb32F => 6,
@@ -167,10 +165,19 @@ pub(crate) fn prepared_bytes_per_pixel(color: image::ColorType, target: Format) 
             C::Rgb8 | C::Rgba8 => 3,
             _ => 6,
         },
-        Format::Avif => color.bytes_per_pixel(),
     }
 }
 
+/// Coerce a `DynamicImage` into a colour/bit-depth that the target encoder is
+/// willing to accept, avoiding encoder-side `UnsupportedError` from formats
+/// that reject common inputs (OpenEXR won't take 8-bit integer; HDR wants
+/// RGB floats). The resulting per-format policy is documented on
+/// [`crate::save_image`].
+///
+/// Float images (OpenEXR/HDR) hold scene-linear light while every integer
+/// format stores sRGB-encoded values, so crossing that boundary applies the
+/// sRGB transfer function (and its inverse) instead of a bare rescale, which
+/// would make linear images look far too dark and vice versa.
 pub(crate) fn prepare_for_target(img: DynamicImage, target: Format) -> DynamicImage {
     let img = match target {
         Format::OpenExr | Format::Hdr => sanitize_floats(linear_from_srgb(img)),
@@ -184,7 +191,7 @@ pub(crate) fn prepare_for_target(img: DynamicImage, target: Format) -> DynamicIm
                 if img.width() > 256 || img.height() > 256 { img.thumbnail(256, 256) } else { img };
             DynamicImage::ImageRgba8(img.into_rgba8())
         }
-        Format::WebP | Format::Gif | Format::Bmp | Format::Tga | Format::Qoi => {
+        Format::WebP | Format::Avif | Format::Gif | Format::Bmp | Format::Tga | Format::Qoi => {
             DynamicImage::ImageRgba8(img.into_rgba8())
         }
         Format::Png => match img {
@@ -213,7 +220,6 @@ pub(crate) fn prepare_for_target(img: DynamicImage, target: Format) -> DynamicIm
         // PGM/PPM carry 8 or 16-bit gray or RGB, but no alpha: flatten only
         // the alpha channel and keep depth and gray-ness.
         Format::Pnm => flatten_alpha_keep_depth(img),
-        _ => img,
     }
 }
 

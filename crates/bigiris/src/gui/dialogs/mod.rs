@@ -3,7 +3,7 @@
 //! `bigiris --dialog=<name>`. Shared form helpers live here; each dialog
 //! has its own module.
 
-use super::batch_runner::{format_size, run_batch_async};
+use super::batch_runner::run_batch_async;
 use super::*;
 
 pub(in crate::gui) use crate::fill;

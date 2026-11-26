@@ -288,11 +288,11 @@ pub(in crate::gui) fn build_batch_dialog(
                                 &fill(
                                     &gettext("{before} → {after} ({delta}) · average per file {avg_before} → {avg_after}"),
                                     &[
-                                        ("before", &batch_runner::format_size(bytes_in)),
-                                        ("after", &batch_runner::format_size(bytes_out)),
+                                        ("before", &glib::format_size(bytes_in)),
+                                        ("after", &glib::format_size(bytes_out)),
                                         ("delta", &delta),
-                                        ("avg_before", &batch_runner::format_size(avg_in)),
-                                        ("avg_after", &batch_runner::format_size(avg_out)),
+                                        ("avg_before", &glib::format_size(avg_in)),
+                                        ("avg_after", &glib::format_size(avg_out)),
                                     ],
                                 ),
                             );
@@ -334,7 +334,7 @@ pub(in crate::gui) fn build_batch_dialog(
 fn refresh_files_row(row: &adw::ActionRow, files: &[PathBuf]) {
     let total: u64 = files.iter().filter_map(|p| std::fs::metadata(p).ok().map(|m| m.len())).sum();
     row.set_title(&format!("{}: {}", gettext("Selected files"), files.len()));
-    row.set_subtitle(&format_size(total));
+    row.set_subtitle(&glib::format_size(total));
 }
 
 fn add_files_to_batch(

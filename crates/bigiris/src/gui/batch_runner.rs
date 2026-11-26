@@ -1,25 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-//! Async batch primitives shared across every Prisma dialog.
-//!
-//! Each per-file Prisma dialog (Convert, Resize, Rotate, Flip, Crop,
-//! Adjust, Upscale) delegates its Apply handler to [`run_batch_async`],
-//! which fans the work out to a pool of worker threads (one per CPU core
-//! minus the one we leave for the GUI) and awaits their progress on the
-//! GTK main loop, woken by the workers rather than a timer. The Animate and remove-bg flows do not use this
-//! helper because they have one-shot or AI-specific shapes.
-//!
-//! Parallelism: the closure must be `Fn + Send + Sync` so multiple
-//! threads can call it concurrently. The 7 dialog call sites pass
-//! closures of the form `move |f| convert_file(f, fmt, &opts, policy)`
-//! which are already `Fn` (target/opts/policy are `Copy`). Workers
-//! coordinate via a shared `AtomicUsize` index into the input `Vec`,
-//! so each file is processed exactly once with no Mutex contention on
-//! the queue.
-//!
-//! Cancellation is wired through `connect_close_request` on the
-//! window: clicking close flips an atomic flag the workers check
-//! between files, so an in-flight encode finishes but the remaining
-//! batch is skipped cleanly.
+//! The worker pool every Prisma dialog and the batch window run files on.
+//! Inputs are planned like the CLI's ([`crate::output_plan`]) and each group
+//! writing one file runs in order on one of at most
+//! [`bigimage_core::resources::batch_worker_count`] workers; progress wakes
+//! the GTK loop, and closing the window cancels the run, a file in the
+//! isolated codec included.
 
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering};
@@ -31,24 +16,6 @@ use gettextrs::gettext;
 use gtk4 as gtk;
 use gtk4::prelude::*;
 use libadwaita as adw;
-
-/// Render a byte count as `12 B` / `456 KB` / `1.2 MB` / `3.4 GB`.
-/// Mirrors `gui::format_size` (kept private to that module to avoid a
-/// circular re-export); tests sit at the bottom of this file.
-pub(super) fn format_size(bytes: u64) -> String {
-    const KB: u64 = 1024;
-    const MB: u64 = 1024 * KB;
-    const GB: u64 = 1024 * MB;
-    if bytes >= GB {
-        format!("{:.1} GB", bytes as f64 / GB as f64)
-    } else if bytes >= MB {
-        format!("{:.1} MB", bytes as f64 / MB as f64)
-    } else if bytes >= KB {
-        format!("{:.0} KB", bytes as f64 / KB as f64)
-    } else {
-        format!("{bytes} B")
-    }
-}
 
 /// Render an elapsed time as `0.4 s` / `12 s` / `1 min 23 s` / `2h 5min`.
 pub(super) fn format_duration(d: Duration) -> String {
@@ -177,9 +144,8 @@ pub(super) fn finish_dialog(
     bytes_in: u64,
     bytes_out: u64,
 ) {
-    // Headline: counts + elapsed. Size delta on the next line when we
-    // have both totals (skipped files contribute to bytes_in but not
-    // bytes_out, so the comparison is fair only when ok > 0).
+    // Headline: counts and elapsed time; the size delta follows when files
+    // were written (both totals count written files only).
     let counts = format_counts(ok, skip, fail);
     let timing = format_duration(elapsed);
     let mut msg = gettext("Finished in {time} · {counts}")
@@ -192,11 +158,11 @@ pub(super) fn finish_dialog(
         msg.push('\n');
         msg.push_str(
             &gettext("{before} → {after} ({delta}) · average per file {average_before} → {average_after}")
-                .replace("{before}", &format_size(bytes_in))
-                .replace("{after}", &format_size(bytes_out))
+                .replace("{before}", &gtk4::glib::format_size(bytes_in))
+                .replace("{after}", &gtk4::glib::format_size(bytes_out))
                 .replace("{delta}", &delta)
-                .replace("{average_before}", &format_size(avg_in))
-                .replace("{average_after}", &format_size(avg_out)),
+                .replace("{average_before}", &gtk4::glib::format_size(avg_in))
+                .replace("{average_after}", &gtk4::glib::format_size(avg_out)),
         );
     }
     if let Some(err) = first_err {

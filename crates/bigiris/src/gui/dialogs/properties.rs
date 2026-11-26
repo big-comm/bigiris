@@ -155,7 +155,10 @@ fn build_properties_file_group(
 
     match fsmeta {
         Ok(fsmeta) => {
-            group.add(&info_row(&gettext("Size"), &format_bytes(fsmeta.len())));
+            group.add(&info_row(
+                &gettext("Size"),
+                &glib::format_size_full(fsmeta.len(), glib::FormatSizeFlags::LONG_FORMAT),
+            ));
             if let Ok(mtime) = fsmeta.modified() {
                 group.add(&info_row(&gettext("Modified"), &format_system_time(mtime)));
             }
@@ -269,18 +272,6 @@ fn info_row(title: &str, value: &str) -> adw::ActionRow {
     let row = adw::ActionRow::builder().use_markup(false).title(title).build();
     row.set_subtitle(value);
     row
-}
-
-/// Human-readable size in binary (1024-based) units.
-fn format_bytes(n: u64) -> String {
-    const UNITS: [&str; 4] = ["B", "KB", "MB", "GB"];
-    let mut v = n as f64;
-    let mut u = 0usize;
-    while v >= 1024.0 && u + 1 < UNITS.len() {
-        v /= 1024.0;
-        u += 1;
-    }
-    if u == 0 { format!("{n} B") } else { format!("{v:.1} {} ({n} bytes)", UNITS[u]) }
 }
 
 /// Local `YYYY-MM-DD HH:MM`; glib handles the time zone and calendar.

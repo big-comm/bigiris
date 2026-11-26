@@ -692,19 +692,7 @@ fn receive_with(mut output: std::fs::File, trailer: bool) -> ImageResult<(Pixels
     let (w, h) = (word(12), word(16));
     let natural = (word(20), word(24));
     let length = u64::from_le_bytes(header[28..36].try_into().unwrap());
-    let color = match header[8] {
-        1 => ColorType::L8,
-        2 => ColorType::La8,
-        3 => ColorType::Rgb8,
-        4 => ColorType::Rgba8,
-        5 => ColorType::L16,
-        6 => ColorType::La16,
-        7 => ColorType::Rgb16,
-        8 => ColorType::Rgba16,
-        9 => ColorType::Rgb32F,
-        10 => ColorType::Rgba32F,
-        _ => return Err(invalid("invalid pixel type")),
-    };
+    let color = color_from_code(header[8]).ok_or_else(|| invalid("invalid pixel type"))?;
     if w == 0
         || h == 0
         || natural.0 == 0
@@ -904,26 +892,42 @@ pub struct Information {
     pub format: Option<String>,
     pub metadata: Option<Metadata>,
 }
+impl Information {
+    /// The pixel layout behind [`Information::color`], if it names one.
+    #[cfg(feature = "gui")]
+    pub fn color_type(&self) -> Option<ColorType> {
+        color_from_code(self.color?)
+    }
+}
+
+/// Pixel layouts the protocol carries; a layout's wire code is its index
+/// plus one, so the order is part of the protocol.
+const COLOR_CODES: [ColorType; 10] = [
+    ColorType::L8,
+    ColorType::La8,
+    ColorType::Rgb8,
+    ColorType::Rgba8,
+    ColorType::L16,
+    ColorType::La16,
+    ColorType::Rgb16,
+    ColorType::Rgba16,
+    ColorType::Rgb32F,
+    ColorType::Rgba32F,
+];
+fn color_code(color: ColorType) -> Option<u8> {
+    let index = COLOR_CODES.iter().position(|&known| known == color)?;
+    u8::try_from(index + 1).ok()
+}
+fn color_from_code(code: u8) -> Option<ColorType> {
+    COLOR_CODES.get(usize::from(code).checked_sub(1)?).copied()
+}
 fn information_local(path: &Path) -> Information {
     let dimensions = backend::dimensions_in_process(path).ok();
     let reader = image::ImageReader::open(path).ok().and_then(|r| r.with_guessed_format().ok());
     let format = reader.as_ref().and_then(|r| r.format()).map(|f| format!("{f:?}"));
-    let color =
-        reader.and_then(|r| r.into_decoder().ok()).map(
-            |dec| match image::ImageDecoder::color_type(&dec) {
-                ColorType::L8 => 1,
-                ColorType::La8 => 2,
-                ColorType::Rgb8 => 3,
-                ColorType::Rgba8 => 4,
-                ColorType::L16 => 5,
-                ColorType::La16 => 6,
-                ColorType::Rgb16 => 7,
-                ColorType::Rgba16 => 8,
-                ColorType::Rgb32F => 9,
-                ColorType::Rgba32F => 10,
-                _ => 0,
-            },
-        );
+    let color = reader
+        .and_then(|r| r.into_decoder().ok())
+        .and_then(|decoder| color_code(image::ImageDecoder::color_type(&decoder)));
     let metadata = bigimage_core::metadata::read(path).ok().map(trim_metadata);
     Information { dimensions, color, format, metadata }
 }
@@ -970,19 +974,7 @@ fn send_to(
     natural: (u32, u32),
     gps: bool,
 ) -> ImageResult<()> {
-    let color = match image.color() {
-        ColorType::L8 => 1,
-        ColorType::La8 => 2,
-        ColorType::Rgb8 => 3,
-        ColorType::Rgba8 => 4,
-        ColorType::L16 => 5,
-        ColorType::La16 => 6,
-        ColorType::Rgb16 => 7,
-        ColorType::Rgba16 => 8,
-        ColorType::Rgb32F => 9,
-        ColorType::Rgba32F => 10,
-        _ => return Err(invalid("invalid pixel type")),
-    };
+    let color = color_code(image.color()).ok_or_else(|| invalid("invalid pixel type"))?;
     let mut header = Vec::with_capacity(HEADER);
     header.extend(MAGIC);
     header.extend([

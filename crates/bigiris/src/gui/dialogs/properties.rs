@@ -176,19 +176,7 @@ fn build_properties_image_group(info: Option<&crate::codec::Information>) -> adw
 
     match info.and_then(|i| i.dimensions) {
         Some((w, h)) => {
-            let color = info.and_then(|i| i.color).and_then(|id| match id {
-                1 => Some(image::ColorType::L8),
-                2 => Some(image::ColorType::La8),
-                3 => Some(image::ColorType::Rgb8),
-                4 => Some(image::ColorType::Rgba8),
-                5 => Some(image::ColorType::L16),
-                6 => Some(image::ColorType::La16),
-                7 => Some(image::ColorType::Rgb16),
-                8 => Some(image::ColorType::Rgba16),
-                9 => Some(image::ColorType::Rgb32F),
-                10 => Some(image::ColorType::Rgba32F),
-                _ => None,
-            });
+            let color = info.and_then(crate::codec::Information::color_type);
             group.add(&info_row(&gettext("Dimensions"), &format!("{w} × {h} px")));
 
             let mp = (f64::from(w) * f64::from(h)) / 1_000_000.0;

@@ -47,6 +47,39 @@ pub fn ensure_static_local(path: &Path) -> Result<()> {
     Ok(())
 }
 
+/// Refuse writing an icon with several sizes, or a multi-part OpenEXR, back
+/// to its own format (`target` `None` keeps the source format): the decoder
+/// returns one entry, so the others would be lost. Converting to another
+/// format keeps working with the entry the decoder picks. Only the header is
+/// read; a file that cannot be read is left to the decode to report.
+///
+/// # Errors
+///
+/// [`BigImageError::InvalidInput`] for such a container written as its own
+/// format.
+pub fn ensure_single_entry(path: &Path, target: Option<crate::Format>) -> Result<()> {
+    use crate::Format;
+    let Some(head) = crate::pipeline::read_head(path) else {
+        return Ok(());
+    };
+    let Some(source) = image::guess_format(&head).ok().and_then(Format::from_image_format) else {
+        return Ok(());
+    };
+    let several = match (source, head.get(4..6)) {
+        // ICONDIR: reserved, type, then the entry count.
+        (Format::Ico, Some(&[low, high])) => u16::from_le_bytes([low, high]) > 1,
+        // Bit 12 of the version field marks a multi-part file.
+        (Format::OpenExr, Some(&[_, flags])) => flags & 0x10 != 0,
+        _ => false,
+    };
+    if several && target.unwrap_or(source) == source {
+        return Err(BigImageError::InvalidInput(
+            "icon with several sizes or multi-part EXR: writing it back would keep only one".into(),
+        ));
+    }
+    Ok(())
+}
+
 /// A TIFF or BigTIFF whose first IFD links to another holds more than one page.
 fn has_second_tiff_page(file: &mut (impl Read + Seek)) -> std::io::Result<bool> {
     let mut header = [0; 16];

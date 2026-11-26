@@ -53,8 +53,7 @@ pub fn flip_file_with_options(
         return Ok(skipped);
     }
 
-    let (src, src_format) = pipeline::decode_with_source_format(input)?;
-    let target = target.unwrap_or(src_format);
+    let (src, target) = pipeline::decode_for_target(input, target)?;
 
     let output = pipeline::resolve_output(input, Some(axis.filename_suffix()), target, policy)?;
 

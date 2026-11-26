@@ -92,8 +92,7 @@ pub fn transform_file(
     {
         return Ok(skipped);
     }
-    let (src, src_format) = pipeline::decode_with_source_format(input)?;
-    let target = target.unwrap_or(src_format);
+    let (src, target) = pipeline::decode_for_target(input, target)?;
     let output = pipeline::resolve_output(input, Some(suffix), target, policy)?;
     if pipeline::existing_output(&output, target, policy) {
         return Ok(ConvertOutcome::Skipped { output });

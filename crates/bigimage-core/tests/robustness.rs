@@ -810,3 +810,71 @@ fn avif_irot_property_of_primary_item_is_applied_on_decode() {
     assert!(top[2] > 200 && top[0] < 60, "top {top:?}");
     assert!(bottom[0] > 200 && bottom[2] < 60, "bottom {bottom:?}");
 }
+
+/// Guards: data loss: the decoder returns one entry of these containers, so
+/// writing one back as its own format would drop the others.
+#[test]
+fn multi_entry_containers_refuse_own_format() {
+    use bigimage_core::*;
+    use exr::prelude::{
+        Encoding, Image, ImageAttributes, IntegerBounds, Layer, LayerAttributes, SpecificChannels,
+        Vec2, WritableImage,
+    };
+    let dir = tempfile::tempdir().unwrap();
+    let opts = EncodeOptions::default();
+    let replace = OverwritePolicy::Replace;
+
+    let icon = dir.path().join("icon.ico");
+    let entries: Vec<_> = [16u32, 32, 64]
+        .into_iter()
+        .map(|size| {
+            let pixels = image::RgbaImage::from_pixel(size, size, image::Rgba([9, 90, 200, 255]));
+            image::codecs::ico::IcoFrame::as_png(
+                pixels.as_raw(),
+                size,
+                size,
+                image::ExtendedColorType::Rgba8,
+            )
+            .unwrap()
+        })
+        .collect();
+    image::codecs::ico::IcoEncoder::new(std::fs::File::create(&icon).unwrap())
+        .encode_images(&entries)
+        .unwrap();
+
+    let parts = dir.path().join("parts.exr");
+    let layer = |name: &str| {
+        Layer::new(
+            (4, 4),
+            LayerAttributes::named(name),
+            Encoding::FAST_LOSSLESS,
+            SpecificChannels::rgba(|_: Vec2<usize>| (0.5f32, 0.25f32, 0.125f32, 1.0f32)),
+        )
+    };
+    Image::from_layers(
+        ImageAttributes::new(IntegerBounds::from_dimensions((4, 4))),
+        vec![layer("a"), layer("b")],
+    )
+    .write()
+    .to_file(&parts)
+    .unwrap();
+
+    for (source, own) in [(&icon, Format::Ico), (&parts, Format::OpenExr)] {
+        let before = std::fs::read(source).unwrap();
+        let flipped = flip_file(source, FlipAxis::Horizontal, None, replace);
+        assert!(matches!(flipped, Err(BigImageError::InvalidInput(_))), "{own:?}: {flipped:?}");
+        let converted = convert_file_to(source, None, own, &opts, replace);
+        assert!(matches!(converted, Err(BigImageError::InvalidInput(_))), "{own:?}");
+        assert!(content::ensure_single_entry(source, Some(own)).is_err());
+        assert_eq!(std::fs::read(source).unwrap(), before);
+        // Another format keeps working with the entry the decoder picks.
+        let png = convert_file_to(source, None, Format::Png, &opts, replace).unwrap();
+        let largest = if own == Format::Ico { (64, 64) } else { (4, 4) };
+        assert_eq!(open_image(png.path()).unwrap().dimensions(), largest);
+    }
+    // Refused rather than reported skipped when the output exists.
+    std::fs::write(dir.path().join("icon_flipH.ico"), b"keep").unwrap();
+    let skipped = flip_file(&icon, FlipAxis::Horizontal, None, OverwritePolicy::Skip);
+    assert!(matches!(skipped, Err(BigImageError::InvalidInput(_))), "{skipped:?}");
+    assert_no_partials(dir.path());
+}

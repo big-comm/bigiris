@@ -232,9 +232,21 @@ pub(crate) fn decode_with_source_format(input: &Path) -> Result<(DynamicImage, F
     Ok((img, format))
 }
 
-/// Source format from magic bytes (extension as fallback) without running
-/// any decoder — the same answer `decode_with_source_format` reports.
-pub(crate) fn sniff_format(input: &Path) -> Option<Format> {
+/// [`decode_with_source_format`] for an output in `target` (the source's
+/// own format when `None`), refusing a container whose other entries that
+/// output would drop (see [`crate::content::ensure_single_entry`]). Returns
+/// the pixels and the resolved target.
+pub(crate) fn decode_for_target(
+    input: &Path,
+    target: Option<Format>,
+) -> Result<(DynamicImage, Format)> {
+    crate::content::ensure_single_entry(input, target)?;
+    let (image, source) = decode_with_source_format(input)?;
+    Ok((image, target.unwrap_or(source)))
+}
+
+/// First 64 bytes of a regular file, read without running any decoder.
+pub(crate) fn read_head(input: &Path) -> Option<Vec<u8>> {
     use std::io::Read;
     use std::os::unix::fs::OpenOptionsExt;
     let file = std::fs::OpenOptions::new()
@@ -247,6 +259,13 @@ pub(crate) fn sniff_format(input: &Path) -> Option<Format> {
     }
     let mut head = Vec::with_capacity(64);
     file.take(64).read_to_end(&mut head).ok()?;
+    Some(head)
+}
+
+/// Source format from magic bytes (extension as fallback) without running
+/// any decoder — the same answer `decode_with_source_format` reports.
+pub(crate) fn sniff_format(input: &Path) -> Option<Format> {
+    let head = read_head(input)?;
     image::guess_format(&head)
         .ok()
         .or_else(|| input.extension().and_then(image::ImageFormat::from_extension))
@@ -299,6 +318,7 @@ pub(crate) fn skip_existing(
         return Ok(None);
     }
     crate::content::ensure_static(input)?;
+    crate::content::ensure_single_entry(input, Some(target))?;
     let (w, h) = crate::image_dimensions(input)
         .map_err(|source| BigImageError::Decode { path: input.to_path_buf(), source })?;
     validate(w, h).or_else(|error| validate(h, w).map_err(|_| error))?;

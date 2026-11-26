@@ -118,6 +118,7 @@ pub fn convert_file_report(
     }
 
     tracing::debug!(?input, ?output, ?target, ?opts, "convert: decoding");
+    crate::content::ensure_single_entry(input, Some(target))?;
     let (img, src_format) = pipeline::decode_with_source_format(input)?;
     let output = pipeline::content_output(output, target, &img);
     let original = (src_format == target).then_some(input);

@@ -59,8 +59,7 @@ pub fn rotate_file_with_options(
         return Ok(skipped);
     }
 
-    let (src, src_format) = pipeline::decode_with_source_format(input)?;
-    let target = target.unwrap_or(src_format);
+    let (src, target) = pipeline::decode_for_target(input, target)?;
 
     let output = pipeline::resolve_output(input, Some(rotation.filename_suffix()), target, policy)?;
 
@@ -114,8 +113,7 @@ pub fn rotate_file_auto_with_options(
 
     // `src` arrives already upright — decode_with_source_format honours the
     // orientation tag for every op. Re-applying it here would double-rotate.
-    let (src, src_format) = crate::pipeline::decode_with_source_format(input)?;
-    let target = target.unwrap_or(src_format);
+    let (src, target) = crate::pipeline::decode_for_target(input, target)?;
 
     let output = crate::pipeline::resolve_output(input, Some("_auto"), target, policy)?;
     if pipeline::existing_output(&output, target, policy) {

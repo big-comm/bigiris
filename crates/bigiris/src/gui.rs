@@ -2958,10 +2958,12 @@ fn write_edits_to_disk(
     let format = save_format(&target).ok_or(SaveFailure::NoEncoder)?;
     // The confined decoder reports animation as a generic decode error,
     // so any failure here is presented as "not a static image".
-    bigimage_core::content::ensure_static(&target).map_err(|error| {
-        tracing::warn!(%error, "save: file is not a static image");
-        SaveFailure::NotStatic
-    })?;
+    bigimage_core::content::ensure_static(&target)
+        .and_then(|()| bigimage_core::content::ensure_single_entry(&target, Some(format)))
+        .map_err(|error| {
+            tracing::warn!(%error, "save: file is not a static image");
+            SaveFailure::NotStatic
+        })?;
     let (img, source, quality) =
         crate::codec::open_for_resave(&target).map_err(SaveFailure::from_image)?;
     let edited = render_edits(img, ops).map_err(SaveFailure::Other)?;

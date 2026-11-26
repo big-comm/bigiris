@@ -22,6 +22,10 @@ post_install() {
   _thunar_hint
 }
 
+# Only an upgrade from a package that still shipped Thunar's file needs the
+# hint again; that stopped with the 26.11.02-1546 build.
 post_upgrade() {
-  _thunar_hint
+  if [ "$(vercmp "$2" 26.11.02-1546)" -lt 0 ]; then
+    _thunar_hint
+  fi
 }

@@ -3001,9 +3001,9 @@ fn metadata_loss_notice(dropped: &[bigimage_core::MetadataLoss]) -> Option<Strin
             MetadataLoss::ExifUnsupported => gettext("the format does not store EXIF"),
             MetadataLoss::ExifTooLarge => gettext("EXIF too large for JPEG"),
             MetadataLoss::ExifInvalid => gettext("invalid EXIF"),
-            MetadataLoss::IccUnsupported
-            | MetadataLoss::IccTooLarge
-            | MetadataLoss::IccMismatched => gettext("color profile converted to sRGB"),
+            MetadataLoss::IccUnsupported | MetadataLoss::IccMismatched => {
+                gettext("color profile converted to sRGB")
+            }
             MetadataLoss::IccDiscarded => gettext("invalid color profile ignored"),
             _ => gettext("unsupported metadata"),
         };

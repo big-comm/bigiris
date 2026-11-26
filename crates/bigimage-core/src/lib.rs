@@ -262,7 +262,6 @@ pub fn save_image_preserving_metadata_report(
         } else {
             let loss = match color::normalize_srgb_applied(&mut image, icc) {
                 Ok(true) if !support.icc => MetadataLoss::IccUnsupported,
-                Ok(true) if icc.len() > MAX_BLOB => MetadataLoss::IccTooLarge,
                 Ok(true) => MetadataLoss::IccMismatched,
                 Ok(false) => MetadataLoss::IccDiscarded,
                 Err(error) => {

@@ -80,14 +80,13 @@ pub enum MetadataLoss {
     /// The target cannot embed the source colour profile; pixels were
     /// converted to sRGB (wide-gamut colours may be clipped).
     IccUnsupported,
-    /// The profile exceeds 4 MiB; pixels were converted to sRGB.
-    IccTooLarge,
     /// The profile's colour model does not match the written pixels (e.g. a
     /// GRAY profile on pixels an edit made RGB); pixels were converted to
     /// sRGB.
     IccMismatched,
-    /// The profile is malformed or of a kind that cannot be applied (CMYK,
-    /// Lab…): it was dropped and the pixels written unchanged.
+    /// The profile is malformed, 4 MiB or larger, or of a kind that cannot
+    /// be applied (CMYK, Lab…): it was dropped and the pixels written
+    /// unchanged.
     IccDiscarded,
 }
 

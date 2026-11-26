@@ -117,164 +117,248 @@ pub fn preserved_by(format: crate::Format) -> MetadataSupport {
 /// `PixelXDimension`/`PixelYDimension` in the Exif IFD are set to it and
 /// the IFD1 thumbnail is erased: it shows the image before the edit, which
 /// file managers display instead of the real pixels and which a crop must
-/// not keep. Returns `None` when the thumbnail cannot be located safely.
-/// Previews inside maker notes are not touched. With `size = None` only the
+/// not keep; values other IFDs reference are never touched, and previews
+/// inside maker notes stay. Returns `None` when the thumbnail's offsets
+/// cannot be read. With `size = None` only the
 /// orientation changes.
 pub(crate) fn resave_exif(exif: &[u8], size: Option<(u32, u32)>) -> Option<Vec<u8>> {
-    let mut tiff = exif.strip_prefix(b"Exif\0\0").unwrap_or(exif).to_vec();
-    let little = match tiff.get(..4)? {
-        [b'I', b'I', 42, 0] => true,
-        [b'M', b'M', 0, 42] => false,
-        _ => return None,
-    };
-    let word = |b: &[u8]| {
-        let b = [b[0], b[1]];
-        if little { u16::from_le_bytes(b) } else { u16::from_be_bytes(b) }
-    };
-    let long = |b: &[u8]| {
-        let b = [b[0], b[1], b[2], b[3]];
-        if little { u32::from_le_bytes(b) } else { u32::from_be_bytes(b) }
-    };
-    let put_word = |v: u16| if little { v.to_le_bytes() } else { v.to_be_bytes() };
-    let put_long = |v: u32| if little { v.to_le_bytes() } else { v.to_be_bytes() };
-    let ifd = usize::try_from(long(tiff.get(4..8)?)).ok()?;
-    let count = usize::from(word(tiff.get(ifd..ifd + 2)?));
+    let mut tiff = Tiff::new(exif.strip_prefix(b"Exif\0\0").unwrap_or(exif))?;
+    let ifd0 = usize::try_from(tiff.long(4)?).ok()?;
+    let count = usize::from(tiff.word(ifd0)?);
     let mut exif_ifd = None;
-    for entry in 0..count {
-        let at = ifd + 2 + entry * 12;
-        let field: [u8; 12] = tiff.get(at..at + 12)?.try_into().ok()?;
-        let (tag, kind, n) = (word(&field[..2]), word(&field[2..4]), long(&field[4..8]));
+    for at in (0..count).map(|entry| ifd0 + 2 + entry * 12) {
+        let (tag, kind, n, value) =
+            (tiff.word(at)?, tiff.word(at + 2)?, tiff.long(at + 4)?, tiff.long(at + 8)?);
         // Orientation, SHORT, count 1: value is inline in the first 2 bytes.
         if tag == 0x0112 && kind == 3 && n == 1 {
-            tiff[at + 8..at + 10].copy_from_slice(&put_word(1));
+            tiff.put_word(at + 8, 1);
         }
         // Exif IFD pointer (LONG or IFD type).
         if tag == 0x8769 && (kind == 4 || kind == 13) && n == 1 {
-            exif_ifd = usize::try_from(long(&field[8..12])).ok();
+            exif_ifd = usize::try_from(value).ok();
         }
     }
     let Some((width, height)) = size else {
-        return Some(tiff);
+        return Some(tiff.bytes);
     };
-    let next = ifd + 2 + count * 12;
-    let thumbnail_ifd = usize::try_from(long(tiff.get(next..next + 4)?)).ok()?;
-    tiff[next..next + 4].copy_from_slice(&put_long(0));
-    if thumbnail_ifd != 0 {
-        erase_thumbnail(&mut tiff, thumbnail_ifd, next + 4, word, long)?;
+    let link = ifd0 + 2 + count * 12;
+    let ifd1 = usize::try_from(tiff.long(link)?).ok()?;
+    let referenced = tiff.referenced_ranges(ifd0);
+    tiff.put_long(link, 0);
+    if ifd1 != 0 {
+        tiff.erase_thumbnail(ifd1, &referenced)?;
     }
-    let Some(sub) = exif_ifd else {
-        return Some(tiff);
-    };
-    let Some(sub_count) = tiff.get(sub..sub + 2).map(|b| usize::from(word(b))) else {
-        return Some(tiff);
-    };
-    for entry in 0..sub_count {
-        let at = sub + 2 + entry * 12;
-        let Some(field) = tiff.get(at..at + 12).and_then(|f| <[u8; 12]>::try_from(f).ok()) else {
-            break;
-        };
-        let (tag, kind, n) = (word(&field[..2]), word(&field[2..4]), long(&field[4..8]));
-        let value = match tag {
-            0xa002 => width,
-            0xa003 => height,
-            _ => continue,
-        };
-        if n != 1 || !(kind == 3 || kind == 4) {
-            continue;
-        }
-        // SHORT or LONG, inline. A SHORT too small for the new size
-        // becomes a LONG (both fit the 4-byte value field).
-        match u16::try_from(value) {
-            Ok(short) if kind == 3 => {
-                tiff[at + 8..at + 10].copy_from_slice(&put_word(short));
-                tiff[at + 10..at + 12].fill(0);
-            }
-            _ => {
-                tiff[at + 2..at + 4].copy_from_slice(&put_word(4));
-                tiff[at + 8..at + 12].copy_from_slice(&put_long(value));
-            }
-        }
+    if let Some(sub) = exif_ifd {
+        tiff.set_pixel_dimensions(sub, width, height);
     }
-    Some(tiff)
+    Some(tiff.bytes)
 }
 
-/// Zero the thumbnail IFD at `ifd1` and the image data it points to (a JPEG
-/// through `JPEGInterchangeFormat`, or strips), and cut what ends the
-/// blob. `None` when a data range is unreadable or starts before
-/// `keep_before` (the header and IFD0), where zeroing would corrupt them.
-fn erase_thumbnail(
-    tiff: &mut Vec<u8>,
-    ifd1: usize,
-    keep_before: usize,
-    word: impl Fn(&[u8]) -> u16,
-    long: impl Fn(&[u8]) -> u32,
-) -> Option<()> {
-    // A dangling IFD1 pointer: nothing to erase.
-    let Some(count) = tiff.get(ifd1..ifd1.saturating_add(2)).map(|b| usize::from(word(b))) else {
-        return Some(());
-    };
-    if ifd1 < keep_before {
-        return None;
+/// A TIFF-structured EXIF block rewritten in place.
+struct Tiff {
+    bytes: Vec<u8>,
+    little: bool,
+}
+
+impl Tiff {
+    /// `None` unless `bytes` starts with a TIFF header.
+    fn new(bytes: &[u8]) -> Option<Self> {
+        let little = match bytes.get(..4)? {
+            [b'I', b'I', 42, 0] => true,
+            [b'M', b'M', 0, 42] => false,
+            _ => return None,
+        };
+        Some(Self { bytes: bytes.to_vec(), little })
     }
-    // SHORT or LONG values of one entry, inline when they fit in 4 bytes.
-    let values = |tiff: &[u8], field: &[u8]| -> Option<Vec<u32>> {
-        let size = match word(&field[2..4]) {
+
+    fn word(&self, at: usize) -> Option<u16> {
+        let b = self.bytes.get(at..at.checked_add(2)?)?.try_into().ok()?;
+        Some(if self.little { u16::from_le_bytes(b) } else { u16::from_be_bytes(b) })
+    }
+
+    fn long(&self, at: usize) -> Option<u32> {
+        let b = self.bytes.get(at..at.checked_add(4)?)?.try_into().ok()?;
+        Some(if self.little { u32::from_le_bytes(b) } else { u32::from_be_bytes(b) })
+    }
+
+    /// Write at an offset a read just validated.
+    fn put_word(&mut self, at: usize, value: u16) {
+        let b = if self.little { value.to_le_bytes() } else { value.to_be_bytes() };
+        self.bytes[at..at + 2].copy_from_slice(&b);
+    }
+
+    fn put_long(&mut self, at: usize, value: u32) {
+        let b = if self.little { value.to_le_bytes() } else { value.to_be_bytes() };
+        self.bytes[at..at + 4].copy_from_slice(&b);
+    }
+
+    /// Bytes of the IFD table at `ifd`: count, entries and next-IFD link.
+    fn table(&self, ifd: usize) -> Option<std::ops::Range<usize>> {
+        let count = usize::from(self.word(ifd)?);
+        Some(ifd..ifd + 2 + count * 12 + 4)
+    }
+
+    /// Where the value of the entry at `at` lies when it does not fit the
+    /// entry's 4-byte field.
+    fn out_of_line(&self, at: usize) -> Option<std::ops::Range<usize>> {
+        let unit = match self.word(at + 2)? {
+            1 | 2 | 6 | 7 => 1,
+            3 | 8 => 2,
+            4 | 9 | 11 | 13 => 4,
+            5 | 10 | 12 => 8,
+            _ => return None,
+        };
+        let len = usize::try_from(self.long(at + 4)?).ok()?.checked_mul(unit)?;
+        let start = usize::try_from(self.long(at + 8)?).ok()?;
+        (len > 4).then(|| start..start.saturating_add(len))
+    }
+
+    /// SHORT or LONG values of the entry at `at`, inline when they fit.
+    fn values(&self, at: usize) -> Option<Vec<u32>> {
+        let unit = match self.word(at + 2)? {
             3 => 2,
             4 => 4,
             _ => return None,
         };
-        let bytes = usize::try_from(long(&field[4..8])).ok()?.checked_mul(size)?;
-        let data = if bytes <= 4 {
-            &field[8..8 + bytes]
-        } else {
-            let at = usize::try_from(long(&field[8..12])).ok()?;
-            tiff.get(at..at.checked_add(bytes)?)?
+        let count = usize::try_from(self.long(at + 4)?).ok()?;
+        let start = self.out_of_line(at).map_or(at + 8, |range| range.start);
+        let read = |i: usize| {
+            let at = start.checked_add(i.checked_mul(unit)?)?;
+            if unit == 2 { self.word(at).map(u32::from) } else { self.long(at) }
         };
-        Some(
-            data.chunks_exact(size)
-                .map(|b| if size == 2 { u32::from(word(b)) } else { long(b) })
-                .collect(),
-        )
-    };
-    let (mut offsets, mut lengths) = (Vec::new(), Vec::new());
-    for entry in 0..count {
-        let at = ifd1 + 2 + entry * 12;
-        let Some(field) = tiff.get(at..at + 12) else {
-            break;
+        (0..count).map(read).collect()
+    }
+
+    /// Header, IFD0 and the Exif, GPS and interoperability IFDs reachable
+    /// from it, each with the values stored outside its entries: what
+    /// erasing the thumbnail must leave intact.
+    fn referenced_ranges(&self, ifd0: usize) -> Vec<std::ops::Range<usize>> {
+        let mut ranges = Vec::new();
+        // The TIFF header.
+        ranges.push(0..8);
+        let mut pending = vec![ifd0];
+        while let Some(ifd) = pending.pop() {
+            let Some(table) = self.table(ifd) else {
+                continue;
+            };
+            for at in (table.start + 2..table.end - 4).step_by(12) {
+                if let Some(value) = self.out_of_line(at) {
+                    ranges.push(value);
+                }
+                let sub_ifd = matches!(self.word(at), Some(0x8769 | 0x8825 | 0xa005));
+                if let (true, Some(sub)) = (sub_ifd, self.long(at + 8))
+                    && let Ok(sub) = usize::try_from(sub)
+                    && ranges.len() < 4096
+                    && !ranges.iter().any(|range| range.start == sub)
+                {
+                    pending.push(sub);
+                }
+            }
+            ranges.push(table);
+        }
+        ranges
+    }
+
+    /// Zero the thumbnail IFD at `ifd1` and the image data it points to (a
+    /// JPEG through `JPEGInterchangeFormat`, or strips), never inside a
+    /// `referenced` range, and cut what ends the blob. A JPEG offset without
+    /// its length leaves the data in place. `None` when the thumbnail's
+    /// offsets cannot be read.
+    fn erase_thumbnail(
+        &mut self,
+        ifd1: usize,
+        referenced: &[std::ops::Range<usize>],
+    ) -> Option<()> {
+        // A dangling IFD1 pointer: nothing to erase.
+        let Some(table) = self.table(ifd1) else {
+            return Some(());
         };
-        match word(&field[..2]) {
-            // JPEGInterchangeFormat, StripOffsets.
-            0x0201 | 0x0111 => offsets.extend(values(tiff, field)?),
-            // JPEGInterchangeFormatLength, StripByteCounts.
-            0x0202 | 0x0117 => lengths.extend(values(tiff, field)?),
-            _ => {}
+        let (offsets, lengths) = self.thumbnail_data(table.clone())?;
+        let overlaps = |range: &std::ops::Range<usize>| {
+            referenced.iter().any(|kept| kept.start < range.end && range.start < kept.end)
+        };
+        let mut truncate_at = self.bytes.len();
+        for (offset, length) in offsets.into_iter().zip(lengths) {
+            let start = usize::try_from(offset).ok()?;
+            let end = start.saturating_add(usize::try_from(length).ok()?).min(self.bytes.len());
+            // Stop at the first referenced value after the start.
+            let end = referenced
+                .iter()
+                .map(|kept| kept.start)
+                .filter(|&kept| kept > start)
+                .fold(end, usize::min);
+            if start >= end || overlaps(&(start..end)) {
+                continue;
+            }
+            self.bytes[start..end].fill(0);
+            if end == self.bytes.len() {
+                truncate_at = truncate_at.min(start);
+            }
+        }
+        let table = table.start..table.end.min(self.bytes.len());
+        if !overlaps(&table) {
+            self.bytes[table.clone()].fill(0);
+            if table.end >= truncate_at {
+                truncate_at = truncate_at.min(table.start);
+            }
+        }
+        self.bytes.truncate(truncate_at);
+        Some(())
+    }
+
+    /// Offsets and lengths of the thumbnail's JPEG or strips listed in the
+    /// IFD1 `table`; no lengths when a JPEG offset comes without one.
+    fn thumbnail_data(&self, table: std::ops::Range<usize>) -> Option<(Vec<u32>, Vec<u32>)> {
+        let (mut offsets, mut lengths) = (Vec::new(), Vec::new());
+        for at in (table.start + 2..table.end - 4).step_by(12) {
+            match self.word(at) {
+                // JPEGInterchangeFormat, StripOffsets.
+                Some(0x0201 | 0x0111) => offsets.extend(self.values(at)?),
+                // JPEGInterchangeFormatLength, StripByteCounts.
+                Some(0x0202 | 0x0117) => lengths.extend(self.values(at)?),
+                Some(_) => {}
+                None => break,
+            }
+        }
+        if lengths.is_empty() {
+            offsets.clear();
+        }
+        (offsets.len() == lengths.len()).then_some((offsets, lengths))
+    }
+
+    /// Set `PixelXDimension`/`PixelYDimension` in the Exif IFD at `ifd`; a
+    /// SHORT too small for the new size becomes a LONG (both fit the
+    /// entry's 4-byte field).
+    fn set_pixel_dimensions(&mut self, ifd: usize, width: u32, height: u32) {
+        let Some(table) = self.table(ifd) else {
+            return;
+        };
+        for at in (table.start + 2..table.end - 4).step_by(12) {
+            let (Some(tag), Some(kind), Some(n), Some(_)) =
+                (self.word(at), self.word(at + 2), self.long(at + 4), self.long(at + 8))
+            else {
+                break;
+            };
+            let value = match tag {
+                0xa002 => width,
+                0xa003 => height,
+                _ => continue,
+            };
+            if n != 1 || !(kind == 3 || kind == 4) {
+                continue;
+            }
+            match u16::try_from(value) {
+                Ok(short) if kind == 3 => {
+                    self.put_word(at + 8, short);
+                    self.bytes[at + 10..at + 12].fill(0);
+                }
+                _ => {
+                    self.put_word(at + 2, 4);
+                    self.put_long(at + 8, value);
+                }
+            }
         }
     }
-    if offsets.len() != lengths.len() {
-        return None;
-    }
-    let mut truncate_at = tiff.len();
-    for (&offset, &length) in offsets.iter().zip(&lengths) {
-        let start = usize::try_from(offset).ok()?;
-        let end = start.saturating_add(usize::try_from(length).ok()?).min(tiff.len());
-        if start >= end {
-            continue;
-        }
-        if start < keep_before {
-            return None;
-        }
-        tiff[start..end].fill(0);
-        if end == tiff.len() {
-            truncate_at = truncate_at.min(start);
-        }
-    }
-    let table_end = ifd1.saturating_add(2 + count * 12 + 4).min(tiff.len());
-    tiff[ifd1..table_end].fill(0);
-    if table_end >= truncate_at {
-        truncate_at = truncate_at.min(ifd1);
-    }
-    tiff.truncate(truncate_at);
-    Some(())
 }
 
 /// Estimated IJG quality (`1..=100`) of the JPEG at `path`, from its
@@ -538,7 +622,7 @@ mod tests {
     }
 
     #[test]
-    fn resave_exif_erases_thumbnail_strips_kept_before_other_data() {
+    fn thumbnail_strips_are_erased() {
         // IFD0 with no entries; IFD1 at 14: StripOffsets LONG x2 at 44,
         // StripByteCounts SHORT x2 inline; strips at 52 and 60, then a tail.
         let mut t = vec![b'I', b'I', 42, 0, 8, 0, 0, 0, 0, 0, 14, 0, 0, 0];
@@ -555,16 +639,73 @@ mod tests {
         assert!(fixed.ends_with(b"tail"));
         assert_eq!(&fixed[10..14], &[0; 4], "IFD1 unlinked");
 
-        // A thumbnail range reaching into IFD0 cannot be erased safely.
+        // A strip pointing into the header leaves the header intact.
         let mut bad = t.clone();
         bad[44] = 2;
-        assert_eq!(resave_exif(&bad, Some((1, 1))), None);
+        let fixed = resave_exif(&bad, Some((1, 1))).unwrap();
+        assert_eq!(&fixed[..8], &bad[..8]);
+        assert!(!contains(&fixed, b"STRIPTWO"));
+    }
+
+    fn parse_exif(tiff: Vec<u8>) -> exif::Exif {
+        exif::Reader::new().read_raw(tiff).unwrap()
+    }
+
+    /// TIFF lets IFD1 and its thumbnail come before IFD0.
+    #[test]
+    fn thumbnail_before_ifd0_is_erased() {
+        let mut t = vec![b'I', b'I', 42, 0, 48, 0, 0, 0];
+        // IFD1 at 8: a 10-byte JPEG at 38, no next IFD.
+        t.extend_from_slice(&[2, 0]);
+        t.extend_from_slice(&[0x01, 0x02, 4, 0, 1, 0, 0, 0, 38, 0, 0, 0]);
+        t.extend_from_slice(&[0x02, 0x02, 4, 0, 1, 0, 0, 0, 10, 0, 0, 0]);
+        t.extend_from_slice(&[0, 0, 0, 0]);
+        t.extend_from_slice(b"THUMBDATA!");
+        assert_eq!(t.len(), 48);
+        // IFD0 at 48: Make "Cam", next IFD 8.
+        t.extend_from_slice(&[1, 0, 0x0f, 0x01, 2, 0, 4, 0, 0, 0, b'C', b'a', b'm', 0, 8, 0, 0, 0]);
+        let fixed = resave_exif(&t, Some((1, 1))).unwrap();
+        assert!(!contains(&fixed, b"THUMBDATA"));
+        let after = parse_exif(fixed);
+        assert!(after.get_field(exif::Tag::Make, exif::In::PRIMARY).is_some());
+        assert!(after.fields().all(|f| f.ifd_num != exif::In::THUMBNAIL));
     }
 
     #[test]
-    fn resave_exif_refreshes_dimensions_and_drops_the_stale_thumbnail() {
+    fn jpeg_offset_without_length_unlinks() {
+        let mut t = vec![b'I', b'I', 42, 0, 8, 0, 0, 0, 0, 0, 14, 0, 0, 0];
+        t.extend_from_slice(&[1, 0, 0x01, 0x02, 4, 0, 1, 0, 0, 0, 32, 0, 0, 0, 0, 0, 0, 0]);
+        t.extend_from_slice(b"JPEGDATA");
+        let fixed = resave_exif(&t, Some((1, 1))).unwrap();
+        assert_eq!(&fixed[10..14], &[0; 4], "IFD1 unlinked");
+        assert!(parse_exif(fixed).fields().all(|f| f.ifd_num != exif::In::THUMBNAIL));
+    }
+
+    /// An overstated thumbnail length must not reach the GPS IFD after it.
+    #[test]
+    fn overstated_length_spares_gps() {
+        let mut t = vec![b'I', b'I', 42, 0, 8, 0, 0, 0];
+        // IFD0 at 8: GPS IFD pointer to 62, next IFD 26.
+        t.extend_from_slice(&[1, 0, 0x25, 0x88, 4, 0, 1, 0, 0, 0, 62, 0, 0, 0, 26, 0, 0, 0]);
+        // IFD1 at 26: a JPEG at 56 whose length runs to the end of the blob.
+        t.extend_from_slice(&[2, 0]);
+        t.extend_from_slice(&[0x01, 0x02, 4, 0, 1, 0, 0, 0, 56, 0, 0, 0]);
+        t.extend_from_slice(&[0x02, 0x02, 4, 0, 1, 0, 0, 0, 200, 0, 0, 0]);
+        t.extend_from_slice(&[0, 0, 0, 0]);
+        t.extend_from_slice(b"THUMB!");
+        assert_eq!(t.len(), 62);
+        // GPS IFD at 62: GPSLatitudeRef "N".
+        t.extend_from_slice(&[1, 0, 0x01, 0x00, 2, 0, 2, 0, 0, 0, b'N', 0, 0, 0, 0, 0, 0, 0]);
+        let fixed = resave_exif(&t, Some((1, 1))).unwrap();
+        assert!(!contains(&fixed, b"THUMB!"));
+        let after = parse_exif(fixed);
+        assert!(after.get_field(exif::Tag::GPSLatitudeRef, exif::In::PRIMARY).is_some());
+    }
+
+    #[test]
+    fn resave_refreshes_size_drops_thumbnail() {
         let source = exif_with_dimensions_and_thumbnail();
-        let parse = |tiff: Vec<u8>| exif::Reader::new().read_raw(tiff).unwrap();
+        let parse = parse_exif;
         let before = parse(source.clone());
         assert!(before.fields().any(|f| f.ifd_num == exif::In::THUMBNAIL));
 

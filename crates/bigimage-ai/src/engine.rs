@@ -676,6 +676,7 @@ mod tests {
                 (LOADS.get(), slot.device()),
                 ((1, 0), Some(Device::Gpu("Fake GPU".into())))
             );
+            std::fs::remove_dir_all(tempdir()).unwrap();
         }
 
         #[test]
@@ -685,6 +686,7 @@ mod tests {
             assert_eq!(run(&slot, &b, SMALL).unwrap(), Path::new(b.weights));
             run(&slot, &b, SMALL).unwrap();
             assert_eq!(LOADS.get(), (2, 0));
+            std::fs::remove_dir_all(tempdir()).unwrap();
         }
 
         #[test]
@@ -698,6 +700,7 @@ mod tests {
             assert_eq!((LOADS.get(), slot.device()), ((1, 1), Some(Device::Cpu)));
             run(&slot, &b, SMALL).unwrap();
             assert_eq!(LOADS.get(), (1, 2));
+            std::fs::remove_dir_all(tempdir()).unwrap();
         }
 
         #[test]
@@ -713,6 +716,7 @@ mod tests {
             let failed = slot.run(&a, SMALL, go, |_, _| Err::<(), _>(AiError::Gpu("lost".into())));
             assert!(matches!(failed, Err(AiError::Inference(_))));
             assert_eq!(slot.device(), None);
+            std::fs::remove_dir_all(tempdir()).unwrap();
         }
     }
 }

@@ -1,13 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-//! EXIF / metadata inspection. Reads tags from image files via
-//! `kamadak-exif`, exposes a friendly [`Metadata`] record the GUI can
-//! render in sidebars, and surfaces the two signals we care about most
-//! for smart-prompts: "has GPS coordinates" and "has camera info".
+//! EXIF and metadata policy. [`read`] turns a file's EXIF into a
+//! [`Metadata`] record the GUI shows, with the GPS and camera signals the
+//! privacy prompts use.
 //!
-//! Does **not** write metadata yet — today our encode pipeline strips all
-//! ancillary chunks anyway (it decodes to `DynamicImage` which has no
-//! metadata carrier). A future iteration will add `preserve_exif` that
-//! reads bytes pre-decode and re-injects them post-encode.
+//! Metadata reaches an output by two paths only: an in-place save writes
+//! the source's EXIF and ICC profile back (see
+//! [`crate::save_image_preserving_metadata`] and [`preserved_by`]), and a
+//! same-format conversion may publish the original bytes unchanged when
+//! they are smaller and carry nothing a stripping encode would remove.
+//! Every other encode writes no source metadata.
 
 use std::path::Path;
 
@@ -391,7 +392,8 @@ fn erase_thumbnail(
 /// Estimated IJG quality (`1..=100`) of the JPEG at `path`, from its
 /// luminance quantization table: the quality to pass in
 /// [`crate::EncodeOptions::quality`] so an in-place resave of a JPEG keeps
-/// roughly its original size and fidelity instead of falling back to 75.
+/// roughly its original size and fidelity instead of being re-compressed
+/// to the perceptual target.
 ///
 /// The table is compared with the standard IJG luminance table scaled for
 /// every quality (`q < 50`: `5000/q` %, otherwise `200 - 2q` %) and the
@@ -558,9 +560,8 @@ pub fn read(path: impl AsRef<Path>) -> Result<Metadata> {
     Ok(out)
 }
 
-/// Quick-path: just check if the file has GPS data. Used by the smart
-/// prompts in the convert/resize dialogs to display a privacy banner
-/// without scanning the full EXIF table into strings.
+/// Whether the file's EXIF holds a GPS coordinate, for the privacy banner
+/// of the convert and resize dialogs; `false` when it cannot be read.
 pub fn has_gps(path: impl AsRef<Path>) -> bool {
     read(path).map(|m| m.has_gps).unwrap_or(false)
 }

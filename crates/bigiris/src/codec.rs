@@ -712,10 +712,10 @@ fn resave_with_quality(path: &Path) -> ImageResult<(backend::ResaveDecoded, Opti
 
 /// Decode `path` for an in-place save: what
 /// [`bigimage_core::open_image_for_resave`] returns, plus the quality of a
-/// JPEG source so re-encoding does not fall back to the default (75) and
-/// degrade the photo on every save. The JPEG markers are parsed by the
-/// sandboxed worker; without the sandboxed backend (unit tests) the quality
-/// is unknown.
+/// JPEG source so re-encoding keeps it instead of searching for the
+/// perceptual target, which can degrade the photo on every save. The JPEG
+/// markers are parsed by the sandboxed worker; without the sandboxed backend
+/// (unit tests) the quality is unknown.
 #[cfg(feature = "gui")]
 pub fn open_for_resave(
     path: &Path,
@@ -1318,7 +1318,7 @@ mod tests {
         let estimate = quality.expect("a JPEG source reports its quality");
         assert!(estimate.abs_diff(92) <= 2, "estimated {estimate}");
         // What the viewer does on Ctrl+S: re-encode with the estimate, so the
-        // file keeps its quality instead of dropping to the default 75.
+        // file keeps its quality instead of the perceptual target's.
         bigimage_core::save_image_preserving_metadata_report(
             image.fliph(),
             &path,

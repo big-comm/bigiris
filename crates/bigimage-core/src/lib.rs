@@ -207,8 +207,9 @@ pub fn open_image_for_resave(
 /// the vendored encoders cannot write it.
 ///
 /// `options` is used as given. For an in-place JPEG save pass the source's
-/// quality, e.g. `quality: metadata::estimate_jpeg_quality(path)`, or the
-/// encoder default (75) re-compresses a high-quality original.
+/// quality, e.g. `quality: metadata::estimate_jpeg_quality(path)`: with
+/// `None` the encoder searches for `options.target`, which can re-compress
+/// a high-quality original below its own quality.
 pub fn save_image_preserving_metadata(
     image: image::DynamicImage,
     output: impl AsRef<std::path::Path>,

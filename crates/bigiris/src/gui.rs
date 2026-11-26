@@ -3809,24 +3809,11 @@ fn path_for_external_tool(state: &Rc<RefCell<ViewerState>>) -> Option<PathBuf> {
 /// The chosen images open in a new viewer process, which leaves this
 /// window's list and edit history alone.
 fn open_file_chooser(window: &adw::ApplicationWindow) {
-    let filter = gtk::FileFilter::new();
-    filter.set_name(Some(&gettext("Images")));
-    filter.add_mime_type("image/*");
-    let filters = gio::ListStore::new::<gtk::FileFilter>();
-    filters.append(&filter);
-
-    let dialog = gtk::FileDialog::builder()
-        .title(gettext("Open images"))
-        .modal(true)
-        .filters(&filters)
-        .build();
-
+    let dialog = image_file_dialog(&gettext("Open images"));
     let parent = window.clone();
     dialog.open_multiple(Some(window), gio::Cancellable::NONE, move |result| {
         let Ok(list) = result else { return };
-        let paths: Vec<PathBuf> = (0..list.n_items())
-            .filter_map(|i| list.item(i).and_downcast::<gio::File>()?.path())
-            .collect();
+        let paths = local_paths(&list);
         // open_files puts "--" first, so a file named like an option is not
         // parsed as one.
         transfers::open_files(&parent, paths, false);
@@ -4375,23 +4362,16 @@ fn open_batch_folder_dialog(window: &adw::ApplicationWindow) {
     });
 }
 
-/// Start page file chooser: the chosen images open in a new viewer process,
-/// the same path as files given on the command line.
-/// A modal file chooser that offers the image formats the viewer opens.
+/// A modal file chooser that lists the files the viewer shows: those whose
+/// extension is one of [`Format::spellings`], as the folder scan takes them.
 pub(in crate::gui) fn image_file_dialog(title: &str) -> gtk::FileDialog {
     let dialog = gtk::FileDialog::builder().title(title).modal(true).build();
     let filter = gtk::FileFilter::new();
     filter.set_name(Some(&gettext("Images")));
-    for mime in [
-        "image/jpeg",
-        "image/png",
-        "image/webp",
-        "image/avif",
-        "image/gif",
-        "image/tiff",
-        "image/bmp",
-    ] {
-        filter.add_mime_type(mime);
+    for format in Format::all() {
+        for spelling in format.spellings() {
+            filter.add_suffix(spelling);
+        }
     }
     let filters = gio::ListStore::new::<gtk::FileFilter>();
     filters.append(&filter);

@@ -97,25 +97,35 @@ impl Format {
         !matches!(self, Format::Jpeg | Format::Pnm | Format::Hdr)
     }
 
-    /// Parse a format from a user-provided string (case-insensitive). Accepts
-    /// extension-like and name-like spellings.
-    pub fn parse(s: &str) -> Result<Self, BigImageError> {
-        match s.trim().to_ascii_lowercase().as_str() {
-            "png" => Ok(Format::Png),
-            "jpg" | "jpeg" | "jpe" => Ok(Format::Jpeg),
-            "webp" => Ok(Format::WebP),
-            "avif" => Ok(Format::Avif),
-            "tif" | "tiff" => Ok(Format::Tiff),
-            "bmp" | "dib" => Ok(Format::Bmp),
-            "gif" => Ok(Format::Gif),
-            "ico" => Ok(Format::Ico),
-            "pnm" | "ppm" | "pgm" | "pbm" | "pam" => Ok(Format::Pnm),
-            "tga" | "targa" => Ok(Format::Tga),
-            "qoi" => Ok(Format::Qoi),
-            "hdr" | "rgbe" => Ok(Format::Hdr),
-            "exr" | "openexr" => Ok(Format::OpenExr),
-            other => Err(BigImageError::UnsupportedFormat(other.to_string())),
+    /// Every spelling [`Format::parse`] accepts for this format, lowercase:
+    /// the file extensions it goes by and its name.
+    pub fn spellings(self) -> &'static [&'static str] {
+        match self {
+            Format::Png => &["png"],
+            Format::Jpeg => &["jpg", "jpeg", "jpe"],
+            Format::WebP => &["webp"],
+            Format::Avif => &["avif"],
+            Format::Tiff => &["tif", "tiff"],
+            Format::Bmp => &["bmp", "dib"],
+            Format::Gif => &["gif"],
+            Format::Ico => &["ico"],
+            Format::Pnm => &["pnm", "ppm", "pgm", "pbm", "pam"],
+            Format::Tga => &["tga", "targa"],
+            Format::Qoi => &["qoi"],
+            Format::Hdr => &["hdr", "rgbe"],
+            Format::OpenExr => &["exr", "openexr"],
         }
+    }
+
+    /// Parse a format from a user-provided string (case-insensitive), one of
+    /// its [`Format::spellings`].
+    pub fn parse(s: &str) -> Result<Self, BigImageError> {
+        let spelling = s.trim().to_ascii_lowercase();
+        Format::all()
+            .iter()
+            .copied()
+            .find(|format| format.spellings().contains(&spelling.as_str()))
+            .ok_or(BigImageError::UnsupportedFormat(spelling))
     }
 
     /// Map an [`ImageFormat`] back to one of our variants. Returns `None` if
@@ -194,6 +204,18 @@ mod tests {
         assert_eq!(ext("a", Format::Png), "png");
         assert_eq!(ext("a.tar.gz", Format::Png), "png");
         assert_eq!(ext("a.PGM", Format::Pnm), "ppm", "PNM follows the pixels");
+    }
+
+    #[test]
+    fn every_spelling_parses_back() {
+        for &format in Format::all() {
+            for spelling in format.spellings() {
+                assert_eq!(Format::parse(spelling).unwrap(), format);
+                assert_eq!(Format::parse(&spelling.to_uppercase()).unwrap(), format);
+            }
+        }
+        assert!(Format::parse("").is_err());
+        assert!(Format::parse("heic").is_err());
     }
 
     #[test]

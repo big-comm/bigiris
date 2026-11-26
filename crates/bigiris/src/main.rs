@@ -1742,7 +1742,13 @@ fn run_batch(profile: &std::path::Path, inputs: &[PathBuf]) -> color_eyre::Resul
             }
             Ok(ConvertOutcome::Skipped { output }) => {
                 skipped += 1;
-                println!("[{}/{}] skip {}", done + 1, total, codec::printable_path(&output));
+                println!(
+                    "[{}/{}] skip {} ({})",
+                    done + 1,
+                    total,
+                    codec::printable_path(&input),
+                    exists_note(&output)
+                );
             }
             Err(error) => {
                 failed += 1;
@@ -1761,7 +1767,7 @@ fn run_batch(profile: &std::path::Path, inputs: &[PathBuf]) -> color_eyre::Resul
             eprintln!("err batch: {}", gettext("a worker ended unexpectedly"));
         }
     }
-    println!("{}", tally("batch", ok, skipped, failed));
+    eprintln!("{}", tally("batch", ok, skipped, failed));
     if failed > 0 {
         exit_partial();
     }

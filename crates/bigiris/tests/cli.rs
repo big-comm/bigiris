@@ -233,7 +233,13 @@ fn batch_profile_converts_folder_and_skip_is_idempotent() {
         std::fs::read_dir(dir.path().join("output")).unwrap().map(|e| e.unwrap().path()).collect();
     assert_eq!(paths.len(), 40);
     let before: Vec<_> = paths.iter().map(|p| std::fs::read(p).unwrap()).collect();
-    success(run(dir.path(), &["batch", "--profile", "profile.toml", "input"]));
+    let output = run(dir.path(), &["batch", "--profile", "profile.toml", "input"]);
+    success(output.clone());
+    // Reported like every command: skip lines name the input, the tally is on stderr.
+    let report = String::from_utf8_lossy(&output.stdout);
+    assert!(report.contains("skip input/image0.png (already exists: "), "{report}");
+    let tally = String::from_utf8_lossy(&output.stderr);
+    assert!(tally.contains("batch: 0 written, 40 skipped, 0 failed"), "{tally}");
     for (path, bytes) in paths.iter().zip(before) {
         assert_eq!(std::fs::read(path).unwrap(), bytes);
         assert_eq!(bigimage_core::open_image(path).unwrap().width(), 32);

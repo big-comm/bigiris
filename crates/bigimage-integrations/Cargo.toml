@@ -13,3 +13,6 @@ thiserror.workspace = true
 directories.workspace = true
 # Atomic sibling temp files for crash-safe rewrites (see safe_fs).
 tempfile = "3"
+
+[lints]
+workspace = true

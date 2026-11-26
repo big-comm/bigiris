@@ -1,4 +1,7 @@
 allow-unwrap-in-tests = true
+allow-expect-in-tests = true
+# Unpublished workspace: let Clippy judge public items too.
+avoid-breaking-exported-api = false
 
 # Outputs are published by bigimage-core: synced with their folder, a
 # replaced file's permission bits kept, skip and increment never overwriting.

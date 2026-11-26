@@ -62,3 +62,6 @@ gui = ["dep:gtk4", "dep:libadwaita"]
 [dev-dependencies]
 # Builds a Display P3 profile for the metadata-preserving re-save test.
 moxcms = "0.8"
+
+[lints]
+workspace = true

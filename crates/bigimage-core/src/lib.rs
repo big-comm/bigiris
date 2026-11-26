@@ -203,8 +203,8 @@ pub fn open_image_for_resave(
 ///
 /// EXIF `PixelXDimension`/`PixelYDimension` are updated to the saved size
 /// and the embedded IFD1 thumbnail (which would show the image before the
-/// edit) is dropped. XMP is not carried: the vendored encoders cannot write
-/// it.
+/// edit) is erased; previews inside a maker note stay. XMP is not carried:
+/// the vendored encoders cannot write it.
 ///
 /// `options` is used as given. For an in-place JPEG save pass the source's
 /// quality, e.g. `quality: metadata::estimate_jpeg_quality(path)`, or the

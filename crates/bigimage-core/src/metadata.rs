@@ -186,9 +186,11 @@ fn webp_carries_metadata(bytes: &[u8]) -> bool {
 ///
 /// With `size` (the saved pixels, after rotate/crop/extent),
 /// `PixelXDimension`/`PixelYDimension` in the Exif IFD are set to it and
-/// the IFD1 thumbnail is unlinked (IFD0's next-IFD offset set to 0): it
-/// shows the image before the edit, and file managers display it instead
-/// of the real pixels. With `size = None` only the orientation changes.
+/// the IFD1 thumbnail is erased: it shows the image before the edit, which
+/// file managers display instead of the real pixels and which a crop must
+/// not keep. Returns `None` when the thumbnail cannot be located safely.
+/// Previews inside maker notes are not touched. With `size = None` only the
+/// orientation changes.
 pub(crate) fn resave_exif(exif: &[u8], size: Option<(u32, u32)>) -> Option<Vec<u8>> {
     let mut tiff = exif.strip_prefix(b"Exif\0\0").unwrap_or(exif).to_vec();
     let little = match tiff.get(..4)? {
@@ -226,8 +228,11 @@ pub(crate) fn resave_exif(exif: &[u8], size: Option<(u32, u32)>) -> Option<Vec<u
         return Some(tiff);
     };
     let next = ifd + 2 + count * 12;
-    tiff.get(next..next + 4)?;
+    let thumbnail_ifd = usize::try_from(long(tiff.get(next..next + 4)?)).ok()?;
     tiff[next..next + 4].copy_from_slice(&put_long(0));
+    if thumbnail_ifd != 0 {
+        erase_thumbnail(&mut tiff, thumbnail_ifd, next + 4, word, long)?;
+    }
     let Some(sub) = exif_ifd else {
         return Some(tiff);
     };
@@ -262,6 +267,85 @@ pub(crate) fn resave_exif(exif: &[u8], size: Option<(u32, u32)>) -> Option<Vec<u
         }
     }
     Some(tiff)
+}
+
+/// Zero the thumbnail IFD at `ifd1` and the image data it points to (a JPEG
+/// through `JPEGInterchangeFormat`, or strips), and cut what ends the
+/// blob. `None` when a data range is unreadable or starts before
+/// `keep_before` (the header and IFD0), where zeroing would corrupt them.
+fn erase_thumbnail(
+    tiff: &mut Vec<u8>,
+    ifd1: usize,
+    keep_before: usize,
+    word: impl Fn(&[u8]) -> u16,
+    long: impl Fn(&[u8]) -> u32,
+) -> Option<()> {
+    // A dangling IFD1 pointer: nothing to erase.
+    let Some(count) = tiff.get(ifd1..ifd1.saturating_add(2)).map(|b| usize::from(word(b))) else {
+        return Some(());
+    };
+    if ifd1 < keep_before {
+        return None;
+    }
+    // SHORT or LONG values of one entry, inline when they fit in 4 bytes.
+    let values = |tiff: &[u8], field: &[u8]| -> Option<Vec<u32>> {
+        let size = match word(&field[2..4]) {
+            3 => 2,
+            4 => 4,
+            _ => return None,
+        };
+        let bytes = usize::try_from(long(&field[4..8])).ok()?.checked_mul(size)?;
+        let data = if bytes <= 4 {
+            &field[8..8 + bytes]
+        } else {
+            let at = usize::try_from(long(&field[8..12])).ok()?;
+            tiff.get(at..at.checked_add(bytes)?)?
+        };
+        Some(
+            data.chunks_exact(size)
+                .map(|b| if size == 2 { u32::from(word(b)) } else { long(b) })
+                .collect(),
+        )
+    };
+    let (mut offsets, mut lengths) = (Vec::new(), Vec::new());
+    for entry in 0..count {
+        let at = ifd1 + 2 + entry * 12;
+        let Some(field) = tiff.get(at..at + 12) else {
+            break;
+        };
+        match word(&field[..2]) {
+            // JPEGInterchangeFormat, StripOffsets.
+            0x0201 | 0x0111 => offsets.extend(values(tiff, field)?),
+            // JPEGInterchangeFormatLength, StripByteCounts.
+            0x0202 | 0x0117 => lengths.extend(values(tiff, field)?),
+            _ => {}
+        }
+    }
+    if offsets.len() != lengths.len() {
+        return None;
+    }
+    let mut truncate_at = tiff.len();
+    for (&offset, &length) in offsets.iter().zip(&lengths) {
+        let start = usize::try_from(offset).ok()?;
+        let end = start.saturating_add(usize::try_from(length).ok()?).min(tiff.len());
+        if start >= end {
+            continue;
+        }
+        if start < keep_before {
+            return None;
+        }
+        tiff[start..end].fill(0);
+        if end == tiff.len() {
+            truncate_at = truncate_at.min(start);
+        }
+    }
+    let table_end = ifd1.saturating_add(2 + count * 12 + 4).min(tiff.len());
+    tiff[ifd1..table_end].fill(0);
+    if table_end >= truncate_at {
+        truncate_at = truncate_at.min(ifd1);
+    }
+    tiff.truncate(truncate_at);
+    Some(())
 }
 
 /// Estimated IJG quality (`1..=100`) of the JPEG at `path`, from its
@@ -544,9 +628,42 @@ mod tests {
         t.extend_from_slice(&[0x03, 0xa0, 4, 0, 1, 0, 0, 0, 0xb8, 0x0b, 0, 0]);
         t.extend_from_slice(&[0, 0, 0, 0]);
         assert_eq!(t.len(), 68);
-        // IFD1: JPEGInterchangeFormatLength = 0, no next IFD.
-        t.extend_from_slice(&[1, 0, 0x02, 0x02, 4, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
+        // IFD1: a JPEG thumbnail of 15 bytes at 98, no next IFD.
+        t.extend_from_slice(&[2, 0]);
+        t.extend_from_slice(&[0x01, 0x02, 4, 0, 1, 0, 0, 0, 98, 0, 0, 0]);
+        t.extend_from_slice(&[0x02, 0x02, 4, 0, 1, 0, 0, 0, 15, 0, 0, 0]);
+        t.extend_from_slice(&[0, 0, 0, 0]);
+        assert_eq!(t.len(), 98);
+        t.extend_from_slice(b"\xff\xd8THUMBMARK\xff\xd9");
         t
+    }
+
+    fn contains(haystack: &[u8], needle: &[u8]) -> bool {
+        haystack.windows(needle.len()).any(|w| w == needle)
+    }
+
+    #[test]
+    fn resave_exif_erases_thumbnail_strips_kept_before_other_data() {
+        // IFD0 with no entries; IFD1 at 14: StripOffsets LONG x2 at 44,
+        // StripByteCounts SHORT x2 inline; strips at 52 and 60, then a tail.
+        let mut t = vec![b'I', b'I', 42, 0, 8, 0, 0, 0, 0, 0, 14, 0, 0, 0];
+        t.extend_from_slice(&[2, 0]);
+        t.extend_from_slice(&[0x11, 0x01, 4, 0, 2, 0, 0, 0, 44, 0, 0, 0]);
+        t.extend_from_slice(&[0x17, 0x01, 3, 0, 2, 0, 0, 0, 8, 0, 8, 0]);
+        t.extend_from_slice(&[0, 0, 0, 0]);
+        assert_eq!(t.len(), 44);
+        t.extend_from_slice(&[52, 0, 0, 0, 60, 0, 0, 0]);
+        t.extend_from_slice(b"STRIPONESTRIPTWOtail");
+        let fixed = resave_exif(&t, Some((1, 1))).unwrap();
+        assert_eq!(fixed.len(), t.len(), "data before the end is zeroed in place");
+        assert!(!contains(&fixed, b"STRIPONE") && !contains(&fixed, b"STRIPTWO"));
+        assert!(fixed.ends_with(b"tail"));
+        assert_eq!(&fixed[10..14], &[0; 4], "IFD1 unlinked");
+
+        // A thumbnail range reaching into IFD0 cannot be erased safely.
+        let mut bad = t.clone();
+        bad[44] = 2;
+        assert_eq!(resave_exif(&bad, Some((1, 1))), None);
     }
 
     #[test]
@@ -557,6 +674,9 @@ mod tests {
         assert!(before.fields().any(|f| f.ifd_num == exif::In::THUMBNAIL));
 
         let fixed = resave_exif(&source, Some((70_000, 20))).unwrap();
+        assert!(contains(&source, b"THUMBMARK"));
+        assert!(!contains(&fixed, b"THUMBMARK"), "thumbnail bytes erased");
+        assert_eq!(fixed.len(), 68, "IFD1 and the thumbnail ending the blob are cut");
         let after = parse(fixed);
         let value = |tag| after.get_field(tag, exif::In::PRIMARY).unwrap().value.get_uint(0);
         assert_eq!(value(exif::Tag::Orientation), Some(1));

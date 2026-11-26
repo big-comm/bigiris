@@ -97,7 +97,11 @@ fn conversion_transform_and_animation_commands_produce_readable_outputs() {
         vec!["adjust", "--brightness", "10", file],
         vec!["animate", "-o", "animation.gif", file, file],
     ] {
-        success(run(dir.path(), &args));
+        let output = run(dir.path(), &args);
+        // The report alone: no diagnostics at the default log level.
+        let report = [&output.stdout[..], &output.stderr[..]].concat();
+        assert!(!String::from_utf8_lossy(&report).contains("INFO"), "{args:?}");
+        success(output);
     }
     for entry in std::fs::read_dir(dir.path()).unwrap() {
         let path = entry.unwrap().path();

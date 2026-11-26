@@ -736,10 +736,14 @@ fn main() -> std::process::ExitCode {
         };
     }
     apply_user_locale();
+    // Diagnostics only: the commands print their own report on stdout.
+    let colour = std::io::IsTerminal::is_terminal(&std::io::stderr())
+        && std::env::var_os("NO_COLOR").is_none_or(|value| value.is_empty());
     tracing_subscriber::fmt()
+        .with_writer(std::io::stderr)
+        .with_ansi(colour)
         .with_env_filter(
-            tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| "bigiris=info,bigimage_core=info".into()),
+            tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| "warn".into()),
         )
         .init();
 

@@ -568,6 +568,12 @@ pub(crate) fn sanitize_text(text: &str) -> String {
         .collect()
 }
 
+/// A path as a terminal or the GUI shows it: [`sanitize_text`] with newlines
+/// replaced too, so a file name cannot fake report lines.
+pub(crate) fn printable_path(path: &Path) -> String {
+    sanitize_text(&path.display().to_string()).replace('\n', "\u{FFFD}")
+}
+
 /// Appended to worker failures when the executable was replaced on disk.
 fn restart_hint() -> String {
     format!(" ({})", gettext("BigIris was updated; restart it"))

@@ -314,6 +314,22 @@ fn worker_refusals_carry_no_report_decoration() {
     assert!(!error.contains("RUST_BACKTRACE") && !error.contains('\x1b'), "{error}");
 }
 
+/// A file name from a downloaded archive cannot retitle the terminal, set
+/// its clipboard (OSC 52) or fake report lines.
+#[test]
+fn hostile_file_names_print_inert() {
+    let dir = tempfile::tempdir().unwrap();
+    let stem = "b\x1b]0;pwned\x07\nok  fake";
+    fixture(dir.path(), &format!("{stem}.png"));
+    std::fs::write(dir.path().join(format!("{stem}.jpg")), b"existing").unwrap();
+    let output = run(dir.path(), &["convert", "--to", "jpeg", &format!("{stem}.png")]);
+    success(output.clone());
+    let report = String::from_utf8_lossy(&output.stdout);
+    assert!(report.starts_with("skip "), "{report}");
+    assert_eq!(report.lines().count(), 1, "{report}");
+    assert!(!report.contains(['\x1b', '\x07']), "{report:?}");
+}
+
 #[test]
 fn colliding_outputs_are_refused_before_any_work() {
     let dir = tempfile::tempdir().unwrap();

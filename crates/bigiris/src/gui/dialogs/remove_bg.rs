@@ -270,7 +270,10 @@ pub(in crate::gui) fn build_remove_bg_dialog(
                             Ok(out) => outputs.push((*idx, Some(out))),
                             Err(e) => {
                                 if first_err.is_none() {
-                                    first_err = Some(format!("{}: {e}", path.display()));
+                                    first_err = Some(format!(
+                                        "{}: {e}",
+                                        crate::codec::printable_path(path)
+                                    ));
                                 }
                                 outputs.push((*idx, None));
                             }

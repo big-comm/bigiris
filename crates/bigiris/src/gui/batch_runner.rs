@@ -383,8 +383,10 @@ where
     while !queue.cancelled.load(Ordering::Relaxed) {
         let idx = queue.next.fetch_add(1, Ordering::Relaxed);
         let Some(path) = queue.files.get(idx) else { break };
-        let display =
-            path.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
+        let display = path
+            .file_name()
+            .map(|name| crate::codec::printable_path(Path::new(name)))
+            .unwrap_or_default();
         let input_bytes = std::fs::metadata(path).map(|m| m.len()).unwrap_or(0);
         // Scoped cancel lets closing the window stop an isolated codec run
         // instead of waiting up to 60 s.
@@ -405,7 +407,9 @@ where
             Ok(ConvertOutcome::Skipped { .. }) => tally.skip += 1,
             Err(e) => {
                 tally.fail += 1;
-                tally.first_err.get_or_insert_with(|| format!("{}: {e}", path.display()));
+                tally
+                    .first_err
+                    .get_or_insert_with(|| format!("{}: {e}", crate::codec::printable_path(path)));
             }
         }
         let done = queue.done.fetch_add(1, Ordering::Relaxed) + 1;

@@ -989,7 +989,7 @@ fn run_strip_metadata(policy: OverwritePolicy, files: &[PathBuf]) -> color_eyre:
     tracing::info!(?policy, count = files.len(), "strip-metadata");
     run_per_file(files, "strip-metadata", Naming::image(None, policy), |f| {
         let format = bigimage_core::sniff_format(f).ok_or_else(|| {
-            bigimage_core::BigImageError::UnsupportedFormat(f.display().to_string())
+            bigimage_core::BigImageError::UnsupportedFormat(codec::printable_path(f))
         })?;
         let report = bigimage_core::convert_file_report(f, None, format, &opts, policy)?;
         note_kept_original(f, report.kept_original);
@@ -1004,7 +1004,7 @@ fn note_kept_original(input: &Path, kept_original: bool) {
         // allow-noisy-log: `info` lines are part of the command's report.
         println!(
             "info {}: {}",
-            input.display(),
+            codec::printable_path(&input),
             gettext("the original was already smaller; copied without recompression")
         );
     }
@@ -1195,7 +1195,7 @@ fn plan_outputs(files: &[PathBuf], naming: Naming) -> color_eyre::Result<Vec<Vec
     {
         let mut message = gettext("several inputs would write the same output file:");
         for group in collisions {
-            let names: Vec<_> = group.iter().map(|path| path.display().to_string()).collect();
+            let names: Vec<_> = group.iter().map(|path| codec::printable_path(path)).collect();
             message.push_str("\n  ");
             message.push_str(&names.join(", "));
         }
@@ -1248,10 +1248,10 @@ where
                 if naming.per_image_suffix && !outputs.insert(output.clone()) =>
             {
                 failed += 1;
-                let output = codec::sanitize_text(&output.display().to_string());
+                let output = codec::printable_path(&output);
                 eprintln!(
                     "err {}: {}",
-                    f.display(),
+                    codec::printable_path(f),
                     fill(
                         &gettext("replaced the output of another input: {path}"),
                         &[("path", &output)]
@@ -1260,15 +1260,19 @@ where
             }
             Ok(ConvertOutcome::Written { output }) => {
                 written += 1;
-                println!("ok  {} -> {}", f.display(), output.display());
+                println!("ok  {} -> {}", codec::printable_path(f), codec::printable_path(&output));
             }
             Ok(ConvertOutcome::Skipped { output }) => {
                 skipped += 1;
-                println!("skip {} ({})", f.display(), exists_note(&output));
+                println!("skip {} ({})", codec::printable_path(f), exists_note(&output));
             }
             Err(e) => {
                 failed += 1;
-                eprintln!("err {}: {}", f.display(), codec::sanitize_text(&e.to_string()));
+                eprintln!(
+                    "err {}: {}",
+                    codec::printable_path(f),
+                    codec::sanitize_text(&e.to_string())
+                );
             }
         }
     }
@@ -1287,13 +1291,13 @@ where
 fn note_ignored_profile(input: &Path) {
     eprintln!(
         "info {}: {}",
-        input.display(),
+        codec::printable_path(&input),
         gettext("the color profile is corrupted; colors were treated as sRGB")
     );
 }
 
 fn exists_note(output: &Path) -> String {
-    fill(&gettext("already exists: {path}"), &[("path", &output.display().to_string())])
+    fill(&gettext("already exists: {path}"), &[("path", &codec::printable_path(output))])
 }
 
 /// Closing line of a command that processed several files.
@@ -1328,7 +1332,7 @@ fn run_remove_bg(
         let dest = remove_bg_output(f);
         if policy == OverwritePolicy::Skip && dest.exists() {
             skipped += 1;
-            println!("skip {} ({})", f.display(), exists_note(&dest));
+            println!("skip {} ({})", codec::printable_path(f), exists_note(&dest));
             continue;
         }
         let session = match &mut slot {
@@ -1342,15 +1346,19 @@ fn run_remove_bg(
         match remove_bg_one(f, dest, policy, session) {
             Ok(ConvertOutcome::Written { output }) => {
                 ok += 1;
-                println!("ok  {} -> {}", f.display(), output.display());
+                println!("ok  {} -> {}", codec::printable_path(f), codec::printable_path(&output));
             }
             Ok(ConvertOutcome::Skipped { output }) => {
                 skipped += 1;
-                println!("skip {} ({})", f.display(), exists_note(&output));
+                println!("skip {} ({})", codec::printable_path(f), exists_note(&output));
             }
             Err(e) => {
                 fail += 1;
-                eprintln!("err {}: {}", f.display(), codec::sanitize_text(&e.to_string()));
+                eprintln!(
+                    "err {}: {}",
+                    codec::printable_path(f),
+                    codec::sanitize_text(&e.to_string())
+                );
             }
         }
     }
@@ -1397,7 +1405,7 @@ fn require_model(model: &bigimage_ai::ModelInfo) -> color_eyre::Result<()> {
             ),
             &[
                 ("model", model.name),
-                ("path", &path.display().to_string()),
+                ("path", &codec::printable_path(&path)),
                 ("command", &model.install_command()),
             ],
         ))),
@@ -1406,7 +1414,7 @@ fn require_model(model: &bigimage_ai::ModelInfo) -> color_eyre::Result<()> {
                 &gettext("could not read the {model} weights at {path}: {error}"),
                 &[
                     ("model", model.name),
-                    ("path", &path.display().to_string()),
+                    ("path", &codec::printable_path(&path)),
                     ("error", &error.to_string()),
                 ],
             )))
@@ -1513,7 +1521,7 @@ fn run_inpaint(mask: &Path, policy: OverwritePolicy, files: &[PathBuf]) -> color
         color_eyre::eyre::eyre!(fill(
             &gettext("mask {path}: {error}"),
             &[
-                ("path", &codec::sanitize_text(&mask.display().to_string())),
+                ("path", &codec::printable_path(mask)),
                 ("error", &codec::sanitize_text(&e.to_string())),
             ],
         ))
@@ -1557,7 +1565,7 @@ fn run_animate(
     match bigimage_core::make_gif_with_policy(frames, output, opts, policy) {
         Ok(ConvertOutcome::Written { output }) => {
             let count = fill(&gettext("{count} frame(s)"), &[("count", &frames.len().to_string())]);
-            println!("ok  {count} -> {}", output.display());
+            println!("ok  {count} -> {}", codec::printable_path(&output));
             Ok(())
         }
         Ok(ConvertOutcome::Skipped { output }) => {
@@ -1596,7 +1604,7 @@ fn default_batch_overwrite() -> String {
 fn unreadable(path: &Path, error: &std::io::Error) -> color_eyre::Report {
     color_eyre::eyre::eyre!(fill(
         &gettext("could not read {path}: {error}"),
-        &[("path", &path.display().to_string()), ("error", &error.to_string())],
+        &[("path", &codec::printable_path(path)), ("error", &error.to_string())],
     ))
 }
 
@@ -1653,7 +1661,7 @@ fn run_batch(profile: &std::path::Path, inputs: &[PathBuf]) -> color_eyre::Resul
         std::fs::create_dir_all(dir).map_err(|e| {
             color_eyre::eyre::eyre!(fill(
                 &gettext("could not create {path}: {error}"),
-                &[("path", &dir.display().to_string()), ("error", &e.to_string())],
+                &[("path", &codec::printable_path(dir)), ("error", &e.to_string())],
             ))
         })?;
     }
@@ -1733,17 +1741,22 @@ fn run_batch(profile: &std::path::Path, inputs: &[PathBuf]) -> color_eyre::Resul
                     "[{}/{}] ok   {} -> {}",
                     done + 1,
                     total,
-                    input.display(),
-                    output.display()
+                    codec::printable_path(&input),
+                    codec::printable_path(&output)
                 );
             }
             Ok(ConvertOutcome::Skipped { output }) => {
                 skipped += 1;
-                println!("[{}/{}] skip {}", done + 1, total, output.display());
+                println!("[{}/{}] skip {}", done + 1, total, codec::printable_path(&output));
             }
             Err(error) => {
                 failed += 1;
-                eprintln!("[{}/{}] error {}: {error}", done + 1, total, input.display());
+                eprintln!(
+                    "[{}/{}] error {}: {error}",
+                    done + 1,
+                    total,
+                    codec::printable_path(&input)
+                );
             }
         }
     }
@@ -1786,15 +1799,23 @@ fn run_to_pdf(
         match to_pdf_one(&soffice_path, file, policy, timeout) {
             Ok(ConvertOutcome::Written { output }) => {
                 ok += 1;
-                println!("ok  {} -> {}", file.display(), output.display());
+                println!(
+                    "ok  {} -> {}",
+                    codec::printable_path(file),
+                    codec::printable_path(&output)
+                );
             }
             Ok(ConvertOutcome::Skipped { output }) => {
                 skipped += 1;
-                println!("skip {} ({})", file.display(), exists_note(&output));
+                println!("skip {} ({})", codec::printable_path(file), exists_note(&output));
             }
             Err(e) => {
                 fail += 1;
-                eprintln!("err {}: {}", file.display(), codec::sanitize_text(&e.to_string()));
+                eprintln!(
+                    "err {}: {}",
+                    codec::printable_path(file),
+                    codec::sanitize_text(&e.to_string())
+                );
             }
         }
     }
@@ -1916,7 +1937,7 @@ fn publish_file(
     }
     Err(color_eyre::eyre::eyre!(fill(
         &gettext("too many files with the same name: {path}"),
-        &[("path", &destination.display().to_string())],
+        &[("path", &codec::printable_path(&destination))],
     )))
 }
 
@@ -2016,18 +2037,18 @@ fn print_install_report(report: &bigimage_integrations::Report, done: &str, summ
             fill(&gettext("{count} file(s)"), &[("count", &format!("{:>2}", outcome.files.len()))]);
         println!("  {:<22}  [{status}]  {files}  ({detected})", outcome.fm.display_name());
         if let Some(err) = &outcome.error {
-            eprintln!("    -> {err}");
+            eprintln!("    -> {}", codec::sanitize_text(&err.to_string()));
         }
     }
     for path in &report.app_files_kept {
-        let path = path.display().to_string();
+        let path = codec::printable_path(path);
         println!(
             "  {}",
             fill(&gettext("kept, not written by BigIris: {path}"), &[("path", &path)])
         );
     }
     for error in &report.app_errors {
-        eprintln!("  {}", with_error(&gettext("FAILED: {error}"), error));
+        eprintln!("  {}", codec::sanitize_text(&with_error(&gettext("FAILED: {error}"), error)));
     }
     eprintln!(
         "{}",
@@ -2069,7 +2090,7 @@ fn dispatch_gui(dialog: Option<Dialog>, files: &[PathBuf]) -> color_eyre::Result
                 )
             );
             for f in files {
-                eprintln!("  - {}", f.display());
+                eprintln!("  - {}", codec::printable_path(f));
             }
         }
         Ok(())

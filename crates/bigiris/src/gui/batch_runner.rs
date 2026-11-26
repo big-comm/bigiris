@@ -646,6 +646,10 @@ mod worker_tests {
         );
         assert!(status.text().contains("/photos/a.png"), "{}", status.text());
         assert!(!auto_close_armed(&window), "a skipped run closed itself");
+        let unchanged = ConvertOutcome::Unchanged { output: output.clone() };
+        finish_dialog(&status, &apply, &window, summary(0, 1, unchanged));
+        assert!(status.text().contains("Nothing would change"), "{}", status.text());
+        assert!(!auto_close_armed(&window), "an unchanged run closed itself");
         finish_dialog(&status, &apply, &window, summary(1, 0, ConvertOutcome::Written { output }));
         assert!(status.text().contains("/photos/a.png"), "{}", status.text());
         assert!(auto_close_armed(&window));

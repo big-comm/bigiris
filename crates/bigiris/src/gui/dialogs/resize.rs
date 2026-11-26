@@ -325,7 +325,8 @@ mod apply_tests {
 
         let dir = tempfile::tempdir().unwrap();
         let source = dir.path().join("photo.png");
-        image::RgbImage::from_pixel(320, 200, image::Rgb([30, 120, 200])).save(&source).unwrap();
+        // Past the default 1920 px bound, or the run would change nothing.
+        image::RgbImage::from_pixel(2400, 1500, image::Rgb([30, 120, 200])).save(&source).unwrap();
 
         let window = build_resize_dialog(&app, Rc::new(vec![source.clone()]));
         window.present();

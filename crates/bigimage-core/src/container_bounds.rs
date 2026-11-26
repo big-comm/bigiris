@@ -153,6 +153,52 @@ pub(crate) fn top_level_meta(reader: &mut (impl Read + Seek)) -> std::io::Result
     Ok(None)
 }
 
+/// Whether the `meta` box whose `size`-byte content `reader` is at
+/// declares an `Exif` item, reading only its child headers and its `iinf`
+/// (bounded to [`MAX_META`]).
+///
+/// # Errors
+///
+/// An I/O error, a malformed or over-long child walk, or an `iinf` over
+/// [`MAX_META`]: whether an Exif item is declared is then unknown.
+pub(crate) fn meta_declares_exif(
+    reader: &mut (impl Read + Seek),
+    size: u64,
+) -> std::io::Result<bool> {
+    let start = reader.stream_position()?;
+    let end = start.checked_add(size).ok_or_else(invalid)?;
+    // FullBox version and flags.
+    let mut position = start + 4;
+    for _ in 0..10_000 {
+        if end.saturating_sub(position) < 8 {
+            return Ok(false);
+        }
+        reader.seek(SeekFrom::Start(position))?;
+        let mut header = [0; 8];
+        reader.read_exact(&mut header)?;
+        let child = u64::from(u32::from_be_bytes(header[..4].try_into().expect("four bytes")));
+        if child < 8 || child > end - position {
+            return Err(invalid());
+        }
+        if &header[4..] == b"iinf" {
+            if child - 8 > MAX_META {
+                return Err(invalid());
+            }
+            let mut iinf = vec![0; usize::try_from(child - 8).map_err(|_| invalid())?];
+            reader.read_exact(&mut iinf)?;
+            let entries = if iinf.first() == Some(&0) { 6 } else { 8 };
+            let infes = iinf.get(entries..).and_then(children).ok_or_else(invalid)?;
+            return Ok(infes.iter().any(|(_, infe)| {
+                // Item type after FullBox, item ID (2 or 4 bytes), protection.
+                let at = if infe.first() == Some(&3) { 10 } else { 8 };
+                infe.get(at..at + 4) == Some(b"Exif")
+            }));
+        }
+        position += child;
+    }
+    Err(invalid())
+}
+
 /// Child boxes of `data` as `(type, content)` pairs; `None` if malformed.
 pub(crate) fn children(data: &[u8]) -> Option<Vec<([u8; 4], &[u8])>> {
     let mut out = Vec::new();

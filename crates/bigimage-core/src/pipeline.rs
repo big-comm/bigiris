@@ -219,8 +219,13 @@ fn avif_exif_block(
     let meta = crate::container_bounds::top_level_meta(data).map_err(|error| error.to_string())?;
     match meta {
         None => return Ok(None),
+        // Too large to hand to the EXIF reader: a loss only if it declares
+        // an Exif item (large grid images and profiles do not).
         Some(size) if size > crate::container_bounds::MAX_META => {
-            return Err(format!("meta box of {size} bytes"));
+            return match crate::container_bounds::meta_declares_exif(data, size) {
+                Ok(false) => Ok(None),
+                _ => Err(format!("meta box of {size} bytes")),
+            };
         }
         Some(_) => {}
     }
@@ -730,4 +735,29 @@ fn write_be16(samples: &[u16], writer: &mut impl std::io::Write) -> std::io::Res
         writer.write_all(&chunk)?;
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn bx(kind: &[u8; 4], content: &[u8]) -> Vec<u8> {
+        [&((content.len() + 8) as u32).to_be_bytes()[..], kind, content].concat()
+    }
+
+    /// An AVIF `meta` over the 1 MiB read cap: an EXIF loss only when it
+    /// declares an Exif item.
+    #[test]
+    fn oversized_meta_loses_exif_only_when_declared() {
+        let file = |item_type: &[u8; 4]| {
+            let infe = bx(b"infe", &[&[2, 0, 0, 0, 0, 1, 0, 0][..], item_type, b"\0"].concat());
+            let iinf = bx(b"iinf", &[&[0, 0, 0, 0, 0, 1][..], &infe].concat());
+            let padding = bx(b"free", &vec![0; 1_100_000]);
+            let meta = bx(b"meta", &[&[0, 0, 0, 0][..], &iinf, &padding].concat());
+            [bx(b"ftyp", b"avif\0\0\0\0mif1"), meta].concat()
+        };
+        let read = |bytes: Vec<u8>| avif_exif_block(&mut std::io::Cursor::new(bytes));
+        assert_eq!(read(file(b"av01")), Ok(None));
+        assert!(read(file(b"Exif")).is_err());
+    }
 }

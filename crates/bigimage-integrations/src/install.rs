@@ -685,6 +685,18 @@ mod tests {
     }
 
     #[test]
+    fn package_directory_entry_is_not_a_package() {
+        let tmp = TempDir::new().unwrap();
+        let package = tmp.path().join("root/usr/share");
+        std::fs::create_dir_all(package.join("kio/servicemenus/bigiris-dir.desktop")).unwrap();
+        let mut paths = ScopePaths::rooted_at(tmp.path().join("home"));
+        paths.package_data = Some(package);
+        let dolphin = &FILE_MANAGERS[0];
+        assert!(matches!(dolphin.fm, FileManager::Dolphin));
+        assert!(!is_packaged(dolphin, &paths));
+    }
+
+    #[test]
     fn install_writes_all_fms() {
         let tmp = TempDir::new().unwrap();
         let paths = ScopePaths::rooted_at(tmp.path());

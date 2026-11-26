@@ -13,6 +13,9 @@ use crate::action::ACTIONS;
 use crate::scope::{Scope, ScopePaths};
 
 const STALE_TREE_ROOT: &str = "BigIris";
+/// How much of a file in the legacy scripts tree is read to identify it;
+/// those scripts were a few lines.
+const MAX_SCRIPT_BYTES: u64 = 64 * 1024;
 const PYTHON_EXTENSION_FILENAME: &str = "bigiris-menu.py";
 
 /// System-wide install path for the Python extension. nautilus-python
@@ -75,10 +78,8 @@ pub(crate) fn install_with_system_path(
 ) -> io::Result<Vec<PathBuf>> {
     let mut written = Vec::new();
 
-    let stale_root = paths.nautilus_scripts().join(STALE_TREE_ROOT);
-    if stale_root.exists() {
-        let _ = std::fs::remove_dir_all(&stale_root);
-    }
+    // Cleanup of a legacy tree; the next run retries a failure.
+    let _ = remove_stale_scripts(&paths.nautilus_scripts().join(STALE_TREE_ROOT));
 
     let ext_dir = paths.nautilus_python_extensions();
 
@@ -108,11 +109,7 @@ pub(crate) fn install_with_system_path(
 pub fn uninstall(paths: &ScopePaths) -> io::Result<Vec<PathBuf>> {
     let mut removed = Vec::new();
 
-    let stale_root = paths.nautilus_scripts().join(STALE_TREE_ROOT);
-    if stale_root.exists() {
-        removed.extend(collect_files(&stale_root)?);
-        std::fs::remove_dir_all(&stale_root)?;
-    }
+    removed.extend(remove_stale_scripts(&paths.nautilus_scripts().join(STALE_TREE_ROOT))?);
 
     let ext_dir = paths.nautilus_python_extensions();
     let ext_file = ext_dir.join(PYTHON_EXTENSION_FILENAME);
@@ -153,18 +150,39 @@ fn remove_own_bytecode(ext_dir: &Path) {
     let _ = std::fs::remove_dir(&pycache);
 }
 
-fn collect_files(dir: &Path) -> io::Result<Vec<PathBuf>> {
-    let mut out = Vec::new();
-    for entry in std::fs::read_dir(dir)? {
+/// Remove the scripts releases before the extension wrote under `dir`
+/// (shell scripts that run `bigiris`; their exact names predate this
+/// repository), then each directory left empty. A missing `dir` removes
+/// nothing, and a script of the user's own stays.
+fn remove_stale_scripts(dir: &Path) -> io::Result<Vec<PathBuf>> {
+    use std::io::Read;
+    let mut removed = Vec::new();
+    let entries = match std::fs::read_dir(dir) {
+        Ok(entries) => entries,
+        Err(e) if e.kind() == io::ErrorKind::NotFound => return Ok(removed),
+        Err(e) => return Err(e),
+    };
+    for entry in entries {
         let entry = entry?;
         let path = entry.path();
-        if entry.file_type()?.is_dir() {
-            out.extend(collect_files(&path)?);
-        } else {
-            out.push(path);
+        let kind = entry.file_type()?;
+        if kind.is_dir() {
+            removed.extend(remove_stale_scripts(&path)?);
+            continue;
+        }
+        let mut head = Vec::new();
+        if kind.is_file() {
+            std::fs::File::open(&path)?.take(MAX_SCRIPT_BYTES).read_to_end(&mut head)?;
+        }
+        let runs_bigiris = head.starts_with(b"#!") && head.windows(8).any(|w| w == b"bigiris ");
+        if runs_bigiris {
+            std::fs::remove_file(&path)?;
+            removed.push(path);
         }
     }
-    Ok(out)
+    // Fails (and is ignored) unless the directory is now empty.
+    let _ = std::fs::remove_dir(dir);
+    Ok(removed)
 }
 
 #[cfg(test)]
@@ -219,11 +237,26 @@ mod tests {
         let paths = ScopePaths::rooted_at(tmp.path());
         let stale = paths.nautilus_scripts().join(STALE_TREE_ROOT);
         std::fs::create_dir_all(stale.join("Convert")).unwrap();
-        std::fs::write(stale.join("Convert").join("PNG"), "#!/bin/sh\necho hi\n").unwrap();
-        assert!(stale.exists());
+        let script = "#!/bin/sh\nexec bigiris convert --to png \"$@\"\n";
+        std::fs::write(stale.join("Convert").join("PNG"), script).unwrap();
 
         install_with_system_path(&paths, Path::new("/nonexistent/system-path")).unwrap();
         assert!(!stale.exists(), "stale scripts tree should have been removed");
+    }
+
+    #[test]
+    fn user_scripts_in_stale_tree_survive() {
+        let tmp = TempDir::new().unwrap();
+        let paths = ScopePaths::rooted_at(tmp.path());
+        let stale = paths.nautilus_scripts().join(STALE_TREE_ROOT);
+        std::fs::create_dir_all(stale.join("Convert")).unwrap();
+        let ours = stale.join("Convert/PNG");
+        std::fs::write(&ours, "#!/bin/sh\nexec bigiris convert --to png \"$@\"\n").unwrap();
+        let mine = stale.join("resize-for-blog.sh");
+        std::fs::write(&mine, "#!/bin/sh\nmagick \"$1\" -resize 50% out.png\n").unwrap();
+        assert_eq!(uninstall(&paths).unwrap(), [ours]);
+        assert!(mine.exists());
+        assert!(!stale.join("Convert").exists(), "emptied directory kept");
     }
 
     #[test]
@@ -268,7 +301,7 @@ mod tests {
         install_with_system_path(&paths, Path::new("/nonexistent/system-path")).unwrap();
         let stale = paths.nautilus_scripts().join(STALE_TREE_ROOT);
         std::fs::create_dir_all(&stale).unwrap();
-        std::fs::write(stale.join("dummy"), b"x").unwrap();
+        std::fs::write(stale.join("View"), "#!/bin/sh\nexec bigiris \"$@\"\n").unwrap();
 
         let removed = uninstall(&paths).unwrap();
         assert!(!removed.is_empty());
@@ -287,14 +320,22 @@ mod tests {
         let ours_opt = pycache.join("bigiris-menu.cpython-313.opt-1.pyc");
         let other = pycache.join("other-extension.cpython-313.pyc");
         let lookalike = pycache.join("bigiris-menu-extra.cpython-313.pyc");
-        for f in [&ours, &ours_opt, &other, &lookalike] {
+        let not_bytecode = pycache.join("bigiris-menu.txt");
+        for f in [&ours, &ours_opt, &other, &lookalike, &not_bytecode] {
             std::fs::write(f, b"pyc").unwrap();
         }
+        let dir = pycache.join("bigiris-menu.cpython-312.pyc");
+        std::fs::create_dir(&dir).unwrap();
+        let link = pycache.join("bigiris-menu.cpython-314.pyc");
+        std::os::unix::fs::symlink(&other, &link).unwrap();
         uninstall(&paths).unwrap();
         assert!(!ours.exists());
         assert!(!ours_opt.exists());
         assert!(other.exists(), "another extension's bytecode was deleted");
         assert!(lookalike.exists());
+        assert!(not_bytecode.exists());
+        assert!(dir.is_dir());
+        assert!(std::fs::symlink_metadata(&link).unwrap().is_symlink());
     }
 
     #[test]

@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: bigiris 0.1.0\n"
 "Report-Msgid-Bugs-To: https://github.com/big-comm/bigiris/issues\n"
-"POT-Creation-Date: 2026-11-26 17:42-0300\n"
+"POT-Creation-Date: 2026-11-26 18:07-0300\n"
 "PO-Revision-Date: 2026-10-14 01:36-0300\n"
 "Last-Translator: BigCommunity Team\n"
 "Language-Team: BigCommunity Team\n"
@@ -16,48 +16,48 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: crates/bigiris/src/codec.rs:244
+#: crates/bigiris/src/codec.rs:252
 msgid "the isolated codec answered with invalid data: {error}"
 msgstr ""
 
-#: crates/bigiris/src/codec.rs:313
+#: crates/bigiris/src/codec.rs:321
 msgid "the BigIris executable was removed; restart BigIris"
 msgstr "קובץ ההפעלה של BigIris הוסר; יש להפעיל מחדש את BigIris"
 
-#: crates/bigiris/src/codec.rs:522 crates/bigiris/src/codec.rs:624
+#: crates/bigiris/src/codec.rs:530 crates/bigiris/src/codec.rs:650
 #: crates/bigiris/src/error_text.rs:36
 msgid "operation canceled"
 msgstr "הפעולה בוטלה"
 
-#: crates/bigiris/src/codec.rs:529
+#: crates/bigiris/src/codec.rs:537
 msgid "the codec exceeded its time limit"
 msgstr "ה־codec חרג ממגבלת הזמן"
 
-#: crates/bigiris/src/codec.rs:587
-msgid "BigIris was updated; restart it"
-msgstr "BigIris עודכן; יש להפעיל אותו מחדש"
-
-#: crates/bigiris/src/codec.rs:632
-msgid "not a regular file, or larger than 1 GiB"
-msgstr "הקלט אינו קובץ רגיל או גדול מ־1 GiB"
-
-#: crates/bigiris/src/codec.rs:732
-msgid "sandbox unavailable: install bubblewrap and util-linux; {error}"
-msgstr "ה־sandbox אינו זמין: יש להתקין את bubblewrap ואת util-linux; {error}"
-
-#: crates/bigiris/src/codec.rs:744
-msgid "BigIris was updated while it was open; restart it"
-msgstr "BigIris עודכן בזמן שהיה פתוח; יש להפעיל אותו מחדש"
-
-#: crates/bigiris/src/codec.rs:751
+#: crates/bigiris/src/codec.rs:602
 msgid "exit code {code}"
 msgstr ""
 
-#: crates/bigiris/src/codec.rs:755
+#: crates/bigiris/src/codec.rs:606
 msgid "signal {signal}"
 msgstr ""
 
+#: crates/bigiris/src/codec.rs:613
+msgid "BigIris was updated; restart it"
+msgstr "BigIris עודכן; יש להפעיל אותו מחדש"
+
+#: crates/bigiris/src/codec.rs:658
+msgid "not a regular file, or larger than 1 GiB"
+msgstr "הקלט אינו קובץ רגיל או גדול מ־1 GiB"
+
 #: crates/bigiris/src/codec.rs:759
+msgid "sandbox unavailable: install bubblewrap and util-linux; {error}"
+msgstr "ה־sandbox אינו זמין: יש להתקין את bubblewrap ואת util-linux; {error}"
+
+#: crates/bigiris/src/codec.rs:771
+msgid "BigIris was updated while it was open; restart it"
+msgstr "BigIris עודכן בזמן שהיה פתוח; יש להפעיל אותו מחדש"
+
+#: crates/bigiris/src/codec.rs:779
 msgid "the isolated codec rejected the image ({status}){hint}: {details}"
 msgstr "ה־codec המבודד דחה את התמונה ({status}){hint}: {details}"
 
@@ -82,51 +82,62 @@ msgid "could not write {path}: {error}"
 msgstr ""
 
 #: crates/bigiris/src/error_text.rs:38
+msgid ""
+"animated or multi-page image: static editing stopped to avoid losing content"
+msgstr ""
+
+#: crates/bigiris/src/error_text.rs:41
+msgid ""
+"icon with several sizes or multi-part EXR: writing it back would keep only "
+"one"
+msgstr ""
+
+#: crates/bigiris/src/error_text.rs:44
 msgid "too many files with the same name: {path}"
 msgstr "יותר מדי קבצים באותו שם: {path}"
 
-#: crates/bigiris/src/error_text.rs:55
+#: crates/bigiris/src/error_text.rs:61
 msgid "damaged or unreadable image data: {error}"
 msgstr ""
 
-#: crates/bigiris/src/error_text.rs:57
+#: crates/bigiris/src/error_text.rs:63
 msgid "the encoder failed: {error}"
 msgstr ""
 
-#: crates/bigiris/src/error_text.rs:58
+#: crates/bigiris/src/error_text.rs:64
 msgid "invalid parameter: {error}"
 msgstr ""
 
-#: crates/bigiris/src/error_text.rs:59
+#: crates/bigiris/src/error_text.rs:65
 msgid "the image is larger than BigIris can process"
 msgstr ""
 
-#: crates/bigiris/src/error_text.rs:61
+#: crates/bigiris/src/error_text.rs:67
 msgid "unsupported image: {error}"
 msgstr ""
 
-#: crates/bigiris/src/error_text.rs:75 crates/bigiris/src/gui.rs:2431
-#: crates/bigiris/src/gui/dialogs/batch.rs:305
+#: crates/bigiris/src/error_text.rs:101 crates/bigiris/src/gui.rs:2431
+#: crates/bigiris/src/gui/dialogs/batch.rs:319
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:1706
 msgid "Canceled"
 msgstr "בוטל"
 
-#: crates/bigiris/src/error_text.rs:78
+#: crates/bigiris/src/error_text.rs:104
 msgid ""
 "{model} needs about {need} GiB of free RAM for this step; available now: "
 "{available} GiB. Close other programs or use a smaller image. Swap does not "
 "count as free RAM."
 msgstr ""
 
-#: crates/bigiris/src/error_text.rs:87
+#: crates/bigiris/src/error_text.rs:113
 msgid "could not check the memory free for AI: {error}"
 msgstr ""
 
-#: crates/bigiris/src/error_text.rs:90
+#: crates/bigiris/src/error_text.rs:116
 msgid "AI failed: {error}"
 msgstr "שגיאת בינה מלאכותית: {error}"
 
-#: crates/bigiris/src/error_text.rs:99
+#: crates/bigiris/src/error_text.rs:125
 msgid ""
 "This build does not include AI. Rebuild with `cargo build --features ai` "
 "(requires glslc, from the shaderc package)."
@@ -134,15 +145,15 @@ msgstr ""
 "גרסה זו אינה כוללת בינה מלאכותית. יש להדר מחדש עם `cargo build --features "
 "ai` (דורש glslc, מהחבילה shaderc)."
 
-#: crates/bigiris/src/error_text.rs:106
+#: crates/bigiris/src/error_text.rs:132
 msgid "{model} is not installed. Install it with: sudo pacman -S {package}"
 msgstr "{model} אינו מותקן. להתקנה: sudo pacman -S {package}"
 
-#: crates/bigiris/src/error_text.rs:114
+#: crates/bigiris/src/error_text.rs:140
 msgid "not a weights file"
 msgstr ""
 
-#: crates/bigiris/src/error_text.rs:118
+#: crates/bigiris/src/error_text.rs:144
 msgid "could not read the {model} weights at {path}: {error}"
 msgstr "לא ניתן לקרוא את המשקלים של {model} ב־{path}: {error}"
 
@@ -156,14 +167,14 @@ msgstr "לא ניתן לפתוח את התמונה"
 
 #: crates/bigiris/src/gui.rs:894 crates/bigiris/src/gui.rs:2717
 #: crates/bigiris/src/gui.rs:4005 crates/bigiris/src/gui/dialogs/animate.rs:165
-#: crates/bigiris/src/gui/dialogs/batch.rs:99
-#: crates/bigiris/src/gui/dialogs/batch.rs:205
-#: crates/bigiris/src/gui/dialogs/batch.rs:313
+#: crates/bigiris/src/gui/dialogs/batch.rs:92
+#: crates/bigiris/src/gui/dialogs/batch.rs:206
+#: crates/bigiris/src/gui/dialogs/batch.rs:327
 #: crates/bigiris/src/gui/viewer/crop.rs:393
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:398
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:399
 #: crates/bigiris/src/gui/dialogs/mod.rs:273
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:196
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:188
 #: crates/bigiris/src/gui/dialogs/resize.rs:375
 #: crates/bigiris/src/gui/previews.rs:232
 msgid "Cancel"
@@ -361,7 +372,7 @@ msgid "Save or undo changes before navigating"
 msgstr "יש לשמור או לבטל את השינויים לפני הניווט"
 
 #: crates/bigiris/src/gui.rs:3380 crates/bigiris/src/gui.rs:4260
-#: crates/bigiris/src/gui.rs:5358 crates/bigiris/src/gui.rs:5492
+#: crates/bigiris/src/gui.rs:5362 crates/bigiris/src/gui.rs:5496
 msgid "Open images…"
 msgstr "פתיחת תמונות…"
 
@@ -378,7 +389,7 @@ msgid "Print…"
 msgstr "הדפסה…"
 
 #: crates/bigiris/src/gui.rs:3386 crates/bigiris/src/gui.rs:4272
-#: crates/bigiris/src/gui.rs:5358
+#: crates/bigiris/src/gui.rs:5362
 msgid "Process a folder…"
 msgstr "עיבוד תיקייה…"
 
@@ -419,7 +430,7 @@ msgid "Save or undo your changes before using this tool"
 msgstr "יש לשמור או לבטל את השינויים לפני השימוש בכלי זה"
 
 #: crates/bigiris/src/gui.rs:3755 crates/bigiris/src/gui.rs:4315
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:105
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:97
 msgid "Images"
 msgstr "תמונות"
 
@@ -444,12 +455,14 @@ msgid "Could not print"
 msgstr "לא ניתן להדפיס"
 
 #: crates/bigiris/src/gui.rs:3907 crates/bigiris/src/gui.rs:4031
-#: crates/bigiris/src/gui/dialogs/batch.rs:311
+#: crates/bigiris/src/gui/dialogs/batch.rs:248
+#: crates/bigiris/src/gui/dialogs/batch.rs:325
+#: crates/bigiris/src/gui/dialogs/batch.rs:553
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:301
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:1839
 #: crates/bigiris/src/gui/dialogs/mod.rs:258
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:318
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:364
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:310
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:356
 #: crates/bigiris/src/gui/transfers.rs:91
 msgid "Close"
 msgstr "סגירה"
@@ -644,11 +657,11 @@ msgstr ""
 #: crates/bigiris/src/gui/batch_runner.rs:182
 #: crates/bigiris/src/gui/dialogs/animate.rs:290
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:1646
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:316
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:308
 msgid "Processing ended unexpectedly. Please try again."
 msgstr "העיבוד הסתיים באופן בלתי צפוי. נא לנסות שוב."
 
-#: crates/bigiris/src/gui/batch_runner.rs:296 crates/bigiris/src/main.rs:1791
+#: crates/bigiris/src/gui/batch_runner.rs:296 crates/bigiris/src/main.rs:1743
 msgid "a worker ended unexpectedly"
 msgstr "תהליכון עיבוד הסתיים באופן בלתי צפוי"
 
@@ -656,7 +669,7 @@ msgstr "תהליכון עיבוד הסתיים באופן בלתי צפוי"
 msgid "unexpected worker failure"
 msgstr "כשל בלתי צפוי בתהליכון עיבוד"
 
-#: crates/bigiris/src/gui/batch_runner.rs:391 crates/bigiris/src/main.rs:1212
+#: crates/bigiris/src/gui/batch_runner.rs:391 crates/bigiris/src/main.rs:1245
 msgid "replaced the output of another input: {path}"
 msgstr "דרס את הפלט של קלט אחר: {path}"
 
@@ -706,7 +719,7 @@ msgid "Below 1 lightens midtones · 1 preserves them · above 1 darkens them"
 msgstr "מתחת ל־1 מבהיר את טוני הביניים · 1 שומר · מעל 1 מכהה"
 
 #: crates/bigiris/src/gui/dialogs/adjust.rs:63
-#: crates/bigiris/src/gui/dialogs/batch.rs:336
+#: crates/bigiris/src/gui/dialogs/batch.rs:361
 #: crates/bigiris/src/gui/dialogs/convert.rs:39
 #: crates/bigiris/src/gui/dialogs/crop.rs:337
 #: crates/bigiris/src/gui/dialogs/extent.rs:85
@@ -726,7 +739,7 @@ msgid "Color"
 msgstr "צבע"
 
 #: crates/bigiris/src/gui/dialogs/adjust.rs:76
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:119
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:111
 msgid "Output"
 msgstr "פלט"
 
@@ -848,62 +861,65 @@ msgstr "הקובץ {file} נוצר בינתיים ונשמר; לא נכתב דב
 msgid "Failed"
 msgstr "נכשל"
 
-#: crates/bigiris/src/gui/dialogs/batch.rs:35
+#: crates/bigiris/src/gui/dialogs/batch.rs:28
 msgid "Prisma — Batch"
 msgstr "Prisma — עיבוד באצווה"
 
-#: crates/bigiris/src/gui/dialogs/batch.rs:39
+#: crates/bigiris/src/gui/dialogs/batch.rs:32
 msgid "Batch conversion"
 msgstr "המרה באצווה"
 
-#: crates/bigiris/src/gui/dialogs/batch.rs:44
+#: crates/bigiris/src/gui/dialogs/batch.rs:37
 msgid "Files"
 msgstr "קבצים"
 
-#: crates/bigiris/src/gui/dialogs/batch.rs:48
-#: crates/bigiris/src/gui/dialogs/batch.rs:345
+#: crates/bigiris/src/gui/dialogs/batch.rs:41
+#: crates/bigiris/src/gui/dialogs/batch.rs:370
 msgid "Add files"
 msgstr "הוספת קבצים"
 
-#: crates/bigiris/src/gui/dialogs/batch.rs:54
+#: crates/bigiris/src/gui/dialogs/batch.rs:47
 msgid "Add folder (images)"
 msgstr "הוספת תיקייה (תמונות)"
 
-#: crates/bigiris/src/gui/dialogs/batch.rs:63
+#: crates/bigiris/src/gui/dialogs/batch.rs:56
 #: crates/bigiris/src/gui/dialogs/convert.rs:44
 msgid "Conversion"
 msgstr "המרה"
 
-#: crates/bigiris/src/gui/dialogs/batch.rs:73
+#: crates/bigiris/src/gui/dialogs/batch.rs:66
 #: crates/bigiris/src/gui/dialogs/convert.rs:50
 msgid "Destination"
 msgstr "יעד"
 
-#: crates/bigiris/src/gui/dialogs/batch.rs:79
+#: crates/bigiris/src/gui/dialogs/batch.rs:72
 msgid "Ready"
 msgstr "מוכן"
 
-#: crates/bigiris/src/gui/dialogs/batch.rs:85
+#: crates/bigiris/src/gui/dialogs/batch.rs:78
+#: crates/bigiris/src/gui/dialogs/batch.rs:526
 msgid "Ready. Click Process to start."
 msgstr "בהמתנה. יש ללחוץ על עיבוד כדי להתחיל."
 
-#: crates/bigiris/src/gui/dialogs/batch.rs:96
+#: crates/bigiris/src/gui/dialogs/batch.rs:89
+#: crates/bigiris/src/gui/dialogs/batch.rs:533
 msgid "Process"
 msgstr "עיבוד"
 
-#: crates/bigiris/src/gui/dialogs/batch.rs:195
+#: crates/bigiris/src/gui/dialogs/batch.rs:196
 msgid "Add at least one image to process."
 msgstr "יש להוסיף לפחות תמונה אחת לעיבוד."
 
-#: crates/bigiris/src/gui/dialogs/batch.rs:207
+#: crates/bigiris/src/gui/dialogs/batch.rs:208
 msgid "Starting…"
 msgstr "מתחיל…"
 
-#: crates/bigiris/src/gui/dialogs/batch.rs:208
+#: crates/bigiris/src/gui/dialogs/batch.rs:209
+#: crates/bigiris/src/gui/dialogs/batch.rs:541
 msgid "Processing…"
 msgstr "מעבד…"
 
-#: crates/bigiris/src/gui/dialogs/batch.rs:267
+#: crates/bigiris/src/gui/dialogs/batch.rs:270
 msgid ""
 "Canceled after {done}/{total} in {timing}. Written: {ok}, skipped: {skip}, "
 "failed: {fail}."
@@ -911,23 +927,33 @@ msgstr ""
 "בוטל לאחר {done}/{total} תוך {timing}. נכתבו: {ok}, דולגו: {skip}, נכשלו: "
 "{fail}."
 
-#: crates/bigiris/src/gui/dialogs/batch.rs:269
+#: crates/bigiris/src/gui/dialogs/batch.rs:272
 msgid "Finished in {timing}. Written: {ok}, skipped: {skip}, failed: {fail}."
 msgstr "הושלם תוך {timing}. נכתבו: {ok}, דולגו: {skip}, נכשלו: {fail}."
 
-#: crates/bigiris/src/gui/dialogs/batch.rs:289
+#: crates/bigiris/src/gui/dialogs/batch.rs:292
+msgid "Skipped as outputs of earlier runs: {files}"
+msgstr ""
+
+#: crates/bigiris/src/gui/dialogs/batch.rs:303
 msgid ""
 "{before} → {after} ({delta}) · average per file {avg_before} → {avg_after}"
 msgstr "{before} → {after} ({delta}) · ממוצע לקובץ {avg_before} → {avg_after}"
 
-#: crates/bigiris/src/gui/dialogs/batch.rs:307
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:335
+#: crates/bigiris/src/gui/dialogs/batch.rs:321
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:327
 msgid "Done"
 msgstr "הושלם"
 
-#: crates/bigiris/src/gui/dialogs/batch.rs:368
+#: crates/bigiris/src/gui/dialogs/batch.rs:393
 msgid "Add image folder"
 msgstr "הוספת תיקייה עם תמונות"
+
+#: crates/bigiris/src/gui/dialogs/batch.rs:529
+#: crates/bigiris/src/gui/dialogs/mod.rs:167
+#: crates/bigiris/src/gui/dialogs/mod.rs:182
+msgid "Target format"
+msgstr "תבנית היעד"
 
 #: crates/bigiris/src/gui/dialogs/compare.rs:25
 msgid "Compare images — Íris"
@@ -1166,7 +1192,7 @@ msgid "Factor"
 msgstr "מקדם"
 
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:385
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:530
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:522
 #: crates/bigiris/src/gui/dialogs/upscale.rs:40
 #: crates/bigiris/src/gui/dialogs/upscale.rs:141
 msgid "Upscale"
@@ -1206,12 +1232,12 @@ msgid "{width}×{height} exceeds the processing limit"
 msgstr "{width}×{height} חורג ממגבלת העיבוד"
 
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:1572
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:201
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:193
 msgid "Preparing…"
 msgstr "מתכונן…"
 
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:1672
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:379
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:371
 msgid "Loading the model…"
 msgstr "טוען את המודל…"
 
@@ -1507,11 +1533,6 @@ msgstr "שכתוב הקובץ"
 msgid "Add a suffix (_1, _2, …)"
 msgstr "הוספת מספור (_1, _2, …)"
 
-#: crates/bigiris/src/gui/dialogs/mod.rs:167
-#: crates/bigiris/src/gui/dialogs/mod.rs:182
-msgid "Target format"
-msgstr "תבנית היעד"
-
 #: crates/bigiris/src/gui/dialogs/mod.rs:178
 msgid "Keep the original format"
 msgstr "שמירה על התבנית המקורית"
@@ -1632,53 +1653,53 @@ msgstr "גווני אפור + אלפא"
 msgid "Fields present: {count}"
 msgstr "שדות קיימים: {count}"
 
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:24
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:16
 msgid "Could not read the image: {error}"
 msgstr "לא ניתן לקרוא את התמונה: {error}"
 
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:39
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:31
 msgid "Could not write the result: {error}"
 msgstr "לא ניתן לכתוב את התוצאה: {error}"
 
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:73
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:65
 msgid "Remove background — Prisma"
 msgstr "הסרת רקע — Prisma"
 
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:78
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:145
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:516
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:544
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:70
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:137
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:508
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:536
 msgid "Remove background"
 msgstr "הסרת רקע"
 
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:79
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:71
 msgid "Prisma · BiRefNet-lite"
 msgstr "Prisma · BiRefNet-lite"
 
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:91
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:83
 #: crates/bigiris/src/gui/previews.rs:251
 msgid "No image selected"
 msgstr "לא נבחרה תמונה"
 
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:92
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:84
 msgid "Select one or more files when opening the dialog."
 msgstr "יש לספק קובץ אחד או יותר בעת פתיחת החלון."
 
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:111
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:103
 msgid "Model"
 msgstr "מודל"
 
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:121
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:113
 msgid ""
 "“source”_nobg.png · PNG with alpha, never overwrites (_1, _2… if it already "
 "exists)"
 msgstr "“מקור”_nobg.png · PNG עם אלפא, ללא דריסה (_1, _2… אם כבר קיים)"
 
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:128
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:120
 msgid "Remove background with local AI"
 msgstr "הסרת רקע עם בינה מלאכותית מקומית"
 
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:129
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:121
 msgid ""
 "The model runs entirely on your computer. No image leaves your disk — no "
 "upload, no account, no external API."
@@ -1686,32 +1707,32 @@ msgstr ""
 "המודל פועל כולו במחשב שלך. אף תמונה לא יוצאת מהדיסק — ללא העלאה, ללא חשבון, "
 "ללא API חיצוני."
 
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:239
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:231
 msgid "Failed to load the model: {error}"
 msgstr "טעינת המודל נכשלה: {error}"
 
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:334
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:358
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:326
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:350
 msgid "Saved images"
 msgstr "תמונות שנשמרו"
 
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:359
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:351
 msgid "Failures"
 msgstr "כשלים"
 
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:361
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:353
 msgid "With errors"
 msgstr "עם שגיאות"
 
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:385
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:377
 msgid "Processing {current}/{total} — {file}"
 msgstr "מעבד {current}/{total} — {file}"
 
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:400
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:392
 msgid "BiRefNet-lite (MIT) · runs offline on {device}"
 msgstr "BiRefNet-lite (MIT) · פועל ללא חיבור לרשת על {device}"
 
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:403
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:395
 msgid "BiRefNet-lite (MIT) · runs offline on your computer"
 msgstr "BiRefNet-lite (MIT) · פועל במחשב שלך ללא חיבור לרשת"
 
@@ -2345,110 +2366,114 @@ msgstr "בינה מלאכותית Real-ESRGAN (דורש realesrgan-native)"
 msgid "Lanczos3 resampling (no AI)"
 msgstr "דגימה מחדש Lanczos3 (ללא בינה מלאכותית)"
 
-#: crates/bigiris/src/main.rs:918
+#: crates/bigiris/src/main.rs:921
 msgid "BigIris: the operation failed"
 msgstr "BigIris: הפעולה נכשלה"
 
-#: crates/bigiris/src/main.rs:931
+#: crates/bigiris/src/main.rs:934
 msgid "Some files were not processed; see the details in the terminal."
 msgstr "חלק מהקבצים לא עובדו; הפרטים מופיעים במסוף."
 
-#: crates/bigiris/src/main.rs:1006
+#: crates/bigiris/src/main.rs:1029
 msgid "invalid quality target: {value}; use maximum, balanced or smallest"
 msgstr "יעד איכות לא תקין: {value}; יש להשתמש ב־maximum, balanced או smallest"
 
-#: crates/bigiris/src/main.rs:1023 crates/bigiris/src/main.rs:1174
-msgid "invalid target format: {error}"
-msgstr "תבנית יעד לא תקינה: {error}"
+#: crates/bigiris/src/main.rs:1052
+msgid "not converted in place: {path} is a symbolic link"
+msgstr ""
 
-#: crates/bigiris/src/main.rs:1032
+#: crates/bigiris/src/main.rs:1060
 msgid "not converted in place: the output would be {path}"
 msgstr ""
 
-#: crates/bigiris/src/main.rs:1066
+#: crates/bigiris/src/main.rs:1094
 msgid "the original was already smaller; copied without recompression"
 msgstr "המקור כבר היה קטן יותר; הועתק ללא דחיסה מחדש"
 
-#: crates/bigiris/src/main.rs:1103
+#: crates/bigiris/src/main.rs:1131
 msgid "rotate: use --degrees 90|180|270 or --auto"
 msgstr "rotate: יש להשתמש ב־--degrees 90|180|270 או ב־--auto"
 
-#: crates/bigiris/src/main.rs:1148
+#: crates/bigiris/src/main.rs:1176
 msgid "invalid --bg: {error}"
 msgstr "ערך --bg לא תקין: {error}"
 
-#: crates/bigiris/src/main.rs:1250
+#: crates/bigiris/src/main.rs:1209
+msgid "invalid target format: {error}"
+msgstr "תבנית יעד לא תקינה: {error}"
+
+#: crates/bigiris/src/main.rs:1283
 msgid "the color profile is corrupted; colors were treated as sRGB"
 msgstr "פרופיל הצבע פגום; הצבעים טופלו כ־sRGB"
 
-#: crates/bigiris/src/main.rs:1256
+#: crates/bigiris/src/main.rs:1289
 msgid "already exists: {path}"
 msgstr "כבר קיים: {path}"
 
-#: crates/bigiris/src/main.rs:1262
+#: crates/bigiris/src/main.rs:1295
 msgid "{operation}: {written} written, {skipped} skipped, {failed} failed"
 msgstr "{operation}: נכתבו: {written}, דולגו: {skipped}, נכשלו: {failed}"
 
-#: crates/bigiris/src/main.rs:1364
+#: crates/bigiris/src/main.rs:1389
 msgid ""
 "{model} is not installed ({path} does not exist). Install it with: {command}"
 msgstr "{model} אינו מותקן ({path} אינו קיים). להתקנה: {command}"
 
-#: crates/bigiris/src/main.rs:1401
+#: crates/bigiris/src/main.rs:1426
 msgid "invalid factor: {factor}. Use 2, 3 or 4."
 msgstr "מקדם לא תקין: {factor}. יש להשתמש ב־2, 3 או 4."
 
-#: crates/bigiris/src/main.rs:1417
+#: crates/bigiris/src/main.rs:1442
 msgid "Real-ESRGAN unavailable; using Lanczos3. To use AI: {command}"
 msgstr ""
 "Real-ESRGAN אינו זמין; נעשה שימוש ב־Lanczos3. לשימוש בבינה מלאכותית: "
 "{command}"
 
-#: crates/bigiris/src/main.rs:1476
+#: crates/bigiris/src/main.rs:1501
 msgid "mask {path}: {error}"
 msgstr "מסכה {path}: {error}"
 
-#: crates/bigiris/src/main.rs:1488
+#: crates/bigiris/src/main.rs:1513
 msgid "marks no area (paint the areas to erase white)"
 msgstr "אינה מסמנת אף אזור (יש לצבוע בלבן את מה שצריך למחוק)"
 
-#: crates/bigiris/src/main.rs:1522
+#: crates/bigiris/src/main.rs:1547
 msgid "{count} frame(s)"
 msgstr "פריימים: {count}"
 
-#: crates/bigiris/src/main.rs:1561
+#: crates/bigiris/src/main.rs:1586 crates/bigiris/src/output_plan.rs:239
 msgid "could not read {path}: {error}"
 msgstr "לא ניתן לקרוא את {path}: {error}"
 
-#: crates/bigiris/src/main.rs:1647
+#: crates/bigiris/src/main.rs:1597
 msgid "invalid TOML profile: {error}"
 msgstr "פרופיל TOML לא תקין: {error}"
 
-#: crates/bigiris/src/main.rs:1650
+#: crates/bigiris/src/main.rs:1600
 msgid "quality must be between 1 and 100"
 msgstr "הערך quality חייב להיות בין 1 ל־100"
 
-#: crates/bigiris/src/main.rs:1653
+#: crates/bigiris/src/main.rs:1604
 msgid "invalid profile format: {error}"
 msgstr "מבנה הפרופיל אינו תקין: {error}"
 
-#: crates/bigiris/src/main.rs:1665
+#: crates/bigiris/src/main.rs:1616
 msgid "invalid overwrite: {value}; use skip, replace or increment"
 msgstr "ערך overwrite לא תקין: {value}; יש להשתמש ב־skip, replace או increment"
 
-#: crates/bigiris/src/main.rs:1674
+#: crates/bigiris/src/main.rs:1626
 msgid "no images found for the batch"
 msgstr "לא נמצאו תמונות לעיבוד באצווה"
 
-#: crates/bigiris/src/main.rs:1690
+#: crates/bigiris/src/main.rs:1642
 msgid "could not create {path}: {error}"
 msgstr "לא ניתן ליצור את {path}: {error}"
 
-#: crates/bigiris/src/main.rs:1747
+#: crates/bigiris/src/main.rs:1699
 msgid "the output of {path} in this batch"
 msgstr ""
 
-#: crates/bigiris/src/main.rs:1813
+#: crates/bigiris/src/main.rs:1765
 msgid ""
 "LibreOffice (`soffice`) not found in PATH. Install `libreoffice-fresh` "
 "(recommended) or `libreoffice-still` (e.g. `sudo pacman -S libreoffice-"
@@ -2457,91 +2482,99 @@ msgstr ""
 "LibreOffice (`soffice`) לא נמצא ב־PATH. יש להתקין את `libreoffice-fresh` "
 "(מומלץ) או את `libreoffice-still` (למשל `sudo pacman -S libreoffice-fresh`)."
 
-#: crates/bigiris/src/main.rs:1874
+#: crates/bigiris/src/main.rs:1827
 msgid "not a regular file"
 msgstr "אינו קובץ רגיל"
 
-#: crates/bigiris/src/main.rs:1877
+#: crates/bigiris/src/main.rs:1830
 msgid "invalid file name"
 msgstr "שם קובץ לא תקין"
 
-#: crates/bigiris/src/main.rs:1898
+#: crates/bigiris/src/main.rs:1841
+msgid "could not write in the document's folder: {error}"
+msgstr ""
+
+#: crates/bigiris/src/main.rs:1845
+msgid "could not create a temporary folder: {error}"
+msgstr ""
+
+#: crates/bigiris/src/main.rs:1849
 msgid "could not run soffice: {error}"
 msgstr "הפעלת soffice נכשלה: {error}"
 
-#: crates/bigiris/src/main.rs:1909
+#: crates/bigiris/src/main.rs:1873
 msgid "soffice exceeded the {seconds} s limit"
 msgstr "soffice חרג מהמגבלה של {seconds} s"
 
-#: crates/bigiris/src/main.rs:1922
+#: crates/bigiris/src/main.rs:1886
 msgid "soffice did not produce the PDF ({status})"
 msgstr "soffice לא יצר את ה־PDF ({status})"
 
-#: crates/bigiris/src/main.rs:1969
+#: crates/bigiris/src/main.rs:1933
 msgid "installation failed: {error}"
 msgstr "ההתקנה נכשלה: {error}"
 
-#: crates/bigiris/src/main.rs:1975
+#: crates/bigiris/src/main.rs:1939
 msgid "installed"
 msgstr "הותקן"
 
-#: crates/bigiris/src/main.rs:1976
+#: crates/bigiris/src/main.rs:1940
 msgid "installed in total: {files} file(s) in {managers} file manager(s)"
 msgstr "סה״כ הותקנו: קבצים: {files}, מנהלי קבצים: {managers}"
 
-#: crates/bigiris/src/main.rs:1992
+#: crates/bigiris/src/main.rs:1956
 msgid "removal failed: {error}"
 msgstr "ההסרה נכשלה: {error}"
 
-#: crates/bigiris/src/main.rs:1995
+#: crates/bigiris/src/main.rs:1959
 msgid "removed"
 msgstr "הוסר"
 
-#: crates/bigiris/src/main.rs:1996
+#: crates/bigiris/src/main.rs:1960
 msgid "removed in total: {files} file(s) in {managers} file manager(s)"
 msgstr "סה״כ הוסרו: קבצים: {files}, מנהלי קבצים: {managers}"
 
-#: crates/bigiris/src/main.rs:2010
+#: crates/bigiris/src/main.rs:1974
 msgid "FAILED"
 msgstr "נכשל"
 
-#: crates/bigiris/src/main.rs:2015
+#: crates/bigiris/src/main.rs:1979
 msgid "provided by the package"
 msgstr "מסופק על ידי החבילה"
 
-#: crates/bigiris/src/main.rs:2017
+#: crates/bigiris/src/main.rs:1981
 msgid "unchanged"
 msgstr "ללא שינויים"
 
-#: crates/bigiris/src/main.rs:2017
+#: crates/bigiris/src/main.rs:1981
 msgid "skipped"
 msgstr "דולג"
 
-#: crates/bigiris/src/main.rs:2021
+#: crates/bigiris/src/main.rs:1985
 msgid "detected"
 msgstr "זוהה"
 
-#: crates/bigiris/src/main.rs:2021
+#: crates/bigiris/src/main.rs:1985
 msgid "not in PATH"
 msgstr "חסר ב־PATH"
 
-#: crates/bigiris/src/main.rs:2023
+#: crates/bigiris/src/main.rs:1987
 msgid "{count} file(s)"
 msgstr "קבצים: {count}"
 
-#: crates/bigiris/src/main.rs:2034
+#: crates/bigiris/src/main.rs:1998
 msgid "kept, not written by BigIris: {path}"
 msgstr ""
 
-#: crates/bigiris/src/main.rs:2041
+#: crates/bigiris/src/main.rs:2005
 msgid "removed, the package provides it: {path}"
 msgstr ""
 
-#: crates/bigiris/src/main.rs:2045
+#: crates/bigiris/src/main.rs:2009
 msgid "FAILED: {error}"
 msgstr ""
 
-#: crates/bigiris/src/main.rs:2067
+#: crates/bigiris/src/main.rs:2031
 msgid ""
 "warning: this build lacks the `gui` feature. Dialog '{dialog}' ignored "
 "(rebuild with --features gui)."
@@ -2549,7 +2582,7 @@ msgstr ""
 "אזהרה: הבנייה הנוכחית היא ללא התכונה `gui`. הדו־שיח '{dialog}' לא נפתח (יש "
 "לקמפל מחדש עם --features gui)."
 
-#: crates/bigiris/src/main.rs:2076
+#: crates/bigiris/src/main.rs:2040
 msgid ""
 "warning: this build lacks the `gui` feature. Viewer unavailable (rebuild "
 "with --features gui)."
@@ -2557,18 +2590,18 @@ msgstr ""
 "אזהרה: הבנייה הנוכחית היא ללא התכונה `gui`. המציג אינו זמין (יש לקמפל מחדש "
 "עם --features gui)."
 
-#: crates/bigiris/src/main.rs:2083
+#: crates/bigiris/src/main.rs:2047
 msgid ""
 "warning: this build lacks the `gui` feature. Viewer unavailable; files "
 "received:"
 msgstr ""
 "אזהרה: הבנייה הנוכחית היא ללא התכונה `gui`. המציג אינו זמין; קבצים שהתקבלו:"
 
-#: crates/bigiris/src/output_plan.rs:102
+#: crates/bigiris/src/output_plan.rs:109
 msgid "several inputs would write the same output file:"
 msgstr "מספר קלטים היו כותבים לאותו קובץ פלט:"
 
-#: crates/bigiris/src/output_plan.rs:110
+#: crates/bigiris/src/output_plan.rs:117
 msgid "Rename the inputs, process them separately or use the increment policy."
 msgstr "יש לשנות את שמות הקלטים, לעבד אותם בנפרד או להשתמש במדיניות increment."
 

@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: bigiris 0.1.0\n"
 "Report-Msgid-Bugs-To: https://github.com/big-comm/bigiris/issues\n"
-"POT-Creation-Date: 2026-11-26 17:42-0300\n"
+"POT-Creation-Date: 2026-11-26 18:07-0300\n"
 "PO-Revision-Date: 2026-10-14 01:37-0300\n"
 "Last-Translator: BigCommunity Team\n"
 "Language-Team: BigCommunity Team\n"
@@ -15,48 +15,48 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: crates/bigiris/src/codec.rs:244
+#: crates/bigiris/src/codec.rs:252
 msgid "the isolated codec answered with invalid data: {error}"
 msgstr ""
 
-#: crates/bigiris/src/codec.rs:313
+#: crates/bigiris/src/codec.rs:321
 msgid "the BigIris executable was removed; restart BigIris"
 msgstr "BigIris 可执行文件已被移除；请重新启动 BigIris"
 
-#: crates/bigiris/src/codec.rs:522 crates/bigiris/src/codec.rs:624
+#: crates/bigiris/src/codec.rs:530 crates/bigiris/src/codec.rs:650
 #: crates/bigiris/src/error_text.rs:36
 msgid "operation canceled"
 msgstr "操作已取消"
 
-#: crates/bigiris/src/codec.rs:529
+#: crates/bigiris/src/codec.rs:537
 msgid "the codec exceeded its time limit"
 msgstr "编解码器超时"
 
-#: crates/bigiris/src/codec.rs:587
-msgid "BigIris was updated; restart it"
-msgstr "BigIris 已更新；请重新启动"
-
-#: crates/bigiris/src/codec.rs:632
-msgid "not a regular file, or larger than 1 GiB"
-msgstr "输入不是普通文件或超过 1 GiB"
-
-#: crates/bigiris/src/codec.rs:732
-msgid "sandbox unavailable: install bubblewrap and util-linux; {error}"
-msgstr "沙盒不可用：请安装 bubblewrap 和 util-linux；{error}"
-
-#: crates/bigiris/src/codec.rs:744
-msgid "BigIris was updated while it was open; restart it"
-msgstr "BigIris 在运行期间已更新；请重新启动"
-
-#: crates/bigiris/src/codec.rs:751
+#: crates/bigiris/src/codec.rs:602
 msgid "exit code {code}"
 msgstr ""
 
-#: crates/bigiris/src/codec.rs:755
+#: crates/bigiris/src/codec.rs:606
 msgid "signal {signal}"
 msgstr ""
 
+#: crates/bigiris/src/codec.rs:613
+msgid "BigIris was updated; restart it"
+msgstr "BigIris 已更新；请重新启动"
+
+#: crates/bigiris/src/codec.rs:658
+msgid "not a regular file, or larger than 1 GiB"
+msgstr "输入不是普通文件或超过 1 GiB"
+
 #: crates/bigiris/src/codec.rs:759
+msgid "sandbox unavailable: install bubblewrap and util-linux; {error}"
+msgstr "沙盒不可用：请安装 bubblewrap 和 util-linux；{error}"
+
+#: crates/bigiris/src/codec.rs:771
+msgid "BigIris was updated while it was open; restart it"
+msgstr "BigIris 在运行期间已更新；请重新启动"
+
+#: crates/bigiris/src/codec.rs:779
 msgid "the isolated codec rejected the image ({status}){hint}: {details}"
 msgstr "隔离的编解码器拒绝了该图像 ({status}){hint}：{details}"
 
@@ -81,51 +81,62 @@ msgid "could not write {path}: {error}"
 msgstr ""
 
 #: crates/bigiris/src/error_text.rs:38
+msgid ""
+"animated or multi-page image: static editing stopped to avoid losing content"
+msgstr ""
+
+#: crates/bigiris/src/error_text.rs:41
+msgid ""
+"icon with several sizes or multi-part EXR: writing it back would keep only "
+"one"
+msgstr ""
+
+#: crates/bigiris/src/error_text.rs:44
 msgid "too many files with the same name: {path}"
 msgstr "同名文件过多：{path}"
 
-#: crates/bigiris/src/error_text.rs:55
+#: crates/bigiris/src/error_text.rs:61
 msgid "damaged or unreadable image data: {error}"
 msgstr ""
 
-#: crates/bigiris/src/error_text.rs:57
+#: crates/bigiris/src/error_text.rs:63
 msgid "the encoder failed: {error}"
 msgstr ""
 
-#: crates/bigiris/src/error_text.rs:58
+#: crates/bigiris/src/error_text.rs:64
 msgid "invalid parameter: {error}"
 msgstr ""
 
-#: crates/bigiris/src/error_text.rs:59
+#: crates/bigiris/src/error_text.rs:65
 msgid "the image is larger than BigIris can process"
 msgstr ""
 
-#: crates/bigiris/src/error_text.rs:61
+#: crates/bigiris/src/error_text.rs:67
 msgid "unsupported image: {error}"
 msgstr ""
 
-#: crates/bigiris/src/error_text.rs:75 crates/bigiris/src/gui.rs:2431
-#: crates/bigiris/src/gui/dialogs/batch.rs:305
+#: crates/bigiris/src/error_text.rs:101 crates/bigiris/src/gui.rs:2431
+#: crates/bigiris/src/gui/dialogs/batch.rs:319
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:1706
 msgid "Canceled"
 msgstr "已取消"
 
-#: crates/bigiris/src/error_text.rs:78
+#: crates/bigiris/src/error_text.rs:104
 msgid ""
 "{model} needs about {need} GiB of free RAM for this step; available now: "
 "{available} GiB. Close other programs or use a smaller image. Swap does not "
 "count as free RAM."
 msgstr ""
 
-#: crates/bigiris/src/error_text.rs:87
+#: crates/bigiris/src/error_text.rs:113
 msgid "could not check the memory free for AI: {error}"
 msgstr ""
 
-#: crates/bigiris/src/error_text.rs:90
+#: crates/bigiris/src/error_text.rs:116
 msgid "AI failed: {error}"
 msgstr "AI 处理失败：{error}"
 
-#: crates/bigiris/src/error_text.rs:99
+#: crates/bigiris/src/error_text.rs:125
 msgid ""
 "This build does not include AI. Rebuild with `cargo build --features ai` "
 "(requires glslc, from the shaderc package)."
@@ -133,15 +144,15 @@ msgstr ""
 "此构建未包含 AI 功能。请使用 `cargo build --features ai` 重新编译（需要 "
 "shaderc 软件包中的 glslc）。"
 
-#: crates/bigiris/src/error_text.rs:106
+#: crates/bigiris/src/error_text.rs:132
 msgid "{model} is not installed. Install it with: sudo pacman -S {package}"
 msgstr "{model} 未安装。请使用以下命令安装：sudo pacman -S {package}"
 
-#: crates/bigiris/src/error_text.rs:114
+#: crates/bigiris/src/error_text.rs:140
 msgid "not a weights file"
 msgstr ""
 
-#: crates/bigiris/src/error_text.rs:118
+#: crates/bigiris/src/error_text.rs:144
 msgid "could not read the {model} weights at {path}: {error}"
 msgstr "无法从 {path} 读取 {model} 的权重：{error}"
 
@@ -155,14 +166,14 @@ msgstr "无法打开图像"
 
 #: crates/bigiris/src/gui.rs:894 crates/bigiris/src/gui.rs:2717
 #: crates/bigiris/src/gui.rs:4005 crates/bigiris/src/gui/dialogs/animate.rs:165
-#: crates/bigiris/src/gui/dialogs/batch.rs:99
-#: crates/bigiris/src/gui/dialogs/batch.rs:205
-#: crates/bigiris/src/gui/dialogs/batch.rs:313
+#: crates/bigiris/src/gui/dialogs/batch.rs:92
+#: crates/bigiris/src/gui/dialogs/batch.rs:206
+#: crates/bigiris/src/gui/dialogs/batch.rs:327
 #: crates/bigiris/src/gui/viewer/crop.rs:393
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:398
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:399
 #: crates/bigiris/src/gui/dialogs/mod.rs:273
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:196
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:188
 #: crates/bigiris/src/gui/dialogs/resize.rs:375
 #: crates/bigiris/src/gui/previews.rs:232
 msgid "Cancel"
@@ -358,7 +369,7 @@ msgid "Save or undo changes before navigating"
 msgstr "请先保存或撤销更改再切换图像"
 
 #: crates/bigiris/src/gui.rs:3380 crates/bigiris/src/gui.rs:4260
-#: crates/bigiris/src/gui.rs:5358 crates/bigiris/src/gui.rs:5492
+#: crates/bigiris/src/gui.rs:5362 crates/bigiris/src/gui.rs:5496
 msgid "Open images…"
 msgstr "打开图像…"
 
@@ -375,7 +386,7 @@ msgid "Print…"
 msgstr "打印…"
 
 #: crates/bigiris/src/gui.rs:3386 crates/bigiris/src/gui.rs:4272
-#: crates/bigiris/src/gui.rs:5358
+#: crates/bigiris/src/gui.rs:5362
 msgid "Process a folder…"
 msgstr "处理文件夹…"
 
@@ -416,7 +427,7 @@ msgid "Save or undo your changes before using this tool"
 msgstr "使用此工具前请先保存或撤销更改"
 
 #: crates/bigiris/src/gui.rs:3755 crates/bigiris/src/gui.rs:4315
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:105
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:97
 msgid "Images"
 msgstr "图像"
 
@@ -441,12 +452,14 @@ msgid "Could not print"
 msgstr "无法打印"
 
 #: crates/bigiris/src/gui.rs:3907 crates/bigiris/src/gui.rs:4031
-#: crates/bigiris/src/gui/dialogs/batch.rs:311
+#: crates/bigiris/src/gui/dialogs/batch.rs:248
+#: crates/bigiris/src/gui/dialogs/batch.rs:325
+#: crates/bigiris/src/gui/dialogs/batch.rs:553
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:301
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:1839
 #: crates/bigiris/src/gui/dialogs/mod.rs:258
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:318
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:364
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:310
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:356
 #: crates/bigiris/src/gui/transfers.rs:91
 msgid "Close"
 msgstr "关闭"
@@ -644,11 +657,11 @@ msgstr ""
 #: crates/bigiris/src/gui/batch_runner.rs:182
 #: crates/bigiris/src/gui/dialogs/animate.rs:290
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:1646
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:316
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:308
 msgid "Processing ended unexpectedly. Please try again."
 msgstr "处理意外终止。请重试。"
 
-#: crates/bigiris/src/gui/batch_runner.rs:296 crates/bigiris/src/main.rs:1791
+#: crates/bigiris/src/gui/batch_runner.rs:296 crates/bigiris/src/main.rs:1743
 msgid "a worker ended unexpectedly"
 msgstr "一个工作进程意外终止"
 
@@ -656,7 +669,7 @@ msgstr "一个工作进程意外终止"
 msgid "unexpected worker failure"
 msgstr "工作进程意外失败"
 
-#: crates/bigiris/src/gui/batch_runner.rs:391 crates/bigiris/src/main.rs:1212
+#: crates/bigiris/src/gui/batch_runner.rs:391 crates/bigiris/src/main.rs:1245
 msgid "replaced the output of another input: {path}"
 msgstr "已替换另一个输入的输出：{path}"
 
@@ -706,7 +719,7 @@ msgid "Below 1 lightens midtones · 1 preserves them · above 1 darkens them"
 msgstr "小于 1 提亮中间调 · 1 保持不变 · 大于 1 压暗中间调"
 
 #: crates/bigiris/src/gui/dialogs/adjust.rs:63
-#: crates/bigiris/src/gui/dialogs/batch.rs:336
+#: crates/bigiris/src/gui/dialogs/batch.rs:361
 #: crates/bigiris/src/gui/dialogs/convert.rs:39
 #: crates/bigiris/src/gui/dialogs/crop.rs:337
 #: crates/bigiris/src/gui/dialogs/extent.rs:85
@@ -726,7 +739,7 @@ msgid "Color"
 msgstr "颜色"
 
 #: crates/bigiris/src/gui/dialogs/adjust.rs:76
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:119
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:111
 msgid "Output"
 msgstr "输出"
 
@@ -848,62 +861,65 @@ msgstr "文件 {file} 在此期间已出现并被保留；未写入任何内容�
 msgid "Failed"
 msgstr "失败"
 
-#: crates/bigiris/src/gui/dialogs/batch.rs:35
+#: crates/bigiris/src/gui/dialogs/batch.rs:28
 msgid "Prisma — Batch"
 msgstr "Prisma — 批量"
 
-#: crates/bigiris/src/gui/dialogs/batch.rs:39
+#: crates/bigiris/src/gui/dialogs/batch.rs:32
 msgid "Batch conversion"
 msgstr "批量转换"
 
-#: crates/bigiris/src/gui/dialogs/batch.rs:44
+#: crates/bigiris/src/gui/dialogs/batch.rs:37
 msgid "Files"
 msgstr "文件"
 
-#: crates/bigiris/src/gui/dialogs/batch.rs:48
-#: crates/bigiris/src/gui/dialogs/batch.rs:345
+#: crates/bigiris/src/gui/dialogs/batch.rs:41
+#: crates/bigiris/src/gui/dialogs/batch.rs:370
 msgid "Add files"
 msgstr "添加文件"
 
-#: crates/bigiris/src/gui/dialogs/batch.rs:54
+#: crates/bigiris/src/gui/dialogs/batch.rs:47
 msgid "Add folder (images)"
 msgstr "添加文件夹（图像）"
 
-#: crates/bigiris/src/gui/dialogs/batch.rs:63
+#: crates/bigiris/src/gui/dialogs/batch.rs:56
 #: crates/bigiris/src/gui/dialogs/convert.rs:44
 msgid "Conversion"
 msgstr "转换"
 
-#: crates/bigiris/src/gui/dialogs/batch.rs:73
+#: crates/bigiris/src/gui/dialogs/batch.rs:66
 #: crates/bigiris/src/gui/dialogs/convert.rs:50
 msgid "Destination"
 msgstr "目标位置"
 
-#: crates/bigiris/src/gui/dialogs/batch.rs:79
+#: crates/bigiris/src/gui/dialogs/batch.rs:72
 msgid "Ready"
 msgstr "就绪"
 
-#: crates/bigiris/src/gui/dialogs/batch.rs:85
+#: crates/bigiris/src/gui/dialogs/batch.rs:78
+#: crates/bigiris/src/gui/dialogs/batch.rs:526
 msgid "Ready. Click Process to start."
 msgstr "等待中。点击“处理”开始。"
 
-#: crates/bigiris/src/gui/dialogs/batch.rs:96
+#: crates/bigiris/src/gui/dialogs/batch.rs:89
+#: crates/bigiris/src/gui/dialogs/batch.rs:533
 msgid "Process"
 msgstr "处理"
 
-#: crates/bigiris/src/gui/dialogs/batch.rs:195
+#: crates/bigiris/src/gui/dialogs/batch.rs:196
 msgid "Add at least one image to process."
 msgstr "请至少添加一张图像进行处理。"
 
-#: crates/bigiris/src/gui/dialogs/batch.rs:207
+#: crates/bigiris/src/gui/dialogs/batch.rs:208
 msgid "Starting…"
 msgstr "正在开始…"
 
-#: crates/bigiris/src/gui/dialogs/batch.rs:208
+#: crates/bigiris/src/gui/dialogs/batch.rs:209
+#: crates/bigiris/src/gui/dialogs/batch.rs:541
 msgid "Processing…"
 msgstr "正在处理…"
 
-#: crates/bigiris/src/gui/dialogs/batch.rs:267
+#: crates/bigiris/src/gui/dialogs/batch.rs:270
 msgid ""
 "Canceled after {done}/{total} in {timing}. Written: {ok}, skipped: {skip}, "
 "failed: {fail}."
@@ -911,23 +927,33 @@ msgstr ""
 "已在 {done}/{total} 后取消，用时 {timing}。已写入 {ok} 个，已跳过 {skip} 个，"
 "失败 {fail} 个。"
 
-#: crates/bigiris/src/gui/dialogs/batch.rs:269
+#: crates/bigiris/src/gui/dialogs/batch.rs:272
 msgid "Finished in {timing}. Written: {ok}, skipped: {skip}, failed: {fail}."
 msgstr "用时 {timing} 完成。已写入 {ok} 个，已跳过 {skip} 个，失败 {fail} 个。"
 
-#: crates/bigiris/src/gui/dialogs/batch.rs:289
+#: crates/bigiris/src/gui/dialogs/batch.rs:292
+msgid "Skipped as outputs of earlier runs: {files}"
+msgstr ""
+
+#: crates/bigiris/src/gui/dialogs/batch.rs:303
 msgid ""
 "{before} → {after} ({delta}) · average per file {avg_before} → {avg_after}"
 msgstr "{before} → {after}（{delta}）· 平均每个文件 {avg_before} → {avg_after}"
 
-#: crates/bigiris/src/gui/dialogs/batch.rs:307
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:335
+#: crates/bigiris/src/gui/dialogs/batch.rs:321
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:327
 msgid "Done"
 msgstr "完成"
 
-#: crates/bigiris/src/gui/dialogs/batch.rs:368
+#: crates/bigiris/src/gui/dialogs/batch.rs:393
 msgid "Add image folder"
 msgstr "添加包含图像的文件夹"
+
+#: crates/bigiris/src/gui/dialogs/batch.rs:529
+#: crates/bigiris/src/gui/dialogs/mod.rs:167
+#: crates/bigiris/src/gui/dialogs/mod.rs:182
+msgid "Target format"
+msgstr "目标格式"
 
 #: crates/bigiris/src/gui/dialogs/compare.rs:25
 msgid "Compare images — Íris"
@@ -1164,7 +1190,7 @@ msgid "Factor"
 msgstr "倍数"
 
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:385
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:530
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:522
 #: crates/bigiris/src/gui/dialogs/upscale.rs:40
 #: crates/bigiris/src/gui/dialogs/upscale.rs:141
 msgid "Upscale"
@@ -1204,12 +1230,12 @@ msgid "{width}×{height} exceeds the processing limit"
 msgstr "{width}×{height} 超出处理上限"
 
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:1572
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:201
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:193
 msgid "Preparing…"
 msgstr "正在准备…"
 
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:1672
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:379
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:371
 msgid "Loading the model…"
 msgstr "正在加载模型…"
 
@@ -1503,11 +1529,6 @@ msgstr "覆盖文件"
 msgid "Add a suffix (_1, _2, …)"
 msgstr "递增编号（_1、_2、…）"
 
-#: crates/bigiris/src/gui/dialogs/mod.rs:167
-#: crates/bigiris/src/gui/dialogs/mod.rs:182
-msgid "Target format"
-msgstr "目标格式"
-
 #: crates/bigiris/src/gui/dialogs/mod.rs:178
 msgid "Keep the original format"
 msgstr "保留原始格式"
@@ -1628,54 +1649,54 @@ msgstr "灰度 + Alpha"
 msgid "Fields present: {count}"
 msgstr "存在的字段：{count}"
 
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:24
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:16
 msgid "Could not read the image: {error}"
 msgstr "无法读取图像：{error}"
 
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:39
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:31
 msgid "Could not write the result: {error}"
 msgstr "无法写入结果：{error}"
 
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:73
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:65
 msgid "Remove background — Prisma"
 msgstr "移除背景 — Prisma"
 
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:78
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:145
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:516
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:544
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:70
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:137
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:508
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:536
 msgid "Remove background"
 msgstr "移除背景"
 
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:79
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:71
 msgid "Prisma · BiRefNet-lite"
 msgstr "Prisma · BiRefNet-lite"
 
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:91
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:83
 #: crates/bigiris/src/gui/previews.rs:251
 msgid "No image selected"
 msgstr "未选择图像"
 
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:92
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:84
 msgid "Select one or more files when opening the dialog."
 msgstr "打开对话框时请指定一个或多个文件。"
 
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:111
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:103
 msgid "Model"
 msgstr "模型"
 
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:121
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:113
 msgid ""
 "“source”_nobg.png · PNG with alpha, never overwrites (_1, _2… if it already "
 "exists)"
 msgstr ""
 "“源文件名”_nobg.png · 带 Alpha 通道的 PNG，不覆盖（如已存在则为 _1、_2…）"
 
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:128
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:120
 msgid "Remove background with local AI"
 msgstr "使用本地 AI 移除背景"
 
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:129
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:121
 msgid ""
 "The model runs entirely on your computer. No image leaves your disk — no "
 "upload, no account, no external API."
@@ -1683,32 +1704,32 @@ msgstr ""
 "模型完全在您的计算机上运行。任何图像都不会离开磁盘 — 无需上传、无需账户、无外"
 "部 API。"
 
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:239
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:231
 msgid "Failed to load the model: {error}"
 msgstr "加载模型失败：{error}"
 
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:334
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:358
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:326
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:350
 msgid "Saved images"
 msgstr "已保存的图像"
 
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:359
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:351
 msgid "Failures"
 msgstr "失败"
 
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:361
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:353
 msgid "With errors"
 msgstr "有错误"
 
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:385
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:377
 msgid "Processing {current}/{total} — {file}"
 msgstr "正在处理 {current}/{total} — {file}"
 
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:400
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:392
 msgid "BiRefNet-lite (MIT) · runs offline on {device}"
 msgstr "BiRefNet-lite (MIT) · 在 {device} 上离线运行"
 
-#: crates/bigiris/src/gui/dialogs/remove_bg.rs:403
+#: crates/bigiris/src/gui/dialogs/remove_bg.rs:395
 msgid "BiRefNet-lite (MIT) · runs offline on your computer"
 msgstr "BiRefNet-lite (MIT) · 在您的计算机上离线运行"
 
@@ -2336,109 +2357,113 @@ msgstr "Real-ESRGAN AI（需要 realesrgan-native）"
 msgid "Lanczos3 resampling (no AI)"
 msgstr "Lanczos3 重采样（无 AI）"
 
-#: crates/bigiris/src/main.rs:918
+#: crates/bigiris/src/main.rs:921
 msgid "BigIris: the operation failed"
 msgstr "BigIris：操作失败"
 
-#: crates/bigiris/src/main.rs:931
+#: crates/bigiris/src/main.rs:934
 msgid "Some files were not processed; see the details in the terminal."
 msgstr "部分文件未能处理；请在终端中查看详细信息。"
 
-#: crates/bigiris/src/main.rs:1006
+#: crates/bigiris/src/main.rs:1029
 msgid "invalid quality target: {value}; use maximum, balanced or smallest"
 msgstr "质量目标无效：{value}；请使用 maximum、balanced 或 smallest"
 
-#: crates/bigiris/src/main.rs:1023 crates/bigiris/src/main.rs:1174
-msgid "invalid target format: {error}"
-msgstr "目标格式无效：{error}"
+#: crates/bigiris/src/main.rs:1052
+msgid "not converted in place: {path} is a symbolic link"
+msgstr ""
 
-#: crates/bigiris/src/main.rs:1032
+#: crates/bigiris/src/main.rs:1060
 msgid "not converted in place: the output would be {path}"
 msgstr ""
 
-#: crates/bigiris/src/main.rs:1066
+#: crates/bigiris/src/main.rs:1094
 msgid "the original was already smaller; copied without recompression"
 msgstr "原文件已更小；已直接复制，未重新压缩"
 
-#: crates/bigiris/src/main.rs:1103
+#: crates/bigiris/src/main.rs:1131
 msgid "rotate: use --degrees 90|180|270 or --auto"
 msgstr "rotate：请使用 --degrees 90|180|270 或 --auto"
 
-#: crates/bigiris/src/main.rs:1148
+#: crates/bigiris/src/main.rs:1176
 msgid "invalid --bg: {error}"
 msgstr "--bg 无效：{error}"
 
-#: crates/bigiris/src/main.rs:1250
+#: crates/bigiris/src/main.rs:1209
+msgid "invalid target format: {error}"
+msgstr "目标格式无效：{error}"
+
+#: crates/bigiris/src/main.rs:1283
 msgid "the color profile is corrupted; colors were treated as sRGB"
 msgstr "颜色配置文件已损坏；颜色已按 sRGB 处理"
 
-#: crates/bigiris/src/main.rs:1256
+#: crates/bigiris/src/main.rs:1289
 msgid "already exists: {path}"
 msgstr "已存在：{path}"
 
-#: crates/bigiris/src/main.rs:1262
+#: crates/bigiris/src/main.rs:1295
 msgid "{operation}: {written} written, {skipped} skipped, {failed} failed"
 msgstr ""
 "{operation}：已写入 {written} 个，已跳过 {skipped} 个，失败 {failed} 个"
 
-#: crates/bigiris/src/main.rs:1364
+#: crates/bigiris/src/main.rs:1389
 msgid ""
 "{model} is not installed ({path} does not exist). Install it with: {command}"
 msgstr "{model} 未安装（{path} 不存在）。请使用以下命令安装：{command}"
 
-#: crates/bigiris/src/main.rs:1401
+#: crates/bigiris/src/main.rs:1426
 msgid "invalid factor: {factor}. Use 2, 3 or 4."
 msgstr "倍数无效：{factor}。请使用 2、3 或 4。"
 
-#: crates/bigiris/src/main.rs:1417
+#: crates/bigiris/src/main.rs:1442
 msgid "Real-ESRGAN unavailable; using Lanczos3. To use AI: {command}"
 msgstr "Real-ESRGAN 不可用；改用 Lanczos3。如需使用 AI：{command}"
 
-#: crates/bigiris/src/main.rs:1476
+#: crates/bigiris/src/main.rs:1501
 msgid "mask {path}: {error}"
 msgstr "蒙版 {path}：{error}"
 
-#: crates/bigiris/src/main.rs:1488
+#: crates/bigiris/src/main.rs:1513
 msgid "marks no area (paint the areas to erase white)"
 msgstr "未标记任何区域（请将要擦除的部分涂成白色）"
 
-#: crates/bigiris/src/main.rs:1522
+#: crates/bigiris/src/main.rs:1547
 msgid "{count} frame(s)"
 msgstr "{count} 帧"
 
-#: crates/bigiris/src/main.rs:1561
+#: crates/bigiris/src/main.rs:1586 crates/bigiris/src/output_plan.rs:239
 msgid "could not read {path}: {error}"
 msgstr "无法读取 {path}：{error}"
 
-#: crates/bigiris/src/main.rs:1647
+#: crates/bigiris/src/main.rs:1597
 msgid "invalid TOML profile: {error}"
 msgstr "TOML 配置文件无效：{error}"
 
-#: crates/bigiris/src/main.rs:1650
+#: crates/bigiris/src/main.rs:1600
 msgid "quality must be between 1 and 100"
 msgstr "quality 必须介于 1 和 100 之间"
 
-#: crates/bigiris/src/main.rs:1653
+#: crates/bigiris/src/main.rs:1604
 msgid "invalid profile format: {error}"
 msgstr "配置文件中的格式无效：{error}"
 
-#: crates/bigiris/src/main.rs:1665
+#: crates/bigiris/src/main.rs:1616
 msgid "invalid overwrite: {value}; use skip, replace or increment"
 msgstr "overwrite 无效：{value}；请使用 skip、replace 或 increment"
 
-#: crates/bigiris/src/main.rs:1674
+#: crates/bigiris/src/main.rs:1626
 msgid "no images found for the batch"
 msgstr "未找到可批量处理的图像"
 
-#: crates/bigiris/src/main.rs:1690
+#: crates/bigiris/src/main.rs:1642
 msgid "could not create {path}: {error}"
 msgstr "无法创建 {path}：{error}"
 
-#: crates/bigiris/src/main.rs:1747
+#: crates/bigiris/src/main.rs:1699
 msgid "the output of {path} in this batch"
 msgstr ""
 
-#: crates/bigiris/src/main.rs:1813
+#: crates/bigiris/src/main.rs:1765
 msgid ""
 "LibreOffice (`soffice`) not found in PATH. Install `libreoffice-fresh` "
 "(recommended) or `libreoffice-still` (e.g. `sudo pacman -S libreoffice-"
@@ -2447,91 +2472,99 @@ msgstr ""
 "在 PATH 中找不到 LibreOffice（`soffice`）。请安装 `libreoffice-fresh`（推荐）"
 "或 `libreoffice-still`（例如：`sudo pacman -S libreoffice-fresh`）。"
 
-#: crates/bigiris/src/main.rs:1874
+#: crates/bigiris/src/main.rs:1827
 msgid "not a regular file"
 msgstr "不是普通文件"
 
-#: crates/bigiris/src/main.rs:1877
+#: crates/bigiris/src/main.rs:1830
 msgid "invalid file name"
 msgstr "文件名无效"
 
-#: crates/bigiris/src/main.rs:1898
+#: crates/bigiris/src/main.rs:1841
+msgid "could not write in the document's folder: {error}"
+msgstr ""
+
+#: crates/bigiris/src/main.rs:1845
+msgid "could not create a temporary folder: {error}"
+msgstr ""
+
+#: crates/bigiris/src/main.rs:1849
 msgid "could not run soffice: {error}"
 msgstr "调用 soffice 失败：{error}"
 
-#: crates/bigiris/src/main.rs:1909
+#: crates/bigiris/src/main.rs:1873
 msgid "soffice exceeded the {seconds} s limit"
 msgstr "soffice 超出了 {seconds} 秒的时间限制"
 
-#: crates/bigiris/src/main.rs:1922
+#: crates/bigiris/src/main.rs:1886
 msgid "soffice did not produce the PDF ({status})"
 msgstr "soffice 未生成 PDF（{status}）"
 
-#: crates/bigiris/src/main.rs:1969
+#: crates/bigiris/src/main.rs:1933
 msgid "installation failed: {error}"
 msgstr "安装失败：{error}"
 
-#: crates/bigiris/src/main.rs:1975
+#: crates/bigiris/src/main.rs:1939
 msgid "installed"
 msgstr "已安装"
 
-#: crates/bigiris/src/main.rs:1976
+#: crates/bigiris/src/main.rs:1940
 msgid "installed in total: {files} file(s) in {managers} file manager(s)"
 msgstr "共安装：{managers} 个文件管理器中的 {files} 个文件"
 
-#: crates/bigiris/src/main.rs:1992
+#: crates/bigiris/src/main.rs:1956
 msgid "removal failed: {error}"
 msgstr "移除失败：{error}"
 
-#: crates/bigiris/src/main.rs:1995
+#: crates/bigiris/src/main.rs:1959
 msgid "removed"
 msgstr "已移除"
 
-#: crates/bigiris/src/main.rs:1996
+#: crates/bigiris/src/main.rs:1960
 msgid "removed in total: {files} file(s) in {managers} file manager(s)"
 msgstr "共移除：{managers} 个文件管理器中的 {files} 个文件"
 
-#: crates/bigiris/src/main.rs:2010
+#: crates/bigiris/src/main.rs:1974
 msgid "FAILED"
 msgstr "失败"
 
-#: crates/bigiris/src/main.rs:2015
+#: crates/bigiris/src/main.rs:1979
 msgid "provided by the package"
 msgstr "由软件包提供"
 
-#: crates/bigiris/src/main.rs:2017
+#: crates/bigiris/src/main.rs:1981
 msgid "unchanged"
 msgstr "无变化"
 
-#: crates/bigiris/src/main.rs:2017
+#: crates/bigiris/src/main.rs:1981
 msgid "skipped"
 msgstr "已跳过"
 
-#: crates/bigiris/src/main.rs:2021
+#: crates/bigiris/src/main.rs:1985
 msgid "detected"
 msgstr "已检测到"
 
-#: crates/bigiris/src/main.rs:2021
+#: crates/bigiris/src/main.rs:1985
 msgid "not in PATH"
 msgstr "PATH 中不存在"
 
-#: crates/bigiris/src/main.rs:2023
+#: crates/bigiris/src/main.rs:1987
 msgid "{count} file(s)"
 msgstr "{count} 个文件"
 
-#: crates/bigiris/src/main.rs:2034
+#: crates/bigiris/src/main.rs:1998
 msgid "kept, not written by BigIris: {path}"
 msgstr ""
 
-#: crates/bigiris/src/main.rs:2041
+#: crates/bigiris/src/main.rs:2005
 msgid "removed, the package provides it: {path}"
 msgstr ""
 
-#: crates/bigiris/src/main.rs:2045
+#: crates/bigiris/src/main.rs:2009
 msgid "FAILED: {error}"
 msgstr ""
 
-#: crates/bigiris/src/main.rs:2067
+#: crates/bigiris/src/main.rs:2031
 msgid ""
 "warning: this build lacks the `gui` feature. Dialog '{dialog}' ignored "
 "(rebuild with --features gui)."
@@ -2539,7 +2572,7 @@ msgstr ""
 "警告：当前构建未包含 `gui` 功能。已忽略对话框“{dialog}”（请使用 --features "
 "gui 重新编译）。"
 
-#: crates/bigiris/src/main.rs:2076
+#: crates/bigiris/src/main.rs:2040
 msgid ""
 "warning: this build lacks the `gui` feature. Viewer unavailable (rebuild "
 "with --features gui)."
@@ -2547,17 +2580,17 @@ msgstr ""
 "警告：当前构建未包含 `gui` 功能。查看器不可用（请使用 --features gui 重新编"
 "译）。"
 
-#: crates/bigiris/src/main.rs:2083
+#: crates/bigiris/src/main.rs:2047
 msgid ""
 "warning: this build lacks the `gui` feature. Viewer unavailable; files "
 "received:"
 msgstr "警告：当前构建未包含 `gui` 功能。查看器不可用；收到的文件："
 
-#: crates/bigiris/src/output_plan.rs:102
+#: crates/bigiris/src/output_plan.rs:109
 msgid "several inputs would write the same output file:"
 msgstr "多个输入会写入同一个输出文件："
 
-#: crates/bigiris/src/output_plan.rs:110
+#: crates/bigiris/src/output_plan.rs:117
 msgid "Rename the inputs, process them separately or use the increment policy."
 msgstr "请重命名输入、分别处理，或使用 increment 策略。"
 

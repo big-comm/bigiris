@@ -91,6 +91,12 @@ impl Format {
         }
     }
 
+    /// Whether an output in this format keeps an alpha channel: JPEG and
+    /// PNM composite it over white, Radiance HDR drops it.
+    pub fn stores_alpha(self) -> bool {
+        !matches!(self, Format::Jpeg | Format::Pnm | Format::Hdr)
+    }
+
     /// Parse a format from a user-provided string (case-insensitive). Accepts
     /// extension-like and name-like spellings.
     pub fn parse(s: &str) -> Result<Self, BigImageError> {

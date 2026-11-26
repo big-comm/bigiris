@@ -32,6 +32,17 @@ const EXTENT_BG_PRESETS: &[(&str, [u8; 4])] = &[
 const EXTENT_GRAVITIES: &[(&str, Gravity)] =
     &[(n_("Center"), Gravity::Center), (n_("Top"), Gravity::North), (n_("Bottom"), Gravity::South)];
 
+/// The bars an output in `format` gets: transparent ones come out white
+/// where the format keeps no alpha, as the JPEG and PNM encoders flatten
+/// them, so every such format and the preview agree.
+fn written_background(background: [u8; 4], format: Option<Format>) -> [u8; 4] {
+    if background[3] == 0 && format.is_some_and(|format| !format.stores_alpha()) {
+        [0xFF; 4]
+    } else {
+        background
+    }
+}
+
 /// Run the "Letterbox" modal. Returns GTK's exit code.
 pub fn run_extent_dialog(files: Vec<PathBuf>) -> i32 {
     let files = Rc::new(files);
@@ -152,6 +163,12 @@ fn fill_extent_dialog(
     group.add(&target_row);
     group.add(&overwrite_row);
 
+    let alpha_banner = adw::Banner::builder()
+        .title(gettext("This format cannot store transparency: the bars will be white."))
+        .use_markup(false)
+        .revealed(false)
+        .build();
+    form_col.append(&alpha_banner);
     form_col.append(&intro);
     form_col.append(&group);
 
@@ -215,8 +232,15 @@ fn fill_extent_dialog(
         let predicted_row = predicted_row.clone();
         let status = status.clone();
         let build_opts = build_opts.clone();
+        let target_row = target_row.clone();
+        let alpha_banner = alpha_banner.clone();
         move || match build_opts() {
-            Ok(opts) => {
+            Ok(mut opts) => {
+                let format = selected_target_format(&target_row)
+                    .or_else(|| session_opt.as_ref().map(|session| session.source_format()));
+                let written = written_background(opts.background, format);
+                alpha_banner.set_revealed(written != opts.background);
+                opts.background = written;
                 let (nw, nh) = match opts.size.resolve(natural.0, natural.1) {
                     Ok(d) => d,
                     Err(e) => {
@@ -279,6 +303,10 @@ fn fill_extent_dialog(
         let refresh = refresh.clone();
         dialog_signal!(window, gravity_row, connect_selected_notify, move |_| refresh());
     }
+    {
+        let refresh = refresh.clone();
+        dialog_signal!(window, target_row, connect_selected_notify, move |_| refresh());
+    }
 
     // Initial paint.
     refresh();
@@ -314,7 +342,11 @@ fn fill_extent_dialog(
                     per_image_suffix: matches!(opts.size, ExtentSize::Aspect { .. }),
                     ..crate::output_plan::Naming::image(target, policy)
                 },
-                move |f| extent_file(f, opts, target, policy),
+                move |f| {
+                    let format = target.or_else(|| bigimage_core::sniff_format(f));
+                    let background = written_background(opts.background, format);
+                    extent_file(f, ExtentOptions { background, ..opts }, target, policy)
+                },
                 gettext("Extending"),
                 status.clone(),
                 apply_btn.clone(),
@@ -324,4 +356,20 @@ fn fill_extent_dialog(
     }
 
     window
+}
+
+#[cfg(test)]
+mod background_tests {
+    use super::*;
+
+    #[test]
+    fn transparent_bars_are_white_only_without_alpha() {
+        let clear = [0, 0, 0, 0];
+        assert_eq!(written_background(clear, Some(Format::Jpeg)), [0xFF; 4]);
+        assert_eq!(written_background(clear, Some(Format::Hdr)), [0xFF; 4]);
+        assert_eq!(written_background(clear, Some(Format::Png)), clear);
+        assert_eq!(written_background(clear, None), clear);
+        let black = [0, 0, 0, 0xFF];
+        assert_eq!(written_background(black, Some(Format::Jpeg)), black);
+    }
 }

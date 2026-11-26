@@ -703,6 +703,16 @@ mod tests {
         assert!(leftovers.is_empty(), "temp file leaked: {leftovers:?}");
     }
 
+    /// [`Format::stores_alpha`] says what the encoders are handed.
+    #[test]
+    fn stores_alpha_matches_the_prepared_pixels() {
+        let rgba = DynamicImage::ImageRgba8(image::RgbaImage::new(2, 2));
+        for &format in Format::all() {
+            let prepared = prepare_for_target(rgba.clone(), format);
+            assert_eq!(prepared.color().has_alpha(), format.stores_alpha(), "{format:?}");
+        }
+    }
+
     #[test]
     fn rgba_to_jpeg_flattens_alpha_over_white_not_black() {
         use image::{Rgba, RgbaImage};

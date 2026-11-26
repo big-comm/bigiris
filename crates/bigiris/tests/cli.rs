@@ -783,9 +783,13 @@ fn to_pdf_verifies_output_and_honours_overwrite_policy() {
     assert_eq!(std::fs::read(&pdf).unwrap(), b"mine");
     assert!(dir.path().join("-doc_1.pdf").exists());
 
+    // Replace keeps the replaced file's permission bits, as every core output does.
+    use std::os::unix::fs::PermissionsExt;
+    std::fs::set_permissions(&pdf, std::fs::Permissions::from_mode(0o640)).unwrap();
     let replace = ["--overwrite", "replace", "--", "-doc.txt"];
     success(to_pdf(dir.path(), bin.path(), "write", &replace));
     assert!(std::fs::read(&pdf).unwrap().starts_with(b"%PDF"));
+    assert_eq!(std::fs::metadata(&pdf).unwrap().permissions().mode() & 0o777, 0o640);
 
     // soffice "succeeds" without producing anything (load failure or a
     // profile owned by another instance): that is a failure, not ok.
@@ -888,8 +892,9 @@ fn collisions_are_planned_by_content_not_extension() {
     let dir = tempfile::tempdir().unwrap();
     sized_fixture(dir.path(), "a.png", 32, 24);
     // A PNG named .jpg: rotate keeps PNG, so both would write a_rot90.png.
-    sized_fixture(dir.path(), "b.png", 16, 12);
-    std::fs::rename(dir.path().join("b.png"), dir.path().join("a.jpg")).unwrap();
+    image::RgbImage::new(16, 12)
+        .save_with_format(dir.path().join("a.jpg"), image::ImageFormat::Png)
+        .unwrap();
     let args = ["rotate", "--degrees", "90", "--overwrite", "replace", "a.png", "a.jpg"];
     let output = run(dir.path(), &args);
     assert_eq!(output.status.code(), Some(1), "{}", String::from_utf8_lossy(&output.stderr));

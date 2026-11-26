@@ -116,6 +116,27 @@ pub fn transform_file(
     pipeline::encode_output(result, output, target, opts, policy)
 }
 
+/// Publish `finished`, a complete file another program wrote on the file
+/// system of `output` (in a private folder beside it), as `output` under
+/// `policy`, with the guarantees of every core output: the file and then
+/// its folder are synced, a replaced file keeps its permission bits, and
+/// `Skip` and `Increment` never overwrite. `finished` is moved, never
+/// copied; it is removed when the policy skips.
+///
+/// # Errors
+///
+/// [`BigImageError::Io`] when `finished` cannot be opened, synced or moved,
+/// and [`BigImageError::NoFreeName`] when `Increment` runs out of names.
+pub fn publish_finished_file(
+    finished: &std::path::Path,
+    output: std::path::PathBuf,
+    policy: OverwritePolicy,
+) -> Result<ConvertOutcome> {
+    let path = tempfile::TempPath::try_from_path(finished).map_err(BigImageError::Io)?;
+    let file = std::fs::File::open(&path).map_err(BigImageError::Io)?;
+    pipeline::publish_temp(tempfile::NamedTempFile::from_parts(file, path), output, policy)
+}
+
 /// Format of an image file by its content (magic bytes), with the extension
 /// as fallback, without decoding it. This is the format transforms keep (and
 /// name their output after) when no target format is given.

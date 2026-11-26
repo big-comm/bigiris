@@ -1899,48 +1899,8 @@ fn to_pdf_one(
             &[("status", &status.to_string())],
         )));
     }
-    publish_file(&produced, destination, policy)
-}
-
-/// Move `source` to `destination` honouring the policy without ever
-/// clobbering an existing file for `skip` and `increment`.
-fn publish_file(
-    source: &Path,
-    destination: PathBuf,
-    policy: OverwritePolicy,
-) -> color_eyre::Result<ConvertOutcome> {
-    if policy == OverwritePolicy::Replace {
-        std::fs::rename(source, &destination)?;
-        return Ok(ConvertOutcome::Written { output: destination });
-    }
-    let mut temp = tempfile::TempPath::try_from_path(source)?;
-    for n in 0..=9_999u32 {
-        let candidate = if n == 0 {
-            destination.clone()
-        } else {
-            let mut name = destination.file_stem().unwrap_or_default().to_os_string();
-            name.push(format!("_{n}"));
-            if let Some(ext) = destination.extension() {
-                name.push(".");
-                name.push(ext);
-            }
-            destination.with_file_name(name)
-        };
-        match temp.persist_noclobber(&candidate) {
-            Ok(()) => return Ok(ConvertOutcome::Written { output: candidate }),
-            Err(e) if e.error.kind() == std::io::ErrorKind::AlreadyExists => {
-                if policy == OverwritePolicy::Skip {
-                    return Ok(ConvertOutcome::Skipped { output: destination });
-                }
-                temp = e.path;
-            }
-            Err(e) => return Err(e.error.into()),
-        }
-    }
-    Err(color_eyre::eyre::eyre!(fill(
-        &gettext("too many files with the same name: {path}"),
-        &[("path", &codec::printable_path(&destination))],
-    )))
+    bigimage_core::publish_finished_file(&produced, destination, policy)
+        .map_err(|error| eyre!(error_text::core_error_text(&error)))
 }
 
 /// `file://` URL for a local path, percent-encoding everything but RFC 3986

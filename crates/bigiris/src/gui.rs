@@ -2951,7 +2951,9 @@ fn write_edits_to_disk(
     // The confined decoder reports animation as a generic decode error,
     // so any failure here is presented as "not a static image".
     bigimage_core::content::ensure_static(&target)
-        .and_then(|()| bigimage_core::content::ensure_single_entry(&target, Some(format)))
+        // Detected by content: an in-place save drops the other entries of
+        // a container whatever its name says.
+        .and_then(|()| bigimage_core::content::ensure_single_entry(&target, None))
         .map_err(|error| {
             tracing::warn!(%error, "save: file is not a static image");
             SaveFailure::NotStatic
@@ -4599,6 +4601,35 @@ mod anchor_tests {
         let huge = EditOp::Resize { w: 100_000, h: 100_000 };
         let result = write_edits_to_disk(&path, &[EditOp::RotateCw, huge]);
         assert!(matches!(result, Err(SaveFailure::Other(_))));
+        assert_eq!(std::fs::read(&path).unwrap(), before);
+    }
+
+    /// An icon with several sizes under a PNG name keeps them all.
+    #[test]
+    fn misnamed_icon_save_is_refused() {
+        use super::{EditOp, SaveFailure, write_edits_to_disk};
+        let dir = tempfile::TempDir::new().unwrap();
+        let path = dir.path().join("icon.png");
+        let entries: Vec<_> = [16u32, 32]
+            .into_iter()
+            .map(|size| {
+                let pixels =
+                    image::RgbaImage::from_pixel(size, size, image::Rgba([9, 90, 200, 255]));
+                image::codecs::ico::IcoFrame::as_png(
+                    pixels.as_raw(),
+                    size,
+                    size,
+                    image::ExtendedColorType::Rgba8,
+                )
+                .unwrap()
+            })
+            .collect();
+        image::codecs::ico::IcoEncoder::new(std::fs::File::create(&path).unwrap())
+            .encode_images(&entries)
+            .unwrap();
+        let before = std::fs::read(&path).unwrap();
+        let result = write_edits_to_disk(&path, &[EditOp::FlipH]);
+        assert!(matches!(result, Err(SaveFailure::NotStatic)));
         assert_eq!(std::fs::read(&path).unwrap(), before);
     }
 

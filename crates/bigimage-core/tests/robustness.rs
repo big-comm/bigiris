@@ -903,5 +903,11 @@ fn multi_entry_containers_refuse_own_format() {
     std::fs::write(dir.path().join("icon_flipH.ico"), b"keep").unwrap();
     let skipped = flip_file(&icon, FlipAxis::Horizontal, None, OverwritePolicy::Skip);
     assert!(matches!(skipped, Err(BigImageError::InvalidInput(_))), "{skipped:?}");
+    // An icon under a PNG name, converted to PNG over itself.
+    let named_png = dir.path().join("named.png");
+    std::fs::copy(&icon, &named_png).unwrap();
+    let over_itself = convert_file_to(&named_png, None, Format::Png, &opts, replace);
+    assert!(matches!(over_itself, Err(BigImageError::InvalidInput(_))), "{over_itself:?}");
+    assert_eq!(std::fs::read(&named_png).unwrap(), std::fs::read(&icon).unwrap());
     assert_no_partials(dir.path());
 }

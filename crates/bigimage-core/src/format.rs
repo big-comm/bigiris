@@ -16,21 +16,22 @@ use crate::BigImageError;
 pub enum Format {
     /// PNG (lossless, 8/16-bit).
     Png,
-    /// JPEG (quality 0..=100).
+    /// JPEG (quality 1..=100).
     Jpeg,
-    /// WebP (lossless via image's built-in encoder; lossy needs libwebp).
+    /// WebP through libwebp: lossy, lossless or near-lossless, whichever
+    /// is smallest at the target (lossless at a fixed quality of 100).
     WebP,
     /// AVIF (AV1 Image File Format). Encode via ravif, decode via libdav1d.
     Avif,
-    /// TIFF (multi-page support landing later).
+    /// TIFF (one page is written).
     Tiff,
     /// BMP.
     Bmp,
-    /// GIF (static; animated support later).
+    /// GIF (static here; [`crate::animate::make_gif`] writes animations).
     Gif,
-    /// ICO (Windows icon, multi-size).
+    /// ICO (Windows icon, one entry of at most 256 px).
     Ico,
-    /// Netpbm: PPM/PGM/PBM.
+    /// Netpbm: PGM or PPM written, PBM and PAM also read.
     Pnm,
     /// Truevision TGA (game-dev textures).
     Tga,

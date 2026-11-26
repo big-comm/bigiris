@@ -16,7 +16,7 @@ use crate::{BigImageError, ConvertOutcome, OverwritePolicy, Result};
 pub enum LoopMode {
     /// Play through the frames once and stop on the last one.
     Once,
-    /// Repeat a fixed number of times (full cycles; 0 becomes `Once`).
+    /// Play a fixed number of full cycles (0 and 1 play once).
     Finite(u16),
     /// Loop forever — what most users expect from a "GIF".
     #[default]
@@ -27,7 +27,9 @@ impl LoopMode {
     fn to_gif_repeat(self) -> gif::Repeat {
         match self {
             LoopMode::Once => gif::Repeat::Finite(0),
-            LoopMode::Finite(n) => gif::Repeat::Finite(n),
+            // The NETSCAPE loop count is the number of repeats after the
+            // first play.
+            LoopMode::Finite(n) => gif::Repeat::Finite(n.saturating_sub(1)),
             LoopMode::Infinite => gif::Repeat::Infinite,
         }
     }
@@ -227,16 +229,24 @@ mod tests {
     }
 
     #[test]
-    fn finite_loop_writes_without_error() {
+    fn finite_loop_counts_full_plays() {
         let dir = TempDir::new().unwrap();
         let f = fixture(dir.path(), "f.png", 16, 16, [0; 3]);
         let out = dir.path().join("loop.gif");
-        let opts = AnimateOptions {
-            loop_mode: LoopMode::Finite(3),
-            delay_ms: 50,
-            ..AnimateOptions::default()
-        };
-        make_gif(&[f], &out, opts).unwrap();
-        assert!(out.exists());
+        // The NETSCAPE 2.0 loop count is the repeats after the first play.
+        for (mode, repeats) in [
+            (LoopMode::Once, gif::Repeat::Finite(0)),
+            (LoopMode::Finite(0), gif::Repeat::Finite(0)),
+            (LoopMode::Finite(1), gif::Repeat::Finite(0)),
+            (LoopMode::Finite(3), gif::Repeat::Finite(2)),
+            (LoopMode::Infinite, gif::Repeat::Infinite),
+        ] {
+            let opts = AnimateOptions { loop_mode: mode, ..AnimateOptions::default() };
+            make_gif(std::slice::from_ref(&f), &out, opts).unwrap();
+            let mut decoder =
+                gif::DecodeOptions::new().read_info(std::fs::File::open(&out).unwrap()).unwrap();
+            while decoder.read_next_frame().unwrap().is_some() {}
+            assert_eq!(decoder.repeat(), repeats, "{mode:?}");
+        }
     }
 }

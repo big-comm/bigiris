@@ -1222,7 +1222,6 @@ where
     Ok(())
 }
 
-/// Why a `skip` line wrote nothing.
 /// The input's colour profile was malformed and its pixels were used as
 /// sRGB; the conversion went on.
 fn note_ignored_profile(input: &Path) {
@@ -1233,6 +1232,7 @@ fn note_ignored_profile(input: &Path) {
     );
 }
 
+/// Why a `skip` line wrote nothing.
 fn exists_note(output: &Path) -> String {
     fill(&gettext("already exists: {path}"), &[("path", &codec::printable_path(output))])
 }

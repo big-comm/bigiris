@@ -516,6 +516,14 @@ fn pnm_outputs_are_named_after_the_written_pixels() {
     assert_eq!(std::fs::read(dir.path().join("gray_rot90.pgm")).unwrap(), b"keep");
     let skipped = convert_file(&gray, Format::Pnm, &opts, OverwritePolicy::Skip).unwrap();
     assert_eq!(skipped, ConvertOutcome::Skipped { output: dir.path().join("gray.pgm") });
+
+    // A smaller PBM original is never published under the .pgm name.
+    let pbm = dir.path().join("mono.pbm");
+    std::fs::write(&pbm, b"P4\n6 4\n\0\0\0\0").unwrap();
+    let keep = EncodeOptions { strip_metadata: false, ..EncodeOptions::default() };
+    let report = convert_file_report(&pbm, None, Format::Pnm, &keep, replace).unwrap();
+    assert_eq!(report.outcome.path(), dir.path().join("mono.pgm"));
+    assert_eq!(&std::fs::read(report.outcome.path()).unwrap()[..2], b"P5");
     assert_no_partials(dir.path());
 }
 

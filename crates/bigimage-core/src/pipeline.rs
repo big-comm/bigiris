@@ -549,7 +549,7 @@ pub(crate) fn encode_keeping_smaller(
     let mut kept = false;
     if let Some(original) = original {
         let written = temp.as_file().metadata().map_err(BigImageError::Io)?.len();
-        if let Some(bytes) = smaller_original(original, written, target, opts) {
+        if let Some(bytes) = smaller_original(original, &output, written, target, opts) {
             let file = temp.as_file_mut();
             file.set_len(0).map_err(BigImageError::Io)?;
             file.rewind().map_err(BigImageError::Io)?;
@@ -567,10 +567,12 @@ pub(crate) fn encode_keeping_smaller(
 }
 
 /// The bytes of `original` when they are smaller than `written` and can be
-/// published as-is: the file is a regular file still in `target` format,
-/// and either metadata stripping is off or it carries none.
+/// published as-is at `output`: the file is a regular file still in
+/// `target` format, of the kind the output's name promises, and either
+/// metadata stripping is off or it carries none.
 fn smaller_original(
     original: &Path,
+    output: &Path,
     written: u64,
     target: Format,
     opts: &EncodeOptions,
@@ -585,6 +587,18 @@ fn smaller_original(
         || (opts.strip_metadata && crate::metadata::carries_metadata(&bytes, format))
     {
         return None;
+    }
+    // A PNM output is named after the written pixels (`.pgm` or `.ppm`), so
+    // a PBM or PAM original cannot stand in for it.
+    if target == Format::Pnm {
+        let kind = match bytes.get(..2)? {
+            b"P2" | b"P5" => "pgm",
+            b"P3" | b"P6" => "ppm",
+            _ => return None,
+        };
+        if output.extension() != Some(std::ffi::OsStr::new(kind)) {
+            return None;
+        }
     }
     Some(bytes)
 }

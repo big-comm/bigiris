@@ -960,7 +960,8 @@ fn apply_user_locale() {
         gettextrs::setlocale(LcMessages, "")
     };
     if let Some(name) = messages.and_then(|name| String::from_utf8(name).ok()) {
-        codec::set_message_locale(name);
+        let language = std::env::var("LANGUAGE").ok();
+        codec::set_message_locale(name, language);
     }
 }
 

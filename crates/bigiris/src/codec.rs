@@ -47,11 +47,12 @@ pub fn configure() {
 }
 
 /// The parent's message locale, which a worker writes its failure in.
-static MESSAGE_LOCALE: std::sync::OnceLock<String> = std::sync::OnceLock::new();
+static MESSAGE_LOCALE: std::sync::OnceLock<(String, Option<String>)> = std::sync::OnceLock::new();
 
-/// Record the message locale the user's environment selected.
-pub(crate) fn set_message_locale(name: String) {
-    let _ = MESSAGE_LOCALE.set(name);
+/// Record the message locale the user's environment selected, and the
+/// `LANGUAGE` priority list gettext reads before it.
+pub(crate) fn set_message_locale(name: String, language: Option<String>) {
+    let _ = MESSAGE_LOCALE.set((name, language.filter(|language| !language.is_empty())));
 }
 
 /// Set once [`configure`] routed decoding through the sandboxed worker.
@@ -184,6 +185,8 @@ fn attest_process() -> color_eyre::Result<()> {
     let mut environment: Vec<_> = std::env::vars_os().map(|(name, _)| name).collect();
     environment.sort();
     // bwrap sets PWD from --chdir.
+    // LANGUAGE only when the user set one.
+    environment.retain(|name| name != "LANGUAGE");
     if environment != ["LC_ALL", "PWD", "RAYON_NUM_THREADS"] {
         bail!("unexpected environment: {environment:?}");
     }
@@ -692,7 +695,9 @@ fn execute(path: &Path, mode: &str, replaced: &mut bool) -> ImageResult<std::fs:
         argv.extend(["--unshare-user", "--disable-userns"].map(Into::into));
     }
     let tmp_size = WORKER_TMP.to_string();
-    let locale = MESSAGE_LOCALE.get().map_or("C.UTF-8", String::as_str);
+    let (locale, language) = MESSAGE_LOCALE
+        .get()
+        .map_or(("C.UTF-8", None), |(locale, language)| (locale.as_str(), language.as_deref()));
     argv.extend(
         [
             "--die-with-parent",
@@ -744,13 +749,14 @@ fn execute(path: &Path, mode: &str, replaced: &mut bool) -> ImageResult<std::fs:
             "--setenv",
             "RAYON_NUM_THREADS",
             "2",
-            "/app/bigiris",
-            "--codec-worker",
-            WORKER_ID,
-            mode,
-            &sandbox_input,
         ]
         .map(Into::into),
+    );
+    if let Some(language) = language {
+        argv.extend(["--setenv", "LANGUAGE", language].map(Into::into));
+    }
+    argv.extend(
+        ["/app/bigiris", "--codec-worker", WORKER_ID, mode, &sandbox_input].map(Into::into),
     );
     #[cfg(test)]
     edit_sandbox(&mut argv);
@@ -1533,18 +1539,18 @@ mod tests {
         assert!(message.contains("restart") && !message.ends_with(&restart_hint()), "{message}");
     }
 
-    /// A worker writes its failure in the user's message locale, which only
-    /// the parent can read from the environment the sandbox clears. `C.utf8`
-    /// stands for it: English like the default `C.UTF-8`, so the other tests
-    /// of this process keep reading English, but spelled apart from it.
+    /// A worker gets the user's message locale and LANGUAGE list, which only
+    /// the parent can read. `C.utf8` stands for the locale: English like the
+    /// default (gettext ignores LANGUAGE in C), so the other tests keep reading
+    /// English, but spelled apart from it.
     #[test]
     fn worker_runs_in_the_message_locale() {
-        set_message_locale("C.utf8".into());
+        set_message_locale("C.utf8".into(), Some("pt_BR".into()));
         let file = input();
-        let script = "echo \"locale=$LC_ALL\" >&2; exit 1";
+        let script = "echo \"locale=$LC_ALL language=$LANGUAGE\" >&2; exit 1";
         let Some(result) = with_worker(script, DEADLINE, || decode(file.path())) else { return };
         let message = result.unwrap_err().to_string();
-        assert!(message.contains("locale=C.utf8"), "{message}");
+        assert!(message.contains("locale=C.utf8 language=pt_BR"), "{message}");
     }
     #[test]
     fn hostile_worker_diagnostics_are_bounded_and_sanitized() {

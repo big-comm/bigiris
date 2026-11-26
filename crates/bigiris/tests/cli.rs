@@ -146,9 +146,13 @@ fn invalid_arguments_return_failure() {
         vec!["adjust", "--contrast=-101", "a.png"],
         vec!["adjust", "--saturation", "inf", "a.png"],
         vec!["animate", "--speed", "99", "-o", "a.gif", "a.png"],
+        vec!["extent", "--size", "8x8", "--bg", "nope", "a.png"],
     ] {
         assert_eq!(run(dir.path(), &args).status.code(), Some(1), "{args:?}");
     }
+    // A refused colour says which forms are accepted.
+    let output = run(dir.path(), &["extent", "--size", "8x8", "--bg", "nope", "a.png"]);
+    assert!(String::from_utf8_lossy(&output.stderr).contains("#RRGGBB"));
     let names: Vec<_> =
         std::fs::read_dir(dir.path()).unwrap().map(|e| e.unwrap().file_name()).collect();
     assert_eq!(names, ["a.png"]);

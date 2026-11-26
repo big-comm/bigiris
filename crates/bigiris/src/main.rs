@@ -1199,7 +1199,9 @@ fn run_extent(
 ) -> color_eyre::Result<()> {
     let target = parse_optional_target(to)?;
     let background = bigimage_core::parse_hex_color(bg).map_err(|_invalid| {
-        color_eyre::eyre::eyre!(with_error(&gettext("invalid --bg: {error}"), format!("{bg:?}")))
+        let value = format!("{bg:?}");
+        let refusal = gettext("invalid --bg: {value}; use #RRGGBB or #RRGGBBAA");
+        color_eyre::eyre::eyre!(fill(&refusal, &[("value", &value)]))
     })?;
     let opts = ExtentOptions { size, background, gravity };
     tracing::info!(?opts, ?target, ?policy, count = files.len(), "extent");

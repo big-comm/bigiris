@@ -1154,6 +1154,14 @@ fn in_place_convert_never_replaces_siblings() {
     for sibling in ["photo.png", "noext.png", "shot.png"] {
         assert_eq!(std::fs::read(dir.path().join(sibling)).unwrap(), sibling.as_bytes());
     }
+    // A link would be replaced by a copy and its target left as it was.
+    std::os::unix::fs::symlink("photo.PNG", dir.path().join("link.png")).unwrap();
+    let before = std::fs::read(dir.path().join("photo.PNG")).unwrap();
+    let output = run(dir.path(), &["convert", "--to", "png", "--in-place", "link.png"]);
+    assert_eq!(output.status.code(), Some(2));
+    assert!(String::from_utf8_lossy(&output.stderr).contains("is a symbolic link"));
+    assert!(std::fs::symlink_metadata(dir.path().join("link.png")).unwrap().is_symlink());
+    assert_eq!(std::fs::read(dir.path().join("photo.PNG")).unwrap(), before);
     let both = ["convert", "--to", "png", "--in-place", "--overwrite", "skip", "photo.PNG"];
     assert_eq!(run(dir.path(), &both).status.code(), Some(1));
 }

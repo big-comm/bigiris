@@ -1025,6 +1025,13 @@ fn run_convert(
     let policy = if in_place { OverwritePolicy::Replace } else { policy };
     tracing::info!(?target, ?opts, ?policy, in_place, count = files.len(), "convert");
     run_per_file(files, "convert", Naming::image(Some(target), policy), |f| {
+        // Publishing replaces the link itself and leaves its target as it was.
+        if in_place && std::fs::symlink_metadata(f).is_ok_and(|meta| meta.is_symlink()) {
+            return Err(bigimage_core::BigImageError::InvalidInput(fill(
+                &gettext("not converted in place: {path} is a symbolic link"),
+                &[("path", &codec::printable_path(f))],
+            )));
+        }
         let output_extension = target.output_extension(f);
         if in_place && f.extension() != Some(output_extension) {
             let output = codec::printable_path(&f.with_extension(output_extension));

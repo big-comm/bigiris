@@ -419,8 +419,8 @@ mod tests {
 
     #[test]
     fn stream_reads_across_chunks_and_accepts_exact_limit() {
-        let data = vec![b'a'; MAX_BYTES];
-        assert_eq!(read_memory(data.clone(), false), Ok(data));
+        let payload = vec![b'a'; MAX_BYTES];
+        assert_eq!(read_memory(payload.clone(), false), Ok(payload));
     }
 
     #[test]

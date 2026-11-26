@@ -39,8 +39,8 @@ pub(super) fn build_preview_column(session: &PreviewSession) -> (gtk::Picture, g
     let original = gettext("Original: {width}×{height} px")
         .replace("{width}", &nw.to_string())
         .replace("{height}", &nh.to_string());
-    let info = gtk::Label::builder().label(original).xalign(0.0).build();
-    info.add_css_class("dim-label");
+    let original_size = gtk::Label::builder().label(original).xalign(0.0).build();
+    original_size.add_css_class("dim-label");
 
     let frame = gtk::Frame::new(None);
     frame.set_child(Some(&picture));
@@ -56,7 +56,7 @@ pub(super) fn build_preview_column(session: &PreviewSession) -> (gtk::Picture, g
         .build();
     column.append(&heading);
     column.append(&frame);
-    column.append(&info);
+    column.append(&original_size);
 
     (picture, column)
 }

@@ -125,17 +125,33 @@ fn corrupt_input_returns_failure_and_preserves_existing_output() {
     assert!(!output.status.success());
     assert_eq!(std::fs::read(dir.path().join("bad.jpg")).unwrap(), b"existing photo");
 }
+/// Values outside the documented ranges are usage errors (exit 1) before
+/// any file is read, never a 1-pixel output or a per-file failure.
 #[test]
 fn invalid_arguments_return_failure() {
     let dir = tempfile::tempdir().unwrap();
+    fixture(dir.path(), "a.png");
     for args in [
-        vec!["convert", "--to", "bogus", "missing.png"],
-        vec!["resize", "--percent", "NaN", "missing.png"],
-        vec!["crop", "--rect", "nonsense", "missing.png"],
-        vec!["adjust", "--gamma", "0", "missing.png"],
+        vec!["convert", "--to", "bogus", "a.png"],
+        vec!["resize", "--percent", "NaN", "a.png"],
+        vec!["resize", "--percent", "0", "a.png"],
+        vec!["resize", "--percent", "1000.5", "a.png"],
+        vec!["resize", "--max-edge", "0", "a.png"],
+        vec!["resize", "--exact", "0x5", "a.png"],
+        vec!["extent", "--size", "0x0", "a.png"],
+        vec!["crop", "--rect", "nonsense", "a.png"],
+        vec!["crop", "--rect", "0x0+0+0", "a.png"],
+        vec!["adjust", "--gamma", "0", "a.png"],
+        vec!["adjust", "--brightness", "500", "a.png"],
+        vec!["adjust", "--contrast=-101", "a.png"],
+        vec!["adjust", "--saturation", "inf", "a.png"],
+        vec!["animate", "--speed", "99", "-o", "a.gif", "a.png"],
     ] {
-        assert!(!run(dir.path(), &args).status.success(), "{args:?}");
+        assert_eq!(run(dir.path(), &args).status.code(), Some(1), "{args:?}");
     }
+    let names: Vec<_> =
+        std::fs::read_dir(dir.path()).unwrap().map(|e| e.unwrap().file_name()).collect();
+    assert_eq!(names, ["a.png"]);
 }
 
 /// File-manager menus pass `--notify`: a failure reaches the desktop through

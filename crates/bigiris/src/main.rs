@@ -146,10 +146,15 @@ impl From<FilterArg> for Filter {
 struct ResizeModeArgs {
     #[arg(
         long = "max-edge",
+        value_parser = clap::value_parser!(u32).range(1..),
         help = gettext("Maximum edge length in pixels (keeps the aspect ratio; no-op if the image is already smaller)")
     )]
     max_edge: Option<u32>,
-    #[arg(long, help = gettext("Percentage scale (e.g. 50 for half; 200 for double)"))]
+    #[arg(
+        long,
+        value_parser = percent_arg,
+        help = gettext("Percentage scale (e.g. 50 for half; 200 for double)")
+    )]
     percent: Option<f32>,
     #[arg(long, value_name = "WxH", help = gettext("Exact WxH size (ignores the aspect ratio)"))]
     exact: Option<WxH>,
@@ -194,6 +199,9 @@ impl std::str::FromStr for WxH {
             w.parse().map_err(|e| with_error(&gettext("invalid width: {error}"), e))?;
         let height: u32 =
             h.parse().map_err(|e| with_error(&gettext("invalid height: {error}"), e))?;
+        if width == 0 || height == 0 {
+            return Err(zero_side(s));
+        }
         Ok(WxH { width, height })
     }
 }
@@ -262,8 +270,45 @@ impl std::str::FromStr for CropGeom {
             h.parse().map_err(|e| with_error(&gettext("invalid height: {error}"), e))?;
         let x: u32 = x.parse().map_err(|e| with_error(&gettext("invalid X offset: {error}"), e))?;
         let y: u32 = y.parse().map_err(|e| with_error(&gettext("invalid Y offset: {error}"), e))?;
+        if width == 0 || height == 0 {
+            return Err(zero_side(s));
+        }
         Ok(CropGeom { rect: CropRect::new(x, y, width, height) })
     }
+}
+
+/// Refusal of a size argument with an empty side.
+fn zero_side(value: &str) -> String {
+    fill(
+        &gettext("width and height must be at least 1, got: {value}"),
+        &[("value", &format!("{value:?}"))],
+    )
+}
+
+/// A finite number that `accept` admits; `range` names the interval in the
+/// refusal. NaN and infinities are refused.
+fn float_arg(value: &str, range: &str, accept: impl Fn(f32) -> bool) -> Result<f32, String> {
+    let number: f32 =
+        value.trim().parse().map_err(|e| with_error(&gettext("not a number: {error}"), e))?;
+    if number.is_finite() && accept(number) {
+        return Ok(number);
+    }
+    Err(fill(&gettext("{value} is outside {range}"), &[("value", value), ("range", range)]))
+}
+
+/// `--percent`: the scale core accepts, (0, 1000].
+fn percent_arg(value: &str) -> Result<f32, String> {
+    float_arg(value, "(0, 1000]", |percent| percent > 0.0 && percent <= 1000.0)
+}
+
+/// `--contrast` and `--saturation`: [-100, 100].
+fn level_arg(value: &str) -> Result<f32, String> {
+    float_arg(value, "[-100, 100]", |level| (-100.0..=100.0).contains(&level))
+}
+
+/// `--gamma`: [0.1, 10].
+fn gamma_arg(value: &str) -> Result<f32, String> {
+    float_arg(value, "[0.1, 10]", |gamma| (0.1..=10.0).contains(&gamma))
 }
 
 /// Aspect ratio in the form `W:H` (e.g. `1:1`, `9:16`, `4:5`). Whitespace
@@ -522,6 +567,7 @@ enum Command {
             long,
             default_value_t = 0,
             allow_negative_numbers = true,
+            value_parser = clap::value_parser!(i32).range(-100..=100),
             help = gettext("Brightness -100..100 (0 = no change)")
         )]
         brightness: i32,
@@ -529,6 +575,7 @@ enum Command {
             long,
             default_value_t = 0.0,
             allow_negative_numbers = true,
+            value_parser = level_arg,
             help = gettext("Contrast -100..100 (0 = no change)")
         )]
         contrast: f32,
@@ -536,12 +583,14 @@ enum Command {
             long,
             default_value_t = 0.0,
             allow_negative_numbers = true,
+            value_parser = level_arg,
             help = gettext("Saturation -100..100 (-100 = gray, 0 = no change)")
         )]
         saturation: f32,
         #[arg(
             long,
             default_value_t = 1.0,
+            value_parser = gamma_arg,
             help = gettext("Gamma 0.1..10.0 (< 1 brightens midtones, > 1 darkens)")
         )]
         gamma: f32,
@@ -641,6 +690,7 @@ enum Command {
         #[arg(
             long,
             default_value_t = 10,
+            value_parser = clap::value_parser!(i32).range(1..=30),
             help = gettext("Encoder speed 1..30 (higher = faster, worse palette)")
         )]
         speed: i32,

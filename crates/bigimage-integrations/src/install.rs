@@ -635,7 +635,7 @@ mod tests {
     }
 
     #[test]
-    fn uninstall_keeps_user_files_that_only_share_our_name_prefix() {
+    fn user_menus_sharing_our_prefix_survive() {
         let tmp = TempDir::new().unwrap();
         let paths = ScopePaths::rooted_at(tmp.path());
         install_with_paths(&paths);
@@ -646,11 +646,34 @@ mod tests {
             paths.contractor().join("bigiris-mine.contract"),
         ];
         for file in &mine {
-            std::fs::write(file, "[Desktop Entry]\nName=Mine\nExec=gimp %F\n").unwrap();
+            std::fs::write(file, "[Desktop Entry]\nName=Mine\nExec=bigiris --dialog=batch %F\n")
+                .unwrap();
         }
+        assert!(install_with_paths(&paths).is_success());
         assert!(uninstall_with_paths(&paths).is_success());
         for file in &mine {
             assert!(file.exists(), "{} was deleted", file.display());
+        }
+    }
+
+    #[test]
+    fn install_drops_menus_of_removed_actions() {
+        let tmp = TempDir::new().unwrap();
+        let paths = ScopePaths::rooted_at(tmp.path());
+        let marked = format!("[Desktop Entry]\n{}\n", crate::scope::GENERATED_MARKER);
+        let stale = [
+            paths.kio_servicemenus().join("bigiris-old.desktop"),
+            paths.nemo_actions().join("bigiris-old.nemo_action"),
+            paths.libfm_actions().join("bigiris-old.desktop"),
+            paths.contractor().join("bigiris-old.contract"),
+        ];
+        for file in &stale {
+            std::fs::create_dir_all(file.parent().unwrap()).unwrap();
+            std::fs::write(file, &marked).unwrap();
+        }
+        assert!(install_with_paths(&paths).is_success());
+        for file in &stale {
+            assert!(!file.exists(), "{} kept", file.display());
         }
     }
 

@@ -12,32 +12,33 @@ use std::io;
 use std::path::PathBuf;
 
 use crate::action::{ACTIONS, Action, TOP_LEVEL_LABEL};
-use crate::safe_fs::{FileMode, safe_write_with_mode};
-use crate::scope::{ScopePaths, remove_matching};
+use crate::safe_fs::FileMode;
+use crate::scope::{ScopePaths, remove_generated, replace_generated};
+
+const SUFFIX: &str = ".desktop";
 
 /// Install one `.desktop` per MIME filter of [`ACTIONS`] into
 /// `~/.local/share/kio/servicemenus/`, replacing what earlier installs wrote.
 pub fn install(paths: &ScopePaths) -> io::Result<Vec<PathBuf>> {
-    let dir = paths.kio_servicemenus();
-    std::fs::create_dir_all(&dir)?;
-    // Older releases wrote one file per action; left behind, they would
+    let files = menus()
+        .into_iter()
+        .map(|menu| (format!("bigiris-{}{SUFFIX}", menu[0].1.id), render(&menu)));
+    // Dolphin treats executable permission as the trust marker for
+    // user-owned ServiceMenus and silently rejects a regular `0644` desktop
+    // file. Older releases wrote one file per action; left behind, they would
     // add every action again under their own submenu titles.
-    remove_matching(&dir, "bigiris-", ".desktop")?;
-    let mut written = Vec::new();
-    for menu in menus() {
-        let file = dir.join(format!("bigiris-{}.desktop", menu[0].1.id));
-        // Dolphin treats executable permission as the trust marker for
-        // user-owned ServiceMenus and silently rejects a regular `0644`
-        // desktop file.
-        safe_write_with_mode(&file, render(&menu), paths.scope, FileMode::Exact(0o755))?;
-        written.push(file);
-    }
-    Ok(written)
+    replace_generated(
+        &paths.kio_servicemenus(),
+        SUFFIX,
+        files.collect(),
+        paths.scope,
+        FileMode::Exact(0o755),
+    )
 }
 
 /// Remove every file we own in `~/.local/share/kio/servicemenus/`.
 pub fn uninstall(paths: &ScopePaths) -> io::Result<Vec<PathBuf>> {
-    remove_matching(&paths.kio_servicemenus(), "bigiris-", ".desktop")
+    remove_generated(&paths.kio_servicemenus(), SUFFIX, &[])
 }
 
 /// [`ACTIONS`] with their index, grouped by MIME filter in declaration order:

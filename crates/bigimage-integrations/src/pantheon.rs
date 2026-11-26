@@ -8,25 +8,28 @@ use std::path::PathBuf;
 
 use crate::action::{ACTIONS, Action};
 use crate::nemo::flat_label;
-use crate::safe_fs::safe_write;
-use crate::scope::{ScopePaths, remove_matching};
+use crate::safe_fs::FileMode;
+use crate::scope::{ScopePaths, remove_generated, replace_generated};
 
-/// Install one `.contract` per [`Action`].
+const SUFFIX: &str = ".contract";
+
+/// Install one `.contract` per [`Action`], removing those of actions a
+/// release dropped.
 pub fn install(paths: &ScopePaths) -> io::Result<Vec<PathBuf>> {
-    let dir = paths.contractor();
-    std::fs::create_dir_all(&dir)?;
-    let mut written = Vec::new();
-    for action in ACTIONS {
-        let file = dir.join(format!("bigiris-{}.contract", action.id));
-        safe_write(&file, render(action), paths.scope)?;
-        written.push(file);
-    }
-    Ok(written)
+    let files =
+        ACTIONS.iter().map(|action| (format!("bigiris-{}{SUFFIX}", action.id), render(action)));
+    replace_generated(
+        &paths.contractor(),
+        SUFFIX,
+        files.collect(),
+        paths.scope,
+        FileMode::Exact(0o644),
+    )
 }
 
 /// Remove every file we own in `~/.local/share/contractor/`.
 pub fn uninstall(paths: &ScopePaths) -> io::Result<Vec<PathBuf>> {
-    remove_matching(&paths.contractor(), "bigiris-", ".contract")
+    remove_generated(&paths.contractor(), SUFFIX, &[])
 }
 
 fn render(action: &Action) -> String {

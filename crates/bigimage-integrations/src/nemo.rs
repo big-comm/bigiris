@@ -7,25 +7,28 @@ use std::io;
 use std::path::PathBuf;
 
 use crate::action::{ACTIONS, Action, TOP_LEVEL_LABEL};
-use crate::safe_fs::safe_write;
-use crate::scope::{ScopePaths, remove_matching};
+use crate::safe_fs::FileMode;
+use crate::scope::{ScopePaths, remove_generated, replace_generated};
 
-/// Install one `.nemo_action` per [`Action`].
+const SUFFIX: &str = ".nemo_action";
+
+/// Install one `.nemo_action` per [`Action`], removing those of actions a
+/// release dropped.
 pub fn install(paths: &ScopePaths) -> io::Result<Vec<PathBuf>> {
-    let dir = paths.nemo_actions();
-    std::fs::create_dir_all(&dir)?;
-    let mut written = Vec::new();
-    for action in ACTIONS {
-        let file = dir.join(format!("bigiris-{}.nemo_action", action.id));
-        safe_write(&file, render(action), paths.scope)?;
-        written.push(file);
-    }
-    Ok(written)
+    let files =
+        ACTIONS.iter().map(|action| (format!("bigiris-{}{SUFFIX}", action.id), render(action)));
+    replace_generated(
+        &paths.nemo_actions(),
+        SUFFIX,
+        files.collect(),
+        paths.scope,
+        FileMode::Exact(0o644),
+    )
 }
 
 /// Remove every file we own in `~/.local/share/nemo/actions/`.
 pub fn uninstall(paths: &ScopePaths) -> io::Result<Vec<PathBuf>> {
-    remove_matching(&paths.nemo_actions(), "bigiris-", ".nemo_action")
+    remove_generated(&paths.nemo_actions(), SUFFIX, &[])
 }
 
 fn render(action: &Action) -> String {

@@ -2,10 +2,13 @@
 //! Install scope — maps `User` / `System` to filesystem roots so every
 //! file-manager generator agrees on where things live.
 
+use std::io;
 use std::path::{Path, PathBuf};
 
 use directories::BaseDirs;
 use thiserror::Error;
+
+use crate::safe_fs::{FileMode, safe_write_with_mode};
 
 /// Errors surfaced by scope resolution.
 #[derive(Debug, Error)]
@@ -179,29 +182,111 @@ fn config_dirs_from(value: Option<std::ffi::OsString>) -> Vec<PathBuf> {
 /// survives even though it matches our naming scheme.
 pub(crate) const GENERATED_MARKER: &str = "X-BigIris-Generated=true";
 
+/// Start of every file name the key-file generators write.
+const FILE_PREFIX: &str = "bigiris-";
+
+/// Ids of every action released before [`GENERATED_MARKER`] existed. Those
+/// releases wrote one unmarked `bigiris-<id><suffix>` file per id; the list
+/// is frozen because every later file carries the marker.
+const PRE_MARKER_ACTION_IDS: &[&str] = &[
+    "adjust-brightness-minus",
+    "adjust-brightness-plus",
+    "adjust-bw",
+    "adjust-contrast-plus",
+    "adjust-custom",
+    "adjust-vivid",
+    "ai-remove-bg",
+    "batch-folder",
+    "convert-avif",
+    "convert-custom",
+    "convert-jpg",
+    "convert-png",
+    "convert-tiff",
+    "convert-webp",
+    "flip-custom",
+    "flip-horizontal",
+    "flip-vertical",
+    "metadata-strip-all",
+    "metadata-view",
+    "pdf-convert",
+    "resize-200pct",
+    "resize-25pct",
+    "resize-4k-3840",
+    "resize-50pct",
+    "resize-custom",
+    "resize-hd-1920",
+    "rotate-180",
+    "rotate-270",
+    "rotate-90",
+    "rotate-auto-exif",
+    "rotate-custom",
+    "utils-animate-gif",
+    "utils-batch",
+    "utils-compare",
+    "view",
+    "web-discord",
+    "web-facebook",
+    "web-instagram",
+    "web-letterbox-custom",
+    "web-letterbox-ig",
+    "web-letterbox-stories",
+    "web-letterbox-yt",
+    "web-optimize-png",
+    "web-telegram",
+    "web-twitter",
+    "web-whatsapp",
+];
+
 /// Upper bound on how much of a candidate file we read to identify it.
 /// Our generated files are a few KiB even with 30 locales.
 const MAX_IDENTIFY_BYTES: u64 = 256 * 1024;
 
-/// Is `body` a file our generators wrote? Current files carry
-/// [`GENERATED_MARKER`]; files from releases before the marker are still
-/// recognized because every action they contained launched `bigiris`
-/// directly (`Exec=bigiris …`).
-pub(crate) fn is_generated_by_us(body: &str) -> bool {
-    body.lines().map(str::trim).any(|line| {
-        line == GENERATED_MARKER || line == "Exec=bigiris" || line.starts_with("Exec=bigiris ")
-    })
+/// Did our generators write the file `name` holding `body`? It carries
+/// [`GENERATED_MARKER`], or it has the exact name a release before the
+/// marker gave it and launches `bigiris` (`Exec=bigiris …`) as all of
+/// those did. A user's own `bigiris-*` file is never ours by content alone.
+fn is_generated_by_us(name: &str, suffix: &str, body: &str) -> bool {
+    let mut lines = body.lines().map(str::trim);
+    if lines.clone().any(|line| line == GENERATED_MARKER) {
+        return true;
+    }
+    let pre_marker_name = name
+        .strip_prefix(FILE_PREFIX)
+        .and_then(|rest| rest.strip_suffix(suffix))
+        .is_some_and(|id| PRE_MARKER_ACTION_IDS.contains(&id));
+    pre_marker_name && lines.any(|line| line == "Exec=bigiris" || line.starts_with("Exec=bigiris "))
 }
 
-/// Remove every regular file in `dir` whose name starts with `prefix`,
-/// ends with `suffix` **and** whose content [`is_generated_by_us`].
-/// Non-matching files (and symlinks) are left alone; a missing `dir`
-/// returns an empty list rather than an error, so uninstall is idempotent.
-pub(crate) fn remove_matching(
+/// Write each `(file name, content)` of `files` into `dir`, then remove the
+/// generated files there that `files` no longer names, so an action a
+/// release drops or renames leaves no stale menu entry behind.
+pub(crate) fn replace_generated(
     dir: &Path,
-    prefix: &str,
     suffix: &str,
-) -> std::io::Result<Vec<PathBuf>> {
+    files: Vec<(String, String)>,
+    scope: Scope,
+    mode: FileMode,
+) -> io::Result<Vec<PathBuf>> {
+    std::fs::create_dir_all(dir)?;
+    let mut written = Vec::with_capacity(files.len());
+    for (name, content) in files {
+        let path = dir.join(name);
+        safe_write_with_mode(&path, content, scope, mode)?;
+        written.push(path);
+    }
+    remove_generated(dir, suffix, &written)?;
+    Ok(written)
+}
+
+/// Remove every regular `bigiris-*<suffix>` file in `dir` that
+/// [`is_generated_by_us`], except those in `keep`. Other files and symlinks
+/// are left alone; a missing `dir` removes nothing, so uninstall is
+/// idempotent.
+pub(crate) fn remove_generated(
+    dir: &Path,
+    suffix: &str,
+    keep: &[PathBuf],
+) -> io::Result<Vec<PathBuf>> {
     use std::io::Read;
 
     let mut removed = Vec::new();
@@ -212,18 +297,18 @@ pub(crate) fn remove_matching(
         let entry = entry?;
         let name = entry.file_name();
         let name = name.to_string_lossy();
-        if !(name.starts_with(prefix) && name.ends_with(suffix)) {
-            continue;
-        }
-        if !entry.file_type()?.is_file() {
+        if !(name.starts_with(FILE_PREFIX) && name.ends_with(suffix)) {
             continue;
         }
         let path = entry.path();
+        if !entry.file_type()?.is_file() || keep.contains(&path) {
+            continue;
+        }
         let mut body = String::new();
         let readable = std::fs::File::open(&path)
             .and_then(|f| f.take(MAX_IDENTIFY_BYTES).read_to_string(&mut body))
             .is_ok();
-        if readable && is_generated_by_us(&body) {
+        if readable && is_generated_by_us(&name, suffix, &body) {
             std::fs::remove_file(&path)?;
             removed.push(path);
         }
@@ -264,41 +349,62 @@ mod tests {
     }
 
     #[test]
-    fn remove_matching_requires_marker_or_legacy_bigiris_exec() {
+    fn remove_generated_requires_marker_or_pre_marker_name() {
         let tmp = TempDir::new().unwrap();
         let dir = tmp.path();
-        let marked = dir.join("bigiris-new.desktop");
-        let legacy = dir.join("bigiris-old.desktop");
-        let users = dir.join("bigiris-mine.desktop");
-        let other_cmd = dir.join("bigiris-wrapper.desktop");
-        let foreign = dir.join("someone-else.desktop");
-        std::fs::write(&marked, format!("[Desktop Entry]\n{GENERATED_MARKER}\nExec=x\n")).unwrap();
-        std::fs::write(&legacy, "[Desktop Entry]\nExec=bigiris convert --to png %F\n").unwrap();
-        std::fs::write(&users, "[Desktop Entry]\nName=My own\nExec=gimp %F\n").unwrap();
-        std::fs::write(&other_cmd, "[Desktop Entry]\nExec=bigiris-helper %F\n").unwrap();
-        std::fs::write(&foreign, format!("{GENERATED_MARKER}\n")).unwrap();
+        let write = |name: &str, body: &str| {
+            let path = dir.join(name);
+            std::fs::write(&path, body).unwrap();
+            path
+        };
+        let marked =
+            write("bigiris-new.desktop", &format!("[Desktop Entry]\n{GENERATED_MARKER}\n"));
+        let pre_marker =
+            write("bigiris-convert-png.desktop", "[Desktop Entry]\nExec=bigiris convert %F\n");
+        let kept = [
+            // A user's own menu calling bigiris, under a name we never used.
+            write("bigiris-my-preset.desktop", "[Desktop Entry]\nExec=bigiris --dialog=batch %F\n"),
+            write("bigiris-view.desktop", "[Desktop Entry]\nName=My own\nExec=gimp %F\n"),
+            write("bigiris-rotate-90.desktop", "[Desktop Entry]\nExec=bigiris-helper %F\n"),
+            write("bigiris-view.nemo_action", "[Nemo Action]\nExec=bigiris %F\n"),
+            write("someone-else.desktop", &format!("{GENERATED_MARKER}\n")),
+        ];
 
-        let mut removed = remove_matching(dir, "bigiris-", ".desktop").unwrap();
+        let mut removed = remove_generated(dir, ".desktop", &[]).unwrap();
         removed.sort();
-        let mut expected = vec![legacy.clone(), marked.clone()];
-        expected.sort();
-        assert_eq!(removed, expected);
-        assert!(users.exists(), "user's own bigiris-* file was deleted");
-        assert!(other_cmd.exists());
-        assert!(foreign.exists(), "prefix filter ignored");
+        assert_eq!(removed, [pre_marker, marked]);
+        for path in kept {
+            assert!(path.exists(), "{} was deleted", path.display());
+        }
     }
 
     #[test]
-    fn remove_matching_skips_symlinks_and_directories() {
+    fn remove_generated_skips_symlinks_and_directories() {
         let tmp = TempDir::new().unwrap();
         let dir = tmp.path().join("menus");
         std::fs::create_dir_all(dir.join("bigiris-dir.desktop")).unwrap();
         let target = tmp.path().join("target.desktop");
         std::fs::write(&target, format!("{GENERATED_MARKER}\n")).unwrap();
         std::os::unix::fs::symlink(&target, dir.join("bigiris-link.desktop")).unwrap();
-        assert!(remove_matching(&dir, "bigiris-", ".desktop").unwrap().is_empty());
+        assert!(remove_generated(&dir, ".desktop", &[]).unwrap().is_empty());
         assert!(target.exists());
         assert!(dir.join("bigiris-dir.desktop").is_dir());
+    }
+
+    #[test]
+    fn replace_generated_drops_files_of_removed_actions() {
+        let tmp = TempDir::new().unwrap();
+        let dir = tmp.path();
+        let stale = dir.join("bigiris-old.nemo_action");
+        std::fs::write(&stale, format!("[Nemo Action]\n{GENERATED_MARKER}\n")).unwrap();
+        let body = format!("[Nemo Action]\n{GENERATED_MARKER}\n");
+        let files = vec![("bigiris-new.nemo_action".to_owned(), body)];
+        let written =
+            replace_generated(dir, ".nemo_action", files, Scope::User, FileMode::Exact(0o644))
+                .unwrap();
+        assert_eq!(written, [dir.join("bigiris-new.nemo_action")]);
+        assert!(written[0].exists());
+        assert!(!stale.exists(), "stale action kept");
     }
 
     #[test]

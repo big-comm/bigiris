@@ -480,6 +480,18 @@ fn viewer_second_review_fixes() {
         metadata_loss_notice(&[bigimage_core::MetadataLoss::ExifUnsupported]).unwrap()
     );
     assert!(state.borrow().osd_revealer.reveals_child(), "notice not shown");
+
+    // Closing with unsaved edits offers Save: after the save confirmation
+    // the file holds the edit and the window closes.
+    apply_edit(&state, EditOp::RotateCw);
+    wait(&context, "edit before closing", &|| state.borrow().current_ready);
+    window.close();
+    settle(&context, 100);
+    answer(&window, "save");
+    settle(&context, 100);
+    answer(&window, "save");
+    wait(&context, "saved and closed", &|| !window.is_visible());
+    assert_eq!(image::image_dimensions(&bmp).unwrap(), (24, 16), "the second turn was saved");
     drop(state);
     window.destroy();
     drop(window);

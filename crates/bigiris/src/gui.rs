@@ -1084,14 +1084,28 @@ fn build_window_preloaded(
                 return glib::Propagation::Stop;
             }
             let alert = adw::AlertDialog::builder()
-                .heading(gettext("Discard changes?"))
+                .heading(gettext("Save changes?"))
                 .body(gettext("The image has unsaved changes."))
                 .build();
             alert.add_response("cancel", &gettext("Continue editing"));
             alert.add_response("discard", &gettext("Discard"));
+            alert.add_response("save", &gettext("Save"));
             alert.set_response_appearance("discard", adw::ResponseAppearance::Destructive);
+            alert.set_response_appearance("save", adw::ResponseAppearance::Suggested);
             alert.set_default_response(Some("cancel"));
             alert.set_close_response("cancel");
+            {
+                let state = state.clone();
+                let closing_window = window.downgrade();
+                alert.connect_response(Some("save"), move |_, _| {
+                    let closing_window = closing_window.clone();
+                    save_edits_then(&state, move || {
+                        if let Some(window) = closing_window.upgrade() {
+                            window.close();
+                        }
+                    });
+                });
+            }
             let state = state.clone();
             let closing_window = window.clone();
             alert.connect_response(Some("discard"), move |_, _| {
@@ -2689,6 +2703,11 @@ fn redo_edit(state: &Rc<RefCell<ViewerState>>) {
 /// Save the pending edits into the file itself, after a confirmation: a
 /// JPEG loses quality on every re-encode.
 fn save_edits(state: &Rc<RefCell<ViewerState>>) {
+    save_edits_then(state, || {});
+}
+
+/// [`save_edits`], running `after_save` once the file holds the edits.
+fn save_edits_then(state: &Rc<RefCell<ViewerState>>, after_save: impl FnOnce() + 'static) {
     viewer::edit_panel::flush_commit(state);
     let (window, path) = {
         let s = state.borrow();
@@ -2733,6 +2752,7 @@ fn save_edits(state: &Rc<RefCell<ViewerState>>) {
     alert.set_close_response("cancel");
 
     let state = state.clone();
+    let after_save = Cell::new(Some(after_save));
     alert.connect_response(Some("save"), move |_, _| {
         // Read the edits now, not when the dialog opened: an undo or a
         // navigation while it was up changes what is to be written.
@@ -2755,6 +2775,7 @@ fn save_edits(state: &Rc<RefCell<ViewerState>>) {
         // Awaited on the GTK loop instead of polled on a timer.
         let state = state.clone();
         let path = path.clone();
+        let after_save = after_save.take();
         glib::MainContext::default().spawn_local(async move {
             // A panicking encoder ends the save as a failure.
             let result = job
@@ -2791,6 +2812,9 @@ fn save_edits(state: &Rc<RefCell<ViewerState>>) {
                             state.borrow().osd_label.set_text(&gettext("Saved"));
                             pulse_osd(&state);
                         }
+                    }
+                    if let Some(after_save) = after_save {
+                        after_save();
                     }
                 }
                 Err(failure) => {

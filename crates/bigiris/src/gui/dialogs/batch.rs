@@ -475,23 +475,6 @@ mod auto_close_tests {
 mod folder_tests {
     use super::*;
 
-    /// The first widget under `root` (inclusive) that `matches`.
-    fn find<W: IsA<gtk::Widget>>(root: &gtk::Widget, matches: &dyn Fn(&W) -> bool) -> Option<W> {
-        if let Some(widget) = root.downcast_ref::<W>()
-            && matches(widget)
-        {
-            return Some(widget.clone());
-        }
-        let mut child = root.first_child();
-        while let Some(current) = child {
-            if let Some(found) = find(&current, matches) {
-                return Some(found);
-            }
-            child = current.next_sibling();
-        }
-        None
-    }
-
     /// Colliding files are refused with nothing run, which leaves Close on
     /// the button. A folder converted beside itself does not take its own
     /// earlier output as an input: `a.webp` next to `a.png` in a WebP batch
@@ -520,15 +503,16 @@ mod folder_tests {
         window.present();
         let root: &gtk::Widget = window.upcast_ref();
         let ready = gettext("Ready. Click Process to start.");
-        let status: gtk::Label = find(root, &|label: &gtk::Label| label.text() == ready).unwrap();
+        let status: gtk::Label =
+            find_widget(root, &|label: &gtk::Label| label.text() == ready).unwrap();
         let webp = CONVERT_FORMATS.iter().position(|(_, format)| *format == Format::WebP).unwrap();
         let title = gettext("Target format");
         let format: adw::ComboRow =
-            find(root, &|row: &adw::ComboRow| row.title() == title).unwrap();
+            find_widget(root, &|row: &adw::ComboRow| row.title() == title).unwrap();
         format.set_selected(u32::try_from(webp).unwrap());
         let process = gettext("Process");
         let apply: gtk::Button =
-            find(root, &|button: &gtk::Button| button.label().as_deref() == Some(&process))
+            find_widget(root, &|button: &gtk::Button| button.label().as_deref() == Some(&process))
                 .unwrap();
         let cancel = apply.prev_sibling().and_downcast::<gtk::Button>().unwrap();
         let run = || {

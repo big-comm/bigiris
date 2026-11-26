@@ -249,39 +249,136 @@ pub(super) fn prepare_dialog(
     let cancel = Arc::new(AtomicBool::new(false));
     let closing = cancel.clone();
     window.connect_unrealize(move |_| closing.store(true, Ordering::Release));
-    let input = files.first().cloned();
+    // The preview shows the first file that opens; the operation still runs
+    // on every file, so one unreadable file does not block the others.
+    let inputs = files.to_vec();
     let job = gio::spawn_blocking(move || {
         crate::codec::with_cancel(cancel, || {
-            input.ok_or_else(|| gettext("No image selected")).and_then(|path| {
-                PreviewSession::open(path)
-                    .map_err(|error| crate::error_text::core_error_text(&error))
-            })
+            let mut first_failure = None;
+            for path in inputs {
+                if crate::codec::cancelled() {
+                    break;
+                }
+                match PreviewSession::open(path) {
+                    Ok(session) => return Ok((session, first_failure)),
+                    Err(error) => {
+                        first_failure
+                            .get_or_insert_with(|| crate::error_text::core_error_text(&error));
+                    }
+                }
+            }
+            Err(first_failure.unwrap_or_else(|| gettext("No image selected")))
         })
     });
     let weak = window.downgrade();
+    let weak_toolbar = toolbar.downgrade();
     glib::MainContext::default().spawn_local(async move {
         let result = job.await;
-        let Some(window) = weak.upgrade() else { return };
+        let (Some(window), Some(toolbar)) = (weak.upgrade(), weak_toolbar.upgrade()) else {
+            return;
+        };
         if !window.is_visible() {
             return;
         }
+        let result = result.unwrap_or_else(|_| Err(gettext("Preparation was interrupted")));
         match result {
-            Ok(Ok(session)) => {
-                fill(window, files, Some(Rc::new(session)));
+            Ok((session, failure)) => {
+                let window = fill(window, files, Some(Rc::new(session)));
+                if let Some(failure) = failure
+                    && let Some(toolbar) = window.content().and_downcast::<adw::ToolbarView>()
+                {
+                    let banner = adw::Banner::builder()
+                        .title(failure)
+                        .use_markup(false)
+                        .revealed(true)
+                        .build();
+                    toolbar.add_top_bar(&banner);
+                }
             }
-            Ok(Err(error)) => {
+            Err(error) => {
+                let close = gtk::Button::builder()
+                    .label(gettext("Close"))
+                    .halign(gtk::Align::Center)
+                    .css_classes(["pill"])
+                    .build();
+                let weak = window.downgrade();
+                close.connect_clicked(move |_| {
+                    if let Some(window) = weak.upgrade() {
+                        window.close();
+                    }
+                });
                 let page = adw::StatusPage::builder()
                     .title(gettext("Could not open the image"))
-                    .description(error)
+                    .description(glib::markup_escape_text(&error))
                     .icon_name("dialog-error-symbolic")
+                    .child(&close)
                     .build();
-                window.set_content(Some(&page));
-            }
-            Err(_) => {
-                window.set_content(Some(&gtk::Label::new(Some(&gettext(
-                    "Preparation was interrupted",
-                )))));
+                toolbar.set_content(Some(&page));
             }
         }
     });
+}
+
+#[cfg(test)]
+mod prepare_tests {
+    use super::*;
+
+    /// An unreadable first file leaves the rest of the selection workable:
+    /// the form previews the next file under a banner naming the failure;
+    /// with nothing readable, the window keeps its header and a Close button.
+    #[test]
+    #[ignore = "requires a graphical display; run alone with GSETTINGS_BACKEND=memory"]
+    fn unreadable_first_file_keeps_the_dialog_usable() {
+        adw::init().expect("GTK display required");
+        let app = adw::Application::builder()
+            .application_id("com.biglinux.Iris.PrepareProbe")
+            .flags(gio::ApplicationFlags::NON_UNIQUE)
+            .build();
+        app.register(None::<&gio::Cancellable>).unwrap();
+        let context = glib::MainContext::default();
+        let pump = |what: &str, done: &dyn Fn() -> bool| {
+            let deadline = std::time::Instant::now() + Duration::from_secs(30);
+            while !done() {
+                while context.pending() {
+                    context.iteration(false);
+                }
+                assert!(std::time::Instant::now() < deadline, "timed out: {what}");
+                std::thread::sleep(Duration::from_millis(5));
+            }
+        };
+        let dir = tempfile::tempdir().unwrap();
+        let good = dir.path().join("good.png");
+        image::RgbImage::new(64, 48).save(&good).unwrap();
+        let broken = dir.path().join("broken.png");
+        std::fs::write(&broken, &std::fs::read(&good).unwrap()[..40]).unwrap();
+
+        let window = build_convert_dialog(&app, Rc::new(vec![broken.clone(), good]));
+        window.present();
+        let root: gtk::Widget = window.clone().upcast();
+        let banner = || dialogs::find_widget(&root, &|banner: &adw::Banner| banner.is_revealed());
+        pump("banner", &|| banner().is_some());
+        let title = banner().unwrap().title();
+        assert!(title.contains("broken.png"), "{title}");
+        let convert = gettext("Convert");
+        let apply = dialogs::find_widget(&root, &|button: &gtk::Button| {
+            button.label().as_deref() == Some(convert.as_str())
+        });
+        assert!(apply.is_some_and(|button| button.is_sensitive()));
+        window.destroy();
+
+        let window = build_convert_dialog(&app, Rc::new(vec![broken]));
+        window.present();
+        let root: gtk::Widget = window.clone().upcast();
+        let page = || dialogs::find_widget::<adw::StatusPage>(&root, &|_| true);
+        pump("failure page", &|| page().is_some());
+        let close = gettext("Close");
+        assert!(
+            dialogs::find_widget(&root, &|button: &gtk::Button| {
+                button.label().as_deref() == Some(close.as_str())
+            })
+            .is_some()
+        );
+        assert!(dialogs::find_widget::<adw::HeaderBar>(&root, &|_| true).is_some());
+        window.destroy();
+    }
 }

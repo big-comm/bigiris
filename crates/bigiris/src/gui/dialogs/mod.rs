@@ -426,6 +426,27 @@ fn pick_output_folder(
     });
 }
 
+/// The first widget under `root` (inclusive) that `matches`.
+#[cfg(test)]
+pub(in crate::gui) fn find_widget<W: IsA<gtk::Widget>>(
+    root: &gtk::Widget,
+    matches: &dyn Fn(&W) -> bool,
+) -> Option<W> {
+    if let Some(widget) = root.downcast_ref::<W>()
+        && matches(widget)
+    {
+        return Some(widget.clone());
+    }
+    let mut child = root.first_child();
+    while let Some(current) = child {
+        if let Some(found) = find_widget(&current, matches) {
+            return Some(found);
+        }
+        child = current.next_sibling();
+    }
+    None
+}
+
 mod adjust;
 mod animate;
 mod batch;

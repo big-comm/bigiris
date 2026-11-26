@@ -40,9 +40,7 @@ pub fn ensure_static_local(path: &Path) -> Result<()> {
         })
     })();
     if result.map_err(|source| BigImageError::Decode { path: path.into(), source })? {
-        return Err(BigImageError::InvalidInput(
-            "animated or multi-page image: static editing stopped to avoid losing content".into(),
-        ));
+        return Err(BigImageError::NotStatic);
     }
     Ok(())
 }
@@ -55,8 +53,8 @@ pub fn ensure_static_local(path: &Path) -> Result<()> {
 ///
 /// # Errors
 ///
-/// [`BigImageError::InvalidInput`] for such a container written as its own
-/// format.
+/// [`BigImageError::SeveralEntries`] for such a container written as its
+/// own format.
 pub fn ensure_single_entry(path: &Path, target: Option<crate::Format>) -> Result<()> {
     use crate::Format;
     let Some(head) = crate::pipeline::read_head(path) else {
@@ -73,9 +71,7 @@ pub fn ensure_single_entry(path: &Path, target: Option<crate::Format>) -> Result
         _ => false,
     };
     if several && target.unwrap_or(source) == source {
-        return Err(BigImageError::InvalidInput(
-            "icon with several sizes or multi-part EXR: writing it back would keep only one".into(),
-        ));
+        return Err(BigImageError::SeveralEntries);
     }
     Ok(())
 }
@@ -334,7 +330,7 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("anim.avif");
         std::fs::write(&path, include_bytes!("../tests/fixtures/avif-sequence.avif")).unwrap();
-        assert!(matches!(ensure_static_local(&path), Err(BigImageError::InvalidInput(_))));
+        assert!(matches!(ensure_static_local(&path), Err(BigImageError::NotStatic)));
     }
 
     #[test]

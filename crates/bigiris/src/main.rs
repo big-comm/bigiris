@@ -789,12 +789,15 @@ enum UpscaleEngineArg {
 
 fn main() -> std::process::ExitCode {
     if std::env::args_os().nth(1).is_some_and(|arg| arg == "--codec-worker") {
-        // The parent quotes this text inside its own sentence. Only the
-        // outer message: the errors raised here already print their cause.
+        // In the parent's message locale (codec::execute passes it), before
+        // the worker starts a thread or reads the input.
+        apply_user_locale();
+        init_i18n();
         return match codec::worker() {
             Ok(()) => std::process::ExitCode::SUCCESS,
             Err(error) => {
-                eprintln!("{error}");
+                // The parent quotes this sentence inside its own.
+                eprintln!("{}", worker_error_text(&error));
                 std::process::ExitCode::FAILURE
             }
         };
@@ -945,12 +948,32 @@ fn init_i18n() {
     let _ = gettextrs::textdomain("bigiris");
 }
 
-/// Take the user's locale from the environment, so gettext answers in it.
+/// Take the user's locale from the environment, so gettext answers in it,
+/// and keep its message locale for the codec workers.
 #[allow(unsafe_code)]
 fn apply_user_locale() {
+    use gettextrs::LocaleCategory::{LcAll, LcMessages};
     // SAFETY: setlocale is not thread-safe; `main` calls this before it, or
     // anything it calls, starts a thread.
-    unsafe { gettextrs::setlocale(gettextrs::LocaleCategory::LcAll, "") };
+    let messages = unsafe {
+        gettextrs::setlocale(LcAll, "");
+        gettextrs::setlocale(LcMessages, "")
+    };
+    if let Some(name) = messages.and_then(|name| String::from_utf8(name).ok()) {
+        codec::set_message_locale(name);
+    }
+}
+
+/// A codec worker's failure as the user reads it: core and `image` errors
+/// through [`error_text`], anything else (the worker's own refusals) as is.
+fn worker_error_text(error: &color_eyre::Report) -> String {
+    if let Some(core) = error.downcast_ref::<bigimage_core::BigImageError>() {
+        return error_text::core_error_text(core);
+    }
+    if let Some(image) = error.downcast_ref::<image::ImageError>() {
+        return error_text::image_error_text(image);
+    }
+    error.to_string()
 }
 
 /// Substitute `{name}` placeholders of a translated template in one pass,

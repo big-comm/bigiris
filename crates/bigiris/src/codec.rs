@@ -46,6 +46,14 @@ pub fn configure() {
     SANDBOXED.store(true, Ordering::Release);
 }
 
+/// The parent's message locale, which a worker writes its failure in.
+static MESSAGE_LOCALE: std::sync::OnceLock<String> = std::sync::OnceLock::new();
+
+/// Record the message locale the user's environment selected.
+pub(crate) fn set_message_locale(name: String) {
+    let _ = MESSAGE_LOCALE.set(name);
+}
+
 /// Set once [`configure`] routed decoding through the sandboxed worker.
 static SANDBOXED: AtomicBool = AtomicBool::new(false);
 
@@ -674,6 +682,7 @@ fn execute(path: &Path, mode: &str, replaced: &mut bool) -> ImageResult<std::fs:
         argv.extend(["--unshare-user", "--disable-userns"].map(Into::into));
     }
     let tmp_size = WORKER_TMP.to_string();
+    let locale = MESSAGE_LOCALE.get().map_or("C.UTF-8", String::as_str);
     argv.extend(
         [
             "--die-with-parent",
@@ -721,7 +730,7 @@ fn execute(path: &Path, mode: &str, replaced: &mut bool) -> ImageResult<std::fs:
             "/",
             "--setenv",
             "LC_ALL",
-            "C.UTF-8",
+            locale,
             "--setenv",
             "RAYON_NUM_THREADS",
             "2",
@@ -1514,6 +1523,19 @@ mod tests {
         assert!(message.contains("restart") && !message.ends_with(&restart_hint()), "{message}");
     }
 
+    /// A worker writes its failure in the user's message locale, which only
+    /// the parent can read from the environment the sandbox clears. `C.utf8`
+    /// stands for it: English like the default `C.UTF-8`, so the other tests
+    /// of this process keep reading English, but spelled apart from it.
+    #[test]
+    fn worker_runs_in_the_message_locale() {
+        set_message_locale("C.utf8".into());
+        let file = input();
+        let script = "echo \"locale=$LC_ALL\" >&2; exit 1";
+        let Some(result) = with_worker(script, DEADLINE, || decode(file.path())) else { return };
+        let message = result.unwrap_err().to_string();
+        assert!(message.contains("locale=C.utf8"), "{message}");
+    }
     #[test]
     fn hostile_worker_diagnostics_are_bounded_and_sanitized() {
         let file = input();

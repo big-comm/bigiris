@@ -34,6 +34,12 @@ pub(crate) fn core_error_text(error: &BigImageError) -> String {
             &[("path", &printable_path(path)), ("error", &image_error_text(source))],
         ),
         BigImageError::Cancelled => gettext("operation canceled"),
+        BigImageError::NotStatic => {
+            gettext("animated or multi-page image: static editing stopped to avoid losing content")
+        }
+        BigImageError::SeveralEntries => gettext(
+            "icon with several sizes or multi-part EXR: writing it back would keep only one",
+        ),
         BigImageError::NoFreeName { output } => fill(
             &gettext("too many files with the same name: {path}"),
             &[("path", &printable_path(output))],
@@ -153,8 +159,8 @@ mod tests {
         assert!(!text.contains(['\x1b', '\x07', '\n']), "{text:?}");
         let text = core_error_text(&BigImageError::NoFreeName { output: path });
         assert!(text.starts_with("too many files with the same name: a"), "{text:?}");
-        let detail = BigImageError::InvalidInput("animated or multi-page image".into());
-        assert!(core_error_text(&detail).ends_with("animated or multi-page image"));
+        let detail = BigImageError::InvalidInput("crop rectangle outside image".into());
+        assert!(core_error_text(&detail).ends_with("crop rectangle outside image"));
         // Library detail may carry a raw name: it cannot start a report line.
         let forged = BigImageError::UnsupportedFormat("x\nok  a.png -> b.png".into());
         assert!(!core_error_text(&forged).contains('\n'));

@@ -384,6 +384,16 @@ pub enum BigImageError {
     #[error("cancelled")]
     Cancelled,
 
+    /// An animated or multi-page image given to an edit that writes one
+    /// picture, which would drop the other frames or pages.
+    #[error("animated or multi-page image: static editing stopped to avoid losing content")]
+    NotStatic,
+
+    /// An icon with several sizes or a multi-part OpenEXR written back to
+    /// its own format, which would keep only one entry.
+    #[error("icon with several sizes or multi-part EXR: writing it back would keep only one")]
+    SeveralEntries,
+
     /// `increment` found every numbered name up to `_9999` taken.
     #[error("too many files with the same name: {}", .output.display())]
     NoFreeName {

@@ -398,6 +398,13 @@ fn worker_refusals_carry_no_report_decoration() {
     assert!(error.contains("animated"), "{error}");
     assert!(!error.contains("Location") && !error.contains(".rs:"), "{error}");
     assert!(!error.contains("RUST_BACKTRACE") && !error.contains('\x1b'), "{error}");
+    // The worker words its failure through the app's sentences: the
+    // refusal has its own, a damaged file reads as damaged data.
+    assert!(!error.contains("invalid input"), "{error}");
+    std::fs::write(dir.path().join("cut.gif"), b"GIF89a").unwrap();
+    let output = run(dir.path(), &["flip", "--axis", "horizontal", "cut.gif"]);
+    let error = String::from_utf8_lossy(&output.stderr);
+    assert!(error.contains("damaged or unreadable image data"), "{error}");
 }
 
 /// A file name from a downloaded archive cannot retitle the terminal, set

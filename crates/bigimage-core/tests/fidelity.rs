@@ -154,7 +154,7 @@ fn static_edits_refuse_animations_and_pages() {
             OverwritePolicy::Replace,
         );
         assert!(
-            matches!(result, Err(bigimage_core::BigImageError::InvalidInput(_))),
+            matches!(result, Err(bigimage_core::BigImageError::NotStatic)),
             "{input:?}: {result:?}"
         );
         assert_eq!(std::fs::read(output).unwrap(), b"previous file");

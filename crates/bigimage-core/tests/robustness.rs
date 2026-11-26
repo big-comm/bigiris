@@ -513,11 +513,11 @@ fn skip_policy_still_rejects_invalid_operations() {
     existing("anim.png");
     assert!(matches!(
         rotate_file(&gif, Rotation::Deg90, None, skip),
-        Err(BigImageError::InvalidInput(_))
+        Err(BigImageError::NotStatic)
     ));
     assert!(matches!(
         convert_file(&gif, Format::Png, &EncodeOptions::default(), skip),
-        Err(BigImageError::InvalidInput(_))
+        Err(BigImageError::NotStatic)
     ));
 }
 
@@ -897,9 +897,9 @@ fn multi_entry_containers_refuse_own_format() {
     for (source, own) in [(&icon, Format::Ico), (&parts, Format::OpenExr)] {
         let before = std::fs::read(source).unwrap();
         let flipped = flip_file(source, FlipAxis::Horizontal, None, replace);
-        assert!(matches!(flipped, Err(BigImageError::InvalidInput(_))), "{own:?}: {flipped:?}");
+        assert!(matches!(flipped, Err(BigImageError::SeveralEntries)), "{own:?}: {flipped:?}");
         let converted = convert_file_to(source, None, own, &opts, replace);
-        assert!(matches!(converted, Err(BigImageError::InvalidInput(_))), "{own:?}");
+        assert!(matches!(converted, Err(BigImageError::SeveralEntries)), "{own:?}");
         assert!(content::ensure_single_entry(source, Some(own)).is_err());
         assert_eq!(std::fs::read(source).unwrap(), before);
         // Another format keeps working with the entry the decoder picks.
@@ -910,12 +910,12 @@ fn multi_entry_containers_refuse_own_format() {
     // Refused rather than reported skipped when the output exists.
     std::fs::write(dir.path().join("icon_flipH.ico"), b"keep").unwrap();
     let skipped = flip_file(&icon, FlipAxis::Horizontal, None, OverwritePolicy::Skip);
-    assert!(matches!(skipped, Err(BigImageError::InvalidInput(_))), "{skipped:?}");
+    assert!(matches!(skipped, Err(BigImageError::SeveralEntries)), "{skipped:?}");
     // An icon under a PNG name, converted to PNG over itself.
     let named_png = dir.path().join("named.png");
     std::fs::copy(&icon, &named_png).unwrap();
     let over_itself = convert_file_to(&named_png, None, Format::Png, &opts, replace);
-    assert!(matches!(over_itself, Err(BigImageError::InvalidInput(_))), "{over_itself:?}");
+    assert!(matches!(over_itself, Err(BigImageError::SeveralEntries)), "{over_itself:?}");
     assert_eq!(std::fs::read(&named_png).unwrap(), std::fs::read(&icon).unwrap());
     assert_no_partials(dir.path());
 }

@@ -881,7 +881,7 @@ fn ensure_static(path: &Path) -> bigimage_core::Result<()> {
         .map_err(|source| BigImageError::Decode { path: path.into(), source })
 }
 fn metadata(path: &Path) -> bigimage_core::Result<Metadata> {
-    run(path, "metadata", read_json)
+    run(path, "metadata", |output| read_json(output).map(sanitize_metadata))
         .map_err(|source| BigImageError::Decode { path: path.into(), source })
 }
 
@@ -931,10 +931,27 @@ fn information_local(path: &Path) -> Information {
     let metadata = bigimage_core::metadata::read(path).ok().map(trim_metadata);
     Information { dimensions, color, format, metadata }
 }
+/// Bounds of a `metadata` or `information` answer, in bytes of UTF-8.
+const MAX_TAGS: usize = 128;
+const MAX_TAG_NAME: usize = 128;
+const MAX_TAG_VALUE: usize = 1024;
+// JSON escapes one byte to at most six (`\u001f`), plus quotes and commas
+// per tag; the rest of an `information` answer fits in 4 KiB.
+const _: () =
+    assert!(MAX_TAGS * 6 * (MAX_TAG_NAME + MAX_TAG_VALUE + 8) + 4096 <= MAX_METADATA as usize);
 fn trim_metadata(mut meta: Metadata) -> Metadata {
-    meta.tags.truncate(128);
-    for (_, value) in &mut meta.tags {
-        *value = value.chars().take(4096).collect();
+    meta.tags.truncate(MAX_TAGS);
+    for (name, value) in &mut meta.tags {
+        name.truncate(name.floor_char_boundary(MAX_TAG_NAME));
+        value.truncate(value.floor_char_boundary(MAX_TAG_VALUE));
+    }
+    meta
+}
+/// EXIF names and values come from the file: see [`sanitize_text`].
+fn sanitize_metadata(mut meta: Metadata) -> Metadata {
+    for (name, value) in &mut meta.tags {
+        *name = sanitize_text(name);
+        *value = sanitize_text(value);
     }
     meta
 }
@@ -945,8 +962,15 @@ pub fn information(path: &Path) -> ImageResult<Information> {
     return Ok(information_local(path));
     #[cfg(not(test))]
     {
-        run(path, "information", read_json)
+        run(path, "information", read_information)
     }
+}
+#[cfg(feature = "gui")]
+fn read_information(output: std::fs::File) -> ImageResult<Information> {
+    let mut information: Information = read_json(output)?;
+    information.format = information.format.as_deref().map(sanitize_text);
+    information.metadata = information.metadata.map(sanitize_metadata);
+    Ok(information)
 }
 /// Bounded JSON answer of the `metadata` and `information` modes.
 fn read_json<T: serde::de::DeserializeOwned>(output: std::fs::File) -> ImageResult<T> {
@@ -1468,6 +1492,59 @@ mod tests {
             assert!(error.contains("not a regular file"), "{error}");
         }
         at_cap.unwrap();
+    }
+
+    /// Control bytes are the worst case: JSON writes each as six.
+    #[test]
+    fn largest_metadata_answer_fits_the_cap() {
+        let tag = (format!("\u{1}{}", "\u{10FFFF}".repeat(100)), "\u{1f}".repeat(10_000));
+        let metadata = Metadata { tags: vec![tag; 300], ..Metadata::default() };
+        let answer = Information {
+            dimensions: Some((u32::MAX, u32::MAX)),
+            color: Some(u8::MAX),
+            format: Some("OpenExr".into()),
+            metadata: Some(trim_metadata(metadata)),
+        };
+        let mut file = tempfile::tempfile().unwrap();
+        serde_json::to_writer(&mut file, &answer).unwrap();
+        assert!(file.metadata().unwrap().len() <= MAX_METADATA);
+        file.rewind().unwrap();
+        let read: Information = read_json(file).unwrap();
+        let tags = read.metadata.unwrap().tags;
+        assert_eq!(tags.len(), MAX_TAGS);
+        // Cut on a character boundary: 1 + 31 four-byte characters.
+        assert_eq!((tags[0].0.len(), tags[0].1.len()), (125, MAX_TAG_VALUE));
+    }
+
+    /// The fake worker replays a forged answer stored as the input file.
+    #[cfg(feature = "gui")]
+    #[test]
+    fn worker_metadata_text_is_sanitized() {
+        let forged = Metadata {
+            tags: vec![("Make\u{202E}".into(), "a\u{2066}b\x1b[2J".into())],
+            ..Metadata::default()
+        };
+        let information = Information {
+            dimensions: Some((1, 1)),
+            color: None,
+            format: Some("Png\u{2069}".into()),
+            metadata: Some(forged.clone()),
+        };
+        let dir = tempfile::tempdir().unwrap();
+        let (meta_file, info_file) = (dir.path().join("meta.png"), dir.path().join("info.png"));
+        std::fs::write(&meta_file, serde_json::to_vec(&forged).unwrap()).unwrap();
+        std::fs::write(&info_file, serde_json::to_vec(&information).unwrap()).unwrap();
+        let Some((meta, info)) = with_worker("exec /usr/bin/cat \"$4\"", DEADLINE, || {
+            (metadata(&meta_file), run(&info_file, "information", read_information))
+        }) else {
+            return;
+        };
+        let clean = |text: &str| !text.contains(['\u{202E}', '\u{2066}', '\u{2069}', '\x1b']);
+        let info = info.ok().unwrap();
+        assert!(clean(info.format.as_deref().unwrap()));
+        for tags in [meta.unwrap().tags, info.metadata.unwrap().tags] {
+            assert!(tags.iter().all(|(name, value)| clean(name) && clean(value)), "{tags:?}");
+        }
     }
 
     #[test]

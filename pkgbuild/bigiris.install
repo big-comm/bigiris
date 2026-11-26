@@ -22,10 +22,13 @@ post_install() {
   _thunar_hint
 }
 
-# Only an upgrade from a package that still shipped Thunar's file needs the
-# hint again; that stopped with the 26.11.02-1546 build.
-post_upgrade() {
-  if [ "$(vercmp "$2" 26.11.02-1546)" -lt 0 ]; then
-    _thunar_hint
-  fi
+# Only an upgrade from a package that still owns Thunar's file needs the
+# hint again. Asked before the upgrade, while pacman still knows the owner:
+# package versions are build times, which say nothing about the source.
+pre_upgrade() {
+  [ "$(pacman -Qqo /etc/xdg/Thunar/uca.xml 2>/dev/null)" = bigiris ] || return 0
+  _thunar_hint
+  echo '==> This upgrade removes /etc/xdg/Thunar/uca.xml, which the installed'
+  echo '    BigIris package owns: reinstall thunar (pacman -S thunar) afterwards'
+  echo '    to restore its default custom actions.'
 }

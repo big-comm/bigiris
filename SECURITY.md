@@ -71,10 +71,13 @@ For context on what is already defense in depth:
 - Service menus written with `O_NOFOLLOW` to prevent following symlinks during
   `sudo install-integrations --system`.
 - Nothing is downloaded: the application has no network client. The AI weights
-  come only from the optional `birefnet-native`, `realesrgan-native`,
+  come from the optional `birefnet-native`, `realesrgan-native`,
   `scunet-native` and `lama-native` packages, read from
   `/usr/share/<package>/`, and all four have FOSS licenses (MIT, BSD-3-Clause,
-  Apache-2.0).
+  Apache-2.0). For development, the `BIGIRIS_*_WEIGHTS` variables point a
+  model at another file in every build; they are read from the user's own
+  environment, which already runs code as that user, so they cross no trust
+  boundary.
 - Thunar UCA commands wrapped in `sh -c '… "$@"' …` so that file names are not
   reinterpreted by the shell.
 
@@ -101,8 +104,8 @@ Each model estimates the memory it needs (weights and fixed buffers at load;
 network and image buffers at each run, with a margin over the measured peaks)
 and checks it before loading and before each run; it considers MemAvailable,
 the limits of the cgroup v2 ancestors and RLIMIT_AS. Swap does not count. The
-weights come only from the system packages (`/usr/share/<package>`), never from
-the network. The policy is not an RSS quota, does not cover cgroup v1 or GPU
+weights come from the system packages (`/usr/share/<package>`) or a
+`BIGIRIS_*_WEIGHTS` file, never from the network. The policy is not an RSS quota, does not cover cgroup v1 or GPU
 memory, and does not remove competition for memory after the check. Inference
 stays in the main process. A smaller model needs its own measurements before it
 is offered for 4 GB machines.

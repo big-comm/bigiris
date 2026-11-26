@@ -38,12 +38,13 @@ workspace `Cargo.toml`.
 | Remove noise | SCUNet color, real PSNR | `scunet-native` | Apache-2.0 |
 | Erase object | Big LaMa | `lama-native` | Apache-2.0 |
 
-The weights live in `/usr/share/<package>/` and are read only from there. For
-testing and development, one variable per model points to another file:
+The weights live in `/usr/share/<package>/`. For testing and development, one
+variable per model points to another file, in every build:
 `BIGIRIS_BIREFNET_WEIGHTS`, `BIGIRIS_REALESRGAN_WEIGHTS`,
-`BIGIRIS_SCUNET_WEIGHTS` and `BIGIRIS_LAMA_WEIGHTS`. The integrity of the
-weights is the package manager's responsibility (repository signature), as for
-any other system file.
+`BIGIRIS_SCUNET_WEIGHTS` and `BIGIRIS_LAMA_WEIGHTS`; an empty value is
+ignored. The integrity of the packaged weights is the package manager's
+responsibility (repository signature), as for any other system file; a file
+named by a variable is the user's own choice.
 
 The engine's own variables:
 

@@ -923,6 +923,30 @@ fn to_pdf_refuses_unpublishable_input() {
     assert!(leftovers(dir.path()).is_empty());
 }
 
+/// Failures read as sentences: no English "at path" from tempfile, no
+/// std "exit status" text.
+#[test]
+fn to_pdf_failures_are_plain_sentences() {
+    use std::os::unix::fs::PermissionsExt;
+    let dir = tempfile::tempdir().unwrap();
+    let bin = fake_soffice();
+    let locked = dir.path().join("locked");
+    std::fs::create_dir(&locked).unwrap();
+    std::fs::write(locked.join("doc.txt"), b"x").unwrap();
+    std::fs::set_permissions(&locked, std::fs::Permissions::from_mode(0o555)).unwrap();
+    let output = to_pdf(dir.path(), bin.path(), "write", &["locked/doc.txt"]);
+    std::fs::set_permissions(&locked, std::fs::Permissions::from_mode(0o755)).unwrap();
+    assert_eq!(output.status.code(), Some(2));
+    let error = String::from_utf8_lossy(&output.stderr);
+    assert!(error.contains("could not write in the document's folder: "), "{error}");
+    assert!(!error.contains("at path"), "{error}");
+
+    std::fs::write(dir.path().join("other.txt"), b"x").unwrap();
+    let output = to_pdf(dir.path(), bin.path(), "silent", &["other.txt"]);
+    let error = String::from_utf8_lossy(&output.stderr);
+    assert!(error.contains("did not produce the PDF (exit code 0)"), "{error}");
+}
+
 fn process_running(marker: &str) -> bool {
     std::fs::read_dir("/proc").unwrap().flatten().any(|entry| {
         std::fs::read(entry.path().join("cmdline"))

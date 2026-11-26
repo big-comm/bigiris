@@ -17,7 +17,7 @@ use crate::{fill, with_error};
 pub(crate) fn core_error_text(error: &BigImageError) -> String {
     let text = match error {
         BigImageError::Io(error) => {
-            with_error(&gettext("could not read or write the file: {error}"), error)
+            with_error(&gettext("could not read or write the file: {error}"), io_error_text(error))
         }
         BigImageError::InvalidInput(detail) => {
             with_error(&gettext("invalid input: {error}"), detail)
@@ -50,7 +50,7 @@ pub(crate) fn core_error_text(error: &BigImageError) -> String {
 /// it raised it.
 pub(crate) fn image_error_text(error: &ImageError) -> String {
     let text = match error {
-        ImageError::IoError(error) => error.to_string(),
+        ImageError::IoError(error) => io_error_text(error),
         ImageError::Decoding(detail) => {
             with_error(&gettext("damaged or unreadable image data: {error}"), detail)
         }
@@ -62,6 +62,26 @@ pub(crate) fn image_error_text(error: &ImageError) -> String {
         }
     };
     printable_text(&text)
+}
+
+/// An I/O error as the system words it in the user's language. tempfile
+/// wraps OS errors in an English "at path" text that drops the error code,
+/// so the common kinds are mapped back to theirs.
+pub(crate) fn io_error_text(error: &std::io::Error) -> String {
+    use std::io::ErrorKind;
+    let code = error.raw_os_error().or(match error.kind() {
+        ErrorKind::PermissionDenied => Some(libc::EACCES),
+        ErrorKind::NotFound => Some(libc::ENOENT),
+        ErrorKind::AlreadyExists => Some(libc::EEXIST),
+        ErrorKind::ReadOnlyFilesystem => Some(libc::EROFS),
+        ErrorKind::StorageFull => Some(libc::ENOSPC),
+        ErrorKind::QuotaExceeded => Some(libc::EDQUOT),
+        _ => None,
+    });
+    match code {
+        Some(code) => std::io::Error::from_raw_os_error(code).to_string(),
+        None => error.to_string(),
+    }
 }
 
 /// A model error in the user's language, safe to print.

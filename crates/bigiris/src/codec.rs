@@ -587,6 +587,19 @@ pub(crate) fn printable_path(path: &Path) -> String {
     printable_text(&path.display().to_string())
 }
 
+/// How a child process ended, translated: its exit code or the signal
+/// that killed it.
+pub(crate) fn exit_status_text(status: std::process::ExitStatus) -> String {
+    match status.code() {
+        Some(code) => crate::fill(&gettext("exit code {code}"), &[("code", &code.to_string())]),
+        None => {
+            let signal = std::os::unix::process::ExitStatusExt::signal(&status);
+            let signal = signal.unwrap_or_default().to_string();
+            crate::fill(&gettext("signal {signal}"), &[("signal", &signal)])
+        }
+    }
+}
+
 /// Appended to worker failures when the executable was replaced on disk.
 fn restart_hint() -> String {
     format!(" ({})", gettext("BigIris was updated; restart it"))
@@ -752,14 +765,7 @@ fn execute(path: &Path, mode: &str, replaced: &mut bool) -> ImageResult<std::fs:
             .and_then(|rx| rx.recv_timeout(Duration::from_secs(2)).ok())
             .unwrap_or_default();
         let details = sanitize_text(String::from_utf8_lossy(&details).trim());
-        let status = match status.code() {
-            Some(code) => crate::fill(&gettext("exit code {code}"), &[("code", &code.to_string())]),
-            None => {
-                let signal = std::os::unix::process::ExitStatusExt::signal(&status);
-                let signal = signal.unwrap_or_default().to_string();
-                crate::fill(&gettext("signal {signal}"), &[("signal", &signal)])
-            }
-        };
+        let status = exit_status_text(status);
         return Err(invalid(crate::fill(
             &gettext("the isolated codec rejected the image ({status}){hint}: {details}"),
             &[("status", &status), ("hint", &hint), ("details", &details)],

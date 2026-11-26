@@ -1798,7 +1798,8 @@ fn to_pdf_one(
     // Absolute paths: a relative name such as `-doc.txt` would be an option.
     // Not canonical: a symlink keeps its own name and folder for the PDF,
     // matching how the outputs were planned.
-    let file = std::path::absolute(file).map_err(|e| eyre!("{e}"))?;
+    let io = |error: std::io::Error| eyre!(error_text::io_error_text(&error));
+    let file = std::path::absolute(file).map_err(io)?;
     if !file.is_file() {
         return Err(eyre!(gettext("not a regular file")));
     }
@@ -1811,8 +1812,19 @@ fn to_pdf_one(
         return Ok(ConvertOutcome::Skipped { output: destination });
     }
     // Same folder as the destination, so publishing is an atomic rename.
-    let staging = tempfile::Builder::new().prefix(".bigiris-pdf-").tempdir_in(dir)?;
-    let profile = tempfile::Builder::new().prefix("bigiris-soffice-").tempdir()?;
+    let staging =
+        tempfile::Builder::new().prefix(".bigiris-pdf-").tempdir_in(dir).map_err(|e| {
+            let error = error_text::io_error_text(&e);
+            eyre!(with_error(&gettext("could not write in the document's folder: {error}"), error))
+        })?;
+    let profile = tempfile::Builder::new().prefix("bigiris-soffice-").tempdir().map_err(|e| {
+        let error = error_text::io_error_text(&e);
+        eyre!(with_error(&gettext("could not create a temporary folder: {error}"), error))
+    })?;
+    let soffice_failed = |e: std::io::Error| {
+        let error = error_text::io_error_text(&e);
+        eyre!(with_error(&gettext("could not run soffice: {error}"), error))
+    };
     let mut child = codec::close_inherited_descriptors(&mut std::process::Command::new(soffice))
         .arg(format!("-env:UserInstallation={}", file_url(profile.path())))
         .args(["--headless", "--norestore", "--nolockcheck", "--convert-to", "pdf", "--outdir"])
@@ -1824,10 +1836,10 @@ fn to_pdf_one(
         // soffice forks soffice.bin; a group lets the timeout reach both.
         .process_group(0)
         .spawn()
-        .map_err(|e| eyre!(with_error(&gettext("could not run soffice: {error}"), e)))?;
+        .map_err(soffice_failed)?;
     let deadline = std::time::Instant::now() + timeout;
     let status = loop {
-        if let Some(status) = child.try_wait()? {
+        if let Some(status) = child.try_wait().map_err(soffice_failed)? {
             break status;
         }
         if std::time::Instant::now() >= deadline {
@@ -1849,7 +1861,7 @@ fn to_pdf_one(
     if !produced_pdf {
         return Err(eyre!(fill(
             &gettext("soffice did not produce the PDF ({status})"),
-            &[("status", &status.to_string())],
+            &[("status", &codec::exit_status_text(status))],
         )));
     }
     bigimage_core::publish_finished_file(&produced, destination, policy)

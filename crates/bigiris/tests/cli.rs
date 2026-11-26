@@ -710,9 +710,12 @@ while [ $# -gt 0 ]; do
 done
 case "$file" in /*) ;; *) echo "relative input: $file" >&2; exit 3 ;; esac
 [ -n "$profile" ] || exit 4
+# A descriptor of bigiris' caller must not reach LibreOffice.
+[ -e /proc/$$/fd/3 ] && exit 5
 name=${file##*/}
 case "$FAKE_SOFFICE" in
   write) printf '%%PDF-1.4 fake' > "$outdir/${name%.*}.pdf" ;;
+  empty) : > "$outdir/${name%.*}.pdf" ;;
   silent) ;;
   hang) /usr/bin/sleep 30.4242; exit 0 ;;
 esac
@@ -797,6 +800,38 @@ fn to_pdf_verifies_output_and_honours_overwrite_policy() {
     let output = to_pdf(dir.path(), bin.path(), "silent", &["other.txt"]);
     assert_eq!(output.status.code(), Some(2));
     assert!(!dir.path().join("other.pdf").exists());
+    assert!(leftovers(dir.path()).is_empty());
+}
+
+/// The refusals that keep a bad conversion from being published: an empty
+/// PDF never replaces a good one, a folder never reaches soffice, and the
+/// caller's descriptors never leak into it.
+#[test]
+fn to_pdf_refuses_what_it_cannot_publish() {
+    let dir = tempfile::tempdir().unwrap();
+    let bin = fake_soffice();
+    std::fs::write(dir.path().join("doc.txt"), b"hello").unwrap();
+    std::fs::write(dir.path().join("doc.pdf"), b"good").unwrap();
+    let replace = ["--overwrite", "replace", "doc.txt"];
+    assert_eq!(to_pdf(dir.path(), bin.path(), "empty", &replace).status.code(), Some(2));
+    assert_eq!(std::fs::read(dir.path().join("doc.pdf")).unwrap(), b"good");
+
+    std::fs::create_dir(dir.path().join("folder.txt")).unwrap();
+    assert_eq!(to_pdf(dir.path(), bin.path(), "write", &["folder.txt"]).status.code(), Some(2));
+    assert!(!dir.path().join("folder.pdf").exists());
+
+    std::fs::write(dir.path().join("other.txt"), b"x").unwrap();
+    let inherited = Command::new("/bin/sh")
+        .args(["-c", "exec 3</dev/null; exec \"$0\" to-pdf other.txt"])
+        .arg(env!("CARGO_BIN_EXE_bigiris"))
+        .env("LC_ALL", "C")
+        .env("PATH", bin.path())
+        .env("FAKE_SOFFICE", "write")
+        .current_dir(dir.path())
+        .output()
+        .unwrap();
+    success(inherited);
+    assert!(dir.path().join("other.pdf").exists());
     assert!(leftovers(dir.path()).is_empty());
 }
 

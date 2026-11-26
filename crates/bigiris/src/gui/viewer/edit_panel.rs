@@ -50,8 +50,7 @@ const SAVE_QUALITIES: [(SaveQuality, &str); 3] = [
 
 /// Encoder options for "Save as…": the smallest file that keeps the
 /// chosen visual quality (SSIMULACRA2 target), like the Prisma converter.
-pub(in crate::gui) fn save_as_options(format: Format, quality: SaveQuality) -> EncodeOptions {
-    let _ = format;
+pub(in crate::gui) fn save_as_options(quality: SaveQuality) -> EncodeOptions {
     let target = match quality {
         SaveQuality::Max => bigimage_core::QualityTarget::Maximum,
         SaveQuality::Balanced => bigimage_core::QualityTarget::Balanced,
@@ -1820,7 +1819,7 @@ pub(in crate::gui) fn save_copy(state: &Rc<RefCell<ViewerState>>, target: PathBu
         present_copy_failure(state, &SaveFailure::NoEncoder);
         return;
     };
-    let options = save_as_options(format, quality);
+    let options = save_as_options(quality);
     let spinner = {
         let mut s = state.borrow_mut();
         s.saving = true;
@@ -2033,7 +2032,7 @@ mod tests {
             (SaveQuality::Balanced, QualityTarget::Balanced),
             (SaveQuality::Smallest, QualityTarget::Smallest),
         ] {
-            let opts = save_as_options(Format::WebP, choice);
+            let opts = save_as_options(choice);
             assert_eq!(opts.target, target);
             // A target, not a fixed quality: the encoder searches.
             assert_eq!(opts.quality, None);

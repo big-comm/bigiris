@@ -90,8 +90,8 @@ impl PreviewDebounce {
     }
 }
 
-/// Apply `op` to `session` and push the resulting thumbnail into `picture`.
-/// Errors are logged and the previous paintable is left untouched.
+/// The newest render request of one preview and its latest result, by
+/// revision; older requests are dropped unrendered.
 struct PreviewRenderQueue {
     stopped: bool,
     next: Option<(u64, PreviewOp)>,
@@ -196,6 +196,9 @@ fn start_renderer(session: &PreviewSession, picture: &gtk::Picture) -> Rc<Previe
     });
     renderer
 }
+/// Apply `op` to `session` off the GTK loop and push the resulting thumbnail
+/// into `picture`. Errors are logged and the previous paintable is left
+/// untouched.
 pub(super) fn refresh_preview(session: &PreviewSession, picture: &gtk::Picture, op: &PreviewOp) {
     let renderer = PREVIEW_RENDERERS.with(|renderers| {
         let mut renderers = renderers.borrow_mut();

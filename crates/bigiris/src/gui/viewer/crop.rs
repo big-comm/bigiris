@@ -424,7 +424,6 @@ pub(in crate::gui) fn build() -> CropUi {
     let pill = gtk::Box::new(gtk::Orientation::Horizontal, 0);
     pill.add_css_class("osd");
     pill.add_css_class("toolbar");
-    pill.add_css_class("crop-bar");
     pill.append(&row);
     let bar = gtk::Revealer::builder()
         .transition_type(gtk::RevealerTransitionType::SlideUp)

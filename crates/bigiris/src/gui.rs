@@ -91,7 +91,6 @@ const THEATER_CSS: &str = "
 .viewer-loading { padding: 12px; border-radius: 8px; background: @window_bg_color; color: @window_fg_color; }
 .plasma headerbar button { border-radius: 6px; }
 .plasma .suggested-action { border-radius: 6px; }
-.plasma .viewer-osd { border-radius: 8px; }
 /* The editing panel takes room from the picture: keep that room dark. */
 .theater .viewer-canvas { background-color: #101216; }
 .edit-panel { border-radius: 14px; background-color: rgba(24, 26, 31, 0.78); color: white; }

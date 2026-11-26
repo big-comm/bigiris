@@ -247,30 +247,67 @@ fn batch_profile_converts_folder_and_skip_is_idempotent() {
 }
 
 /// Outputs written beside their sources are not inputs of the next run:
-/// a rerun skips, and `increment` adds one file per run, never doubling.
+/// a rerun skips, and `increment` adds one file per run, never doubling,
+/// also when the sources already are in the target format (same-format
+/// outputs keep the input's name) or the target is PNM (`.pgm` or `.ppm`).
 #[test]
 fn batch_reruns_beside_sources_stay_stable() {
     if !sandbox_available() {
         return;
     }
     let dir = tempfile::tempdir().unwrap();
-    let folder = dir.path().join("f");
-    std::fs::create_dir(&folder).unwrap();
-    fixture(&folder, "x.png");
-    std::fs::write(dir.path().join("skip.toml"), "format = 'webp'\n").unwrap();
-    std::fs::write(dir.path().join("inc.toml"), "format = 'webp'\noverwrite = 'increment'\n")
-        .unwrap();
-    let count = || std::fs::read_dir(&folder).unwrap().count();
-    success(run(dir.path(), &["batch", "--profile", "skip.toml", "f"]));
-    let output = run(dir.path(), &["batch", "--profile", "skip.toml", "f"]);
-    success(output.clone());
-    assert!(String::from_utf8_lossy(&output.stdout).contains("skip f/x.webp"));
-    assert_eq!(count(), 2);
+    let profile = |name: &str, body: &str| std::fs::write(dir.path().join(name), body).unwrap();
+    profile("webp.toml", "format = 'webp'\n");
+    profile("webp-inc.toml", "format = 'webp'\noverwrite = 'increment'\n");
+    profile("png-inc.toml", "format = 'png'\noverwrite = 'increment'\n");
+    profile("pnm.toml", "format = 'pnm'\n");
+    profile("jpg-inc.toml", "format = 'jpg'\noverwrite = 'increment'\n");
+    let folder = |name: &str| {
+        let folder = dir.path().join(name);
+        std::fs::create_dir(&folder).unwrap();
+        folder
+    };
+    let count = |folder: &Path| std::fs::read_dir(folder).unwrap().count();
+    let batch = |profile: &str, folder: &str| {
+        let output = run(dir.path(), &["batch", "--profile", profile, folder]);
+        success(output.clone());
+        String::from_utf8_lossy(&output.stdout).into_owned()
+    };
+
+    let webp = folder("webp");
+    fixture(&webp, "x.png");
+    batch("webp.toml", "webp");
+    assert!(batch("webp.toml", "webp").contains("skip webp/x.webp"));
+    assert_eq!(count(&webp), 2);
     for expected in [3, 4] {
-        success(run(dir.path(), &["batch", "--profile", "inc.toml", "f"]));
-        assert_eq!(count(), expected);
+        batch("webp-inc.toml", "webp");
+        assert_eq!(count(&webp), expected);
     }
-    assert!(folder.join("x_2.webp").exists());
+    assert!(webp.join("x_2.webp").exists());
+
+    let png = folder("png");
+    fixture(&png, "x.png");
+    for expected in [2, 3, 4] {
+        batch("png-inc.toml", "png");
+        assert_eq!(count(&png), expected);
+    }
+    assert!(png.join("x_3.png").exists() && !png.join("x_1_1.png").exists());
+
+    // A same-format output keeps the input's spelling: `.jpeg` stays `.jpeg`.
+    let jpeg = folder("jpeg");
+    image::RgbImage::new(8, 8).save(jpeg.join("a.jpeg")).unwrap();
+    for expected in [2, 3, 4] {
+        batch("jpg-inc.toml", "jpeg");
+        assert_eq!(count(&jpeg), expected);
+    }
+    assert!(jpeg.join("a_3.jpeg").exists() && !jpeg.join("a_1_1.jpeg").exists());
+
+    let pnm = folder("pnm");
+    image::GrayImage::new(8, 8).save(pnm.join("g.png")).unwrap();
+    batch("pnm.toml", "pnm");
+    assert!(pnm.join("g.pgm").exists());
+    assert!(batch("pnm.toml", "pnm").contains("skip pnm/g.pgm"));
+    assert_eq!(count(&pnm), 2);
 }
 
 fn sized_fixture(dir: &Path, name: &str, width: u32, height: u32) {

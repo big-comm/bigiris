@@ -3,6 +3,7 @@
 //! which inputs write the same file, refused or run in order before any
 //! work starts.
 
+use std::collections::HashMap;
 use std::ffi::OsString;
 use std::path::{Path, PathBuf};
 
@@ -10,6 +11,7 @@ use bigimage_core::{Format, OverwritePolicy};
 use gettextrs::gettext;
 
 use crate::codec::printable_path;
+use crate::fill;
 
 /// How a command names outputs: `<dir>/<stem><suffix>.<ext>`. The suffix is
 /// usually fixed per invocation, so inputs sharing directory, stem and
@@ -59,7 +61,7 @@ pub(crate) fn plan_outputs(
     files: &[PathBuf],
     naming: &Naming,
 ) -> Result<Vec<Vec<PathBuf>>, String> {
-    use std::collections::{HashMap, HashSet};
+    use std::collections::HashSet;
     let mut seen = HashSet::new();
     let mut groups: Vec<Vec<PathBuf>> = Vec::new();
     let mut index = HashMap::new();
@@ -147,6 +149,112 @@ pub(crate) fn remove_bg_output(input: &Path) -> PathBuf {
     input.with_file_name(name)
 }
 
+/// Inputs of a batch, and the folder entries left out of them.
+pub(crate) struct BatchFiles {
+    /// Files named as inputs, and the supported images directly inside named
+    /// folders.
+    pub(crate) inputs: Vec<PathBuf>,
+    /// `(entry, source)`: a folder image named like the output `source`
+    /// writes beside itself (`x.webp`, or `x_1.webp`, beside `x.png` in a
+    /// WebP batch; `x_1.png` beside `x.png` in a PNG one). It is an earlier
+    /// run's output, or a file this run skips or replaces anyway; converting
+    /// it again would multiply outputs.
+    pub(crate) earlier_outputs: Vec<(PathBuf, PathBuf)>,
+}
+
+/// The images directly inside `dir` whose extension names a supported
+/// format, sorted; folders are never searched.
+pub(crate) fn folder_images(dir: &Path) -> std::io::Result<Vec<PathBuf>> {
+    let mut images: Vec<PathBuf> = std::fs::read_dir(dir)?
+        .flatten()
+        .map(|entry| entry.path())
+        .filter(|path| {
+            path.is_file()
+                && path
+                    .extension()
+                    .and_then(|ext| ext.to_str())
+                    .is_some_and(|ext| Format::parse(ext).is_ok())
+        })
+        .collect();
+    images.sort();
+    Ok(images)
+}
+
+/// The inputs of a batch converting to `format`: files as given, folders as
+/// their [`folder_images`], minus the earlier outputs found in a folder the
+/// outputs are written to. The error is the translated refusal of a folder
+/// that cannot be listed.
+pub(crate) fn batch_files(
+    inputs: &[PathBuf],
+    format: Format,
+    output_dir: Option<&Path>,
+) -> Result<BatchFiles, String> {
+    let mut files = BatchFiles { inputs: Vec::new(), earlier_outputs: Vec::new() };
+    for input in inputs {
+        if !input.is_dir() {
+            files.inputs.push(input.clone());
+            continue;
+        }
+        let images = folder_images(input).map_err(|error| {
+            fill(
+                &gettext("could not read {path}: {error}"),
+                &[("path", &printable_path(input)), ("error", &error.to_string())],
+            )
+        })?;
+        let writes_here = output_dir
+            .is_none_or(|dir| std::fs::canonicalize(dir).ok() == std::fs::canonicalize(input).ok());
+        if !writes_here {
+            files.inputs.extend(images);
+            continue;
+        }
+        let mut by_stem: HashMap<OsString, Vec<&PathBuf>> = HashMap::new();
+        for image in &images {
+            by_stem
+                .entry(image.file_stem().unwrap_or_default().to_os_string())
+                .or_default()
+                .push(image);
+        }
+        for image in &images {
+            match earlier_output_source(image, &by_stem, format) {
+                Some(source) => files.earlier_outputs.push((image.clone(), source.clone())),
+                None => files.inputs.push(image.clone()),
+            }
+        }
+    }
+    Ok(files)
+}
+
+/// The other image of the folder whose output in `format` is named like
+/// `image`: the same stem, or `x` for `x_2` and `x_2_1` as `increment`
+/// numbers them, with the extension that output takes. An image is never
+/// its own earlier output, though a same-format output keeps its name.
+fn earlier_output_source<'a>(
+    image: &Path,
+    by_stem: &HashMap<OsString, Vec<&'a PathBuf>>,
+    format: Format,
+) -> Option<&'a PathBuf> {
+    let named_like_output_of = |source: &Path| match format {
+        // A PNM output is `.pgm` or `.ppm` by its pixels, unknown before decoding.
+        Format::Pnm => image
+            .extension()
+            .and_then(|ext| ext.to_str())
+            .is_some_and(|ext| Format::parse(ext).is_ok_and(|parsed| parsed == Format::Pnm)),
+        _ => image.extension() == Some(format.output_extension(source)),
+    };
+    let mut stem = Some(image.file_stem().unwrap_or_default().to_os_string());
+    let mut numbered = false;
+    while let Some(current) = stem {
+        let candidates = by_stem.get(&current).into_iter().flatten();
+        let mut sources = candidates.filter(|source| numbered || source.as_path() != image);
+        if let Some(source) = sources.find(|source| named_like_output_of(source)) {
+            return Some(source);
+        }
+        stem = numbered_base(&current);
+        numbered = true;
+    }
+    None
+}
+
 /// `x` for a stem `x_N` as written by the `increment` policy (N >= 1, no
 /// leading zero).
 pub(crate) fn numbered_base(stem: &std::ffi::OsStr) -> Option<std::ffi::OsString> {
@@ -206,5 +314,44 @@ mod tests {
         assert_eq!(png(&["photo.PNG", "photo.png"]).unwrap().len(), 2);
         assert!(png(&["photo.jpeg", "photo.jpg"]).is_err());
         assert!(png(&["noext", "noext.png"]).is_err(), "an extensionless PNG writes noext.png");
+    }
+
+    /// Earlier outputs are matched by the name the source's output takes:
+    /// a same-format source keeps its name, so only its numbered copies are
+    /// outputs, and a PNM output may be `.pgm` or `.ppm`.
+    #[test]
+    fn earlier_outputs_follow_output_names() {
+        let dir = tempfile::tempdir().unwrap();
+        let names = ["x.png", "x_1.png", "x_1_1.png", "y.jpg", "y.png", "g.png", "g.pgm", "Z.PNG"];
+        for name in names {
+            std::fs::write(dir.path().join(name), b"").unwrap();
+        }
+        let scan = |format| {
+            let files = batch_files(&[dir.path().to_path_buf()], format, None).unwrap();
+            let name = |path: &PathBuf| path.file_name().unwrap().to_str().unwrap().to_owned();
+            let inputs: Vec<_> = files.inputs.iter().map(name).collect();
+            let earlier: Vec<_> = files
+                .earlier_outputs
+                .iter()
+                .map(|(entry, source)| (name(entry), name(source)))
+                .collect();
+            (inputs, earlier)
+        };
+        let (inputs, earlier) = scan(Format::Png);
+        assert_eq!(inputs, ["Z.PNG", "g.pgm", "x.png", "y.jpg"]);
+        let pairs = [
+            ("g.png", "g.pgm"),
+            ("x_1.png", "x.png"),
+            ("x_1_1.png", "x_1.png"),
+            ("y.png", "y.jpg"),
+        ];
+        assert_eq!(earlier, pairs.map(|(a, b)| (a.to_owned(), b.to_owned())));
+        let (inputs, earlier) = scan(Format::Pnm);
+        assert_eq!(earlier, [("g.pgm".to_owned(), "g.png".to_owned())]);
+        assert_eq!(inputs.len(), names.len() - 1);
+        // An output folder elsewhere: every image is an input.
+        let elsewhere = tempfile::tempdir().unwrap();
+        let files = batch_files(&[dir.path().to_path_buf()], Format::Png, Some(elsewhere.path()));
+        assert_eq!(files.unwrap().inputs.len(), names.len());
     }
 }

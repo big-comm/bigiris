@@ -1555,81 +1555,6 @@ fn unreadable(path: &Path, error: &std::io::Error) -> color_eyre::Report {
     ))
 }
 
-/// Inputs of a batch, and the folder entries left out of them.
-struct BatchFiles {
-    /// The files named on the command line, and the supported images
-    /// directly inside named folders.
-    inputs: Vec<PathBuf>,
-    /// `(entry, source)`: a folder entry named like the output `source`
-    /// writes beside itself (`x.webp`, or `x_1.webp`, next to `x.png` in a
-    /// WebP batch). It is an earlier run's output, or a file this run skips
-    /// or replaces anyway; converting it again would multiply outputs.
-    outputs_of_inputs: Vec<(PathBuf, PathBuf)>,
-}
-
-fn batch_files(
-    inputs: &[PathBuf],
-    format: Format,
-    output_dir: Option<&Path>,
-) -> color_eyre::Result<BatchFiles> {
-    let mut files = BatchFiles { inputs: Vec::new(), outputs_of_inputs: Vec::new() };
-    for input in inputs {
-        if !input.is_dir() {
-            files.inputs.push(input.clone());
-            continue;
-        }
-        let entries = std::fs::read_dir(input).map_err(|e| unreadable(input, &e))?;
-        let images: Vec<PathBuf> = entries
-            .flatten()
-            .map(|entry| entry.path())
-            .filter(|path| {
-                path.is_file()
-                    && path
-                        .extension()
-                        .and_then(|ext| ext.to_str())
-                        .is_some_and(|ext| Format::parse(ext).is_ok())
-            })
-            .collect();
-        let writes_here = output_dir
-            .is_none_or(|dir| std::fs::canonicalize(dir).ok() == std::fs::canonicalize(input).ok());
-        if !writes_here {
-            files.inputs.extend(images);
-            continue;
-        }
-        let is_target = |path: &Path| {
-            path.extension().is_some_and(|ext| ext.eq_ignore_ascii_case(format.extension()))
-        };
-        let sources: std::collections::HashMap<_, _> = images
-            .iter()
-            .filter(|path| !is_target(path))
-            .map(|path| (path.file_stem().unwrap_or_default().to_os_string(), path))
-            .collect();
-        for image in &images {
-            match is_target(image).then(|| output_source(image, &sources)).flatten() {
-                Some(source) => files.outputs_of_inputs.push((image.clone(), source.clone())),
-                None => files.inputs.push(image.clone()),
-            }
-        }
-    }
-    Ok(files)
-}
-
-/// The image of `sources` (by stem) whose output `image` is named after:
-/// the same stem, or `x` for `x_2` and `x_2_1`, as `increment` numbers them.
-fn output_source<'a>(
-    image: &Path,
-    sources: &std::collections::HashMap<std::ffi::OsString, &'a PathBuf>,
-) -> Option<&'a PathBuf> {
-    let mut stem = Some(image.file_stem().unwrap_or_default().to_os_string());
-    while let Some(current) = stem {
-        if let Some(source) = sources.get(&current) {
-            return Some(source);
-        }
-        stem = output_plan::numbered_base(&current);
-    }
-    None
-}
-
 fn run_batch(profile: &std::path::Path, inputs: &[PathBuf]) -> color_eyre::Result<()> {
     use std::sync::atomic::{AtomicUsize, Ordering};
     use std::sync::{Arc, mpsc};
@@ -1659,8 +1584,9 @@ fn run_batch(profile: &std::path::Path, inputs: &[PathBuf]) -> color_eyre::Resul
             )));
         }
     };
-    let BatchFiles { inputs: mut files, outputs_of_inputs } =
-        batch_files(inputs, format, profile.output_dir.as_deref())?;
+    let output_plan::BatchFiles { inputs: mut files, earlier_outputs } =
+        output_plan::batch_files(inputs, format, profile.output_dir.as_deref())
+            .map_err(|message| color_eyre::eyre::eyre!(message))?;
     files.sort();
     if files.is_empty() {
         return Err(color_eyre::eyre::eyre!(gettext("no images found for the batch")));
@@ -1732,9 +1658,9 @@ fn run_batch(profile: &std::path::Path, inputs: &[PathBuf]) -> color_eyre::Resul
     drop(tx);
 
     let mut ok = 0usize;
-    let mut skipped = outputs_of_inputs.len();
+    let mut skipped = earlier_outputs.len();
     let mut failed = 0usize;
-    for (entry, source) in &outputs_of_inputs {
+    for (entry, source) in &earlier_outputs {
         let note = fill(
             &gettext("the output of {path} in this batch"),
             &[("path", &codec::printable_path(source))],

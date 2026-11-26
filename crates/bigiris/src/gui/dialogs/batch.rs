@@ -3,25 +3,18 @@
 
 use super::*;
 
-/// Prisma Batch: converts the files given on the command line, with folders
-/// expanded one level, on the shared parallel pool.
+/// Prisma Batch: converts the files and folders given on the command line
+/// on the shared parallel pool. Folders stay folders until Apply, which
+/// lists their images as the CLI does ([`crate::output_plan::batch_files`]).
 pub fn run_batch_dialog(files: Vec<PathBuf>) -> i32 {
-    let files = Rc::new(RefCell::new(expand_batch_inputs(files)));
-    run_dialog_app(move |app| build_batch_dialog(app, files.clone()).present())
-}
-
-fn expand_batch_inputs(inputs: Vec<PathBuf>) -> Vec<PathBuf> {
-    let mut files = Vec::new();
-    for input in inputs {
-        if input.is_dir() {
-            files.extend(collect_images_in_dir(&input));
-        } else if input.is_file() && is_viewable(&input) {
-            files.push(input);
-        }
-    }
-    files.sort_by(|a, b| a.as_os_str().cmp(b.as_os_str()));
-    files.dedup();
-    files
+    let mut inputs: Vec<PathBuf> = files
+        .into_iter()
+        .filter(|input| input.is_dir() || (input.is_file() && is_viewable(input)))
+        .collect();
+    inputs.sort_by(|a, b| a.as_os_str().cmp(b.as_os_str()));
+    inputs.dedup();
+    let inputs = Rc::new(RefCell::new(inputs));
+    run_dialog_app(move |app| build_batch_dialog(app, inputs.clone()).present())
 }
 
 pub(in crate::gui) fn build_batch_dialog(
@@ -190,8 +183,16 @@ pub(in crate::gui) fn build_batch_dialog(
             let policy = selected_overwrite(&overwrite_row);
             let opts = encode.options();
             let out_dir_snapshot = output_dir.borrow().clone();
-            let files_owned: Vec<PathBuf> = files.borrow().clone();
-            if files_owned.is_empty() {
+            let scanned =
+                crate::output_plan::batch_files(&files.borrow(), fmt, out_dir_snapshot.as_deref());
+            let crate::output_plan::BatchFiles { inputs, earlier_outputs } = match scanned {
+                Ok(scanned) => scanned,
+                Err(message) => {
+                    status.set_text(&message);
+                    return;
+                }
+            };
+            if inputs.is_empty() && earlier_outputs.is_empty() {
                 status.set_text(&gettext("Add at least one image to process."));
                 return;
             }
@@ -214,7 +215,7 @@ pub(in crate::gui) fn build_batch_dialog(
                 per_image_suffix: false,
             };
             let events = batch_runner::spawn_batch_workers(
-                files_owned,
+                inputs,
                 naming,
                 move |path| convert_file_to(path, out_dir_snapshot.as_deref(), fmt, &opts, policy),
                 cancelled.clone(),
@@ -243,6 +244,8 @@ pub(in crate::gui) fn build_batch_dialog(
                         progress.set_text(None);
                         status.set_text(&message);
                         apply_btn.set_sensitive(true);
+                        // Nothing runs, so the button closes the window.
+                        cancel_btn.set_label(&gettext("Close"));
                         return;
                     }
                     Some(batch_runner::AsyncBatchEvent::Done {
@@ -275,10 +278,21 @@ pub(in crate::gui) fn build_batch_dialog(
                                 ("total", &total.to_string()),
                                 ("timing", &timing),
                                 ("ok", &ok.to_string()),
-                                ("skip", &skip.to_string()),
+                                ("skip", &(skip + earlier_outputs.len()).to_string()),
                                 ("fail", &fail.to_string()),
                             ],
                         );
+                        if !earlier_outputs.is_empty() {
+                            let names: Vec<_> = earlier_outputs
+                                .iter()
+                                .map(|(entry, _)| crate::codec::printable_path(entry))
+                                .collect();
+                            msg.push('\n');
+                            msg.push_str(&fill(
+                                &gettext("Skipped as outputs of earlier runs: {files}"),
+                                &[("files", &names.join(", "))],
+                            ));
+                        }
                         if ok > 0 && bytes_in > 0 && bytes_out > 0 {
                             let delta = batch_runner::format_size_delta(bytes_in, bytes_out);
                             let avg_in = bytes_in / (ok as u64).max(1);
@@ -331,7 +345,18 @@ pub(in crate::gui) fn build_batch_dialog(
     window
 }
 
-fn refresh_files_row(row: &adw::ActionRow, files: &[PathBuf]) {
+/// `inputs` are files and folders; a folder counts as its images.
+fn refresh_files_row(row: &adw::ActionRow, inputs: &[PathBuf]) {
+    let files: Vec<PathBuf> = inputs
+        .iter()
+        .flat_map(|input| {
+            if input.is_dir() {
+                crate::output_plan::folder_images(input).unwrap_or_default()
+            } else {
+                vec![input.clone()]
+            }
+        })
+        .collect();
     let total: u64 = files.iter().filter_map(|p| std::fs::metadata(p).ok().map(|m| m.len())).sum();
     row.set_title(&format!("{}: {}", gettext("Selected files"), files.len()));
     row.set_subtitle(&glib::format_size(total));
@@ -358,8 +383,8 @@ fn add_files_to_batch(
     });
 }
 
-/// Adds the images directly inside the chosen folder; subfolders are not
-/// searched.
+/// Adds the chosen folder: its images directly inside, listed at Apply;
+/// subfolders are not searched.
 fn add_folder_to_batch(
     window: &adw::ApplicationWindow,
     files: &Rc<RefCell<Vec<PathBuf>>>,
@@ -372,11 +397,10 @@ fn add_folder_to_batch(
     dialog.select_folder(Some(&parent), None::<&gio::Cancellable>, move |result| {
         let Ok(folder) = result else { return };
         let Some(dir) = folder.path() else { return };
-        let found = collect_images_in_dir(&dir);
-        if found.is_empty() {
+        if crate::output_plan::folder_images(&dir).is_ok_and(|images| images.is_empty()) {
             return;
         }
-        append_unique(&files, found);
+        append_unique(&files, vec![dir]);
         refresh_files_row(&row, &files.borrow());
     });
 }
@@ -389,30 +413,6 @@ fn append_unique(files: &Rc<RefCell<Vec<PathBuf>>>, new_paths: Vec<PathBuf>) {
             list.push(p);
         }
     }
-}
-
-/// Lowercase extensions a folder scan accepts, compared case-insensitively.
-const IMAGE_EXTENSIONS: &[&str] = &[
-    "jpg", "jpeg", "png", "webp", "avif", "gif", "tif", "tiff", "bmp", "ico", "pnm", "ppm", "pgm",
-    "pbm", "pam", "tga", "qoi", "hdr", "exr",
-];
-
-fn collect_images_in_dir(dir: &Path) -> Vec<PathBuf> {
-    let Ok(entries) = std::fs::read_dir(dir) else { return Vec::new() };
-    let mut out = Vec::new();
-    for entry in entries.flatten() {
-        let path = entry.path();
-        if !path.is_file() {
-            continue;
-        }
-        let Some(ext) = path.extension() else { continue };
-        let ext_lower = ext.to_string_lossy().to_ascii_lowercase();
-        if IMAGE_EXTENSIONS.iter().any(|e| *e == ext_lower) {
-            out.push(path);
-        }
-    }
-    out.sort();
-    out
 }
 
 #[cfg(test)]
@@ -472,5 +472,91 @@ mod auto_close_tests {
         other.close();
         spin(&context, Duration::from_millis(200));
         assert!(!auto_close_armed(&other), "closing kept the auto-close armed");
+    }
+}
+
+#[cfg(test)]
+mod folder_tests {
+    use super::*;
+
+    /// The first widget under `root` (inclusive) that `matches`.
+    fn find<W: IsA<gtk::Widget>>(root: &gtk::Widget, matches: &dyn Fn(&W) -> bool) -> Option<W> {
+        if let Some(widget) = root.downcast_ref::<W>()
+            && matches(widget)
+        {
+            return Some(widget.clone());
+        }
+        let mut child = root.first_child();
+        while let Some(current) = child {
+            if let Some(found) = find(&current, matches) {
+                return Some(found);
+            }
+            child = current.next_sibling();
+        }
+        None
+    }
+
+    /// Colliding files are refused with nothing run, which leaves Close on
+    /// the button. A folder converted beside itself does not take its own
+    /// earlier output as an input: `a.webp` next to `a.png` in a WebP batch
+    /// is listed as skipped, never refused as a collision or converted again.
+    #[test]
+    #[ignore = "requires a graphical display; run alone with GSETTINGS_BACKEND=memory"]
+    fn folder_batch_skips_earlier_outputs() {
+        adw::init().expect("GTK display required");
+        let app = adw::Application::builder()
+            .application_id("com.biglinux.Iris.BatchFolderProbe")
+            .flags(gio::ApplicationFlags::NON_UNIQUE)
+            .build();
+        app.register(None::<&gio::Cancellable>).unwrap();
+        let context = glib::MainContext::default();
+        let dir = tempfile::tempdir().unwrap();
+        image::RgbImage::new(8, 8).save(dir.path().join("a.png")).unwrap();
+        std::fs::write(dir.path().join("a.webp"), b"earlier output").unwrap();
+        let other = tempfile::tempdir().unwrap();
+        let colliding = ["b.png", "b.jpg"].map(|name| other.path().join(name));
+        for file in &colliding {
+            image::RgbImage::new(8, 8).save(file).unwrap();
+        }
+
+        let inputs = Rc::new(RefCell::new(colliding.to_vec()));
+        let window = build_batch_dialog(&app, inputs.clone());
+        window.present();
+        let root: &gtk::Widget = window.upcast_ref();
+        let ready = gettext("Ready. Click Process to start.");
+        let status: gtk::Label = find(root, &|label: &gtk::Label| label.text() == ready).unwrap();
+        let webp = CONVERT_FORMATS.iter().position(|(_, format)| *format == Format::WebP).unwrap();
+        let title = gettext("Target format");
+        let format: adw::ComboRow =
+            find(root, &|row: &adw::ComboRow| row.title() == title).unwrap();
+        format.set_selected(u32::try_from(webp).unwrap());
+        let process = gettext("Process");
+        let apply: gtk::Button =
+            find(root, &|button: &gtk::Button| button.label().as_deref() == Some(&process))
+                .unwrap();
+        let cancel = apply.prev_sibling().and_downcast::<gtk::Button>().unwrap();
+        let run = || {
+            apply.emit_clicked();
+            let deadline = std::time::Instant::now() + Duration::from_secs(30);
+            while !apply.is_sensitive() || status.text() == gettext("Processing…") {
+                while context.pending() {
+                    context.iteration(false);
+                }
+                assert!(std::time::Instant::now() < deadline, "batch never finished");
+                std::thread::sleep(Duration::from_millis(5));
+            }
+            status.text()
+        };
+
+        let text = run();
+        assert!(text.contains("several inputs would write the same output file"), "{text}");
+        assert_eq!(cancel.label().as_deref(), Some(gettext("Close").as_str()));
+
+        *inputs.borrow_mut() = vec![dir.path().to_path_buf()];
+        let text = run();
+        assert!(text.contains("skipped: 2"), "{text}");
+        assert!(text.contains("Skipped as outputs of earlier runs: "), "{text}");
+        assert_eq!(std::fs::read(dir.path().join("a.webp")).unwrap(), b"earlier output");
+        window.destroy();
     }
 }

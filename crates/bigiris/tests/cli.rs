@@ -442,6 +442,57 @@ fn colliding_outputs_are_refused_before_any_work() {
     assert!(!dir.path().join("out").exists());
 }
 
+/// A link to an input from another folder writes its own output there,
+/// while two spellings of one path still run once.
+#[test]
+fn linked_input_in_another_folder_runs() {
+    if !sandbox_available() {
+        return;
+    }
+    let dir = tempfile::tempdir().unwrap();
+    fixture(dir.path(), "a.png");
+    std::fs::create_dir(dir.path().join("sub")).unwrap();
+    std::os::unix::fs::symlink("../a.png", dir.path().join("sub/link.png")).unwrap();
+    let output = run(dir.path(), &["convert", "--to", "webp", "a.png", "./a.png", "sub/link.png"]);
+    success(output.clone());
+    assert!(dir.path().join("a.webp").exists() && dir.path().join("sub/link.webp").exists());
+    assert_eq!(String::from_utf8_lossy(&output.stdout).lines().count(), 2);
+}
+
+/// On a folder that folds case (vfat, exFAT, NTFS, casefolded ext4 or
+/// tmpfs), `IMG.webp` and `img.webp` are one file, and `a.jpg`'s `a.png`
+/// is the input `a.PNG`: both are refused before any work. The folder is a
+/// casefolded tmpfs in a user namespace; the test is skipped where the
+/// kernel or the sandbox forbids one.
+#[test]
+fn case_folding_collisions_are_refused() {
+    let dir = tempfile::tempdir().unwrap();
+    for name in ["IMG.png", "img.jpg", "a.jpg", "a.PNG"] {
+        fixture(dir.path(), name);
+    }
+    std::fs::create_dir(dir.path().join("mnt")).unwrap();
+    let script = r#"
+mount -t tmpfs -o casefold tmpfs "$1/mnt" && mkdir "$1/mnt/f" && chattr +F "$1/mnt/f" || exit 77
+cp "$1"/*.png "$1"/*.PNG "$1"/*.jpg "$1/mnt/f/" && cd "$1/mnt/f" || exit 1
+"$2" convert --to webp --overwrite replace IMG.png img.jpg; echo "webp $?"
+"$2" convert --to png --overwrite replace a.jpg a.PNG; echo "png $?"
+ls
+"#;
+    let output = Command::new("unshare")
+        .args(["--user", "--map-root-user", "--mount", "/bin/sh", "-c", script, "sh"])
+        .arg(dir.path())
+        .arg(env!("CARGO_BIN_EXE_bigiris"))
+        .env("LC_ALL", "C")
+        .output();
+    let Some(output) = output.ok().filter(|output| output.status.code() != Some(77)) else {
+        eprintln!("skipping: no casefolded tmpfs in a user namespace here");
+        return;
+    };
+    let report = String::from_utf8_lossy(&output.stdout);
+    assert!(report.contains("webp 1") && report.contains("png 1"), "{report}");
+    assert!(!report.contains(".webp"), "{report}");
+}
+
 #[test]
 fn increment_resolves_collisions_deterministically() {
     if !sandbox_available() {

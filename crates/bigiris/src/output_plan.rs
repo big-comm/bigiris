@@ -43,7 +43,10 @@ impl Naming {
 }
 
 /// Group inputs by destination, in input order, before any work starts.
-/// Repeated spellings of one file (`a.png`, `./a.png`) are processed once.
+/// Repeated spellings of one file (`a.png`, `./a.png`) are processed once;
+/// a link to it in another folder writes its own output there and runs too.
+/// Outputs whose names differ only in case are one file where their folder
+/// folds case (vfat, exFAT, NTFS, casefolded folders).
 /// Distinct inputs that collide are refused unless the policy is
 /// `increment`; callers then process each group in order, so the numbered
 /// names are deterministic. Under `increment`, an input named like another
@@ -70,10 +73,12 @@ pub(crate) fn plan_outputs(
         let identity = std::fs::canonicalize(file)
             .or_else(|_| std::path::absolute(file))
             .unwrap_or_else(|_| file.clone());
-        if seen.insert(identity) {
-            planned.push((output_key(file, naming), file));
+        let key = output_key(file, naming);
+        if seen.insert((identity, key.clone())) {
+            planned.push((key, file));
         }
     }
+    merge_case_variants(&mut planned, folds_case);
     let keys: HashSet<_> = planned.iter().map(|(key, _)| key.clone()).collect();
     for (mut key, file) in planned {
         // `increment` numbers outputs `x_1`, `x_2`, … which is exactly what
@@ -116,8 +121,42 @@ pub(crate) fn plan_outputs(
     Ok(groups)
 }
 
+type OutputKey = (PathBuf, OsString, OsString);
+
+/// Give keys that differ only in ASCII case one spelling where their folder
+/// treats such names as one file (`folds`), so they group as one output.
+fn merge_case_variants<F: AsRef<Path>>(
+    planned: &mut [(OutputKey, F)],
+    folds: impl Fn(&Path) -> bool,
+) {
+    let folded = |key: &OutputKey| {
+        let fold = |name: &OsString| name.as_encoded_bytes().to_ascii_lowercase();
+        (key.0.clone(), fold(&key.1), fold(&key.2))
+    };
+    let mut spelling: HashMap<_, OutputKey> = HashMap::new();
+    let mut folding: HashMap<PathBuf, bool> = HashMap::new();
+    for (key, _) in planned.iter_mut() {
+        let first = spelling.entry(folded(key)).or_insert_with(|| key.clone());
+        if first != key && *folding.entry(key.0.clone()).or_insert_with(|| folds(&key.0)) {
+            *key = first.clone();
+        }
+    }
+}
+
+/// Whether `dir` treats names that differ only in case as one file (vfat,
+/// exFAT, NTFS, a casefolded folder), probed with a hidden temporary file.
+/// A folder that cannot be probed counts as folding: the cost is a refusal.
+fn folds_case(dir: &Path) -> bool {
+    let prefix = format!("{}case-", bigimage_core::TEMP_FILE_PREFIX);
+    let Ok(probe) = tempfile::Builder::new().prefix(&prefix).tempfile_in(dir) else {
+        return true;
+    };
+    let name = probe.path().file_name().unwrap_or_default().to_ascii_uppercase();
+    std::fs::symlink_metadata(dir.join(name)).is_ok()
+}
+
 /// Folder, stem and extension of the file `file` writes under `naming`.
-fn output_key(file: &Path, naming: &Naming) -> (PathBuf, OsString, OsString) {
+fn output_key(file: &Path, naming: &Naming) -> OutputKey {
     let dir = naming
         .output_dir
         .as_deref()

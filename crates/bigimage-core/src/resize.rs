@@ -156,9 +156,9 @@ pub fn resize_file(
 ) -> Result<ConvertOutcome> {
     let input = input.as_ref();
     let suffix = mode.filename_suffix();
-    if let Some(skipped) =
-        pipeline::skip_before_decode(input, &suffix, target, policy, pipeline::any_size)?
-    {
+    if let Some(skipped) = pipeline::skip_before_decode(input, &suffix, target, policy, |w, h| {
+        mode.target_dims(w, h).map(drop)
+    })? {
         return Ok(skipped);
     }
 

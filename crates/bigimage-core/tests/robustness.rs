@@ -462,6 +462,17 @@ fn skip_policy_still_rejects_invalid_operations() {
     existing("src_extent-30x30.png");
     assert_eq!(crop_file(&src, crop, None, skip).unwrap_err().to_string(), fresh_crop);
     assert_eq!(extent_file(&src, extent, None, skip).unwrap_err().to_string(), fresh_extent);
+    let opts = EncodeOptions::default();
+    for (mode, name) in [
+        (ResizeMode::Percent(2000.0), "src_2000pct.png"),
+        (ResizeMode::Exact { width: 0, height: 5 }, "src_0x5.png"),
+        (ResizeMode::Fit { width: 5, height: 0 }, "src_fit-5x0.png"),
+    ] {
+        let resize = || resize_file(&src, mode, Filter::Lanczos3, None, &opts, skip);
+        let fresh = resize().unwrap_err().to_string();
+        existing(name);
+        assert_eq!(resize().unwrap_err().to_string(), fresh, "{mode:?}");
+    }
     // Valid only once transposed (as for an EXIF-rotated photo): still
     // skipped before decoding, the decode path stays authoritative.
     existing("src_crop-20x30+0+0.png");

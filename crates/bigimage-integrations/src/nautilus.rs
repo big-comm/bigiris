@@ -2,9 +2,9 @@
 //! Nautilus: a `nautilus-python` extension, the only entry point, at
 //! `~/.local/share/nautilus-python/extensions/bigiris-menu.py`.
 //!
-//! A scripts tree under `~/.local/share/nautilus/scripts/BigIris/` would
-//! add a second "Scripts ▸ BigIris" entry, so install and uninstall both
-//! remove any such tree they find.
+//! A `~/.local/share/nautilus/scripts/BigIris/` tree left by a prototype
+//! that predates the released history is not touched: what it held cannot
+//! be told apart from the user's own scripts.
 
 use std::io;
 use std::path::{Path, PathBuf};
@@ -12,10 +12,6 @@ use std::path::{Path, PathBuf};
 use crate::action::ACTIONS;
 use crate::scope::{Installed, Scope, ScopePaths};
 
-const STALE_TREE_ROOT: &str = "BigIris";
-/// How much of a file in the legacy scripts tree is read to identify it;
-/// those scripts were a few lines.
-const MAX_SCRIPT_BYTES: u64 = 64 * 1024;
 const PYTHON_EXTENSION_FILENAME: &str = "bigiris-menu.py";
 /// How much of an existing `bigiris-menu.py` is read to identify it; ours
 /// is a few KiB.
@@ -62,7 +58,7 @@ fn render() -> String {
     PYTHON_EXTENSION.replacen(ACTIONS_PLACEHOLDER, &table, 1)
 }
 
-/// Install the Python extension and remove any stale scripts tree.
+/// Install the Python extension.
 ///
 /// A user-scope install skips the copy when the package already ships
 /// `SYSTEM_EXTENSION_PATH`, and removes any user-scope `.py` and our
@@ -78,9 +74,6 @@ pub(crate) fn install_with_system_path(
     paths: &ScopePaths,
     system_ext: &Path,
 ) -> io::Result<Installed> {
-    // Cleanup of a legacy tree; the next run retries a failure.
-    let _ = remove_stale_scripts(&paths.nautilus_scripts().join(STALE_TREE_ROOT));
-
     let ext_dir = paths.nautilus_python_extensions();
 
     // A user-scope copy beside a system-wide one duplicates the menu.
@@ -117,12 +110,10 @@ fn is_our_extension(path: &Path) -> bool {
         && body.contains("class BigIrisMenuProvider(")
 }
 
-/// Remove the Python extension, any stale scripts tree, and our bytecode
+/// Remove the Python extension and our bytecode
 /// in the `__pycache__` beside it, which would otherwise keep the menu alive.
 pub fn uninstall(paths: &ScopePaths) -> io::Result<Vec<PathBuf>> {
     let mut removed = Vec::new();
-
-    removed.extend(remove_stale_scripts(&paths.nautilus_scripts().join(STALE_TREE_ROOT))?);
 
     let ext_dir = paths.nautilus_python_extensions();
     let ext_file = ext_dir.join(PYTHON_EXTENSION_FILENAME);
@@ -161,41 +152,6 @@ fn remove_own_bytecode(ext_dir: &Path) {
     }
     // Fails, and is ignored, while the directory still holds files.
     let _ = std::fs::remove_dir(&pycache);
-}
-
-/// Remove the scripts releases before the extension wrote under `dir`
-/// (shell scripts that run `bigiris`; their exact names predate this
-/// repository), then each directory left empty. A missing `dir` removes
-/// nothing, and a script of the user's own stays.
-fn remove_stale_scripts(dir: &Path) -> io::Result<Vec<PathBuf>> {
-    use std::io::Read;
-    let mut removed = Vec::new();
-    let entries = match std::fs::read_dir(dir) {
-        Ok(entries) => entries,
-        Err(e) if e.kind() == io::ErrorKind::NotFound => return Ok(removed),
-        Err(e) => return Err(e),
-    };
-    for entry in entries {
-        let entry = entry?;
-        let path = entry.path();
-        let kind = entry.file_type()?;
-        if kind.is_dir() {
-            removed.extend(remove_stale_scripts(&path)?);
-            continue;
-        }
-        let mut head = Vec::new();
-        if kind.is_file() {
-            std::fs::File::open(&path)?.take(MAX_SCRIPT_BYTES).read_to_end(&mut head)?;
-        }
-        let runs_bigiris = head.starts_with(b"#!") && head.windows(8).any(|w| w == b"bigiris ");
-        if runs_bigiris {
-            std::fs::remove_file(&path)?;
-            removed.push(path);
-        }
-    }
-    // Fails, and is ignored, while the directory still holds files.
-    let _ = std::fs::remove_dir(dir);
-    Ok(removed)
 }
 
 #[cfg(test)]
@@ -262,31 +218,15 @@ mod tests {
     }
 
     #[test]
-    fn install_cleans_stale_scripts_tree() {
+    fn scripts_tree_left_alone() {
         let tmp = TempDir::new().unwrap();
         let paths = ScopePaths::rooted_at(tmp.path());
-        let stale = paths.nautilus_scripts().join(STALE_TREE_ROOT);
-        std::fs::create_dir_all(stale.join("Convert")).unwrap();
-        let script = "#!/bin/sh\nexec bigiris convert --to png \"$@\"\n";
-        std::fs::write(stale.join("Convert").join("PNG"), script).unwrap();
-
+        let script = paths.data.join("nautilus/scripts/BigIris/My preset");
+        std::fs::create_dir_all(script.parent().unwrap()).unwrap();
+        std::fs::write(&script, "#!/bin/sh\nexec bigiris --dialog=batch \"$@\"\n").unwrap();
         install_with_system_path(&paths, Path::new("/nonexistent/system-path")).unwrap();
-        assert!(!stale.exists(), "stale scripts tree should have been removed");
-    }
-
-    #[test]
-    fn user_scripts_in_stale_tree_survive() {
-        let tmp = TempDir::new().unwrap();
-        let paths = ScopePaths::rooted_at(tmp.path());
-        let stale = paths.nautilus_scripts().join(STALE_TREE_ROOT);
-        std::fs::create_dir_all(stale.join("Convert")).unwrap();
-        let ours = stale.join("Convert/PNG");
-        std::fs::write(&ours, "#!/bin/sh\nexec bigiris convert --to png \"$@\"\n").unwrap();
-        let mine = stale.join("resize-for-blog.sh");
-        std::fs::write(&mine, "#!/bin/sh\nmagick \"$1\" -resize 50% out.png\n").unwrap();
-        assert_eq!(uninstall(&paths).unwrap(), [ours]);
-        assert!(mine.exists());
-        assert!(!stale.join("Convert").exists(), "emptied directory kept");
+        uninstall(&paths).unwrap();
+        assert!(script.exists());
     }
 
     #[test]
@@ -325,18 +265,13 @@ mod tests {
     }
 
     #[test]
-    fn uninstall_removes_python_extension_and_legacy_tree() {
+    fn uninstall_removes_python_extension() {
         let tmp = TempDir::new().unwrap();
         let paths = ScopePaths::rooted_at(tmp.path());
         install_with_system_path(&paths, Path::new("/nonexistent/system-path")).unwrap();
-        let stale = paths.nautilus_scripts().join(STALE_TREE_ROOT);
-        std::fs::create_dir_all(&stale).unwrap();
-        std::fs::write(stale.join("View"), "#!/bin/sh\nexec bigiris \"$@\"\n").unwrap();
-
         let removed = uninstall(&paths).unwrap();
         assert!(!removed.is_empty());
         assert!(!paths.nautilus_python_extensions().join(PYTHON_EXTENSION_FILENAME).exists());
-        assert!(!stale.exists());
     }
 
     #[test]

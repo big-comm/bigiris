@@ -131,12 +131,6 @@ impl ScopePaths {
         self.data.join("contractor")
     }
 
-    /// `~/.local/share/nautilus/scripts/`: GNOME Nautilus script tree, where
-    /// releases before the extension wrote; never written, only cleaned.
-    pub fn nautilus_scripts(&self) -> PathBuf {
-        self.data.join("nautilus/scripts")
-    }
-
     /// `~/.local/share/nautilus-python/extensions/` — home of Python
     /// extensions that add top-level right-click entries (required for
     /// "BigIris ▸" to appear outside the Scripts submenu).
@@ -360,7 +354,6 @@ mod tests {
         assert_eq!(p.nemo_actions(), tmp.path().join(".local/share/nemo/actions"));
         assert_eq!(p.libfm_actions(), tmp.path().join(".local/share/file-manager/actions"));
         assert_eq!(p.contractor(), tmp.path().join(".local/share/contractor"));
-        assert_eq!(p.nautilus_scripts(), tmp.path().join(".local/share/nautilus/scripts"));
         assert_eq!(
             p.nautilus_python_extensions(),
             tmp.path().join(".local/share/nautilus-python/extensions")

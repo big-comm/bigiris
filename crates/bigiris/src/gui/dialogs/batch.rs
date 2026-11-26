@@ -74,16 +74,12 @@ pub(in crate::gui) fn build_batch_dialog(
     progress.set_margin_end(18);
     progress.set_margin_top(8);
 
-    let status = gtk::Label::builder()
-        .label(gettext("Ready. Click Process to start."))
-        .wrap(true)
-        .max_width_chars(64)
-        .css_classes(["dim-label"])
-        .margin_start(18)
-        .margin_end(18)
-        .margin_top(4)
-        .margin_bottom(4)
-        .build();
+    let status = status_label();
+    status.set_label(&gettext("Ready. Click Process to start."));
+    status.set_margin_start(18);
+    status.set_margin_end(18);
+    status.set_margin_top(4);
+    status.set_margin_bottom(4);
 
     let apply_btn = gtk::Button::builder()
         .label(gettext("Process"))

@@ -63,15 +63,12 @@ fn fill_extent_dialog(
         &gettext("Prisma · no cropping"),
     )));
 
-    let content_h = padded_box(gtk::Orientation::Horizontal, 16);
+    let content_h = gtk::Box::new(gtk::Orientation::Horizontal, 16);
 
     let natural = preview_session.as_ref().map(|s| s.natural_size()).unwrap_or((1, 1));
 
-    let form_col = gtk::Box::builder()
-        .orientation(gtk::Orientation::Vertical)
-        .spacing(12)
-        .width_request(380)
-        .build();
+    let form_col = padded_box(gtk::Orientation::Vertical, 12);
+    form_col.set_width_request(380);
 
     let intro = gtk::Label::builder()
         .label(gettext(
@@ -159,12 +156,9 @@ fn fill_extent_dialog(
     form_col.append(&group);
 
     let status = status_label();
-    form_col.append(&status);
 
     let (cancel_btn, apply_btn, actions) = action_buttons(&gettext("Extend"));
-    form_col.append(&actions);
-
-    content_h.append(&form_col);
+    content_h.append(&form_column(&form_col, &[status.upcast_ref(), actions.upcast_ref()]));
 
     // Live preview on the right, driven by PreviewOp::Extent.
     let picture_opt = if let Some(sess) = preview_session.as_ref() {

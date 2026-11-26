@@ -277,7 +277,12 @@ fn build_crop_preview_column(
     overlay.set_child(Some(&picture));
     overlay.add_overlay(&selection_area);
 
-    let column = gtk::Box::builder().orientation(gtk::Orientation::Vertical).build();
+    let column = gtk::Box::builder()
+        .orientation(gtk::Orientation::Vertical)
+        .margin_top(16)
+        .margin_bottom(16)
+        .margin_end(16)
+        .build();
     column.append(&overlay);
 
     let hint = gtk::Label::builder()
@@ -320,7 +325,7 @@ fn fill_crop_dialog(
     let header = adw::HeaderBar::new();
     header.set_title_widget(Some(&adw::WindowTitle::new(&gettext("Crop"), "Prisma")));
 
-    let content_h = padded_box(gtk::Orientation::Horizontal, 16);
+    let content_h = gtk::Box::new(gtk::Orientation::Horizontal, 16);
 
     // Preview is keyed off the first file — multi-file dialogs share the
     // rect and per-file validation catches out-of-bounds at apply time.
@@ -328,11 +333,8 @@ fn fill_crop_dialog(
     let initial = default_crop(natural.0, natural.1);
 
     // Form column — native-width controls for coordinates and size.
-    let form_col = gtk::Box::builder()
-        .orientation(gtk::Orientation::Vertical)
-        .spacing(12)
-        .width_request(360)
-        .build();
+    let form_col = padded_box(gtk::Orientation::Vertical, 12);
+    form_col.set_width_request(360);
 
     let files_row = selection_row(&gettext("Selected files"), &files);
 
@@ -376,14 +378,11 @@ fn fill_crop_dialog(
     form_col.append(&group);
 
     let status = status_label();
-    form_col.append(&status);
 
     let reset_btn = gtk::Button::with_label(&gettext("Centered 50%"));
     let (cancel_btn, apply_btn, actions) = action_buttons(&gettext("Crop"));
     actions.prepend(&reset_btn);
-    form_col.append(&actions);
-
-    content_h.append(&form_col);
+    content_h.append(&form_column(&form_col, &[status.upcast_ref(), actions.upcast_ref()]));
 
     // Interactive preview: full thumbnail + DrawingArea overlay that strokes
     // the selection rect and shades the outside. Spin rows are the source of

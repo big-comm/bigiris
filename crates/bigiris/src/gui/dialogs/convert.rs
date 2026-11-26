@@ -97,18 +97,14 @@ fn fill_convert_dialog(
     content.append(&alpha_banner);
     content.append(&conv_group);
     content.append(&dest_group);
-    content.append(&status);
-    content.append(&actions);
-    content.set_size_request(420, -1);
+    let column = form_column(&content, &[status.upcast_ref(), actions.upcast_ref()]);
+    column.set_size_request(420, -1);
 
     let main_box =
         gtk::Box::builder().orientation(gtk::Orientation::Horizontal).spacing(16).build();
-    main_box.append(&content);
+    main_box.append(&column);
     if let Some(sess) = preview_session.as_ref() {
         let (_picture, column) = build_preview_column(sess);
-        column.set_margin_top(16);
-        column.set_margin_bottom(16);
-        column.set_margin_end(16);
         main_box.append(&column);
         // Convert is format-level — visual preview is just the source
         // thumbnail (pixels don't change meaningfully between PNG/JPG/WebP

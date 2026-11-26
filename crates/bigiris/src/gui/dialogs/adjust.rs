@@ -86,16 +86,8 @@ fn fill_adjust_dialog(
     content.append(&group_tone);
     content.append(&group_color);
     content.append(&group_out);
-    content.append(&status);
-    content.append(&actions_box);
-
-    let scrolled = gtk::ScrolledWindow::builder()
-        .hexpand(true)
-        .vexpand(true)
-        .hscrollbar_policy(gtk::PolicyType::Never)
-        .vscrollbar_policy(gtk::PolicyType::Automatic)
-        .child(&content)
-        .build();
+    let scrolled = form_column(&content, &[status.upcast_ref(), actions_box.upcast_ref()]);
+    scrolled.set_hexpand(true);
     scrolled.set_size_request(420, -1);
 
     // Two-column layout: scrollable form on the left, live preview column
@@ -110,9 +102,6 @@ fn fill_adjust_dialog(
 
     let preview_picture: Option<gtk::Picture> = if let Some(sess) = preview_session.as_ref() {
         let (picture, column) = build_preview_column(sess);
-        column.set_margin_top(16);
-        column.set_margin_bottom(16);
-        column.set_margin_end(16);
         main_box.append(&column);
         Some(picture)
     } else {

@@ -61,7 +61,6 @@ pub(in crate::gui) fn build_remove_bg_dialog(
     let window = adw::ApplicationWindow::builder()
         .application(app)
         .default_width(520)
-        .default_height(420)
         .title(gettext("Remove background — Prisma"))
         .build();
 
@@ -129,16 +128,11 @@ pub(in crate::gui) fn build_remove_bg_dialog(
     // the first run, then per-file inference progress.
     let progress_bar =
         gtk::ProgressBar::builder().show_text(true).visible(false).margin_top(6).build();
-    content.append(&progress_bar);
-
     let status = status_label();
-    content.append(&status);
-
     let (cancel_btn, apply_btn, actions_box) = action_buttons(&gettext("Remove background"));
     apply_btn.set_sensitive(unavailable.is_none());
-    content.append(&actions_box);
-
-    set_dialog_content(&window, &header, &content);
+    let footer = [progress_bar.upcast_ref(), status.upcast_ref(), actions_box.upcast_ref()];
+    set_dialog_content(&window, &header, &form_column(&content, &footer));
 
     // Shared by the UI, the worker and the close handler: closing the window
     // (X, Esc, Cancel) stops the remaining files and keeps the Compare window

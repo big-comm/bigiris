@@ -273,11 +273,49 @@ fn show_selection_problem(
     set_dialog_content(window, header, content);
 }
 
-/// Dimmed, wrapping status line under a dialog form.
+/// Dimmed status line under a dialog form. A long report (a failure with
+/// its path) is cut at four lines so the buttons stay in view; the tooltip
+/// holds the whole text.
 fn status_label() -> gtk::Label {
-    let status = gtk::Label::builder().label("").wrap(true).xalign(0.0).build();
+    let status = gtk::Label::builder()
+        .label("")
+        .wrap(true)
+        .wrap_mode(gtk::pango::WrapMode::WordChar)
+        .ellipsize(gtk::pango::EllipsizeMode::End)
+        .lines(4)
+        .xalign(0.0)
+        .build();
     status.add_css_class("dim-label");
+    status.connect_label_notify(|status| {
+        let text = status.label();
+        status.set_tooltip_text(Some(text.as_str()).filter(|text| !text.is_empty()));
+    });
     status
+}
+
+/// A dialog's form column: `form` scrolls when the window is shorter than
+/// it, while `footer` (status line, progress, buttons) stays in view below.
+fn form_column(form: &impl IsA<gtk::Widget>, footer: &[&gtk::Widget]) -> gtk::Box {
+    let scroller = gtk::ScrolledWindow::builder()
+        .hscrollbar_policy(gtk::PolicyType::Never)
+        .propagate_natural_height(true)
+        .vexpand(true)
+        .child(form)
+        .build();
+    let bottom = gtk::Box::builder()
+        .orientation(gtk::Orientation::Vertical)
+        .spacing(12)
+        .margin_start(16)
+        .margin_end(16)
+        .margin_bottom(16)
+        .build();
+    for widget in footer {
+        bottom.append(*widget);
+    }
+    let column = gtk::Box::new(gtk::Orientation::Vertical, 0);
+    column.append(&scroller);
+    column.append(&bottom);
+    column
 }
 
 /// End-aligned Cancel + suggested `apply_label` buttons.

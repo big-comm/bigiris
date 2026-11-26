@@ -143,18 +143,8 @@ fn fill_resize_dialog(
     content.append(&group_mode);
     content.append(&stack);
     content.append(&group_options);
-    content.append(&status);
-    content.append(&actions);
-
-    // Scroll the whole content in case the resize dialog overflows a small
-    // screen — it's taller than the convert dialog.
-    let scrolled = gtk::ScrolledWindow::builder()
-        .hexpand(true)
-        .vexpand(true)
-        .hscrollbar_policy(gtk::PolicyType::Never)
-        .vscrollbar_policy(gtk::PolicyType::Automatic)
-        .child(&content)
-        .build();
+    let scrolled = form_column(&content, &[status.upcast_ref(), actions.upcast_ref()]);
+    scrolled.set_hexpand(true);
     scrolled.set_size_request(420, -1);
 
     let main_box =
@@ -162,9 +152,6 @@ fn fill_resize_dialog(
     main_box.append(&scrolled);
     let preview_picture: Option<gtk::Picture> = if let Some(sess) = preview_session.as_ref() {
         let (picture, column) = build_preview_column(sess);
-        column.set_margin_top(16);
-        column.set_margin_bottom(16);
-        column.set_margin_end(16);
         main_box.append(&column);
         Some(picture)
     } else {

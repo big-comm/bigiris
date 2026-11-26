@@ -21,7 +21,6 @@ pub(in crate::gui) fn build_rotate_dialog(
     let window = adw::ApplicationWindow::builder()
         .application(app)
         .default_width(440)
-        .default_height(340)
         .title(gettext("Rotate images — Prisma"))
         .build();
 
@@ -53,10 +52,9 @@ pub(in crate::gui) fn build_rotate_dialog(
 
     let content = padded_box(gtk::Orientation::Vertical, 16);
     content.append(&group);
-    content.append(&status);
-    content.append(&actions);
 
-    set_dialog_content(&window, &header, &content);
+    let column = form_column(&content, &[status.upcast_ref(), actions.upcast_ref()]);
+    set_dialog_content(&window, &header, &column);
 
     close_on_click(&window, &cancel_btn);
 

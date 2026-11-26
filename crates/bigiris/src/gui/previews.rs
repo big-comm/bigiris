@@ -14,7 +14,8 @@ pub(super) fn dynamic_image_to_texture(img: DynamicImage) -> gdk::Texture {
         .upcast()
 }
 
-/// Build the preview-area column every dialog uses on its right-hand side.
+/// Build the preview-area column every dialog uses on its right-hand side,
+/// with the window margins on its outer sides.
 /// Returns the `gtk::Picture` the caller drives via `set_paintable` and the
 /// outer container to append into the dialog's horizontal box.
 pub(super) fn build_preview_column(session: &PreviewSession) -> (gtk::Picture, gtk::Box) {
@@ -49,6 +50,9 @@ pub(super) fn build_preview_column(session: &PreviewSession) -> (gtk::Picture, g
         .spacing(8)
         .hexpand(true)
         .vexpand(true)
+        .margin_top(16)
+        .margin_bottom(16)
+        .margin_end(16)
         .build();
     column.append(&heading);
     column.append(&frame);

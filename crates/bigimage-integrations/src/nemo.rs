@@ -14,6 +14,11 @@ const SUFFIX: &str = ".nemo_action";
 
 /// Install one `.nemo_action` per [`Action`], removing those of actions a
 /// release dropped.
+///
+/// # Errors
+///
+/// An I/O error when the actions folder cannot be listed or created, or an
+/// action file cannot be written or a stale one removed.
 pub fn install(paths: &ScopePaths) -> io::Result<Installed> {
     let files =
         ACTIONS.iter().map(|action| (format!("bigiris-{}{SUFFIX}", action.id), render(action)));
@@ -27,6 +32,11 @@ pub fn install(paths: &ScopePaths) -> io::Result<Installed> {
 }
 
 /// Remove every file we own in `~/.local/share/nemo/actions/`.
+///
+/// # Errors
+///
+/// An I/O error when the actions folder cannot be listed or a file we own
+/// cannot be removed.
 pub fn uninstall(paths: &ScopePaths) -> io::Result<Vec<PathBuf>> {
     remove_generated(&paths.nemo_actions(), SUFFIX, &[])
 }

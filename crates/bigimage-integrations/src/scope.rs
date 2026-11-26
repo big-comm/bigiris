@@ -56,6 +56,10 @@ pub struct ScopePaths {
 
 impl ScopePaths {
     /// Resolve real paths for the given scope.
+    ///
+    /// # Errors
+    ///
+    /// [`ScopeError::NoHome`] when the user's home folder cannot be found.
     pub fn resolve(scope: Scope) -> Result<Self, ScopeError> {
         match scope {
             Scope::User => {

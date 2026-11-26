@@ -19,6 +19,11 @@ const SUFFIX: &str = ".desktop";
 
 /// Install one `.desktop` per MIME filter of [`ACTIONS`] into
 /// `~/.local/share/kio/servicemenus/`, replacing what earlier installs wrote.
+///
+/// # Errors
+///
+/// An I/O error when the service-menu folder cannot be listed or created, or
+/// a menu file cannot be written or a stale one removed.
 pub fn install(paths: &ScopePaths) -> io::Result<Installed> {
     let files = menus()
         .into_iter()
@@ -37,6 +42,11 @@ pub fn install(paths: &ScopePaths) -> io::Result<Installed> {
 }
 
 /// Remove every file we own in `~/.local/share/kio/servicemenus/`.
+///
+/// # Errors
+///
+/// An I/O error when the service-menu folder cannot be listed or a file we
+/// own cannot be removed.
 pub fn uninstall(paths: &ScopePaths) -> io::Result<Vec<PathBuf>> {
     remove_generated(&paths.kio_servicemenus(), SUFFIX, &[])
 }

@@ -82,6 +82,11 @@ pub enum InstallError {
 /// `install-integrations --user` gives the full "registered app"
 /// experience without needing the PKGBUILD. For `Scope::System` the
 /// PKGBUILD is expected to own those files, so we don't touch them.
+///
+/// # Errors
+///
+/// [`InstallError::Scope`] when the home folder cannot be resolved; failures
+/// of single files are reported in the [`Report`].
 pub fn install(scope: Scope) -> Result<Report, InstallError> {
     let paths = ScopePaths::resolve(scope)?;
     // A per-user install only writes integration files for file managers
@@ -97,6 +102,11 @@ pub fn install(scope: Scope) -> Result<Report, InstallError> {
 }
 
 /// Remove every BigIris service-menu file across every supported manager.
+///
+/// # Errors
+///
+/// [`InstallError::Scope`] when the home folder cannot be resolved; failures
+/// of single files are reported in the [`Report`].
 pub fn uninstall(scope: Scope) -> Result<Report, InstallError> {
     let paths = ScopePaths::resolve(scope)?;
     let mut report = run_all(&paths, InstallOp::Uninstall, false);

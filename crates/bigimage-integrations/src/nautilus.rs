@@ -64,6 +64,11 @@ fn render() -> String {
 /// `SYSTEM_EXTENSION_PATH`, and removes any user-scope `.py` and our
 /// `__pycache__` bytecode instead: `nautilus-python` loads bytecode even
 /// without its `.py`, which would show "BigIris ▸" twice.
+///
+/// # Errors
+///
+/// An I/O error when the extension folder cannot be created or the extension
+/// cannot be written.
 pub fn install(paths: &ScopePaths) -> io::Result<Installed> {
     install_with_system_path(paths, Path::new(SYSTEM_EXTENSION_PATH))
 }
@@ -112,6 +117,10 @@ fn is_our_extension(path: &Path) -> bool {
 
 /// Remove the Python extension and our bytecode
 /// in the `__pycache__` beside it, which would otherwise keep the menu alive.
+///
+/// # Errors
+///
+/// An I/O error when our extension cannot be removed.
 pub fn uninstall(paths: &ScopePaths) -> io::Result<Vec<PathBuf>> {
     let mut removed = Vec::new();
 

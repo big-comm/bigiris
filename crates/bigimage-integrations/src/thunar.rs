@@ -39,6 +39,11 @@ const UCA_MODE: FileMode = FileMode::KeepExisting(0o600);
 ///
 /// No-op for [`Scope::System`]: see the module docs for why we never write
 /// Thunar's package-owned system file.
+///
+/// # Errors
+///
+/// An I/O error when `uca.xml` or its folder cannot be read or written, the
+/// path is not a regular file, or the file lost its closing `</actions>` tag.
 pub fn install(paths: &ScopePaths) -> io::Result<Installed> {
     if paths.scope == Scope::System {
         return Ok(Installed::default());
@@ -70,6 +75,11 @@ pub fn install(paths: &ScopePaths) -> io::Result<Installed> {
 /// actions an old BigIris package merged into `/etc/xdg/Thunar/uca.xml`,
 /// never deleting that `thunar`-owned file) is library-only for now. A
 /// file without any of our actions is left untouched.
+///
+/// # Errors
+///
+/// An I/O error when `uca.xml` cannot be read, written or removed, the path
+/// is not a regular file, or the file lost its closing `</actions>` tag.
 pub fn uninstall(paths: &ScopePaths) -> io::Result<Vec<PathBuf>> {
     let target = paths.thunar_uca();
     let Some(existing) = read_existing(&target)? else {

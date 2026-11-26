@@ -1868,7 +1868,7 @@ mod tests {
         assert!(
             meta.tags
                 .iter()
-                .any(|(name, value)| name.contains("original") && value.contains("2024-05-06")),
+                .any(|(name, value)| name == "DateTimeOriginal" && value.contains("2024-05-06")),
             "DateTimeOriginal lost: {:?}",
             meta.tags
         );

@@ -18,7 +18,9 @@ use crate::{BigImageError, Result};
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Metadata {
-    /// Human-readable `(name, value)` pairs, ready to show in a sidebar.
+    /// `(tag, value)` pairs in file order: the EXIF tag name (`Make`,
+    /// `DateTimeOriginal`) for the caller to translate, and the value as
+    /// text, unquoted.
     pub tags: Vec<(String, String)>,
     /// Whether the file encodes a GPS coordinate (either `GPSLatitude` or
     /// `GPSLongitude` is present in the primary IFD).
@@ -256,10 +258,17 @@ pub fn read(path: impl AsRef<Path>) -> Result<Metadata> {
 
     let mut out = Metadata::default();
     for field in exif.fields() {
-        let name = field.tag.description().unwrap_or("").to_string();
-        let name = if name.is_empty() { format!("{}", field.tag) } else { name };
-        let value = field.display_value().with_unit(&exif).to_string();
-        out.tags.push((name, value));
+        let shown = field.display_value().with_unit(&exif).to_string();
+        let value = match &field.value {
+            // The library quotes and escapes plain text; show it as written.
+            exif::Value::Ascii(texts) if shown.starts_with('"') => texts
+                .iter()
+                .map(|text| String::from_utf8_lossy(text).into_owned())
+                .collect::<Vec<_>>()
+                .join(", "),
+            _ => shown,
+        };
+        out.tags.push((field.tag.to_string(), value));
 
         // Surface signals we feed back to smart-prompts.
         if field.ifd_num == exif::In::PRIMARY {
@@ -340,6 +349,34 @@ mod tests {
         assert_eq!(estimate_jpeg_quality(&png), None);
         assert_eq!(estimate_jpeg_quality_from_reader(&mut std::io::Cursor::new(b"\xff\xd8")), None);
         assert_eq!(estimate_jpeg_quality(dir.path()), None);
+    }
+
+    /// Tags come by name; text shows as written, a date keeps the
+    /// library's rendering.
+    #[test]
+    fn tags_are_named_and_unquoted() {
+        use exif::{Field, In, Tag, Value};
+        let ascii = |text: &str| Value::Ascii(vec![text.as_bytes().to_vec()]);
+        let fields = [
+            Field { tag: Tag::Make, ifd_num: In::PRIMARY, value: ascii("Câmera \"X\"") },
+            Field { tag: Tag::DateTime, ifd_num: In::PRIMARY, value: ascii("2024:05:06 07:08:09") },
+        ];
+        let mut writer = exif::experimental::Writer::new();
+        for field in &fields {
+            writer.push_field(field);
+        }
+        let mut blob = std::io::Cursor::new(Vec::new());
+        writer.write(&mut blob, true).unwrap();
+        let dir = TempDir::new().unwrap();
+        let path = dir.path().join("camera.jpg");
+        let mut encoder =
+            image::codecs::jpeg::JpegEncoder::new(std::fs::File::create(&path).unwrap());
+        image::ImageEncoder::set_exif_metadata(&mut encoder, blob.into_inner()).unwrap();
+        image::ImageEncoder::write_image(encoder, &[0; 12], 2, 2, image::ExtendedColorType::Rgb8)
+            .unwrap();
+        let tags = read(&path).unwrap().tags;
+        assert!(tags.contains(&("Make".into(), "Câmera \"X\"".into())), "{tags:?}");
+        assert!(tags.contains(&("DateTime".into(), "2024-05-06 07:08:09".into())), "{tags:?}");
     }
 
     #[test]

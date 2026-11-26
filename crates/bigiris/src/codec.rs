@@ -312,7 +312,7 @@ fn close_inherited_descriptors_passing(
     install_descriptor_hook(command, Some(fd))
 }
 
-#[allow(unsafe_code)]
+#[expect(unsafe_code, reason = "pre_exec hook; its SAFETY comment holds the invariant")]
 fn install_descriptor_hook(
     command: &mut Command,
     pass_as_3: Option<std::os::fd::RawFd>,
@@ -329,7 +329,7 @@ fn install_descriptor_hook(
 }
 
 /// Body of the `pre_exec` hook; see [`install_descriptor_hook`].
-#[allow(unsafe_code)]
+#[expect(unsafe_code, reason = "raw descriptor syscalls in the forked child before exec")]
 fn prepare_descriptors(pass_as_3: Option<std::os::fd::RawFd>) -> std::io::Result<()> {
     // SAFETY: plain syscalls on integer descriptors. Marking failures are
     // ignored because the worker re-checks its descriptor table and fails

@@ -27,7 +27,7 @@ pub struct Action {
     /// (kebab-case, no spaces, ASCII only).
     pub id: &'static str,
     /// Optional grouping. `None` means the action sits at the top of the
-    /// Íris submenu itself.
+    /// BigIris menu itself.
     pub submenu: Option<Submenu>,
     /// User-visible label.
     pub label: &'static str,
@@ -114,7 +114,8 @@ pub const SUB_AI: Submenu =
     Submenu { id: "ai", label: n_("AI"), icon: "applications-science-symbolic" };
 
 /// Submenu: convert a document to PDF through LibreOffice. Shown only when
-/// the selection matches [`DOC_MIME`]; images go through Convert ▸.
+/// the selection matches the document MIME types; images go through
+/// Convert ▸.
 pub const SUB_PDF: Submenu =
     Submenu { id: "pdf", label: n_("PDF"), icon: "application-pdf-symbolic" };
 

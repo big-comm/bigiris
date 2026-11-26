@@ -62,7 +62,7 @@ fn render() -> String {
 /// Install the Python extension and remove any stale scripts tree.
 ///
 /// A user-scope install skips the copy when the package already ships
-/// [`SYSTEM_EXTENSION_PATH`], and removes any user-scope `.py` and our
+/// `SYSTEM_EXTENSION_PATH`, and removes any user-scope `.py` and our
 /// `__pycache__` bytecode instead: `nautilus-python` loads bytecode even
 /// without its `.py`, which would show "BigIris ▸" twice.
 pub fn install(paths: &ScopePaths) -> io::Result<Vec<PathBuf>> {
@@ -70,8 +70,7 @@ pub fn install(paths: &ScopePaths) -> io::Result<Vec<PathBuf>> {
 }
 
 /// Same as [`install`] but takes the system-wide extension path as a
-/// parameter so tests can point it at a non-existent file (and so a
-/// future flag like `BIGIRIS_NAUTILUS_SYSTEM_PATH` can override it).
+/// parameter so tests can point it at a non-existent file.
 pub(crate) fn install_with_system_path(
     paths: &ScopePaths,
     system_ext: &Path,

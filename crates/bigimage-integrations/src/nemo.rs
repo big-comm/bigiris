@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //! Nemo (Cinnamon) — `.nemo_action` files. Nemo doesn't support nested
-//! submenus, so each action ends up flat with a `Íris ▸ <submenu> ▸ <label>`
-//! prefix to preserve some sense of hierarchy.
+//! submenus, so each action ends up flat with a `BigIris ▸ <submenu> ▸
+//! <label>` prefix to preserve some sense of hierarchy.
 
 use std::io;
 use std::path::PathBuf;

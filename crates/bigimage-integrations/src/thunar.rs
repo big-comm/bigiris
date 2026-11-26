@@ -211,10 +211,10 @@ fn render_action(action: &Action) -> String {
         Some(sub) => format!("{TOP_LEVEL_LABEL}/{}", sub.label),
         None => TOP_LEVEL_LABEL.to_string(),
     };
-    // Thunar passes <command> through `g_shell_parse_argv`, so a malicious
-    // filename containing `$()` or backticks would otherwise be interpreted
-    // as shell metasyntax. Wrap in `sh -c '… "$@"' progname …` so paths
-    // become positional args ($1, $2, …) and never re-traverse the parser.
+    // Thunar quotes each path it substitutes for %F and runs the command
+    // with /bin/sh -c. The `sh -c '… "$@"'` wrapper also hands the paths
+    // over as positional arguments, so no file name is ever part of the
+    // action's own shell text, even if that quoting were ever lost.
     let safe_cmd = wrap_for_shell(action);
     let file_filter = file_filters(action.mime_types).join("\n\t");
     format!(

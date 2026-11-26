@@ -131,15 +131,15 @@ impl ScopePaths {
         self.data.join("contractor")
     }
 
-    /// `~/.local/share/nautilus/scripts/` — GNOME Nautilus script tree
-    /// (fallback when `nautilus-python` isn't installed).
+    /// `~/.local/share/nautilus/scripts/`: GNOME Nautilus script tree, where
+    /// releases before the extension wrote; never written, only cleaned.
     pub fn nautilus_scripts(&self) -> PathBuf {
         self.data.join("nautilus/scripts")
     }
 
     /// `~/.local/share/nautilus-python/extensions/` — home of Python
     /// extensions that add top-level right-click entries (required for
-    /// "Íris ▸" to appear outside the Scripts submenu).
+    /// "BigIris ▸" to appear outside the Scripts submenu).
     pub fn nautilus_python_extensions(&self) -> PathBuf {
         self.data.join("nautilus-python/extensions")
     }

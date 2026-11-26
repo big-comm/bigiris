@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //! elementary Files — Contractor `.contract` files in
-//! `~/.local/share/contractor/`. Flat list, same "Íris ▸ …" convention as
-//! Nemo/PCManFM-Qt.
+//! `~/.local/share/contractor/`. Flat list, same "BigIris ▸ …" convention
+//! as Nemo.
 
 use std::io;
 use std::path::PathBuf;

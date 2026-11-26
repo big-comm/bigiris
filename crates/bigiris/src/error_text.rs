@@ -10,10 +10,10 @@ use bigimage_core::BigImageError;
 use gettextrs::gettext;
 use image::ImageError;
 
-use crate::codec::{printable_path, sanitize_text};
+use crate::codec::{printable_path, printable_text};
 use crate::{fill, with_error};
 
-/// A core error in the user's language, safe to print.
+/// A core error in the user's language, one line safe to print.
 pub(crate) fn core_error_text(error: &BigImageError) -> String {
     let text = match error {
         BigImageError::Io(error) => {
@@ -42,7 +42,7 @@ pub(crate) fn core_error_text(error: &BigImageError) -> String {
         // internal fault with no sentence of its own.
         BigImageError::Other(text) => text.clone(),
     };
-    sanitize_text(&text)
+    printable_text(&text)
 }
 
 /// An `image` error in the user's language, safe to print. Its I/O variant
@@ -61,7 +61,7 @@ pub(crate) fn image_error_text(error: &ImageError) -> String {
             with_error(&gettext("unsupported image: {error}"), detail)
         }
     };
-    sanitize_text(&text)
+    printable_text(&text)
 }
 
 /// A model error in the user's language, safe to print.
@@ -90,7 +90,7 @@ pub(crate) fn ai_error_text(error: &AiError) -> String {
             with_error(&gettext("AI failed: {error}"), detail)
         }
     };
-    sanitize_text(&text)
+    printable_text(&text)
 }
 
 /// This build has no AI engines.
@@ -135,6 +135,12 @@ mod tests {
         assert!(text.starts_with("too many files with the same name: a"), "{text:?}");
         let detail = BigImageError::InvalidInput("animated or multi-page image".into());
         assert!(core_error_text(&detail).ends_with("animated or multi-page image"));
+        // Library detail may carry a raw name: it cannot start a report line.
+        let forged = BigImageError::UnsupportedFormat("x\nok  a.png -> b.png".into());
+        assert!(!core_error_text(&forged).contains('\n'));
+        assert!(!ai_error_text(&AiError::Processing("x\nok".into())).contains('\n'));
+        let image = ImageError::IoError(std::io::Error::other("x\nok"));
+        assert!(!image_error_text(&image).contains('\n'));
     }
 
     #[test]

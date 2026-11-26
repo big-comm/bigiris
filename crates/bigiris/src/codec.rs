@@ -576,10 +576,15 @@ pub(crate) fn sanitize_text(text: &str) -> String {
         .collect()
 }
 
-/// A path as a terminal or the GUI shows it: [`sanitize_text`] with newlines
-/// replaced too, so a file name cannot fake report lines.
+/// One line of untrusted text for a terminal or the GUI: [`sanitize_text`]
+/// with newlines replaced too, so it cannot fake report lines.
+pub(crate) fn printable_text(text: &str) -> String {
+    sanitize_text(text).replace('\n', "\u{FFFD}")
+}
+
+/// A path as [`printable_text`] shows it.
 pub(crate) fn printable_path(path: &Path) -> String {
-    sanitize_text(&path.display().to_string()).replace('\n', "\u{FFFD}")
+    printable_text(&path.display().to_string())
 }
 
 /// Appended to worker failures when the executable was replaced on disk.

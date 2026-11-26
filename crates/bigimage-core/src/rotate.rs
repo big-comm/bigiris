@@ -1,11 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-//! Lossy rotation pipeline (90 / 180 / 270 via `image::imageops`).
-//!
-//! Arbitrary-angle rotation (with bicubic interpolation) and truly lossless
-//! JPEG DCT-level rotation are tracked as follow-up iterations — see PLAN.md.
-//! Everything here re-encodes from scratch, which is correct for every format
-//! we ship but can lose quality for JPEG sources; the viewer path will use
-//! the lossless variant when it lands.
+//! Rotation: quarter turns, baking the EXIF orientation into the pixels,
+//! and [`straighten`] by any angle with a crop to the largest rectangle
+//! inside. Every path decodes and re-encodes, so a JPEG source loses some
+//! quality; there is no lossless DCT-level rotation.
 
 use std::path::Path;
 
@@ -89,10 +86,8 @@ pub fn apply_to(src: &image::DynamicImage, rotation: Rotation) -> image::Dynamic
 /// "Bake" the EXIF orientation of `input` into the pixels and write the
 /// upright result with an `_auto` suffix.
 ///
-/// The central decode path ([`crate::pipeline::decode_with_source_format`])
-/// already applies the orientation tag, so this command no longer rotates a
-/// second time — it simply materialises that upright image to disk (the
-/// encode step strips the now-redundant tag). Images without EXIF or with
+/// Every decode already applies the orientation tag, so this writes that
+/// upright image to disk (the encode drops the now-redundant tag). Images without EXIF or with
 /// orientation `1` are a harmless re-encode, keeping the return type
 /// consistent for callers counting "written vs skipped".
 pub fn rotate_file_auto(

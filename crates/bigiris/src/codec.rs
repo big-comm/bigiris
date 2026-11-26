@@ -61,36 +61,72 @@ pub fn self_test() -> color_eyre::Result<()> {
     Ok(())
 }
 
+/// Namespaces `--unshare-all` gives the worker on every host; `user` is
+/// checked too when [`userns_hardening`] asks bwrap for one explicitly.
+const NAMESPACES: [&str; 6] = ["cgroup", "ipc", "mnt", "net", "pid", "uts"];
+
 /// Have a worker check, from inside, that its sandbox is the one
-/// [`execute`] asks for. The worker answers whether it could create a user
-/// namespace; only this side knows whether bwrap was told to forbid it.
+/// [`execute`] asks for. The worker reports its namespaces and whether it
+/// could create a user namespace; only this side knows its own namespaces
+/// and whether bwrap was told to forbid nested ones.
 fn attest(input: &Path) -> ImageResult<()> {
     let report = run(input, "attest", |output| {
         let mut report = String::new();
-        output.take(64).read_to_string(&mut report)?;
+        output.take(4096).read_to_string(&mut report)?;
         Ok(report)
     })?;
     let accepted: &[&str] =
         if userns_hardening() { &["userns=denied"] } else { &["userns=denied", "userns=allowed"] };
-    if !accepted.contains(&report.trim_end()) {
+    if !report.lines().next().is_some_and(|userns| accepted.contains(&userns)) {
         return Err(invalid(format!("invalid sandbox attestation: {}", sanitize_text(&report))));
+    }
+    let user = userns_hardening().then_some("user");
+    for kind in NAMESPACES.into_iter().chain(user) {
+        let own = std::fs::read_link(format!("/proc/self/ns/{kind}"))?;
+        let theirs = report.lines().find_map(|line| line.strip_prefix(kind)?.strip_prefix(' '));
+        if theirs.is_none_or(|theirs| Path::new(theirs) == own) {
+            return Err(invalid(format!("the sandbox shares the {kind} namespace")));
+        }
     }
     Ok(())
 }
 
 /// Worker side of [`attest`]: fail unless every limit [`execute`] sets is in
-/// force, then print whether a nested user namespace could be created.
-fn attest_sandbox() -> color_eyre::Result<()> {
-    use color_eyre::eyre::bail;
+/// force, then report the namespaces and whether a nested user namespace
+/// could be created.
+fn attest_sandbox(input: &Path) -> color_eyre::Result<()> {
+    attest_host_hidden()?;
+    attest_limits()?;
+    attest_process()?;
+    attest_mounts(input)?;
+    let nested = Command::new("/usr/bin/unshare")
+        .args(["--user", "/usr/bin/true"])
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status()?;
+    println!("userns={}", if nested.success() { "allowed" } else { "denied" });
+    for kind in NAMESPACES.into_iter().chain(["user"]) {
+        println!("{kind} {}", std::fs::read_link(format!("/proc/self/ns/{kind}"))?.display());
+    }
+    Ok(())
+}
+
+fn attest_host_hidden() -> color_eyre::Result<()> {
     for location in ["/home", "/root", "/run", "/etc"] {
         if Path::new(location).exists() {
-            bail!("host directory visible: {location}");
+            color_eyre::eyre::bail!("host directory visible: {location}");
         }
     }
     let network = std::fs::read_to_string("/proc/net/dev")?;
     if network.lines().skip(2).any(|line| !line.trim_start().starts_with("lo:")) {
-        bail!("host network visible");
+        color_eyre::eyre::bail!("host network visible");
     }
+    Ok(())
+}
+
+/// The `prlimit` values, soft and hard.
+fn attest_limits() -> color_eyre::Result<()> {
     let limits = std::fs::read_to_string("/proc/self/limits")?;
     for (name, expected) in [
         ("Max address space", WORKER_ADDRESS_SPACE),
@@ -105,9 +141,15 @@ fn attest_sandbox() -> color_eyre::Result<()> {
             .find_map(|line| line.strip_prefix(name))
             .map(|rest| rest.split_whitespace().take(2).collect());
         if values.as_deref() != Some(&[expected.as_str(), expected.as_str()]) {
-            bail!("{name} is not {expected}: {values:?}");
+            color_eyre::eyre::bail!("{name} is not {expected}: {values:?}");
         }
     }
+    Ok(())
+}
+
+/// Capabilities, session, parent-death signal and environment.
+fn attest_process() -> color_eyre::Result<()> {
+    use color_eyre::eyre::bail;
     let status = std::fs::read_to_string("/proc/self/status")?;
     for set in ["CapInh:", "CapPrm:", "CapEff:", "CapBnd:", "CapAmb:"] {
         let value = status.lines().find_map(|line| line.strip_prefix(set)).map(str::trim);
@@ -122,28 +164,35 @@ fn attest_sandbox() -> color_eyre::Result<()> {
     if session.is_none_or(|session| session == "0") {
         bail!("the worker shares the caller's session: {session:?}");
     }
+    let death = rustix::process::parent_process_death_signal()?;
+    if death != Some(rustix::process::Signal::KILL) {
+        bail!("no parent death signal: {death:?}");
+    }
     let mut environment: Vec<_> = std::env::vars_os().map(|(name, _)| name).collect();
     environment.sort();
     // bwrap sets PWD from --chdir.
     if environment != ["LC_ALL", "PWD", "RAYON_NUM_THREADS"] {
         bail!("unexpected environment: {environment:?}");
     }
-    for directory in ["/", "/app", "/dev"] {
-        if std::fs::File::create_new(Path::new(directory).join("attest")).is_ok() {
-            bail!("{directory} is writable");
+    Ok(())
+}
+
+/// Every mount but the 64 MiB `/tmp` is read-only.
+fn attest_mounts(input: &Path) -> color_eyre::Result<()> {
+    let read_only = |path: &Path| -> rustix::io::Result<bool> {
+        Ok(rustix::fs::statvfs(path)?.f_flag.contains(rustix::fs::StatVfsMountFlags::RDONLY))
+    };
+    for mount in
+        [Path::new("/"), Path::new("/usr"), Path::new("/dev"), Path::new("/app/bigiris"), input]
+    {
+        if !read_only(mount)? {
+            color_eyre::eyre::bail!("{} is writable", mount.display());
         }
     }
     let tmp = rustix::fs::statvfs("/tmp")?;
     if tmp.f_blocks.saturating_mul(tmp.f_frsize) != WORKER_TMP {
-        bail!("/tmp is not limited to {WORKER_TMP} bytes");
+        color_eyre::eyre::bail!("/tmp is not limited to {WORKER_TMP} bytes");
     }
-    let nested = Command::new("/usr/bin/unshare")
-        .args(["--user", "/usr/bin/true"])
-        .stdin(Stdio::null())
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .status()?;
-    println!("userns={}", if nested.success() { "allowed" } else { "denied" });
     Ok(())
 }
 
@@ -1176,7 +1225,7 @@ pub fn worker() -> color_eyre::Result<()> {
             let meta = trim_metadata(bigimage_core::metadata::read(&path)?);
             serde_json::to_writer(std::io::stdout().lock(), &meta)?;
         }
-        "attest" => attest_sandbox()?,
+        "attest" => attest_sandbox(&path)?,
         "static" => {
             bigimage_core::content::ensure_static_local(&path)?;
         }
@@ -1847,53 +1896,66 @@ mod tests {
     /// `--clearenv` and `--cap-drop ALL` have no row: `env_clear` and bwrap's
     /// own capability drop for a user that is not root hide their removal.
     #[test]
-    fn attest_refuses_a_sandbox_missing_any_limit() {
+    fn attest_refuses_each_weakened_limit() {
         let binary = built_worker();
         let file = input();
-        let attest_with = |from: &[&str], to: &[&str]| {
-            let edit = (!from.is_empty()).then(|| {
-                (
-                    from.iter().map(|s| s.to_string()).collect(),
-                    to.iter().map(|s| s.to_string()).collect(),
-                )
-            });
+        let attest_with = |edit: Option<(Vec<String>, Vec<String>)>| {
             TEST_SANDBOX_EDIT.with(|slot| *slot.borrow_mut() = edit);
             let result = with_executable(binary.clone(), DEADLINE, || attest(file.path()));
             TEST_SANDBOX_EDIT.with(|slot| *slot.borrow_mut() = None);
             result
         };
-        let Some(result) = attest_with(&[], &[]) else { return };
+        let Some(result) = attest_with(None) else { return };
         result.unwrap();
+        let strings = |tokens: &[&str]| tokens.iter().map(|token| token.to_string()).collect();
+        let row = |from: &[&str], to: &[&str], expected: &str| {
+            (strings(from), strings(to), expected.to_owned())
+        };
         let fsize = format!("--fsize={}", output_limit("attest"));
-        let fsize = [fsize.as_str()];
-        let mut weakened: Vec<(&[&str], &[&str], &str)> = vec![
-            (&["--as=2147483648"], &[], "Max address space"),
-            (&["--cpu=30"], &[], "Max cpu time"),
-            (&["--nofile=64"], &[], "Max open files"),
-            (&["--core=0"], &[], "Max core file size"),
-            (&fsize, &[], "Max file size"),
-            (&["--new-session"], &[], "session"),
-            (&["--remount-ro", "/dev"], &[], "/dev is writable"),
-            (&["--remount-ro", "/"], &[], "/ is writable"),
-            (&["--size", "67108864"], &[], "/tmp is not limited"),
-            (&["--chdir"], &["--setenv", "HOME", "/", "--chdir"], "unexpected environment"),
-            (
+        let app = binary.to_str().unwrap();
+        let mut weakened = vec![
+            row(&["--as=2147483648"], &[], "Max address space"),
+            row(&["--cpu=30"], &[], "Max cpu time"),
+            row(&["--nofile=64"], &[], "Max open files"),
+            row(&["--core=0"], &[], "Max core file size"),
+            row(&[&fsize], &[], "Max file size"),
+            row(&["--new-session"], &[], "session"),
+            row(&["--die-with-parent"], &[], "parent death signal"),
+            row(&["--remount-ro", "/dev"], &[], "/dev is writable"),
+            row(&["--remount-ro", "/"], &[], "/ is writable"),
+            row(&["--ro-bind", "/usr"], &["--bind", "/usr"], "/usr is writable"),
+            row(&["--ro-bind", app], &["--bind", app], "/app/bigiris is writable"),
+            row(&["--ro-bind-fd", "3"], &["--bind-fd", "3"], "/input.png is writable"),
+            row(&["--size", "67108864"], &[], "/tmp is not limited"),
+            row(&["--chdir"], &["--setenv", "HOME", "/", "--chdir"], "unexpected environment"),
+            row(
                 &["--dir", "/app"],
                 &["--ro-bind", "/etc", "/etc", "--dir", "/app"],
                 "host directory visible",
             ),
-            (
-                &["--unshare-all"],
-                &["--unshare-user-try", "--unshare-ipc", "--unshare-pid", "--unshare-uts"],
-                "host network visible",
-            ),
         ];
+        // `--unshare-all` with one namespace left out.
+        let all = ["user-try", "ipc", "pid", "net", "uts", "cgroup-try"];
+        for (left_out, expected) in [
+            ("ipc", "ipc namespace"),
+            ("pid", "pid namespace"),
+            ("net", "host network visible"),
+            ("uts", "uts namespace"),
+            ("cgroup-try", "cgroup namespace"),
+        ] {
+            let kept: Vec<String> = all
+                .iter()
+                .filter(|kind| **kind != left_out)
+                .map(|kind| format!("--unshare-{kind}"))
+                .collect();
+            weakened.push((strings(&["--unshare-all"]), kept, expected.to_owned()));
+        }
         if userns_hardening() {
-            weakened.push((&["--disable-userns"], &[], "userns=allowed"));
+            weakened.push(row(&["--disable-userns"], &[], "userns=allowed"));
         }
         for (from, to, expected) in weakened {
-            let error = attest_with(from, to).unwrap().unwrap_err().to_string();
-            assert!(error.contains(expected), "without {from:?}: {error}");
+            let error = attest_with(Some((from.clone(), to))).unwrap().unwrap_err().to_string();
+            assert!(error.contains(&expected), "without {from:?}: {error}");
         }
     }
 

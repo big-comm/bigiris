@@ -86,35 +86,6 @@ pub fn apply_to(src: &image::DynamicImage, rotation: Rotation) -> image::Dynamic
     }
 }
 
-/// Apply the transformation implied by an EXIF orientation tag (1..=8).
-/// The tag describes how the pixel array was stored relative to the scene
-/// the camera saw, so "un-applying" it produces the upright image the
-/// user actually wants. Unknown values pass through untouched — better
-/// than silently garbling orientation.
-///
-/// Mapping (per EXIF 2.32):
-/// 1. Top-left (identity)
-/// 2. Top-right → horizontal flip
-/// 3. Bottom-right → 180° rotation
-/// 4. Bottom-left → vertical flip
-/// 5. Left-top → rotate 90° then flip horizontal (transpose)
-/// 6. Right-top → rotate 90°
-/// 7. Right-bottom → rotate 270° then flip horizontal (transverse)
-/// 8. Left-bottom → rotate 270°
-pub fn apply_exif_orientation(img: image::DynamicImage, orientation: u16) -> image::DynamicImage {
-    match orientation {
-        1 => img,
-        2 => img.fliph(),
-        3 => img.rotate180(),
-        4 => img.flipv(),
-        5 => img.rotate90().fliph(),
-        6 => img.rotate90(),
-        7 => img.rotate270().fliph(),
-        8 => img.rotate270(),
-        _ => img,
-    }
-}
-
 /// "Bake" the EXIF orientation of `input` into the pixels and write the
 /// upright result with an `_auto` suffix.
 ///
@@ -509,22 +480,6 @@ mod tests {
             _ => panic!("expected write"),
         };
         assert_eq!(dims(&out), (20, 40));
-    }
-
-    #[test]
-    fn exif_orientation_dispatches_correctly() {
-        let src = image::DynamicImage::new_rgb8(40, 20);
-        let wh = |img: &image::DynamicImage| (img.width(), img.height());
-        // Case 1: identity
-        assert_eq!(wh(&apply_exif_orientation(src.clone(), 1)), (40, 20));
-        // Case 3: 180° keeps dims
-        assert_eq!(wh(&apply_exif_orientation(src.clone(), 3)), (40, 20));
-        // Case 6: 90° swaps dims
-        assert_eq!(wh(&apply_exif_orientation(src.clone(), 6)), (20, 40));
-        // Case 8: 270° swaps dims
-        assert_eq!(wh(&apply_exif_orientation(src.clone(), 8)), (20, 40));
-        // Unknown → pass-through
-        assert_eq!(wh(&apply_exif_orientation(src.clone(), 99)), (40, 20));
     }
 
     #[test]

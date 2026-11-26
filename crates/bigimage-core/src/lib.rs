@@ -340,30 +340,6 @@ pub enum BigImageError {
 /// Alias for pipeline results.
 pub type Result<T> = std::result::Result<T, BigImageError>;
 
-/// One conversion job, input to output. Left intentionally thin in M1 —
-/// batch orchestration (`Pipeline` trait with progress + cancel) will layer
-/// on top once more than a single transform type exists.
-#[derive(Debug, Clone)]
-pub struct ConvertJob {
-    /// Source path.
-    pub input: PathBuf,
-    /// Destination path (resolved by naming strategy upstream).
-    pub output: PathBuf,
-    /// Target format.
-    pub target_format: Format,
-}
-
-impl ConvertJob {
-    /// Create a new job with input, output, and target format.
-    pub fn new(
-        input: impl Into<PathBuf>,
-        output: impl Into<PathBuf>,
-        target_format: Format,
-    ) -> Self {
-        Self { input: input.into(), output: output.into(), target_format }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -403,12 +379,6 @@ mod tests {
         );
         assert!(failed.unwrap_err().to_string().contains("model missing"));
         assert!(!dir.path().join("photo_err.jpg").exists());
-    }
-
-    #[test]
-    fn convert_job_roundtrip() {
-        let job = ConvertJob::new("a.jpg", "a.png", Format::Png);
-        assert_eq!(job.target_format, Format::Png);
     }
 
     #[test]

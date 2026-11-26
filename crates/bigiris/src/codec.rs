@@ -748,7 +748,6 @@ fn preview(path: &Path) -> bigimage_core::Result<PreviewSession> {
     let pixels = run(path, "preview", receive)
         .map_err(|source| BigImageError::Decode { path: path.into(), source })?;
     PreviewSession::from_cached(
-        path.into(),
         pixels.natural,
         pixels
             .format

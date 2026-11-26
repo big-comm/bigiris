@@ -121,9 +121,7 @@ fn static_edits_refuse_animated_gif_and_preserve_destination() {
 fn preview_huge_resize_and_canvas_remain_bounded() {
     use bigimage_core::{ExtentOptions, ExtentSize, Filter, PreviewOp, PreviewSession, ResizeMode};
     let source = DynamicImage::new_rgb8(800, 600);
-    let session =
-        PreviewSession::from_cached("source.png".into(), (800, 600), Format::Png, source, false)
-            .unwrap();
+    let session = PreviewSession::from_cached((800, 600), Format::Png, source, false).unwrap();
     for op in [
         PreviewOp::Resize {
             mode: ResizeMode::Exact { width: u32::MAX, height: u32::MAX },

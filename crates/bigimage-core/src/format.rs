@@ -77,25 +77,6 @@ impl Format {
         }
     }
 
-    /// MIME type.
-    pub fn mime(&self) -> &'static str {
-        match self {
-            Format::Png => "image/png",
-            Format::Jpeg => "image/jpeg",
-            Format::WebP => "image/webp",
-            Format::Avif => "image/avif",
-            Format::Tiff => "image/tiff",
-            Format::Bmp => "image/bmp",
-            Format::Gif => "image/gif",
-            Format::Ico => "image/vnd.microsoft.icon",
-            Format::Pnm => "image/x-portable-anymap",
-            Format::Tga => "image/x-tga",
-            Format::Qoi => "image/qoi",
-            Format::Hdr => "image/vnd.radiance",
-            Format::OpenExr => "image/x-exr",
-        }
-    }
-
     /// Parse a format from a user-provided string (case-insensitive). Accepts
     /// extension-like and name-like spellings.
     pub fn parse(s: &str) -> Result<Self, BigImageError> {
@@ -230,13 +211,5 @@ mod tests {
             assert_eq!(Format::Pnm.extension_for(color), ext, "{color:?}");
         }
         assert_eq!(Format::Png.extension_for(ColorType::L8), "png");
-    }
-
-    #[test]
-    fn mime_never_empty() {
-        for f in Format::all() {
-            assert!(!f.mime().is_empty());
-            assert!(f.mime().contains('/'));
-        }
     }
 }

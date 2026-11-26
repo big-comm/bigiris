@@ -116,22 +116,6 @@ impl EncodeOptions {
     }
 }
 
-impl EncodeOptions {
-    /// Convenience: a preset tailored for web uploads (WhatsApp, general
-    /// email). JPEG quality 85. Progressive/optimize are compatibility
-    /// flags with no JPEG effect in the current encoder. Metadata stripped.
-    pub fn web_preset() -> Self {
-        Self { quality: Some(85), progressive: true, optimize: true, ..Self::default() }
-    }
-
-    /// Returns the resolved fixed JPEG quality — user value when set,
-    /// otherwise 75. The encoder only uses it when `quality` is `Some`;
-    /// `None` searches by [`EncodeOptions::target`] instead.
-    pub fn jpeg_quality(&self) -> u8 {
-        self.quality.unwrap_or(75)
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -142,11 +126,6 @@ mod tests {
     #[test]
     fn default_options_strip_metadata() {
         assert!(EncodeOptions::default().strip_metadata);
-    }
-
-    #[test]
-    fn web_preset_strips_metadata() {
-        assert!(EncodeOptions::web_preset().strip_metadata);
     }
 
     #[test]

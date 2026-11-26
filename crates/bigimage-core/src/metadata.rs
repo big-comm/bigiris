@@ -415,7 +415,7 @@ pub fn estimate_jpeg_quality(path: impl AsRef<Path>) -> Option<u8> {
 
 /// [`estimate_jpeg_quality`] over any seekable reader positioned at the
 /// start of a JPEG stream.
-pub fn estimate_jpeg_quality_from_reader(
+fn estimate_jpeg_quality_from_reader(
     reader: &mut (impl std::io::Read + std::io::Seek),
 ) -> Option<u8> {
     use std::io::SeekFrom;

@@ -62,8 +62,6 @@ pub enum PreviewOp {
 /// Cached decoded image + downsampled thumbnail, built once per dialog.
 #[derive(Debug, Clone)]
 pub struct PreviewSession {
-    /// Path of the source file — kept for error messages only.
-    source_path: std::path::PathBuf,
     /// Natural pixel dimensions of the source (used to scale crop/resize
     /// parameters into the thumbnail space).
     natural_size: (u32, u32),
@@ -95,7 +93,6 @@ impl PreviewSession {
         let thumbnail_scale = thumbnail.width() as f64 / natural_size.0.max(1) as f64;
 
         Ok(Self {
-            source_path: input.to_path_buf(),
             natural_size,
             source_format,
             thumbnail,
@@ -106,7 +103,6 @@ impl PreviewSession {
 
     /// Reconstruct a validated preview returned by an isolated decoder.
     pub fn from_cached(
-        input: std::path::PathBuf,
         natural_size: (u32, u32),
         source_format: Format,
         thumbnail: DynamicImage,
@@ -122,7 +118,6 @@ impl PreviewSession {
             return Err(crate::BigImageError::InvalidInput("invalid preview".into()));
         }
         Ok(Self {
-            source_path: input,
             natural_size,
             source_format,
             thumbnail_scale: thumbnail.width() as f64 / natural_size.0 as f64,
@@ -140,11 +135,6 @@ impl PreviewSession {
     /// Format detected at decode time.
     pub fn source_format(&self) -> Format {
         self.source_format
-    }
-
-    /// Path of the source file.
-    pub fn source_path(&self) -> &Path {
-        &self.source_path
     }
 
     /// Apply `op` to the cached thumbnail and return the result. The
@@ -217,13 +207,6 @@ impl PreviewSession {
                 )
             }
         }
-    }
-
-    /// How many bytes the cached thumbnail occupies if we upload it to the
-    /// GPU as an RGBA texture. Useful to sanity-check memory on very
-    /// large selections.
-    pub fn thumbnail_rgba_bytes(&self) -> usize {
-        (self.thumbnail.width() as usize) * (self.thumbnail.height() as usize) * 4
     }
 
     /// Expose the thumbnail directly — GUI uses this when no op has been

@@ -227,6 +227,12 @@ fn closest_ijg_quality(table: &[u16]) -> u8 {
 /// Read EXIF from `path`. Returns an empty [`Metadata`] when the file
 /// has no EXIF segment (very common for PNG/WebP/GIF outputs from
 /// non-camera sources) — the caller decides whether that's notable.
+///
+/// # Errors
+///
+/// - [`BigImageError::Io`]: `path` cannot be opened.
+/// - [`BigImageError::InvalidInput`]: it is not a regular file or is over 1 GiB.
+/// - [`BigImageError::Other`]: its EXIF cannot be read.
 pub fn read(path: impl AsRef<Path>) -> Result<Metadata> {
     let path = path.as_ref();
     if let Some(backend) = crate::backend::configured() {

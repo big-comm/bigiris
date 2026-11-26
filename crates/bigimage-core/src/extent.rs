@@ -53,6 +53,12 @@ impl ExtentSize {
     /// Validates that the resolved canvas can contain the source — extent
     /// is an extend-only operation; smaller targets are rejected so users
     /// don't silently lose pixels.
+    ///
+    /// # Errors
+    ///
+    /// [`BigImageError::InvalidInput`] when the source, the target size or the
+    /// ratio has a zero term, the target is smaller than the source, or the
+    /// canvas does not fit in `u32`.
     pub fn resolve(self, src_w: u32, src_h: u32) -> Result<(u32, u32)> {
         if src_w == 0 || src_h == 0 {
             return Err(BigImageError::InvalidInput(format!(
@@ -195,6 +201,14 @@ impl ExtentOptions {
 /// Parse a hex colour string (`#RRGGBB` or `#RRGGBBAA`, with or without
 /// leading `#`) into RGBA bytes. Returns a user-friendly error string for
 /// CLI/GUI surfacing.
+///
+/// # Errors
+///
+/// A message for the user when `s` does not hold 6 or 8 hex digits.
+#[expect(
+    clippy::missing_panics_doc,
+    reason = "the expects only see digit pairs already checked to be ASCII hex"
+)]
 pub fn parse_hex_color(s: &str) -> std::result::Result<[u8; 4], String> {
     let digits = s.strip_prefix('#').unwrap_or(s).as_bytes();
     if !matches!(digits.len(), 6 | 8) {
@@ -213,6 +227,10 @@ pub fn parse_hex_color(s: &str) -> std::result::Result<[u8; 4], String> {
 }
 
 /// Extend the canvas of a file and write it next to the source.
+///
+/// # Errors
+///
+/// As [`extent_file_with_options`].
 pub fn extent_file(
     input: impl AsRef<Path>,
     opts: ExtentOptions,
@@ -223,6 +241,11 @@ pub fn extent_file(
 }
 
 /// Like [`extent_file`], with caller-supplied encoder options.
+///
+/// # Errors
+///
+/// [`BigImageError::InvalidInput`] when [`ExtentSize::resolve`] refuses the
+/// size; otherwise as [`crate::transform_file`].
 pub fn extent_file_with_options(
     input: impl AsRef<Path>,
     opts: ExtentOptions,
@@ -271,6 +294,11 @@ pub fn extent_file_with_options(
 /// channel is only added when the source has one or the background is not
 /// fully opaque. Float canvases receive the background in linear light,
 /// matching the linear convention used for float images.
+///
+/// # Errors
+///
+/// [`BigImageError::InvalidInput`] when [`ExtentSize::resolve`] refuses the
+/// size for `src`.
 pub fn apply_to(src: &DynamicImage, opts: &ExtentOptions) -> Result<DynamicImage> {
     use image::ColorType;
     let (sw, sh) = (src.width(), src.height());

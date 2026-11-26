@@ -30,9 +30,14 @@ fn score(reference: &RgbaImage, distorted: &RgbaImage) -> f64 {
         .map(|bg| {
             let a = composite(reference, bg);
             let b = composite(distorted, bg);
-            let sa = PixelSlice::new(&a, w, h, w as usize * 3, PixelDescriptor::RGB8_SRGB).unwrap();
-            let sb = PixelSlice::new(&b, w, h, w as usize * 3, PixelDescriptor::RGB8_SRGB).unwrap();
-            Ssimulacra2Reference::new(&sa).unwrap().compare(&sb).unwrap()
+            let slice = |rgb| {
+                PixelSlice::new(rgb, w, h, w as usize * 3, PixelDescriptor::RGB8_SRGB)
+                    .expect("composite returns three bytes per pixel")
+            };
+            Ssimulacra2Reference::new(&slice(&a))
+                .expect("reference image too small for SSIMULACRA2")
+                .compare(&slice(&b))
+                .expect("images of different sizes")
         })
         .fold(f64::INFINITY, f64::min)
 }
@@ -72,8 +77,9 @@ fn displayed(image: &DynamicImage, format: Format) -> RgbaImage {
         return rgba;
     }
     let rgb = composite(&rgba, 255);
-    DynamicImage::ImageRgb8(image::RgbImage::from_raw(rgba.width(), rgba.height(), rgb).unwrap())
-        .into_rgba8()
+    let rgb = image::RgbImage::from_raw(rgba.width(), rgba.height(), rgb)
+        .expect("composite returns three bytes per pixel");
+    DynamicImage::ImageRgb8(rgb).into_rgba8()
 }
 
 fn save(
@@ -83,8 +89,8 @@ fn save(
     dir: &std::path::Path,
 ) -> Vec<u8> {
     let path = dir.join(format!("out-{:?}-{:?}.{}", opts.target, opts.quality, format.extension()));
-    save_image(image.clone(), &path, format, opts, OverwritePolicy::Replace).unwrap();
-    std::fs::read(&path).unwrap()
+    save_image(image.clone(), &path, format, opts, OverwritePolicy::Replace).expect("save");
+    std::fs::read(&path).expect("read the saved file")
 }
 
 #[test]
@@ -111,7 +117,7 @@ fn lossy_and_palette_outputs_meet_every_target() {
     let bytes = save(&graphic(), Format::Gif, &opts, dir.path());
     let decoded = image::load_from_memory(&bytes).unwrap().into_rgba8();
     let flat = graphic().to_rgba8();
-    let mut binary = flat.clone();
+    let mut binary = flat;
     for px in binary.pixels_mut() {
         px[3] = if px[3] < 128 { 0 } else { 255 };
     }

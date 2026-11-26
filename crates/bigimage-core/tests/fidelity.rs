@@ -337,20 +337,20 @@ fn large_exif(len: usize) -> Vec<u8> {
         writer.push_field(field);
     }
     let mut out = std::io::Cursor::new(Vec::new());
-    writer.write(&mut out, true).unwrap();
+    writer.write(&mut out, true).expect("write EXIF");
     out.into_inner()
 }
 
 fn icc_of(path: &std::path::Path) -> Option<Vec<u8>> {
     use image::ImageDecoder;
     image::ImageReader::open(path)
-        .unwrap()
+        .expect("open")
         .with_guessed_format()
-        .unwrap()
+        .expect("read the header")
         .into_decoder()
-        .unwrap()
+        .expect("decoder")
         .icc_profile()
-        .unwrap()
+        .expect("read the ICC profile")
 }
 
 #[test]

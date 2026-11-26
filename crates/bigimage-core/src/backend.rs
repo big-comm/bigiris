@@ -47,15 +47,30 @@ pub(crate) fn configured() -> Option<&'static Backend> {
 }
 /// Local decoding entry point reserved for the isolated codec process and
 /// standalone library consumers. Never calls the configured backend.
+///
+/// # Errors
+///
+/// An [`image::ImageError`] when `path` cannot be read, is not a regular file,
+/// exceeds the decoding limits or holds no image a decoder accepts.
 pub fn decode_in_process(path: &Path) -> ImageResult<Decoded> {
     crate::pipeline::decode_local(path)
 }
 /// Resave decoding inside the isolated codec process (see
 /// [`configure_resave`]). Never calls the configured backend.
+///
+/// # Errors
+///
+/// An [`image::ImageError`] when `path` cannot be read, is not a regular file,
+/// exceeds the decoding limits or holds no image a decoder accepts.
 pub fn decode_for_resave_in_process(path: &Path) -> ImageResult<ResaveDecoded> {
     crate::pipeline::decode_local_with(path, false)
 }
 /// Header inspection inside the isolated codec process.
+///
+/// # Errors
+///
+/// An [`image::ImageError`] when `path` cannot be read, is not a regular file,
+/// has no header a decoder accepts or declares a size over the limits.
 pub fn dimensions_in_process(path: &Path) -> ImageResult<(u32, u32)> {
     crate::pipeline::bounded_dimensions(path)
 }

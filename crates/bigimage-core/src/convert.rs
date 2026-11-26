@@ -67,6 +67,10 @@ impl ConvertOutcome {
 /// depth where the target can store it). The encode carries no source
 /// metadata; [`convert_file_report`] says when the original bytes are
 /// published instead.
+///
+/// # Errors
+///
+/// As [`convert_file_report`].
 pub fn convert_file(
     input: impl AsRef<Path>,
     target: Format,
@@ -80,6 +84,10 @@ pub fn convert_file(
 /// the converted file into that directory keeping the source stem and
 /// honouring the overwrite policy (Skip/Replace/Increment). Passing
 /// `None` is equivalent to [`convert_file`] (writes next to the source).
+///
+/// # Errors
+///
+/// As [`convert_file_report`].
 pub fn convert_file_to(
     input: impl AsRef<Path>,
     output_dir: Option<&Path>,
@@ -109,6 +117,11 @@ pub struct ConvertReport {
 /// holds anything the encoders would not write (EXIF, XMP, text, C2PA,
 /// private chunks, bytes after the image): privacy wins over size. Across formats the sizes are not comparable
 /// and the encode is always written.
+///
+/// # Errors
+///
+/// As [`crate::transform_file`]; converting a file over itself also refuses a
+/// container with several entries ([`crate::BigImageError::SeveralEntries`]).
 pub fn convert_file_report(
     input: impl AsRef<Path>,
     output_dir: Option<&Path>,

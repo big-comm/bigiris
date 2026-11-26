@@ -65,8 +65,8 @@ impl ResizeMode {
                     )));
                 }
                 let f = f64::from(p) / 100.0;
-                let w = ((src_w as f64) * f).round() as u32;
-                let h = ((src_h as f64) * f).round() as u32;
+                let w = (f64::from(src_w) * f).round() as u32;
+                let h = (f64::from(src_h) * f).round() as u32;
                 Ok((w.max(1), h.max(1)))
             }
             ResizeMode::Exact { width, height } => {
@@ -87,8 +87,8 @@ impl ResizeMode {
                     f64::from(width) / f64::from(src_w),
                     f64::from(height) / f64::from(src_h),
                 );
-                let w = ((src_w as f64) * scale).round() as u32;
-                let h = ((src_h as f64) * scale).round() as u32;
+                let w = (f64::from(src_w) * scale).round() as u32;
+                let h = (f64::from(src_h) * scale).round() as u32;
                 Ok((w.max(1), h.max(1)))
             }
         }
@@ -147,6 +147,11 @@ impl Filter {
 /// `target = None` preserves the source encoding; the output file always
 /// carries a suffix describing the resize (e.g. `photo_1080.jpg`) so we never
 /// overwrite the original unless policy explicitly asks for it.
+///
+/// # Errors
+///
+/// [`BigImageError::InvalidInput`] when `mode` is invalid for the image;
+/// otherwise as [`crate::transform_file`].
 pub fn resize_file(
     input: impl AsRef<Path>,
     mode: ResizeMode,
@@ -185,6 +190,12 @@ pub fn resize_file(
 /// Pure in-memory variant — resizes an already-decoded image and returns
 /// the result. Shared by [`resize_file`] and by the preview pipeline in
 /// `crate::preview`.
+///
+/// # Errors
+///
+/// - [`BigImageError::InvalidInput`]: `mode` is invalid for `src`, or the
+///   result exceeds the processing limits.
+/// - [`BigImageError::Other`]: the resizer fails.
 pub fn apply_to(src: &DynamicImage, mode: ResizeMode, filter: Filter) -> Result<DynamicImage> {
     let (new_w, new_h) = mode.target_dims(src.width(), src.height())?;
     pipeline::check_dimensions(new_w, new_h, src.color().bytes_per_pixel())?;

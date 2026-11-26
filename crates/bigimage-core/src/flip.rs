@@ -26,6 +26,10 @@ impl FlipAxis {
 }
 
 /// Flip a single file along the given axis.
+///
+/// # Errors
+///
+/// As [`crate::transform_file`].
 pub fn flip_file(
     input: impl AsRef<Path>,
     axis: FlipAxis,
@@ -36,6 +40,10 @@ pub fn flip_file(
 }
 
 /// Like [`flip_file`], with caller-supplied encoder options.
+///
+/// # Errors
+///
+/// As [`crate::transform_file`].
 pub fn flip_file_with_options(
     input: impl AsRef<Path>,
     axis: FlipAxis,

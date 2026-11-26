@@ -10,15 +10,17 @@ use bigimage_core::{
 use image::{DynamicImage, GenericImageView, Rgb, RgbImage};
 
 fn fixture(dir: &Path, name: &str, color: u8) -> PathBuf {
-    std::fs::create_dir_all(dir).unwrap();
+    std::fs::create_dir_all(dir).expect("create the fixture folder");
     let path = dir.join(name);
-    RgbImage::from_pixel(32, 24, Rgb([color, 20, 30])).save(&path).unwrap();
+    RgbImage::from_pixel(32, 24, Rgb([color, 20, 30])).save(&path).expect("save the fixture");
     path
 }
 
 fn assert_no_partials(dir: &Path) {
-    for entry in std::fs::read_dir(dir).unwrap() {
-        assert!(!entry.unwrap().file_name().to_string_lossy().starts_with(".bigiris-"));
+    for entry in std::fs::read_dir(dir).expect("list the output folder") {
+        assert!(
+            !entry.expect("folder entry").file_name().to_string_lossy().starts_with(".bigiris-")
+        );
     }
 }
 
@@ -507,8 +509,7 @@ fn skip_policy_still_rejects_invalid_operations() {
 
     // Animated input: refused, never reported as skipped.
     let gif = dir.path().join("anim.gif");
-    make_gif(&[src.clone(), fixture(dir.path(), "b.png", 200)], &gif, AnimateOptions::default())
-        .unwrap();
+    make_gif(&[src, fixture(dir.path(), "b.png", 200)], &gif, AnimateOptions::default()).unwrap();
     existing("anim_rot90.gif");
     existing("anim.png");
     assert!(matches!(
@@ -743,7 +744,7 @@ fn add_primary_irot(file: &[u8], angle: u8) -> Vec<u8> {
         bytes.windows(4).position(|w| w == kind).expect("box present") - 4
     }
     fn size(bytes: &[u8], at: usize) -> usize {
-        u32::from_be_bytes(bytes[at..at + 4].try_into().unwrap()) as usize
+        u32::from_be_bytes([bytes[at], bytes[at + 1], bytes[at + 2], bytes[at + 3]]) as usize
     }
     fn grow(bytes: &mut [u8], at: usize, by: usize) {
         let new = (size(bytes, at) + by) as u32;
@@ -850,12 +851,12 @@ fn write_multi_size_icon(path: &Path, sizes: &[u32]) {
                 size,
                 image::ExtendedColorType::Rgba8,
             )
-            .unwrap()
+            .expect("encode an icon entry")
         })
         .collect();
-    image::codecs::ico::IcoEncoder::new(std::fs::File::create(path).unwrap())
+    image::codecs::ico::IcoEncoder::new(std::fs::File::create(path).expect("create the icon"))
         .encode_images(&entries)
-        .unwrap();
+        .expect("encode the icon");
 }
 
 /// A 4x4 OpenEXR with two parts.
@@ -878,7 +879,7 @@ fn write_two_part_exr(path: &Path) {
     )
     .write()
     .to_file(path)
-    .unwrap();
+    .expect("write the OpenEXR file");
 }
 
 /// Guards: data loss: the decoder returns one entry of these containers, so

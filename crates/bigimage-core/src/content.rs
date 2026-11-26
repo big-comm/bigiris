@@ -5,6 +5,12 @@ use std::io::{Read, Seek, SeekFrom};
 use std::path::Path;
 
 /// Static transformations never silently discard animation or TIFF pages.
+///
+/// # Errors
+///
+/// - [`BigImageError::Decode`]: `path` cannot be read, exceeds the decoding
+///   limits or its container is malformed.
+/// - [`BigImageError::NotStatic`]: it is an animation or holds several pages.
 pub fn ensure_static(path: &Path) -> Result<()> {
     if let Some(backend) = crate::backend::configured() {
         return (backend.ensure_static)(path);
@@ -12,6 +18,12 @@ pub fn ensure_static(path: &Path) -> Result<()> {
     ensure_static_local(path)
 }
 /// Local inspection entry point for the confined worker.
+///
+/// # Errors
+///
+/// - [`BigImageError::Decode`]: `path` cannot be read, exceeds the decoding
+///   limits or its container is malformed.
+/// - [`BigImageError::NotStatic`]: it is an animation or holds several pages.
 pub fn ensure_static_local(path: &Path) -> Result<()> {
     // bounded_reader validates size, regular-file status and AVIF box bounds
     // before any container parser.
@@ -78,8 +90,8 @@ pub fn ensure_single_entry(path: &Path, target: Option<crate::Format>) -> Result
 
 /// A TIFF or BigTIFF whose first IFD links to another holds more than one page.
 fn has_second_tiff_page(file: &mut (impl Read + Seek)) -> std::io::Result<bool> {
-    let mut header = [0; 16];
-    file.read_exact(&mut header[..8])?;
+    let mut header = [0; 8];
+    file.read_exact(&mut header)?;
     let little = &header[..2] == b"II";
     let word = |bytes: [u8; 2]| {
         if little { u16::from_le_bytes(bytes) } else { u16::from_be_bytes(bytes) }
@@ -90,20 +102,22 @@ fn has_second_tiff_page(file: &mut (impl Read + Seek)) -> std::io::Result<bool> 
     let wide = |bytes: [u8; 8]| {
         if little { u64::from_le_bytes(bytes) } else { u64::from_be_bytes(bytes) }
     };
-    let (first, big) = if word(header[2..4].try_into().unwrap()) == 43 {
-        file.read_exact(&mut header[8..16])?;
-        (wide(header[8..16].try_into().unwrap()), true)
+    let (first, big) = if word([header[2], header[3]]) == 43 {
+        let mut offset = [0; 8];
+        file.read_exact(&mut offset)?;
+        (wide(offset), true)
     } else {
-        (u64::from(long(header[4..8].try_into().unwrap())), false)
+        (u64::from(long([header[4], header[5], header[6], header[7]])), false)
     };
     file.seek(SeekFrom::Start(first))?;
-    let mut bytes = [0; 8];
     let (count, entry, base) = if big {
-        file.read_exact(&mut bytes)?;
-        (wide(bytes), 20u64, 8u64)
+        let mut count = [0; 8];
+        file.read_exact(&mut count)?;
+        (wide(count), 20u64, 8u64)
     } else {
-        file.read_exact(&mut bytes[..2])?;
-        (u64::from(word(bytes[..2].try_into().unwrap())), 12, 2)
+        let mut count = [0; 2];
+        file.read_exact(&mut count)?;
+        (u64::from(word(count)), 12, 2)
     };
     let next = count
         .checked_mul(entry)
@@ -111,11 +125,13 @@ fn has_second_tiff_page(file: &mut (impl Read + Seek)) -> std::io::Result<bool> 
         .ok_or_else(|| std::io::Error::new(std::io::ErrorKind::InvalidData, "invalid TIFF IFD"))?;
     file.seek(SeekFrom::Start(next))?;
     if big {
-        file.read_exact(&mut bytes)?;
-        Ok(wide(bytes) != 0)
+        let mut link = [0; 8];
+        file.read_exact(&mut link)?;
+        Ok(wide(link) != 0)
     } else {
-        file.read_exact(&mut bytes[..4])?;
-        Ok(long(bytes[..4].try_into().unwrap()) != 0)
+        let mut link = [0; 4];
+        file.read_exact(&mut link)?;
+        Ok(long(link) != 0)
     }
 }
 
@@ -131,9 +147,8 @@ pub(crate) fn is_avif_sequence(reader: &mut (impl Read + Seek)) -> std::io::Resu
             break;
         }
         reader.seek(SeekFrom::Start(position))?;
-        let mut header = [0; 8];
-        reader.read_exact(&mut header)?;
-        let (size, header_size) = match u32::from_be_bytes(header[..4].try_into().unwrap()) {
+        let (short, kind) = crate::container_bounds::read_box_header(reader)?;
+        let (size, header_size) = match short {
             0 => (end - position, 8),
             1 => {
                 let mut large = [0; 8];
@@ -145,7 +160,7 @@ pub(crate) fn is_avif_sequence(reader: &mut (impl Read + Seek)) -> std::io::Resu
         if size < header_size {
             break;
         }
-        match &header[4..8] {
+        match &kind {
             b"moov" => return Ok(true),
             b"ftyp" => {
                 // major_brand(4) minor_version(4) compatible_brands(4 each)
@@ -206,8 +221,8 @@ pub(crate) fn inspect_gif(reader: &mut (impl Read + Seek)) -> image::ImageResult
     if &header[..6] != b"GIF87a" && &header[..6] != b"GIF89a" {
         return Err(malformed().into());
     }
-    let width = u16::from_le_bytes(header[6..8].try_into().unwrap());
-    let height = u16::from_le_bytes(header[8..10].try_into().unwrap());
+    let width = u16::from_le_bytes([header[6], header[7]]);
+    let height = u16::from_le_bytes([header[8], header[9]]);
     if width == 0 || height == 0 {
         return Err(malformed().into());
     }
@@ -234,8 +249,8 @@ pub(crate) fn inspect_gif(reader: &mut (impl Read + Seek)) -> image::ImageResult
             0x2c => {
                 let mut descriptor = [0; 9];
                 reader.read_exact(&mut descriptor)?;
-                let word = |offset| {
-                    u16::from_le_bytes(descriptor[offset..offset + 2].try_into().unwrap()) as u32
+                let word = |offset: usize| {
+                    u32::from(u16::from_le_bytes([descriptor[offset], descriptor[offset + 1]]))
                 };
                 if word(4) == 0
                     || word(6) == 0

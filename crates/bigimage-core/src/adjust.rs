@@ -102,6 +102,10 @@ impl AdjustOps {
 ///
 /// Output naming carries a compact tag from [`AdjustOps::suffix_tag`] so
 /// independent tweaks don't step on each other: `foo_b10_c-20.png`.
+///
+/// # Errors
+///
+/// As [`adjust_file_with_options`].
 pub fn adjust_file(
     input: impl AsRef<Path>,
     ops: AdjustOps,
@@ -112,6 +116,11 @@ pub fn adjust_file(
 }
 
 /// Like [`adjust_file`], with caller-supplied encoder options.
+///
+/// # Errors
+///
+/// [`BigImageError::InvalidInput`] when a value of `ops` is out of range;
+/// otherwise as [`crate::transform_file`].
 pub fn adjust_file_with_options(
     input: impl AsRef<Path>,
     ops: AdjustOps,
@@ -363,7 +372,7 @@ mod tests {
 
         // Brightness alone must be visible on 16-bit (it used to add 20 of
         // 65535) and match the 8-bit shift: +20/255 of full scale.
-        let bright = apply_to(rgb16.clone(), AdjustOps { brightness: 20, ..AdjustOps::default() });
+        let bright = apply_to(rgb16, AdjustOps { brightness: 20, ..AdjustOps::default() });
         let px = bright.as_rgb16().unwrap().get_pixel(0, 0).0;
         let expected = 20000 + (20.0f32 * 65535.0 / 255.0).round() as u16;
         assert!(px[0].abs_diff(expected) <= 1, "got {px:?}, expected {expected}");

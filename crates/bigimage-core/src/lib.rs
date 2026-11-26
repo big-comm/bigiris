@@ -82,6 +82,11 @@ pub fn version() -> &'static str {
 /// "extension not recognized as an image format" even though the bytes are a
 /// valid PNG/JPEG/etc. Sniffing the header avoids the false negative; on a
 /// well-named file it costs the same.
+///
+/// # Errors
+///
+/// An [`image::ImageError`] when `path` cannot be read, is not a regular file,
+/// exceeds the decoding limits or holds no image a decoder accepts.
 pub fn open_image(path: impl AsRef<std::path::Path>) -> image::ImageResult<image::DynamicImage> {
     let path = path.as_ref();
     pipeline::decode_image(path).map(|(img, _)| img)
@@ -92,6 +97,19 @@ pub fn open_image(path: impl AsRef<std::path::Path>) -> image::ImageResult<image
 /// decoding), size limits and atomic publication every transform without
 /// its own validation shares (flip, rotate, adjust, the AI tools). `target`
 /// defaults to the source format.
+///
+/// # Errors
+///
+/// - [`BigImageError::NotStatic`] or [`BigImageError::SeveralEntries`]: the
+///   output would drop frames, pages or entries of `input`.
+/// - [`BigImageError::Decode`]: `input` cannot be read or decoded.
+/// - [`BigImageError::UnsupportedFormat`]: no format is recognized in `input`.
+/// - [`BigImageError::InvalidInput`]: `input` has no file name, or the result
+///   exceeds the processing limits.
+/// - Any error `transform` returns.
+/// - [`BigImageError::Encode`] or [`BigImageError::Io`]: the output cannot be
+///   encoded, synced or published.
+/// - [`BigImageError::NoFreeName`]: `Increment` finds every numbered name taken.
 pub fn transform_file(
     input: impl AsRef<std::path::Path>,
     suffix: &str,
@@ -152,6 +170,11 @@ pub fn within_limits(width: u32, height: u32, bytes_per_pixel: u8) -> bool {
 
 /// Read just the dimensions of an image, dispatching the decoder by content.
 /// See [`open_image`] for why this matters.
+///
+/// # Errors
+///
+/// An [`image::ImageError`] when `path` cannot be read, is not a regular file,
+/// has no header a decoder accepts or declares a size over the limits.
 pub fn image_dimensions(path: impl AsRef<std::path::Path>) -> image::ImageResult<(u32, u32)> {
     if let Some(backend) = backend::configured() {
         return (backend.dimensions)(path.as_ref());
@@ -190,6 +213,14 @@ pub fn image_dimensions(path: impl AsRef<std::path::Path>) -> image::ImageResult
 /// above 1.0). Float outputs replace NaN and -inf with 0 and clamp +inf to
 /// a large finite value the encoders can represent. PNG and JPEG outputs
 /// carry a generated sRGB ICC profile; no source metadata is written (see [`save_image_preserving_metadata`]).
+///
+/// # Errors
+///
+/// - [`BigImageError::InvalidInput`]: the pixels prepared for `target` exceed
+///   the processing limits.
+/// - [`BigImageError::Encode`] or [`BigImageError::Io`]: the output cannot be
+///   encoded, synced or published.
+/// - [`BigImageError::NoFreeName`]: `Increment` finds every numbered name taken.
 pub fn save_image(
     image: image::DynamicImage,
     output: impl AsRef<std::path::Path>,
@@ -208,6 +239,11 @@ pub fn save_image(
 /// installed by [`backend::configure_resave`]; if none was installed the
 /// pixels come back sRGB-normalised with empty metadata (nothing can be
 /// re-attached, and no codec runs in this process).
+///
+/// # Errors
+///
+/// An [`image::ImageError`] when `path` cannot be read, is not a regular file,
+/// exceeds the decoding limits or holds no image a decoder accepts.
 pub fn open_image_for_resave(
     path: impl AsRef<std::path::Path>,
 ) -> image::ImageResult<(image::DynamicImage, SourceMetadata)> {
@@ -248,6 +284,10 @@ pub fn open_image_for_resave(
 /// quality, e.g. `quality: metadata::estimate_jpeg_quality(path)`: with
 /// `None` the encoder searches for `options.target`, which can re-compress
 /// a high-quality original below its own quality.
+///
+/// # Errors
+///
+/// As [`save_image`]; metadata that cannot be written is dropped, never an error.
 pub fn save_image_preserving_metadata(
     image: image::DynamicImage,
     output: impl AsRef<std::path::Path>,
@@ -273,6 +313,11 @@ pub struct ResaveOutcome {
 /// [`save_image_preserving_metadata`], also reporting which source
 /// metadata could not be written, so the UI can tell the user (e.g. "the
 /// colour profile was converted to sRGB", "EXIF too large for this format").
+///
+/// # Errors
+///
+/// As [`save_image`]; metadata that cannot be written is reported in
+/// [`ResaveOutcome::dropped`], never as an error.
 pub fn save_image_preserving_metadata_report(
     image: image::DynamicImage,
     output: impl AsRef<std::path::Path>,

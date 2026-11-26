@@ -61,6 +61,10 @@ impl CropRect {
 }
 
 /// Crop a rectangular window from a file.
+///
+/// # Errors
+///
+/// As [`crop_file_with_options`].
 pub fn crop_file(
     input: impl AsRef<Path>,
     rect: CropRect,
@@ -72,6 +76,11 @@ pub fn crop_file(
 
 /// Like [`crop_file`], with caller-supplied encoder options (JPEG/AVIF
 /// quality, PNG optimisation…).
+///
+/// # Errors
+///
+/// [`BigImageError::InvalidInput`] when `rect` is empty or not inside the
+/// image; otherwise as [`crate::transform_file`].
 pub fn crop_file_with_options(
     input: impl AsRef<Path>,
     rect: CropRect,
@@ -107,6 +116,10 @@ pub fn crop_file_with_options(
 
 /// Pure in-memory crop — validates `rect` against the image then returns a
 /// cropped copy. Shared with the preview pipeline in `crate::preview`.
+///
+/// # Errors
+///
+/// [`BigImageError::InvalidInput`] when `rect` is empty or not inside `src`.
 pub fn apply_to(src: &image::DynamicImage, rect: CropRect) -> Result<image::DynamicImage> {
     rect.validate_against(src.width(), src.height())?;
     Ok(src.crop_imm(rect.x, rect.y, rect.width, rect.height))

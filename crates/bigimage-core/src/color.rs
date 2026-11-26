@@ -26,6 +26,11 @@ fn error(message: impl std::fmt::Display) -> ImageError {
 /// pixels as sRGB and records it with [`note_ignored_profile`], so the
 /// viewer and the CLI can say the colours may be off instead of refusing the
 /// photo or relabeling it silently.
+///
+/// # Errors
+///
+/// An [`ImageError`] when `icc` is not a parsable profile, or the colour
+/// transform it describes cannot be built.
 pub fn normalize_srgb(image: &mut DynamicImage, icc: &[u8]) -> ImageResult<()> {
     normalize_srgb_applied(image, icc).map(drop)
 }

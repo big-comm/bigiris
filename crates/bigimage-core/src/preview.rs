@@ -81,6 +81,11 @@ pub struct PreviewSession {
 impl PreviewSession {
     /// Open a file, decode it, downsample to a preview thumbnail, and
     /// cache everything in memory.
+    ///
+    /// # Errors
+    ///
+    /// As [`crate::transform_file`] for the decode, plus
+    /// [`crate::BigImageError::Other`] when the thumbnail cannot be resized.
     pub fn open(input: impl AsRef<Path>) -> Result<Self> {
         let input = input.as_ref();
         if let Some(backend) = crate::backend::configured() {
@@ -90,7 +95,7 @@ impl PreviewSession {
         let natural_size = (src.width(), src.height());
 
         let thumbnail = downscale(&src, PREVIEW_MAX_EDGE)?;
-        let thumbnail_scale = thumbnail.width() as f64 / natural_size.0.max(1) as f64;
+        let thumbnail_scale = f64::from(thumbnail.width()) / f64::from(natural_size.0.max(1));
 
         Ok(Self {
             natural_size,
@@ -102,6 +107,11 @@ impl PreviewSession {
     }
 
     /// Reconstruct a validated preview returned by an isolated decoder.
+    ///
+    /// # Errors
+    ///
+    /// [`crate::BigImageError::InvalidInput`] when a size is zero or the thumbnail
+    /// is over the preview edge.
     pub fn from_cached(
         natural_size: (u32, u32),
         source_format: Format,
@@ -120,7 +130,7 @@ impl PreviewSession {
         Ok(Self {
             natural_size,
             source_format,
-            thumbnail_scale: thumbnail.width() as f64 / natural_size.0 as f64,
+            thumbnail_scale: f64::from(thumbnail.width()) / f64::from(natural_size.0),
             thumbnail,
             has_gps,
         })
@@ -140,6 +150,12 @@ impl PreviewSession {
     /// Apply `op` to the cached thumbnail and return the result. The
     /// thumbnail itself is never mutated, so callers can keep calling
     /// with different ops freely.
+    ///
+    /// # Errors
+    ///
+    /// [`crate::BigImageError::InvalidInput`] when `op` is invalid for the source
+    /// image (a resize, crop or extent the file operation would refuse), and
+    /// [`crate::BigImageError::Other`] when the thumbnail cannot be resized.
     pub fn apply(&self, op: &PreviewOp) -> Result<DynamicImage> {
         match op {
             PreviewOp::Identity => Ok(self.thumbnail.clone()),
@@ -183,10 +199,12 @@ impl PreviewSession {
                 let preview_opts = match opts.size {
                     ExtentSize::Aspect { .. } => *opts,
                     ExtentSize::Exact { width, height } => {
-                        let pw = ((width as f64) * self.thumbnail_scale).round().max(f64::from(tw))
-                            as u32;
-                        let ph = ((height as f64) * self.thumbnail_scale).round().max(f64::from(th))
-                            as u32;
+                        let pw = (f64::from(width) * self.thumbnail_scale)
+                            .round()
+                            .max(f64::from(tw)) as u32;
+                        let ph = (f64::from(height) * self.thumbnail_scale)
+                            .round()
+                            .max(f64::from(th)) as u32;
                         ExtentOptions { size: ExtentSize::Exact { width: pw, height: ph }, ..*opts }
                     }
                 };

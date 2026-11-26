@@ -32,6 +32,10 @@ impl Rotation {
 }
 
 /// Rotate a single file.
+///
+/// # Errors
+///
+/// As [`crate::transform_file`].
 pub fn rotate_file(
     input: impl AsRef<Path>,
     rotation: Rotation,
@@ -42,6 +46,10 @@ pub fn rotate_file(
 }
 
 /// Like [`rotate_file`], with caller-supplied encoder options.
+///
+/// # Errors
+///
+/// As [`crate::transform_file`].
 pub fn rotate_file_with_options(
     input: impl AsRef<Path>,
     rotation: Rotation,
@@ -70,6 +78,10 @@ pub fn apply_to(src: &image::DynamicImage, rotation: Rotation) -> image::Dynamic
 /// upright image to disk (the encode drops the now-redundant tag). Images without EXIF or with
 /// orientation `1` are a harmless re-encode, keeping the return type
 /// consistent for callers counting "written vs skipped".
+///
+/// # Errors
+///
+/// As [`crate::transform_file`].
 pub fn rotate_file_auto(
     input: impl AsRef<Path>,
     target: Option<crate::Format>,
@@ -82,6 +94,10 @@ pub fn rotate_file_auto(
 pub const AUTO_ROTATE_SUFFIX: &str = "_auto";
 
 /// Like [`rotate_file_auto`], with caller-supplied encoder options.
+///
+/// # Errors
+///
+/// As [`crate::transform_file`].
 pub fn rotate_file_auto_with_options(
     input: impl AsRef<Path>,
     target: Option<crate::Format>,
@@ -346,7 +362,7 @@ mod straighten_tests {
         let darkest = out
             .enumerate_pixels()
             .min_by_key(|(_, _, p)| p.0[0])
-            .map(|(x, y, _)| (x as i64 - w as i64 / 2, y as i64 - h as i64 / 2))
+            .map(|(x, y, _)| (i64::from(x) - i64::from(w) / 2, i64::from(y) - i64::from(h) / 2))
             .unwrap();
         assert!(darkest.0 > 0 && darkest.1 > 5, "dot at {darkest:?}");
     }

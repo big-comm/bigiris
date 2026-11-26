@@ -7,6 +7,13 @@ fn invalid() -> std::io::Error {
         "invalid AVIF: box outside its container or too complex",
     )
 }
+/// Size field and four-character type of the box header at the reader's position.
+pub(crate) fn read_box_header(reader: &mut impl Read) -> std::io::Result<(u32, [u8; 4])> {
+    let mut header = [[0; 4]; 2];
+    reader.read_exact(header.as_flattened_mut())?;
+    let [size, kind] = header;
+    Ok((u32::from_be_bytes(size), kind))
+}
 pub(crate) fn inspect(reader: &mut (impl Read + Seek)) -> std::io::Result<()> {
     let end = reader.seek(SeekFrom::End(0))?;
     let mut count = 0;
@@ -28,9 +35,7 @@ fn boxes(
             return Err(invalid());
         }
         reader.seek(SeekFrom::Start(position))?;
-        let mut header = [0; 8];
-        reader.read_exact(&mut header)?;
-        let short = u32::from_be_bytes(header[..4].try_into().unwrap());
+        let (short, kind) = read_box_header(reader)?;
         let (size, header_size) = match short {
             0 => (end - position, 8u64),
             1 => {
@@ -48,7 +53,7 @@ fn boxes(
             return Err(invalid());
         }
         let content = position + header_size;
-        match &header[4..8] {
+        match &kind {
             b"meta" | b"iref" => {
                 if size < header_size + 4 {
                     return Err(invalid());
@@ -65,7 +70,7 @@ fn boxes(
                 }
                 let mut full = [0; 4];
                 reader.read_exact(&mut full)?;
-                let entries = if &header[4..8] == b"iinf" && full[0] != 0 { 4 } else { 2 };
+                let entries = if &kind == b"iinf" && full[0] != 0 { 4 } else { 2 };
                 if size < header_size + 4 + entries {
                     return Err(invalid());
                 }
@@ -131,9 +136,8 @@ pub(crate) fn top_level_meta(reader: &mut (impl Read + Seek)) -> std::io::Result
     let mut position = 0;
     while end - position >= 8 {
         reader.seek(SeekFrom::Start(position))?;
-        let mut header = [0; 8];
-        reader.read_exact(&mut header)?;
-        let (size, header_size) = match u32::from_be_bytes(header[..4].try_into().unwrap()) {
+        let (short, kind) = read_box_header(reader)?;
+        let (size, header_size) = match short {
             0 => (end - position, 8),
             1 => {
                 let mut size = [0; 8];
@@ -145,7 +149,7 @@ pub(crate) fn top_level_meta(reader: &mut (impl Read + Seek)) -> std::io::Result
         if size < header_size || size > end - position {
             break;
         }
-        if &header[4..8] == b"meta" {
+        if &kind == b"meta" {
             return Ok(Some(size - header_size));
         }
         position += size;
@@ -174,13 +178,12 @@ pub(crate) fn meta_declares_exif(
             return Ok(false);
         }
         reader.seek(SeekFrom::Start(position))?;
-        let mut header = [0; 8];
-        reader.read_exact(&mut header)?;
-        let child = u64::from(u32::from_be_bytes(header[..4].try_into().expect("four bytes")));
+        let (child, kind) = read_box_header(reader)?;
+        let child = u64::from(child);
         if child < 8 || child > end - position {
             return Err(invalid());
         }
-        if &header[4..] == b"iinf" {
+        if &kind == b"iinf" {
             if child - 8 > MAX_META {
                 return Err(invalid());
             }

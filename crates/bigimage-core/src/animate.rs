@@ -68,6 +68,10 @@ impl Default for AnimateOptions {
 ///
 /// An existing `output` is replaced; see [`make_gif_with_policy`] to skip or
 /// pick a free name instead.
+///
+/// # Errors
+///
+/// As [`make_gif_with_policy`].
 pub fn make_gif(frames: &[PathBuf], output: &Path, opts: AnimateOptions) -> Result<PathBuf> {
     make_gif_with_policy(frames, output, opts, OverwritePolicy::Replace)
         .map(|outcome| outcome.path().to_path_buf())
@@ -76,6 +80,17 @@ pub fn make_gif(frames: &[PathBuf], output: &Path, opts: AnimateOptions) -> Resu
 /// Like [`make_gif`], honouring `policy` when `output` already exists:
 /// `Skip` returns [`ConvertOutcome::Skipped`] without decoding any frame,
 /// `Increment` publishes to `name_1.gif`, `name_2.gif`, … atomically.
+///
+/// # Errors
+///
+/// - [`BigImageError::InvalidInput`]: `frames` is empty, or the first frame
+///   exceeds the processing limits.
+/// - [`BigImageError::NotStatic`]: a frame is itself animated or multi-page.
+/// - [`BigImageError::Decode`] or [`BigImageError::UnsupportedFormat`]: a frame
+///   cannot be read or decoded.
+/// - [`BigImageError::Encode`] or [`BigImageError::Io`]: the GIF cannot be
+///   encoded, synced or published.
+/// - [`BigImageError::NoFreeName`]: `Increment` finds every numbered name taken.
 pub fn make_gif_with_policy(
     frames: &[PathBuf],
     output: &Path,
@@ -142,7 +157,7 @@ fn normalise_frame(img: DynamicImage, w: u32, h: u32) -> Result<RgbaImage> {
     let mut canvas = RgbaImage::from_pixel(w, h, image::Rgba([0, 0, 0, 0]));
     let dx = (w - scaled_rgba.width()) / 2;
     let dy = (h - scaled_rgba.height()) / 2;
-    image::imageops::overlay(&mut canvas, &scaled_rgba, dx as i64, dy as i64);
+    image::imageops::overlay(&mut canvas, &scaled_rgba, i64::from(dx), i64::from(dy));
     Ok(canvas)
 }
 

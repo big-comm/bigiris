@@ -119,6 +119,10 @@ impl Format {
 
     /// Parse a format from a user-provided string (case-insensitive), one of
     /// its [`Format::spellings`].
+    ///
+    /// # Errors
+    ///
+    /// [`BigImageError::UnsupportedFormat`] when `s` is none of the spellings.
     pub fn parse(s: &str) -> Result<Self, BigImageError> {
         let spelling = s.trim().to_ascii_lowercase();
         Format::all()

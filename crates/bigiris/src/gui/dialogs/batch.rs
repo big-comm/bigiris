@@ -361,21 +361,9 @@ fn run_summary(
             &[("files", &names.join(", "))],
         ));
     }
-    if ok > 0 && bytes_in > 0 && bytes_out > 0 {
-        let delta = batch_runner::format_size_delta(bytes_in, bytes_out);
-        let avg_in = bytes_in / (ok as u64).max(1);
-        let avg_out = bytes_out / (ok as u64).max(1);
+    if let Some(sizes) = batch_runner::size_change_text(ok, bytes_in, bytes_out) {
         msg.push('\n');
-        msg.push_str(&fill(
-            &gettext("{before} → {after} ({delta}) · average per file {avg_before} → {avg_after}"),
-            &[
-                ("before", &glib::format_size(bytes_in)),
-                ("after", &glib::format_size(bytes_out)),
-                ("delta", &delta),
-                ("avg_before", &glib::format_size(avg_in)),
-                ("avg_after", &glib::format_size(avg_out)),
-            ],
-        ));
+        msg.push_str(&sizes);
     }
     if let Some(err) = first_err {
         msg.push('\n');

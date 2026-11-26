@@ -40,11 +40,11 @@ pub(in crate::gui) fn build_properties_window(
     // Awaited on the GTK loop instead of polled on a timer.
     let job = gio::spawn_blocking(move || {
         crate::codec::with_cancel(cancel, || {
-            let info = crate::codec::information(&input)
+            let information = crate::codec::information(&input)
                 .map_err(|error| crate::error_text::image_error_text(&error));
             let fsmeta =
                 std::fs::metadata(&input).map_err(|error| crate::error_text::io_error_text(&error));
-            (info, fsmeta)
+            (information, fsmeta)
         })
     });
     let spinner = adw::Spinner::new();
@@ -54,7 +54,7 @@ pub(in crate::gui) fn build_properties_window(
     glib::MainContext::default().spawn_local(async move {
         // A panicking reader still replaces the spinner with what the
         // file system knows.
-        let (info, fsmeta) = job.await.unwrap_or_else(|_| {
+        let (information, fsmeta) = job.await.unwrap_or_else(|_| {
             let failure = gettext("Could not read the file information");
             (Err(failure.clone()), Err(failure))
         });
@@ -63,14 +63,14 @@ pub(in crate::gui) fn build_properties_window(
         if !window.is_visible() {
             return;
         }
-        fill_properties_window(window, &input, info.as_ref(), fsmeta.as_ref());
+        fill_properties_window(window, &input, information.as_ref(), fsmeta.as_ref());
     });
     window
 }
 fn fill_properties_window(
     window: adw::ApplicationWindow,
     path: &Path,
-    info: std::result::Result<&crate::codec::Information, &String>,
+    information: std::result::Result<&crate::codec::Information, &String>,
     fsmeta: std::result::Result<&std::fs::Metadata, &String>,
 ) -> adw::ApplicationWindow {
     let filename = crate::codec::printable_name(path);
@@ -79,10 +79,10 @@ fn fill_properties_window(
     header.set_title_widget(Some(&adw::WindowTitle::new(&gettext("Properties"), &filename)));
 
     let page = adw::PreferencesPage::new();
-    page.add(&build_properties_file_group(path, info.ok(), fsmeta));
-    page.add(&build_properties_image_group(info));
+    page.add(&build_properties_file_group(path, information.ok(), fsmeta));
+    page.add(&build_properties_image_group(information));
 
-    if let Some(meta) = info.ok().and_then(|i| i.metadata.as_ref())
+    if let Some(meta) = information.ok().and_then(|i| i.metadata.as_ref())
         && !meta.is_empty()
     {
         if meta.has_gps || meta.has_camera_info {
@@ -109,7 +109,7 @@ fn fill_properties_window(
 
 fn build_properties_file_group(
     path: &Path,
-    info: Option<&crate::codec::Information>,
+    information: Option<&crate::codec::Information>,
     fsmeta: std::result::Result<&std::fs::Metadata, &String>,
 ) -> adw::PreferencesGroup {
     let group = adw::PreferencesGroup::builder().title(gettext("File")).build();
@@ -133,7 +133,7 @@ fn build_properties_file_group(
         other => other.to_string(),
     };
     let ext = path.extension().map(|e| canonical(&e.to_string_lossy()));
-    let sniffed = info.and_then(|i| i.format.as_deref()).map(canonical);
+    let sniffed = information.and_then(|i| i.format.as_deref()).map(canonical);
     match (sniffed, ext) {
         (Some(s), Some(e)) if s != e => {
             group.add(&info_row(
@@ -171,41 +171,16 @@ fn build_properties_file_group(
 }
 
 fn build_properties_image_group(
-    info: std::result::Result<&crate::codec::Information, &String>,
+    information: std::result::Result<&crate::codec::Information, &String>,
 ) -> adw::PreferencesGroup {
     let group = adw::PreferencesGroup::builder().title(gettext("Image")).build();
-    let orientation = info.ok().and_then(|i| i.metadata.as_ref()).and_then(|m| m.orientation);
+    let orientation =
+        information.ok().and_then(|i| i.metadata.as_ref()).and_then(|m| m.orientation);
 
-    match info.map(|i| i.dimensions) {
+    match information.map(|i| i.dimensions) {
         Ok(Some((w, h))) => {
-            let color = info.ok().and_then(crate::codec::Information::color_type);
-            // Orientations 5 to 8 turn the stored pixels a quarter: every
-            // other view of the file (viewer, dialogs) shows them upright.
-            let turned = matches!(orientation, Some(5..=8));
-            let (uw, uh) = if turned { (h, w) } else { (w, h) };
-            let dimensions = if turned {
-                fill(
-                    &gettext("{width} × {height} px (stored as {stored_width} × {stored_height})"),
-                    &[
-                        ("width", &uw.to_string()),
-                        ("height", &uh.to_string()),
-                        ("stored_width", &w.to_string()),
-                        ("stored_height", &h.to_string()),
-                    ],
-                )
-            } else {
-                format!("{w} × {h} px")
-            };
-            group.add(&info_row(&gettext("Dimensions"), &dimensions));
-
-            let mp = (f64::from(w) * f64::from(h)) / 1_000_000.0;
-            if mp >= 0.1 {
-                group.add(&info_row(&gettext("Megapixels"), &format!("{mp:.1} MP")));
-            }
-            if w > 0 && h > 0 {
-                let (rw, rh) = simplify_ratio(uw, uh);
-                group.add(&info_row(&gettext("Aspect ratio"), &format!("{rw}:{rh}")));
-            }
+            let color = information.ok().and_then(crate::codec::Information::color_type);
+            add_size_rows(&group, (w, h), orientation);
             if let Some(color) = color {
                 group.add(&info_row(&gettext("Color mode"), &color_type_label(color)));
                 group.add(&info_row(&gettext("Bits per channel"), color_type_bits(color)));
@@ -238,6 +213,37 @@ fn build_properties_image_group(
         ));
     }
     group
+}
+
+/// Dimensions, megapixels and aspect ratio of a `stored` size. Orientations
+/// 5 to 8 turn the stored pixels a quarter: every other view of the file
+/// (viewer, dialogs) shows them upright, so the rows do too.
+fn add_size_rows(group: &adw::PreferencesGroup, stored: (u32, u32), orientation: Option<u16>) {
+    let (w, h) = stored;
+    let turned = matches!(orientation, Some(5..=8));
+    let (uw, uh) = if turned { (h, w) } else { (w, h) };
+    let dimensions = if turned {
+        fill(
+            &gettext("{width} × {height} px (stored as {stored_width} × {stored_height})"),
+            &[
+                ("width", &uw.to_string()),
+                ("height", &uh.to_string()),
+                ("stored_width", &w.to_string()),
+                ("stored_height", &h.to_string()),
+            ],
+        )
+    } else {
+        format!("{w} × {h} px")
+    };
+    group.add(&info_row(&gettext("Dimensions"), &dimensions));
+    let mp = (f64::from(w) * f64::from(h)) / 1_000_000.0;
+    if mp >= 0.1 {
+        group.add(&info_row(&gettext("Megapixels"), &format!("{mp:.1} MP")));
+    }
+    if w > 0 && h > 0 {
+        let (rw, rh) = simplify_ratio(uw, uh);
+        group.add(&info_row(&gettext("Aspect ratio"), &format!("{rw}:{rh}")));
+    }
 }
 
 /// Friendly label for the decoded pixel layout, matching what the Convert

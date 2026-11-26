@@ -126,6 +126,27 @@ pub(super) fn format_counts(ok: usize, skip: usize, fail: usize) -> String {
         .replace("{failed}", &fail.to_string())
 }
 
+/// `12 MB → 3 MB (−75%) · average per file …` for `ok` written files of
+/// `bytes_in` that became `bytes_out`; `None` when nothing was written.
+pub(super) fn size_change_text(ok: usize, bytes_in: u64, bytes_out: u64) -> Option<String> {
+    if ok == 0 || bytes_in == 0 || bytes_out == 0 {
+        return None;
+    }
+    let files = ok as u64;
+    Some(crate::fill(
+        &gettext(
+            "{before} → {after} ({delta}) · average per file {average_before} → {average_after}",
+        ),
+        &[
+            ("before", &gtk4::glib::format_size(bytes_in)),
+            ("after", &gtk4::glib::format_size(bytes_out)),
+            ("delta", &format_size_delta(bytes_in, bytes_out)),
+            ("average_before", &gtk4::glib::format_size(bytes_in / files)),
+            ("average_after", &gtk4::glib::format_size(bytes_out / files)),
+        ],
+    ))
+}
+
 /// Show a finished run's summary and enable Apply again. Only a run that
 /// wrote every input closes the dialog by itself (after 2 s); a skip or a
 /// failure stays on screen to be read.
@@ -144,19 +165,9 @@ pub(super) fn finish_dialog(
     let mut msg = gettext("Finished in {time} · {counts}")
         .replace("{time}", &timing)
         .replace("{counts}", &counts);
-    if ok > 0 && bytes_in > 0 && bytes_out > 0 {
-        let delta = format_size_delta(bytes_in, bytes_out);
-        let avg_in = bytes_in / (ok as u64).max(1);
-        let avg_out = bytes_out / (ok as u64).max(1);
+    if let Some(sizes) = size_change_text(ok, bytes_in, bytes_out) {
         msg.push('\n');
-        msg.push_str(
-            &gettext("{before} → {after} ({delta}) · average per file {average_before} → {average_after}")
-                .replace("{before}", &gtk4::glib::format_size(bytes_in))
-                .replace("{after}", &gtk4::glib::format_size(bytes_out))
-                .replace("{delta}", &delta)
-                .replace("{average_before}", &gtk4::glib::format_size(avg_in))
-                .replace("{average_after}", &gtk4::glib::format_size(avg_out)),
-        );
+        msg.push_str(&sizes);
     }
     let single = match &single {
         Some(ConvertOutcome::Written { output }) => Some((gettext("Saved: {path}"), output)),

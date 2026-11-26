@@ -2754,77 +2754,96 @@ fn save_edits_then(state: &Rc<RefCell<ViewerState>>, after_save: impl FnOnce() +
     let state = state.clone();
     let after_save = Cell::new(Some(after_save));
     alert.connect_response(Some("save"), move |_, _| {
-        // Read the edits now, not when the dialog opened: an undo or a
-        // navigation while it was up changes what is to be written.
-        let (ops, spinner) = {
-            let mut s = state.borrow_mut();
-            let current = s.files.get(s.idx) == Some(&path);
-            if !current || s.pending_ops.is_empty() || s.saving {
-                return;
-            }
-            s.saving = true;
-            (s.pending_ops.clone(), s.loading_spinner.clone())
-        };
-        spinner.set_visible(true);
-        sync_edit_actions(&state);
-
-        let worker_path = path.clone();
-        let worker_ops = ops.clone();
-        let job = gio::spawn_blocking(move || write_edits_to_disk(&worker_path, &worker_ops));
-
-        // Awaited on the GTK loop instead of polled on a timer.
-        let state = state.clone();
-        let path = path.clone();
-        let after_save = after_save.take();
-        glib::MainContext::default().spawn_local(async move {
-            // A panicking encoder ends the save as a failure.
-            let result = job
-                .await
-                .unwrap_or_else(|_| Err(SaveFailure::Other("save worker panicked".to_string())));
-            let dropped = result.as_ref().ok().cloned().unwrap_or_default();
-            let spinner = {
-                let mut s = state.borrow_mut();
-                s.saving = false;
-                if result.is_ok() {
-                    s.pending_ops.clear();
-                    s.redo_ops.clear();
-                    s.loader.clear_cache();
-                    // The file on disk now holds the edits: working copies
-                    // and the original view (hold `\`) made from the old
-                    // bytes are stale.
-                    viewer::edit_panel::forget_file_pixels(&mut s);
-                }
-                s.loading_spinner.clone()
-            };
-            spinner.set_visible(false);
-            refresh_title(&state);
-            sync_edit_actions(&state);
-            match result {
-                Ok(_) => {
-                    adopt_saved_frame(&state, &path);
-                    match metadata_loss_notice(&dropped) {
-                        Some(notice) => {
-                            tracing::info!(?path, ?dropped, "save: metadata dropped");
-                            state.borrow().osd_label.set_text(&notice);
-                            pulse_osd_for(&state, OSD_NOTICE_MS);
-                        }
-                        None => {
-                            state.borrow().osd_label.set_text(&gettext("Saved"));
-                            pulse_osd(&state);
-                        }
-                    }
-                    if let Some(after_save) = after_save {
-                        after_save();
-                    }
-                }
-                Err(failure) => {
-                    tracing::error!(?path, ?failure, "save: writing the edits failed");
-                    present_save_failure(&state, &failure);
-                }
-            }
-        });
+        if let Some(after_save) = after_save.take() {
+            write_pending_edits(&state, &path, after_save);
+        }
     });
     alert.present(Some(&window));
+}
+
+/// Write the pending edits of `path` to the file on a worker, then run
+/// `after_save` if it succeeded.
+fn write_pending_edits(
+    state: &Rc<RefCell<ViewerState>>,
+    path: &Path,
+    after_save: impl FnOnce() + 'static,
+) {
+    // Read the edits now, not when the dialog opened: an undo or a
+    // navigation while it was up changes what is to be written.
+    let (ops, spinner) = {
+        let mut s = state.borrow_mut();
+        let current = s.files.get(s.idx).map(PathBuf::as_path) == Some(path);
+        if !current || s.pending_ops.is_empty() || s.saving {
+            return;
+        }
+        s.saving = true;
+        (s.pending_ops.clone(), s.loading_spinner.clone())
+    };
+    spinner.set_visible(true);
+    sync_edit_actions(state);
+
+    let worker_path = path.to_path_buf();
+    let job = gio::spawn_blocking(move || write_edits_to_disk(&worker_path, &ops));
+
+    // Awaited on the GTK loop instead of polled on a timer.
+    let state = state.clone();
+    let path = path.to_path_buf();
+    glib::MainContext::default().spawn_local(async move {
+        // A panicking encoder ends the save as a failure.
+        let result = job
+            .await
+            .unwrap_or_else(|_| Err(SaveFailure::Other("save worker panicked".to_string())));
+        finish_save(&state, &path, result, after_save);
+    });
+}
+
+/// Show how the save of `path` ended; on success the viewer adopts the
+/// written file and `after_save` runs.
+fn finish_save(
+    state: &Rc<RefCell<ViewerState>>,
+    path: &Path,
+    result: Result<Vec<bigimage_core::MetadataLoss>, SaveFailure>,
+    after_save: impl FnOnce(),
+) {
+    let dropped = result.as_ref().ok().cloned().unwrap_or_default();
+    let spinner = {
+        let mut s = state.borrow_mut();
+        s.saving = false;
+        if result.is_ok() {
+            s.pending_ops.clear();
+            s.redo_ops.clear();
+            s.loader.clear_cache();
+            // The file on disk now holds the edits: working copies
+            // and the original view (hold `\`) made from the old
+            // bytes are stale.
+            viewer::edit_panel::forget_file_pixels(&mut s);
+        }
+        s.loading_spinner.clone()
+    };
+    spinner.set_visible(false);
+    refresh_title(state);
+    sync_edit_actions(state);
+    match result {
+        Ok(_) => {
+            adopt_saved_frame(state, path);
+            match metadata_loss_notice(&dropped) {
+                Some(notice) => {
+                    tracing::info!(?path, ?dropped, "save: metadata dropped");
+                    state.borrow().osd_label.set_text(&notice);
+                    pulse_osd_for(state, OSD_NOTICE_MS);
+                }
+                None => {
+                    state.borrow().osd_label.set_text(&gettext("Saved"));
+                    pulse_osd(state);
+                }
+            }
+            after_save();
+        }
+        Err(failure) => {
+            tracing::error!(?path, ?failure, "save: writing the edits failed");
+            present_save_failure(state, &failure);
+        }
+    }
 }
 
 /// The texture on screen is now what the file holds: cache it under the

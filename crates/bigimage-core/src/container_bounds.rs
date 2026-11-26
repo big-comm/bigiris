@@ -154,7 +154,7 @@ pub(crate) fn top_level_meta(reader: &mut (impl Read + Seek)) -> std::io::Result
 }
 
 /// Child boxes of `data` as `(type, content)` pairs; `None` if malformed.
-fn children(data: &[u8]) -> Option<Vec<([u8; 4], &[u8])>> {
+pub(crate) fn children(data: &[u8]) -> Option<Vec<([u8; 4], &[u8])>> {
     let mut out = Vec::new();
     let mut rest = data;
     while !rest.is_empty() {

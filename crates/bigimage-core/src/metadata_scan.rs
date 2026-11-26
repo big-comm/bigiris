@@ -3,9 +3,13 @@
 //! write, so the never-larger shortcut of a stripping conversion may publish
 //! it unchanged.
 //!
-//! Each walker accepts only the structures this crate's encoders produce
-//! and a clean end; anything else (EXIF, XMP, text, C2PA, private chunks,
-//! bytes after the image) counts as metadata.
+//! Each walker accepts only the structures this crate's encoders produce,
+//! each at most once where the format allows one, colour profiles only when
+//! they are the sRGB profile the encoders embed, and a clean end; anything
+//! else (EXIF, XMP, text, C2PA, private chunks, bytes after the image)
+//! counts as metadata.
+
+use std::sync::OnceLock;
 
 use crate::Format;
 
@@ -21,17 +25,22 @@ pub(crate) fn carries_metadata(bytes: &[u8], format: Format) -> bool {
         Format::Avif => avif_carries_metadata(bytes),
         Format::Gif => gif_carries_metadata(bytes),
         Format::Bmp => bmp_carries_metadata(bytes),
-        // The end marker: seven zero bytes and a one.
-        Format::Qoi => bytes.len() < 22 || !bytes.ends_with(&[0, 0, 0, 0, 0, 0, 0, 1]),
+        Format::Qoi => qoi_carries_metadata(bytes),
         Format::Tiff | Format::OpenExr | Format::Hdr | Format::Pnm | Format::Tga | Format::Ico => {
             true
         }
     }
 }
 
-/// `false` only for a JPEG of JFIF (without thumbnail), Adobe and ICC
-/// segments, tables, frames and scans, ending at EOI.
+/// Whether `profile` is the sRGB profile the encoders embed.
+fn is_own_srgb(profile: &[u8]) -> bool {
+    crate::color::srgb_profile().is_ok_and(|srgb| srgb == profile)
+}
+
+/// `false` only for a JPEG of one JFIF (without thumbnail), Adobe and
+/// sRGB ICC segment, tables, frames and scans, ending at EOI.
 fn jpeg_carries_metadata(bytes: &[u8]) -> bool {
+    let mut seen = Vec::new();
     let mut at = 2;
     while let Some(&[prefix, marker]) = bytes.get(at..at + 2) {
         if prefix != 0xff {
@@ -59,15 +68,18 @@ fn jpeg_carries_metadata(bytes: &[u8]) -> bool {
                 payload.len() == 14 && payload.starts_with(b"JFIF\0") && payload[12..] == [0, 0]
             }
             0xee => payload.len() == 12 && payload.starts_with(b"Adobe"),
-            0xe2 => payload.starts_with(b"ICC_PROFILE\0"),
+            // One segment (sequence 1 of 1) holding the sRGB profile.
+            0xe2 => payload.strip_prefix(b"ICC_PROFILE\0\x01\x01").is_some_and(is_own_srgb),
             // DQT, DHT, DRI, DAC, SOS and the SOF markers.
             0xdb | 0xc4 | 0xdd | 0xcc | 0xda => true,
             0xc0..=0xcf => marker != 0xc8,
             _ => false,
         };
-        if !written {
+        let once = matches!(marker, 0xe0 | 0xe2 | 0xee);
+        if !written || (once && seen.contains(&marker)) {
             return true;
         }
+        seen.push(marker);
         at += 2 + len;
         if marker == 0xda {
             let Some(end) = scan_end(bytes, at) else {
@@ -91,40 +103,104 @@ fn scan_end(bytes: &[u8], mut at: usize) -> Option<usize> {
     }
 }
 
-/// `false` only for a PNG of the critical, colour and transparency chunks,
-/// whose last chunk is IEND.
-fn png_carries_metadata(bytes: &[u8]) -> bool {
+/// `(type, data)` of each chunk of a PNG, `None` when one runs past the
+/// end or the last is not IEND ending the file.
+fn png_chunks(bytes: &[u8]) -> Option<Vec<(&[u8], &[u8])>> {
+    let mut chunks = Vec::new();
     let mut at = 8;
     while let Some(&[a, b, c, d, ref kind @ ..]) = bytes.get(at..at + 8) {
-        let len = usize::try_from(u32::from_be_bytes([a, b, c, d])).unwrap_or(usize::MAX);
-        let next = at.saturating_add(12).saturating_add(len);
-        match kind {
-            b"IEND" => return next != bytes.len(),
-            b"IHDR" | b"PLTE" | b"tRNS" | b"iCCP" | b"sRGB" | b"gAMA" | b"cHRM" | b"IDAT" => {}
-            _ => return true,
+        let len = usize::try_from(u32::from_be_bytes([a, b, c, d])).ok()?;
+        let data = bytes.get(at + 8..at.checked_add(8)?.checked_add(len)?)?;
+        chunks.push((kind, data));
+        at = at.checked_add(12)?.checked_add(len)?;
+        if kind == b"IEND" {
+            return (at == bytes.len()).then_some(chunks);
         }
-        at = next;
     }
-    true
+    None
 }
 
-/// `false` only for a WebP of image, alpha, extended-header and ICC chunks
-/// ending exactly at the end of the file.
-fn webp_carries_metadata(bytes: &[u8]) -> bool {
-    let mut at = 12;
-    while let Some(&[ref kind @ .., a, b, c, d]) = bytes.get(at..at + 8) {
-        if !matches!(kind, b"VP8 " | b"VP8L" | b"VP8X" | b"ALPH" | b"ICCP") {
+/// `false` only for a PNG of the critical, colour and transparency chunks,
+/// each once (but IDAT), with an iCCP only as the encoder writes the sRGB
+/// profile.
+fn png_carries_metadata(bytes: &[u8]) -> bool {
+    let Some(chunks) = png_chunks(bytes) else {
+        return true;
+    };
+    let mut seen: Vec<&[u8]> = Vec::new();
+    for (kind, data) in chunks {
+        let written = match kind {
+            b"IDAT" | b"IEND" => true,
+            b"IHDR" => data.len() == 13,
+            b"PLTE" => data.len() <= 768 && data.len().is_multiple_of(3),
+            b"tRNS" => data.len() <= 256,
+            b"sRGB" => data.len() == 1,
+            b"gAMA" => data.len() == 4,
+            b"cHRM" => data.len() == 32,
+            b"iCCP" => own_srgb_iccp().iter().any(|iccp| iccp == data),
+            _ => false,
+        };
+        if !written || (kind != b"IDAT" && seen.contains(&kind)) {
             return true;
         }
+        seen.push(kind);
+    }
+    false
+}
+
+/// The iCCP data the PNG encoder writes for the sRGB profile, per
+/// compression preset; comparing the compressed bytes needs no inflater.
+fn own_srgb_iccp() -> &'static [Vec<u8>] {
+    static CHUNKS: OnceLock<Vec<Vec<u8>>> = OnceLock::new();
+    CHUNKS.get_or_init(|| {
+        let Ok(srgb) = crate::color::srgb_profile() else {
+            return Vec::new();
+        };
+        let pixel = image::DynamicImage::ImageRgb8(image::RgbImage::new(1, 1));
+        [false, true]
+            .into_iter()
+            .filter_map(|optimize| {
+                let opts = crate::EncodeOptions { optimize, ..crate::EncodeOptions::default() };
+                let png = crate::optimize::encode(&pixel, Format::Png, &opts, Some(&srgb), None);
+                let png = png.ok().flatten()?;
+                let chunks = png_chunks(&png)?;
+                let (_, data) = chunks.into_iter().find(|(kind, _)| *kind == b"iCCP")?;
+                Some(data.to_vec())
+            })
+            .collect()
+    })
+}
+
+/// `false` only for a WebP of one image, alpha, extended-header and sRGB
+/// ICC chunk each, ending exactly at the end of the file.
+fn webp_carries_metadata(bytes: &[u8]) -> bool {
+    let mut seen: Vec<&[u8]> = Vec::new();
+    let mut at = 12;
+    while let Some(&[ref kind @ .., a, b, c, d]) = bytes.get(at..at + 8) {
         let len = usize::try_from(u32::from_le_bytes([a, b, c, d])).unwrap_or(usize::MAX);
+        let written = match kind {
+            b"VP8 " | b"VP8L" | b"VP8X" | b"ALPH" => true,
+            b"ICCP" => {
+                bytes.get(at + 8..at.saturating_add(8).saturating_add(len)).is_some_and(is_own_srgb)
+            }
+            _ => false,
+        };
+        // One image chunk, lossy or lossless.
+        let image = |kind: &[u8]| matches!(kind, b"VP8 " | b"VP8L");
+        let repeated = seen.iter().any(|&other| other == kind || (image(kind) && image(other)));
+        if !written || repeated {
+            return true;
+        }
+        seen.push(kind);
         at = at.saturating_add(8).saturating_add(len).saturating_add(len & 1);
     }
     at != bytes.len()
 }
 
-/// `false` only for an AVIF of `ftyp`, `meta` and `mdat` boxes ending at
-/// the end of the file, whose `meta` declares no `Exif` or `mime` (XMP) item.
+/// `false` only for an AVIF of one `ftyp`, `meta` and `mdat` box ending at
+/// the end of the file, whose `meta` holds what the AV1 encoder writes.
 fn avif_carries_metadata(bytes: &[u8]) -> bool {
+    let mut seen: Vec<&[u8]> = Vec::new();
     let mut at = 0;
     while at < bytes.len() {
         let Some(&[a, b, c, d, ref kind @ ..]) = bytes.get(at..at + 8) else {
@@ -141,22 +217,65 @@ fn avif_carries_metadata(bytes: &[u8]) -> bool {
             }
             size => usize::try_from(size).unwrap_or(usize::MAX),
         };
-        let Some(content) = bytes.get(at..at.saturating_add(size)).filter(|_| size >= 8) else {
+        let Some(content) = bytes.get(at + 8..at.saturating_add(size)).filter(|_| size >= 8) else {
             return true;
         };
-        match kind {
-            b"meta" => {
-                let declares = |item: &[u8]| content.windows(4).any(|w| w == item);
-                if declares(b"Exif") || declares(b"mime") {
-                    return true;
-                }
-            }
-            b"ftyp" | b"mdat" => {}
-            _ => return true,
+        let written = match kind {
+            b"meta" => !avif_meta_carries_metadata(content),
+            b"ftyp" | b"mdat" => true,
+            _ => false,
+        };
+        if !written || seen.contains(&kind) {
+            return true;
         }
+        seen.push(kind);
         at += size;
     }
     false
+}
+
+/// Whether an AVIF `meta` box (`content` after its header) holds anything
+/// but the handler, item locations and references, AV1 items without names
+/// and the image, colour and alpha properties.
+fn avif_meta_carries_metadata(content: &[u8]) -> bool {
+    use crate::container_bounds::children;
+    let empty_name = |infe: &[u8]| {
+        // FullBox, item ID (2 bytes in version 2, 4 in 3), protection index.
+        let fields = match infe.first() {
+            Some(2) => 4 + 2 + 2,
+            Some(3) => 4 + 4 + 2,
+            _ => return false,
+        };
+        infe.get(fields..) == Some(b"av01\0")
+    };
+    let property = |(kind, content): &([u8; 4], &[u8])| match kind {
+        b"ispe" | b"av1C" | b"pixi" | b"irot" | b"imir" => true,
+        b"colr" => content.starts_with(b"nclx") && content.len() == 11,
+        b"auxC" => content == b"\0\0\0\0urn:mpeg:mpegB:cicp:systems:auxiliary:alpha\0",
+        _ => false,
+    };
+    let Some(boxes) = content.get(4..).and_then(children) else {
+        return true;
+    };
+    !boxes.iter().all(|(kind, content)| match kind {
+        b"pitm" | b"iloc" | b"iref" => true,
+        // FullBox, `pict`, reserved, empty name.
+        b"hdlr" => content.len() == 25 && content[8..12] == *b"pict" && content[24] == 0,
+        b"iinf" => {
+            let entries = if content.first() == Some(&0) { 6 } else { 8 };
+            content.get(entries..).and_then(children).is_some_and(|infes| {
+                infes.iter().all(|(kind, infe)| kind == b"infe" && empty_name(infe))
+            })
+        }
+        b"iprp" => children(content).is_some_and(|parts| {
+            parts.iter().all(|(kind, part)| match kind {
+                b"ipco" => children(part).is_some_and(|props| props.iter().all(property)),
+                b"ipma" => true,
+                _ => false,
+            })
+        }),
+        _ => false,
+    })
 }
 
 /// `false` only for a GIF of images, graphic controls and loop extensions
@@ -248,6 +367,40 @@ fn bmp_carries_metadata(bytes: &[u8]) -> bool {
     layout() != Some(true)
 }
 
+/// `false` only for a QOI whose end marker follows its last pixel and
+/// ends the file.
+fn qoi_carries_metadata(bytes: &[u8]) -> bool {
+    const END: [u8; 8] = [0, 0, 0, 0, 0, 0, 0, 1];
+    let size = |at: usize| {
+        bytes
+            .get(at..at + 4)
+            .map(|b| u64::from(u32::from_be_bytes(b.try_into().expect("four bytes"))))
+    };
+    let (Some(width), Some(height)) = (size(4), size(8)) else {
+        return true;
+    };
+    let pixels = width * height;
+    let (mut at, mut decoded) = (14, 0u64);
+    while decoded < pixels {
+        let Some(&op) = bytes.get(at) else {
+            return true;
+        };
+        let (len, count) = match op {
+            0xfe => (4, 1),
+            0xff => (5, 1),
+            // QOI_OP_LUMA: one more byte.
+            0x80..=0xbf => (2, 1),
+            // QOI_OP_RUN.
+            0xc0..=0xfd => (1, u64::from(op & 0x3f) + 1),
+            // QOI_OP_INDEX and QOI_OP_DIFF.
+            _ => (1, 1),
+        };
+        at += len;
+        decoded += count;
+    }
+    decoded != pixels || bytes.get(at..) != Some(&END[..])
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -321,6 +474,12 @@ mod tests {
                 ("caBX (C2PA)", with(b"caBX", b"jumb"), true),
                 ("private prVt", with(b"prVt", b"secret"), true),
                 ("data after IEND", [&png[..], b"secret"].concat(), true),
+                ("iCCP of another profile", with(b"iCCP", b"icc\0\0x\x9c\x03\0"), true),
+                (
+                    "second gAMA",
+                    splice(&with(b"gAMA", &[0; 4]), before_iend, &chunk(b"gAMA", &[0; 4])),
+                    true,
+                ),
             ],
             Format::Png,
         );
@@ -337,6 +496,8 @@ mod tests {
             [&[0xff, marker][..], &len, payload].concat()
         };
         let thumbnail = [&b"JFIF\0\x01\x02\0\0\x01\0\x01\x01\x01"[..], &[9, 9, 9]].concat();
+        let jfif = b"JFIF\0\x01\x02\0\0\x01\0\x01\0\0";
+        let other_icc = [&b"ICC_PROFILE\0\x01\x01"[..], b"a profile holding text"].concat();
         check(
             &[
                 ("plain", jpeg.clone(), false),
@@ -352,6 +513,12 @@ mod tests {
                 ("COM after the scan", splice(&jpeg, before_eoi, &segment(0xfe, b"abc")), true),
                 ("data after EOI", [&jpeg[..], b"secret"].concat(), true),
                 ("cut inside the scan", jpeg[..jpeg.len() - 4].to_vec(), true),
+                ("second JFIF", splice(&jpeg, after_soi, &segment(0xe0, jfif)), true),
+                (
+                    "ICC of another profile",
+                    splice(&jpeg, after_soi, &segment(0xe2, &other_icc)),
+                    true,
+                ),
             ],
             Format::Jpeg,
         );
@@ -366,6 +533,7 @@ mod tests {
                 ("plain", webp.clone(), false),
                 ("XMP", [&webp[..], b"XMP \x02\0\0\0<x"].concat(), true),
                 ("C2PA", [&webp[..], b"C2PA\x02\0\0\0jb"].concat(), true),
+                ("ICCP holding text", [&webp[..], b"ICCP\x04\0\0\0text"].concat(), true),
                 ("truncated", webp[..webp.len() - 1].to_vec(), true),
             ],
             Format::WebP,
@@ -384,6 +552,33 @@ mod tests {
             ],
             Format::Avif,
         );
+    }
+
+    fn bx(kind: &[u8; 4], content: &[u8]) -> Vec<u8> {
+        [&((content.len() + 8) as u32).to_be_bytes()[..], kind, content].concat()
+    }
+
+    /// Guards: privacy: what an AVIF `meta` may hold besides the image.
+    #[test]
+    fn avif_meta_extras_carry_metadata() {
+        let infe =
+            |name: &[u8]| bx(b"infe", &[&[2, 0, 0, 0, 0, 1, 0, 0][..], b"av01", name].concat());
+        let meta = |infe: Vec<u8>, property: Vec<u8>| {
+            let hdlr = bx(b"hdlr", &[&[0; 8][..], b"pict", &[0; 13]].concat());
+            let iinf = bx(b"iinf", &[&[0, 0, 0, 0, 0, 1][..], &infe].concat());
+            let ipco = bx(b"ipco", &[bx(b"ispe", &[0; 12]), property].concat());
+            let iprp = bx(b"iprp", &[ipco, bx(b"ipma", &[0; 8])].concat());
+            [&[0, 0, 0, 0][..], &hdlr, &bx(b"pitm", &[0; 6]), &iinf, &iprp].concat()
+        };
+        let cases = [
+            ("as encoded", meta(infe(b"\0"), bx(b"pixi", &[0; 8])), false),
+            ("named item", meta(infe(b"holiday.jpg\0"), bx(b"pixi", &[0; 8])), true),
+            ("udes property", meta(infe(b"\0"), bx(b"udes", b"\0\0\0\0en\0Name\0")), true),
+            ("ICC colour", meta(infe(b"\0"), bx(b"colr", b"profsome profile")), true),
+        ];
+        for (name, content, expected) in cases {
+            assert_eq!(avif_meta_carries_metadata(&content), expected, "{name}");
+        }
     }
 
     /// Guards: privacy: GIF, BMP and QOI must end where their image ends.
@@ -415,6 +610,7 @@ mod tests {
             &[
                 ("plain", qoi.clone(), false),
                 ("bytes after the end marker", [&qoi[..], b"secret"].concat(), true),
+                ("two images in a row", [&qoi[..], &qoi[..]].concat(), true),
             ],
             Format::Qoi,
         );

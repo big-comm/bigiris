@@ -468,9 +468,7 @@ pub const ACTIONS: &[Action] = &[
         id: "metadata-strip-all",
         submenu: Some(SUB_METADATA),
         label: n_("Remove all metadata (clean re-encode)"),
-        // Convert re-encodes without EXIF, IPTC or XMP, so stripping
-        // everything is a convert to the same format.
-        command: "bigiris --dialog=convert %F",
+        command: "bigiris --notify strip-metadata --overwrite increment %F",
         icon: "edit-delete-symbolic",
         mime_types: IMAGE_MIME,
     },

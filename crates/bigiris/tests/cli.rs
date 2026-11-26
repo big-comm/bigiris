@@ -871,3 +871,30 @@ fn system_install_needs_destdir() {
     success(run(dir.path(), &["install-integrations", "--system", &destdir]));
     assert!(package.join("usr/share/kio/servicemenus/bigiris-view.desktop").is_file());
 }
+
+/// The menu's "Remove all metadata" runs this: a numbered copy in the same
+/// format, without the source's EXIF, next to the untouched original.
+#[test]
+fn strip_metadata_writes_clean_copy() {
+    if !sandbox_available() {
+        return;
+    }
+    let dir = tempfile::tempdir().unwrap();
+    let mut jpeg = Vec::new();
+    let pixels = image::RgbImage::from_pixel(32, 24, image::Rgb([200, 40, 40]));
+    pixels.write_to(&mut std::io::Cursor::new(&mut jpeg), image::ImageFormat::Jpeg).unwrap();
+    // APP1 Exif after SOI: little-endian TIFF header and one empty IFD.
+    let tiff = b"Exif\0\0II*\0\x08\0\0\0\0\0\0\0\0\0";
+    let length = u16::try_from(tiff.len() + 2).unwrap().to_be_bytes();
+    let mut tagged = jpeg[..2].to_vec();
+    tagged.extend_from_slice(&[0xFF, 0xE1, length[0], length[1]]);
+    tagged.extend_from_slice(tiff);
+    tagged.extend_from_slice(&jpeg[2..]);
+    std::fs::write(dir.path().join("photo.jpg"), &tagged).unwrap();
+
+    success(run(dir.path(), &["strip-metadata", "--overwrite", "increment", "photo.jpg"]));
+    assert_eq!(std::fs::read(dir.path().join("photo.jpg")).unwrap(), tagged);
+    let clean = std::fs::read(dir.path().join("photo_1.jpg")).unwrap();
+    assert!(clean.starts_with(&[0xFF, 0xD8]));
+    assert!(!clean.windows(6).any(|w| w == b"Exif\0\0"), "EXIF kept");
+}

@@ -398,6 +398,18 @@ enum Command {
         #[arg(value_name = "FILE", required = true, help = gettext("Input files"))]
         files: Vec<PathBuf>,
     },
+    #[command(about = gettext("Remove the metadata (EXIF, IPTC, XMP, comments) of each file by re-encoding it in its own format (headless)"))]
+    StripMetadata {
+        #[arg(
+            long = "overwrite",
+            value_enum,
+            default_value_t = OverwriteArg::Skip,
+            help = gettext("What to do when the output file already exists")
+        )]
+        overwrite: OverwriteArg,
+        #[arg(value_name = "FILE", required = true, help = gettext("Input files"))]
+        files: Vec<PathBuf>,
+    },
     #[command(about = gettext("Resize files (headless). Exactly one mode among --max-edge / --percent / --exact / --fit is required"))]
     Resize {
         #[command(flatten)]
@@ -743,6 +755,9 @@ fn main() -> color_eyre::Result<()> {
         Some(Command::Convert { to, encode, overwrite, files }) => {
             run_convert(&to, encode.options(), overwrite.into(), &files)
         }
+        Some(Command::StripMetadata { overwrite, files }) => {
+            run_strip_metadata(overwrite.into(), &files)
+        }
         Some(Command::Resize { mode, filter, to, encode, overwrite, files }) => run_resize(
             mode.into_mode(),
             filter.into(),
@@ -939,16 +954,38 @@ fn run_convert(
     tracing::info!(?target, ?opts, ?policy, count = files.len(), "convert");
     run_per_file(files, "convert", Naming::image(Some(target), policy), |f| {
         let report = bigimage_core::convert_file_report(f, None, target, &opts, policy)?;
-        if report.kept_original {
-            // allow-noisy-log: `info` lines are part of the command's report.
-            println!(
-                "info {}: {}",
-                f.display(),
-                gettext("the original was already smaller; copied without recompression")
-            );
-        }
+        note_kept_original(f, report.kept_original);
         Ok(report.outcome)
     })
+}
+
+/// A convert to each file's own format: the encoders write no EXIF, IPTC,
+/// XMP or comments, and the default options never publish the original
+/// bytes when they carry any.
+fn run_strip_metadata(policy: OverwritePolicy, files: &[PathBuf]) -> color_eyre::Result<()> {
+    let opts = EncodeOptions::default();
+    tracing::info!(?policy, count = files.len(), "strip-metadata");
+    run_per_file(files, "strip-metadata", Naming::image(None, policy), |f| {
+        let format = bigimage_core::sniff_format(f).ok_or_else(|| {
+            bigimage_core::BigImageError::UnsupportedFormat(f.display().to_string())
+        })?;
+        let report = bigimage_core::convert_file_report(f, None, format, &opts, policy)?;
+        note_kept_original(f, report.kept_original);
+        Ok(report.outcome)
+    })
+}
+
+/// Same-format conversions publish the original when re-encoding would
+/// only make it larger and it carries no metadata.
+fn note_kept_original(input: &Path, kept_original: bool) {
+    if kept_original {
+        // allow-noisy-log: `info` lines are part of the command's report.
+        println!(
+            "info {}: {}",
+            input.display(),
+            gettext("the original was already smaller; copied without recompression")
+        );
+    }
 }
 
 fn run_resize(

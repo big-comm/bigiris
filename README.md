@@ -283,6 +283,7 @@ bigiris --dialog=upscale photo.jpg
 bigiris convert --to avif --overwrite increment *.jpg
 bigiris convert --to webp --target smallest *.png
 bigiris convert --to jpg --quality 90 photo.png
+bigiris strip-metadata --overwrite increment photo.jpg  # photo_1.jpg, no EXIF
 bigiris resize --max-edge 1080 *.png
 bigiris rotate --degrees 90 photo.jpg
 bigiris flip --axis horizontal photo.jpg

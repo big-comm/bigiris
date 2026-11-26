@@ -1049,15 +1049,18 @@ fn run_convert(
     run_per_file(files, "convert", naming, |f| {
         // Publishing replaces the link itself and leaves its target as it was.
         if in_place && std::fs::symlink_metadata(f).is_ok_and(|meta| meta.is_symlink()) {
-            return Err(bigimage_core::BigImageError::InvalidInput(fill(
+            return Err(bigimage_core::BigImageError::Other(fill(
                 &gettext("not converted in place: {path} is a symbolic link"),
                 &[("path", &codec::printable_path(f))],
             )));
         }
-        let output_extension = target.output_extension(f);
+        let output_extension = match target {
+            Format::Pnm => pnm_output_extension(f).unwrap_or("ppm").as_ref(),
+            _ => target.output_extension(f),
+        };
         if in_place && f.extension() != Some(output_extension) {
             let output = codec::printable_path(&f.with_extension(output_extension));
-            return Err(bigimage_core::BigImageError::InvalidInput(fill(
+            return Err(bigimage_core::BigImageError::Other(fill(
                 &gettext("not converted in place: the output would be {path}"),
                 &[("path", &output)],
             )));
@@ -1083,6 +1086,27 @@ fn run_strip_metadata(policy: OverwritePolicy, files: &[PathBuf]) -> color_eyre:
         note_kept_original(f, report.kept_original);
         Ok(report.outcome)
     })
+}
+
+/// The extension of a PNM output of `input`, by its magic number: core
+/// writes gray pixels (P1, P2, P4, P5) as `.pgm` and colour (P3, P6) as
+/// `.ppm`. `None` for PAM, whose pixels decide, and for anything else.
+fn pnm_output_extension(input: &Path) -> Option<&'static str> {
+    use std::io::Read;
+    use std::os::unix::fs::OpenOptionsExt;
+    let mut magic = [0; 2];
+    // Non-blocking, so a FIFO named as an input cannot hang the run.
+    let mut file = std::fs::OpenOptions::new()
+        .read(true)
+        .custom_flags(rustix::fs::OFlags::NONBLOCK.bits() as i32)
+        .open(input)
+        .ok()?;
+    file.read_exact(&mut magic).ok()?;
+    match &magic {
+        b"P1" | b"P2" | b"P4" | b"P5" => Some("pgm"),
+        b"P3" | b"P6" => Some("ppm"),
+        _ => None,
+    }
 }
 
 /// Same-format conversions publish the original when re-encoding would

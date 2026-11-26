@@ -1235,6 +1235,14 @@ fn in_place_convert_never_replaces_siblings() {
     for sibling in ["photo.png", "noext.png", "shot.png"] {
         assert_eq!(std::fs::read(dir.path().join(sibling)).unwrap(), sibling.as_bytes());
     }
+    // Refusals are sentences of their own, not "invalid input".
+    let output = run(dir.path(), &["convert", "--to", "png", "--in-place", "shot.jpg"]);
+    assert!(!String::from_utf8_lossy(&output.stderr).contains("invalid input"));
+    // A PNM is written as .pgm or .ppm by its content: a gray .pgm stays itself.
+    let pgm = [&b"P5\n4 4\n255\n"[..], &[0x80; 16]].concat();
+    std::fs::write(dir.path().join("g.pgm"), pgm).unwrap();
+    success(run(dir.path(), &["convert", "--to", "pnm", "--in-place", "g.pgm"]));
+    assert!(!dir.path().join("g.ppm").exists());
     // A link would be replaced by a copy and its target left as it was.
     std::os::unix::fs::symlink("photo.PNG", dir.path().join("link.png")).unwrap();
     let before = std::fs::read(dir.path().join("photo.PNG")).unwrap();

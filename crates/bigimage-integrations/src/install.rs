@@ -426,11 +426,7 @@ fn install_app_files_with_system(
 /// missing tool is skipped silently.
 fn refresh_xdg_caches(paths: &ScopePaths) {
     use std::process::{Command, Stdio};
-    let _ = Command::new("update-desktop-database")
-        .arg(paths.applications_dir())
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .status();
+    refresh_desktop_database(&paths.applications_dir());
     refresh_icon_cache(&paths.data.join("icons/hicolor"));
     // Plasma/Dolphin discovers ServiceMenus through the KService cache.
     let _ = Command::new("kbuildsycoca6")
@@ -438,6 +434,20 @@ fn refresh_xdg_caches(paths: &ScopePaths) {
         .stdout(Stdio::null())
         .stderr(Stdio::null())
         .status();
+}
+
+/// Rebuild `applications/mimeinfo.cache` only where one already exists, as
+/// [`refresh_icon_cache`] does: creating one (and `intent.cache`) in a
+/// folder that had none changes how other programs' launchers are found.
+fn refresh_desktop_database(applications: &std::path::Path) {
+    use std::process::{Command, Stdio};
+    if applications.join("mimeinfo.cache").is_file() {
+        let _ = Command::new("update-desktop-database")
+            .arg(applications)
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .status();
+    }
 }
 
 /// Rebuild `hicolor/icon-theme.cache` only where one already exists: GTK
@@ -638,6 +648,33 @@ mod tests {
         std::fs::write(hicolor.join("scalable/apps").join(APP_ICON_NAME), APP_ICON_SVG).unwrap();
         refresh_icon_cache(&hicolor);
         assert!(!hicolor.join("icon-theme.cache").exists());
+    }
+
+    #[test]
+    fn mime_cache_never_created() {
+        let tmp = TempDir::new().unwrap();
+        let paths = ScopePaths::rooted_at(tmp.path());
+        install_app_files(&paths);
+        refresh_desktop_database(&paths.applications_dir());
+        assert!(!paths.applications_dir().join("mimeinfo.cache").exists());
+        assert!(!paths.applications_dir().join("intent.cache").exists());
+    }
+
+    #[test]
+    fn existing_mime_cache_follows_install() {
+        let tmp = TempDir::new().unwrap();
+        let paths = ScopePaths::rooted_at(tmp.path());
+        install_app_files(&paths);
+        let cache = paths.applications_dir().join("mimeinfo.cache");
+        std::fs::write(&cache, "[MIME Cache]\n").unwrap();
+        if !is_on_path("update-desktop-database") {
+            // allow-noisy-log: a skipped check says so in the test output.
+            eprintln!("skipped: update-desktop-database is not installed");
+            return;
+        }
+        refresh_desktop_database(&paths.applications_dir());
+        let body = std::fs::read_to_string(&cache).unwrap();
+        assert!(body.contains("image/png=") && body.contains(APP_DESKTOP_NAME), "{body}");
     }
 
     #[test]

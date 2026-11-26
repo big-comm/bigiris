@@ -11,7 +11,7 @@ use std::path::Path;
 use image::DynamicImage;
 
 use crate::convert::{ConvertOutcome, OverwritePolicy};
-use crate::{BigImageError, Format, Result, pipeline};
+use crate::{BigImageError, Format, Result};
 
 /// All four adjustments bundled. Any axis left at its neutral value is
 /// skipped entirely to avoid needless pixel churn.
@@ -114,29 +114,10 @@ pub fn adjust_file_with_options(
     policy: OverwritePolicy,
 ) -> Result<ConvertOutcome> {
     ops.validate()?;
-
-    let input = input.as_ref();
-    let suffix_tag = ops.suffix_tag();
-    let suffix = format!("_{suffix_tag}");
-    if let Some(skipped) =
-        pipeline::skip_before_decode(input, &suffix, target, policy, pipeline::any_size)?
-    {
-        return Ok(skipped);
-    }
-
-    let (src, target) = pipeline::decode_for_target(input, target)?;
-
-    let output = pipeline::resolve_output(input, Some(&suffix), target)?;
-
-    if pipeline::existing_output(&output, target, policy) {
-        tracing::debug!(?output, "adjust: skipping existing output");
-        return Ok(ConvertOutcome::Skipped { output });
-    }
-
-    tracing::debug!(?input, ?output, ?ops, "adjust: applying");
-    let tweaked = if ops.is_identity() { src } else { apply_to(src, ops) };
-
-    pipeline::encode_output(tweaked, output, target, opts, policy)
+    let suffix = format!("_{}", ops.suffix_tag());
+    crate::transform_file(input, &suffix, target, opts, policy, |src| {
+        Ok(if ops.is_identity() { src } else { apply_to(src, ops) })
+    })
 }
 
 /// Pure in-memory variant of [`adjust_file`] — applies `ops` to an already-

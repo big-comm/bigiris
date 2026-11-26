@@ -76,9 +76,9 @@ pub fn open_image(path: impl AsRef<std::path::Path>) -> image::ImageResult<image
 
 /// Decode `input`, apply `transform` and write the result next to it as
 /// `<stem><suffix>.<ext>`, with the naming, `Skip` short-circuit (before
-/// decoding), size limits and atomic publication of the built-in
-/// transforms. `target` defaults to the source format. For transforms
-/// that live outside this crate, such as the AI tools.
+/// decoding), size limits and atomic publication every transform without
+/// its own validation shares (flip, rotate, adjust, the AI tools). `target`
+/// defaults to the source format.
 pub fn transform_file(
     input: impl AsRef<std::path::Path>,
     suffix: &str,

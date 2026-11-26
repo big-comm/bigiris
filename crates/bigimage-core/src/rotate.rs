@@ -48,29 +48,9 @@ pub fn rotate_file_with_options(
     opts: &crate::EncodeOptions,
     policy: OverwritePolicy,
 ) -> Result<ConvertOutcome> {
-    let input = input.as_ref();
-    if let Some(skipped) = pipeline::skip_before_decode(
-        input,
-        rotation.filename_suffix(),
-        target,
-        policy,
-        pipeline::any_size,
-    )? {
-        return Ok(skipped);
-    }
-
-    let (src, target) = pipeline::decode_for_target(input, target)?;
-
-    let output = pipeline::resolve_output(input, Some(rotation.filename_suffix()), target)?;
-
-    if pipeline::existing_output(&output, target, policy) {
-        tracing::debug!(?output, "rotate: skipping existing output");
-        return Ok(ConvertOutcome::Skipped { output });
-    }
-
-    tracing::debug!(?input, ?output, ?target, ?rotation, "rotate: computing");
-    let rotated = apply_to(&src, rotation);
-    pipeline::encode_output(rotated, output, target, opts, policy)
+    crate::transform_file(input, rotation.filename_suffix(), target, opts, policy, |src| {
+        Ok(apply_to(&src, rotation))
+    })
 }
 
 /// Pure in-memory rotation — shared with preview pipeline.
@@ -104,24 +84,9 @@ pub fn rotate_file_auto_with_options(
     opts: &crate::EncodeOptions,
     policy: OverwritePolicy,
 ) -> Result<ConvertOutcome> {
-    let input = input.as_ref();
-    if let Some(skipped) =
-        pipeline::skip_before_decode(input, "_auto", target, policy, pipeline::any_size)?
-    {
-        return Ok(skipped);
-    }
-
-    // `src` arrives already upright — decode_with_source_format honours the
-    // orientation tag for every op. Re-applying it here would double-rotate.
-    let (src, target) = crate::pipeline::decode_for_target(input, target)?;
-
-    let output = crate::pipeline::resolve_output(input, Some("_auto"), target)?;
-    if pipeline::existing_output(&output, target, policy) {
-        return Ok(ConvertOutcome::Skipped { output });
-    }
-
-    tracing::debug!(?input, ?output, "rotate: bake EXIF orientation");
-    pipeline::encode_output(src, output, target, opts, policy)
+    // Every decode applies the orientation tag already: the upright pixels
+    // are written as they are.
+    crate::transform_file(input, "_auto", target, opts, policy, Ok)
 }
 
 /// Largest axis-aligned rectangle (width, height) that fits inside a

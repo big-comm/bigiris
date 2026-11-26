@@ -4,7 +4,7 @@
 use std::path::Path;
 
 use crate::convert::{ConvertOutcome, OverwritePolicy};
-use crate::{Format, Result, pipeline};
+use crate::{Format, Result};
 
 /// Mirror axis.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -42,29 +42,9 @@ pub fn flip_file_with_options(
     opts: &crate::EncodeOptions,
     policy: OverwritePolicy,
 ) -> Result<ConvertOutcome> {
-    let input = input.as_ref();
-    if let Some(skipped) = pipeline::skip_before_decode(
-        input,
-        axis.filename_suffix(),
-        target,
-        policy,
-        pipeline::any_size,
-    )? {
-        return Ok(skipped);
-    }
-
-    let (src, target) = pipeline::decode_for_target(input, target)?;
-
-    let output = pipeline::resolve_output(input, Some(axis.filename_suffix()), target)?;
-
-    if pipeline::existing_output(&output, target, policy) {
-        tracing::debug!(?output, "flip: skipping existing output");
-        return Ok(ConvertOutcome::Skipped { output });
-    }
-
-    tracing::debug!(?input, ?output, ?target, ?axis, "flip: computing");
-    let flipped = apply_to(&src, axis);
-    pipeline::encode_output(flipped, output, target, opts, policy)
+    crate::transform_file(input, axis.filename_suffix(), target, opts, policy, |src| {
+        Ok(apply_to(&src, axis))
+    })
 }
 
 /// Pure in-memory flip — shared with preview pipeline.

@@ -13,9 +13,9 @@
 //!   `adjust`, `animate`; `preview` replays them on a thumbnail.
 //! - Encoding: `format`, `encode` (settings), `optimize` (the encoders and
 //!   their quality search), `color` (ICC normalization and the sRGB profile).
-//! - Metadata: `metadata` (EXIF reading, in-place re-save), `metadata_scan`
-//!   (whether original bytes may be republished); `resources`: batch
-//!   concurrency.
+//! - Metadata: `metadata` (EXIF reading, what a save keeps), `exif_resave`
+//!   (the EXIF an in-place save writes), `metadata_scan` (whether original
+//!   bytes may be republished); `resources`: batch concurrency.
 
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
@@ -33,6 +33,7 @@ pub mod content;
 mod convert;
 pub mod crop;
 mod encode;
+mod exif_resave;
 pub mod extent;
 pub mod flip;
 mod format;
@@ -213,10 +214,14 @@ pub fn open_image_for_resave(
 /// [`save_image_preserving_metadata_report`]. `options.strip_metadata` is
 /// ignored: the whole point of this call is to keep the user's own metadata.
 ///
-/// EXIF `PixelXDimension`/`PixelYDimension` are updated to the saved size
-/// and the embedded IFD1 thumbnail (which would show the image before the
-/// edit) is erased; previews inside a maker note stay. XMP is not carried:
-/// the vendored encoders cannot write it.
+/// EXIF is rebuilt from the source's primary-image fields (IFD0, Exif, GPS,
+/// interoperability) with `Orientation` 1 and `PixelXDimension`/
+/// `PixelYDimension` set to the saved size; the IFD1 thumbnail, which shows
+/// the image before the edit, is not written. The `MakerNote` is copied as
+/// opaque bytes: a vendor note addressed by absolute offsets loses its
+/// meaning, and previews inside it stay. Fields the writer cannot encode are
+/// reported as [`MetadataLoss::ExifFieldsDropped`]. XMP is not carried: the
+/// vendored encoders cannot write it.
 ///
 /// `options` is used as given. For an in-place JPEG save pass the source's
 /// quality, e.g. `quality: metadata::estimate_jpeg_quality(path)`: with
@@ -286,11 +291,23 @@ pub fn save_image_preserving_metadata_report(
     }
     if let Some(exif) = source.exif.as_deref().filter(|exif| !exif.is_empty()) {
         let limit = if target == Format::Jpeg { MAX_JPEG_EXIF } else { MAX_RESAVE_BLOB };
-        match metadata::resave_exif(exif, Some((image.width(), image.height()))) {
-            _ if !support.exif => dropped.push(MetadataLoss::ExifUnsupported),
-            None => dropped.push(MetadataLoss::ExifInvalid),
-            Some(exif) if exif.len() > limit => dropped.push(MetadataLoss::ExifTooLarge),
-            Some(exif) => extras.exif = Some(exif),
+        if !support.exif {
+            dropped.push(MetadataLoss::ExifUnsupported);
+        } else if exif.len() > MAX_RESAVE_BLOB {
+            dropped.push(MetadataLoss::ExifTooLarge);
+        } else {
+            match exif_resave::resave_exif(exif, (image.width(), image.height())) {
+                None => dropped.push(MetadataLoss::ExifInvalid),
+                Some(rebuilt) if rebuilt.tiff.len() > limit => {
+                    dropped.push(MetadataLoss::ExifTooLarge);
+                }
+                Some(rebuilt) => {
+                    if rebuilt.dropped_fields {
+                        dropped.push(MetadataLoss::ExifFieldsDropped);
+                    }
+                    extras.exif = Some(rebuilt.tiff);
+                }
+            }
         }
     } else if source.exif_unreadable {
         dropped.push(MetadataLoss::ExifInvalid);

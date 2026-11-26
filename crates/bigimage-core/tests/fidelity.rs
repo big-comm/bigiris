@@ -320,6 +320,27 @@ fn camera_exif() -> Vec<u8> {
     exif
 }
 
+/// TIFF EXIF with Make and a `UserComment` that brings it to about `len`
+/// bytes, written by kamadak-exif.
+fn large_exif(len: usize) -> Vec<u8> {
+    use exif::{Field, In, Tag, Value};
+    let fields = [
+        Field { tag: Tag::Make, ifd_num: In::PRIMARY, value: Value::Ascii(vec![b"Cam".to_vec()]) },
+        Field {
+            tag: Tag::UserComment,
+            ifd_num: In::PRIMARY,
+            value: Value::Undefined(vec![b'c'; len], 0),
+        },
+    ];
+    let mut writer = exif::experimental::Writer::new();
+    for field in &fields {
+        writer.push_field(field);
+    }
+    let mut out = std::io::Cursor::new(Vec::new());
+    writer.write(&mut out, true).unwrap();
+    out.into_inner()
+}
+
 fn icc_of(path: &std::path::Path) -> Option<Vec<u8>> {
     use image::ImageDecoder;
     image::ImageReader::open(path)
@@ -411,8 +432,7 @@ fn unreadable_avif_exif_is_reported() {
     };
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().join("photo.avif");
-    let mut large = camera_exif();
-    large.resize(70_000, 0);
+    let large = large_exif(70_000);
     let opts = EncodeOptions { quality: Some(80), ..EncodeOptions::default() };
     let save = |source: &SourceMetadata| {
         let image = DynamicImage::new_rgb8(8, 8);
@@ -531,11 +551,20 @@ fn preserving_save_reports_what_it_dropped() {
         report("bad.png", Format::Png, Some(b"not exif".to_vec()), &p3),
         [MetadataLoss::ExifInvalid]
     );
-    let mut huge = camera_exif();
-    huge.resize(70_000, 0);
+    let huge = large_exif(70_000);
     assert_eq!(
         report("huge.jpg", Format::Jpeg, Some(huge.clone()), &p3),
         [MetadataLoss::ExifTooLarge]
     );
     assert_eq!(report("huge.png", Format::Png, Some(huge), &p3), []);
+    // A field of an unknown TIFF type next to Make: Make kept, the loss said.
+    let mut unknown = vec![b'I', b'I', 42, 0, 8, 0, 0, 0, 2, 0];
+    unknown.extend_from_slice(&[0x0f, 0x01, 2, 0, 4, 0, 0, 0, b'C', b'a', b'm', 0]);
+    unknown.extend_from_slice(&[0x99, 0x99, 99, 0, 1, 0, 0, 0, 1, 2, 3, 4, 0, 0, 0, 0]);
+    assert_eq!(
+        report("unknown.png", Format::Png, Some(unknown), &p3),
+        [MetadataLoss::ExifFieldsDropped]
+    );
+    let meta = bigimage_core::metadata::read(dir.path().join("unknown.png")).unwrap();
+    assert!(meta.has_camera_info, "{:?}", meta.tags);
 }

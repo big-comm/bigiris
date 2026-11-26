@@ -219,6 +219,9 @@ fn abort_dialog(status: &gtk::Label, apply_btn: &gtk::Button) {
 
 /// Progress message sent from the worker pool to the UI poll.
 pub(super) enum AsyncBatchEvent {
+    /// Several inputs would write the same file and the policy cannot
+    /// resolve it: nothing ran. The text names the colliding inputs.
+    Refused(String),
     /// One file finished (in any of the workers, in any order). `done`
     /// is the cumulative count of finished files; `total` is fixed at
     /// the start. `file` is the bare file name (no directory) of the
@@ -267,9 +270,12 @@ impl BatchEvents {
 
 /// Spawn the GTK-independent worker pool. The generic dialog and the richer
 /// folder/batch window share this exact engine, so progress, cancellation,
-/// parallelism and accounting cannot drift apart again.
+/// parallelism and accounting cannot drift apart again. Inputs are planned
+/// as the CLI plans them: those writing one file run in order on one worker,
+/// or the run is refused before any work when `naming` cannot tell them apart.
 pub(super) fn spawn_batch_workers<W>(
     files: Vec<PathBuf>,
+    naming: crate::output_plan::Naming,
     work: W,
     cancelled: Arc<AtomicBool>,
 ) -> BatchEvents
@@ -289,15 +295,26 @@ where
         }
         let _close = CloseOnDrop(wake.clone());
         let start = Instant::now();
+        // Planned here, off the GTK loop: it reads each input's header.
+        let groups = match crate::output_plan::plan_outputs(&files, &naming) {
+            Ok(groups) => groups,
+            Err(message) => {
+                let _ = tx.send(AsyncBatchEvent::Refused(message));
+                return;
+            }
+        };
+        let planned: Vec<PathBuf> = groups.iter().flatten().cloned().collect();
         let queue = Queue {
-            files,
+            total: planned.len(),
+            groups,
             next: AtomicUsize::new(0),
             done: AtomicUsize::new(0),
             bytes_in: AtomicU64::new(0),
             bytes_out: AtomicU64::new(0),
             cancelled,
         };
-        let n_workers = bigimage_core::resources::batch_worker_count(&queue.files);
+        let n_workers =
+            bigimage_core::resources::batch_worker_count(&planned).min(queue.groups.len());
         let tally = std::thread::scope(|scope| {
             let handles: Vec<_> = (0..n_workers)
                 .map(|_| {
@@ -328,17 +345,20 @@ where
             bytes_in: queue.bytes_in.load(Ordering::Relaxed),
             bytes_out: queue.bytes_out.load(Ordering::Relaxed),
             done: queue.done.load(Ordering::Relaxed),
-            total: queue.files.len(),
+            total: queue.total,
             cancelled: queue.cancelled.load(Ordering::Relaxed),
         });
     });
     events
 }
 
-/// What the batch workers share: the files, the next one to take, and the
-/// running totals.
+/// What the batch workers share: the planned groups, the next one to take,
+/// and the running totals.
 struct Queue {
-    files: Vec<PathBuf>,
+    /// Inputs writing one destination, in input order.
+    groups: Vec<Vec<PathBuf>>,
+    /// Inputs in every group.
+    total: usize,
     next: AtomicUsize,
     done: AtomicUsize,
     bytes_in: AtomicU64,
@@ -367,8 +387,8 @@ impl Tally {
     }
 }
 
-/// Take files from `queue` until it is empty or cancelled, reporting each
-/// one to the GTK side.
+/// Take groups from `queue` until it is empty or cancelled, running each
+/// group's files in order and reporting each one to the GTK side.
 fn run_worker<W>(
     queue: &Queue,
     work: &W,
@@ -378,49 +398,63 @@ fn run_worker<W>(
 where
     W: Fn(&Path) -> bigimage_core::Result<ConvertOutcome>,
 {
-    let total = queue.files.len();
     let mut tally = Tally::default();
     while !queue.cancelled.load(Ordering::Relaxed) {
         let idx = queue.next.fetch_add(1, Ordering::Relaxed);
-        let Some(path) = queue.files.get(idx) else { break };
-        let display = path
-            .file_name()
-            .map(|name| crate::codec::printable_path(Path::new(name)))
-            .unwrap_or_default();
-        let input_bytes = std::fs::metadata(path).map(|m| m.len()).unwrap_or(0);
-        // Scoped cancel lets closing the window stop an isolated codec run
-        // instead of waiting up to 60 s.
-        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-            crate::codec::with_cancel(queue.cancelled.clone(), || work(path))
-        }))
-        .unwrap_or_else(|_| {
-            Err(bigimage_core::BigImageError::Other(gettext("unexpected worker failure")))
-        });
-        match result {
-            Ok(ConvertOutcome::Written { output }) => {
-                tally.ok += 1;
-                queue.bytes_in.fetch_add(input_bytes, Ordering::Relaxed);
-                if let Ok(meta) = std::fs::metadata(&output) {
-                    queue.bytes_out.fetch_add(meta.len(), Ordering::Relaxed);
+        let Some(group) = queue.groups.get(idx) else { break };
+        // A per-image name can still repeat inside a group.
+        let mut written = Vec::new();
+        for path in group {
+            if queue.cancelled.load(Ordering::Relaxed) {
+                break;
+            }
+            let display = path
+                .file_name()
+                .map(|name| crate::codec::printable_path(Path::new(name)))
+                .unwrap_or_default();
+            let input_bytes = std::fs::metadata(path).map(|m| m.len()).unwrap_or(0);
+            // Scoped cancel lets closing the window stop an isolated codec run
+            // instead of waiting up to 60 s.
+            let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                crate::codec::with_cancel(queue.cancelled.clone(), || work(path))
+            }))
+            .unwrap_or_else(|_| {
+                Err(bigimage_core::BigImageError::Other(gettext("unexpected worker failure")))
+            });
+            let failure = match result {
+                Ok(ConvertOutcome::Written { output }) if written.contains(&output) => {
+                    Some(crate::fill(
+                        &gettext("replaced the output of another input: {path}"),
+                        &[("path", &crate::codec::printable_path(&output))],
+                    ))
                 }
-            }
-            Ok(ConvertOutcome::Skipped { .. }) => tally.skip += 1,
-            Err(e) => {
+                Ok(ConvertOutcome::Written { output }) => {
+                    tally.ok += 1;
+                    queue.bytes_in.fetch_add(input_bytes, Ordering::Relaxed);
+                    if let Ok(meta) = std::fs::metadata(&output) {
+                        queue.bytes_out.fetch_add(meta.len(), Ordering::Relaxed);
+                    }
+                    written.push(output);
+                    None
+                }
+                Ok(ConvertOutcome::Skipped { .. }) => {
+                    tally.skip += 1;
+                    None
+                }
+                Err(e) => Some(crate::error_text::core_error_text(&e)),
+            };
+            if let Some(failure) = failure {
                 tally.fail += 1;
-                tally.first_err.get_or_insert_with(|| {
-                    format!(
-                        "{}: {}",
-                        crate::codec::printable_path(path),
-                        crate::error_text::core_error_text(&e)
-                    )
-                });
+                let shown = crate::codec::printable_path(path);
+                tally.first_err.get_or_insert_with(|| format!("{shown}: {failure}"));
             }
+            let done = queue.done.fetch_add(1, Ordering::Relaxed) + 1;
+            let progress = AsyncBatchEvent::Progress { done, total: queue.total, file: display };
+            if tx.send(progress).is_err() {
+                return tally;
+            }
+            wake.notify();
         }
-        let done = queue.done.fetch_add(1, Ordering::Relaxed) + 1;
-        if tx.send(AsyncBatchEvent::Progress { done, total, file: display }).is_err() {
-            break;
-        }
-        wake.notify();
     }
     tally
 }
@@ -431,6 +465,7 @@ where
 /// stranded.
 pub(super) fn run_batch_async<W>(
     files: Vec<PathBuf>,
+    naming: crate::output_plan::Naming,
     work: W,
     busy_label: String,
     status: gtk::Label,
@@ -452,7 +487,7 @@ pub(super) fn run_batch_async<W>(
         })
     });
 
-    let events = spawn_batch_workers(files, work, cancelled);
+    let events = spawn_batch_workers(files, naming, work, cancelled);
     // Released with this task, i.e. only after the pool reported back.
     let hold = window.application().map(|app| app.hold());
 
@@ -462,6 +497,11 @@ pub(super) fn run_batch_async<W>(
             match events.next().await {
                 Some(AsyncBatchEvent::Progress { done, total, file }) => {
                     status.set_text(&format!("{busy_label} {done}/{total} — {file}"));
+                }
+                Some(AsyncBatchEvent::Refused(message)) => {
+                    status.set_text(&message);
+                    apply_btn.set_sensitive(true);
+                    break;
                 }
                 Some(AsyncBatchEvent::Done {
                     ok,
@@ -498,13 +538,18 @@ pub(super) fn run_batch_async<W>(
 #[cfg(test)]
 mod worker_tests {
     use super::*;
+    use bigimage_core::{Format, OverwritePolicy};
+
+    fn png_naming(policy: OverwritePolicy) -> crate::output_plan::Naming {
+        crate::output_plan::Naming::image(Some(Format::Png), policy)
+    }
 
     /// Awaits the events the way the dialogs do, through the wake-up.
     fn summary(events: BatchEvents) -> AsyncBatchEvent {
         gtk4::glib::MainContext::new().block_on(async {
             loop {
                 let event = events.next().await.expect("workers ended without a summary");
-                if matches!(event, AsyncBatchEvent::Done { .. }) {
+                if matches!(event, AsyncBatchEvent::Done { .. } | AsyncBatchEvent::Refused(_)) {
                     return event;
                 }
             }
@@ -516,6 +561,7 @@ mod worker_tests {
         let cancelled = Arc::new(AtomicBool::new(true));
         let rx = spawn_batch_workers(
             vec![PathBuf::from("unread.png")],
+            png_naming(OverwritePolicy::Skip),
             |_| panic!("work after cancellation"),
             cancelled,
         );
@@ -528,6 +574,7 @@ mod worker_tests {
         let trigger = cancelled.clone();
         let rx = spawn_batch_workers(
             vec![PathBuf::from("first.png")],
+            png_naming(OverwritePolicy::Skip),
             move |path| {
                 assert!(!crate::codec::cancelled());
                 trigger.store(true, Ordering::Release);
@@ -557,6 +604,7 @@ mod worker_tests {
             .collect();
         let rx = spawn_batch_workers(
             files,
+            png_naming(OverwritePolicy::Skip),
             |path| {
                 if path.file_name().unwrap() == "3.png" {
                     panic!("synthetic failure");
@@ -577,6 +625,7 @@ mod worker_tests {
         std::fs::write(&skipped, [0u8; 100]).unwrap();
         let rx = spawn_batch_workers(
             vec![written, skipped],
+            png_naming(OverwritePolicy::Skip),
             |path| {
                 if path.file_name().unwrap() == "written.png" {
                     Ok(ConvertOutcome::Written { output: path.to_path_buf() })
@@ -590,5 +639,45 @@ mod worker_tests {
             summary(rx),
             AsyncBatchEvent::Done { ok: 1, skip: 1, bytes_in: 10, bytes_out: 10, .. }
         ));
+    }
+
+    /// The GUI plans like the CLI: `a.png` and `a.bmp` both write `a.webp`.
+    #[test]
+    fn colliding_inputs_are_planned() {
+        let dir = tempfile::tempdir().unwrap();
+        let first = dir.path().join("a.png");
+        let second = dir.path().join("a.bmp");
+        image::RgbImage::new(32, 24).save(&first).unwrap();
+        image::RgbImage::new(16, 12).save(&second).unwrap();
+        let files = vec![first, second];
+        let webp = |policy| crate::output_plan::Naming::image(Some(Format::WebP), policy);
+        let convert = |policy| {
+            move |path: &Path| {
+                let opts = bigimage_core::EncodeOptions::default();
+                bigimage_core::convert_file_to(path, None, Format::WebP, &opts, policy)
+            }
+        };
+        for policy in [OverwritePolicy::Skip, OverwritePolicy::Replace] {
+            let cancelled = Arc::new(AtomicBool::new(false));
+            let events =
+                spawn_batch_workers(files.clone(), webp(policy), convert(policy), cancelled);
+            let refusal = summary(events);
+            let AsyncBatchEvent::Refused(message) = refusal else { panic!("ran under {policy:?}") };
+            assert!(message.contains("a.png") && message.contains("a.bmp"), "{message}");
+        }
+        assert!(!dir.path().join("a.webp").exists());
+        // Increment runs them in input order on one worker, so the numbers
+        // never depend on which worker gets there first.
+        let policy = OverwritePolicy::Increment;
+        let events = spawn_batch_workers(
+            files,
+            webp(policy),
+            convert(policy),
+            Arc::new(AtomicBool::new(false)),
+        );
+        assert!(matches!(summary(events), AsyncBatchEvent::Done { ok: 2, fail: 0, .. }));
+        let size = |name: &str| image::image_dimensions(dir.path().join(name)).unwrap();
+        assert_eq!(size("a.webp"), (32, 24));
+        assert_eq!(size("a_1.webp"), (16, 12));
     }
 }

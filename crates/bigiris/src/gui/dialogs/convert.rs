@@ -143,6 +143,12 @@ fn fill_convert_dialog(
             let work_files: Vec<PathBuf> = (*files).clone();
             run_batch_async(
                 work_files,
+                crate::output_plan::Naming {
+                    output_dir: out_dir_snapshot.clone(),
+                    extension: Some(fmt.extension()),
+                    policy,
+                    per_image_suffix: false,
+                },
                 move |f| convert_file_to(f, out_dir_snapshot.as_deref(), fmt, &opts, policy),
                 gettext("Converting"),
                 status.clone(),

@@ -316,6 +316,10 @@ fn fill_extent_dialog(
             let work_files: Vec<PathBuf> = (*files).clone();
             run_batch_async(
                 work_files,
+                crate::output_plan::Naming {
+                    per_image_suffix: matches!(opts.size, ExtentSize::Aspect { .. }),
+                    ..crate::output_plan::Naming::image(target, policy)
+                },
                 move |f| extent_file(f, opts, target, policy),
                 gettext("Extending"),
                 status.clone(),

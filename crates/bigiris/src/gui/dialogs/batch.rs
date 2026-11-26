@@ -207,8 +207,15 @@ pub(in crate::gui) fn build_batch_dialog(
             progress.set_text(Some(&gettext("Starting…")));
             status.set_text(&gettext("Processing…"));
 
+            let naming = crate::output_plan::Naming {
+                output_dir: out_dir_snapshot.clone(),
+                extension: Some(fmt.extension()),
+                policy,
+                per_image_suffix: false,
+            };
             let events = batch_runner::spawn_batch_workers(
                 files_owned,
+                naming,
                 move |path| convert_file_to(path, out_dir_snapshot.as_deref(), fmt, &opts, policy),
                 cancelled.clone(),
             );
@@ -230,6 +237,13 @@ pub(in crate::gui) fn build_batch_dialog(
                     Some(batch_runner::AsyncBatchEvent::Progress { done, total, file }) => {
                         progress.set_fraction(done as f64 / total.max(1) as f64);
                         progress.set_text(Some(&format!("{done}/{total} · {file}")));
+                    }
+                    Some(batch_runner::AsyncBatchEvent::Refused(message)) => {
+                        running.set(false);
+                        progress.set_text(None);
+                        status.set_text(&message);
+                        apply_btn.set_sensitive(true);
+                        return;
                     }
                     Some(batch_runner::AsyncBatchEvent::Done {
                         ok,

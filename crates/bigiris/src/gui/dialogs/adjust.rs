@@ -179,6 +179,7 @@ fn fill_adjust_dialog(
             let work_files: Vec<PathBuf> = (*files).clone();
             run_batch_async(
                 work_files,
+                crate::output_plan::Naming::image(target, policy),
                 move |f| adjust_file(f, ops, target, policy),
                 gettext("Adjusting"),
                 status.clone(),

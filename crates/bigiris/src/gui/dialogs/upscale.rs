@@ -202,6 +202,7 @@ fn fill_upscale_dialog(
             let loaded = loaded.clone();
             run_batch_async(
                 work_files,
+                crate::output_plan::Naming::image(target, policy),
                 move |f| {
                     if !ai {
                         return resize_file(f, mode, Filter::Lanczos3, target, &opts, policy);

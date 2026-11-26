@@ -115,18 +115,6 @@ pub(crate) fn admit(model: &str, need: u64) -> Result<(), AiError> {
     decide(model, available()?, need)
 }
 
-/// Resident memory of this process (`VmRSS`), for measurements.
-#[allow(dead_code)]
-pub(crate) fn resident_bytes() -> Result<u64, AiError> {
-    process_value("VmRSS:")
-}
-
-/// Peak resident memory of this process (`VmHWM`), for measurements.
-#[allow(dead_code)]
-pub(crate) fn peak_bytes() -> Result<u64, AiError> {
-    process_value("VmHWM:")
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -171,6 +159,5 @@ mod tests {
             Ok(available) => assert!(available > 0),
             Err(error) => eprintln!("memory budget unknown here: {error}"),
         }
-        assert!(resident_bytes().unwrap() > 0 && peak_bytes().unwrap() > 0);
     }
 }

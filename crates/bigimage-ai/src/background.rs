@@ -7,9 +7,9 @@
 //! image (multiplied into any alpha it already had). The output is always
 //! 8-bit RGBA; 16-bit and float sources are converted to 8-bit sRGB first.
 //!
-//! **Batch use:** the loaded model is kept for the process (see
-//! [`unload`]), so [`BgSession`] is only a handle: build one per batch and
-//! call [`BgSession::process`] per image.
+//! **Batch use:** the loaded model is kept until [`unload`] or
+//! [`crate::unload_all`], so [`BgSession`] is only a handle: build one per
+//! batch and call [`BgSession::process`] per image.
 //!
 //! The weights come from the BigLinux package `birefnet-native` (MIT);
 //! `BIGIRIS_BIREFNET_WEIGHTS` points at another file.
@@ -57,7 +57,7 @@ pub fn availability() -> Availability {
     MODEL.availability()
 }
 
-/// Where the loaded model runs; `None` before the first run.
+/// Where the loaded model runs; `None` while none is loaded.
 pub fn device() -> Option<Device> {
     SLOT.device()
 }

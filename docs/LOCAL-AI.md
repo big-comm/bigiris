@@ -51,8 +51,10 @@ The engine's own variables:
   missing GPU into an error that explains the reason.
 - `IMAGE_ENGINE_NATIVE_TIER=N` limits the CPU instruction set.
 
-If the GPU fails in the middle of a run, BigIris repeats that run on the CPU
-and stays on the CPU until the process ends.
+A loaded model stays loaded between runs; the viewer gives its memory (and
+the GPU) back when its edit panel closes. If the GPU fails in the middle of a
+run, BigIris repeats that run on the CPU and stays on the CPU until the
+process ends.
 
 ## How to use it
 

@@ -865,6 +865,9 @@ fn set_open(state: &Rc<RefCell<ViewerState>>, open: bool) {
         let original = state.borrow().edit_ui.original.clone();
         original.set_active(false);
         show_original(state, Source::Key, false);
+        // Give the AI models' memory (and GPU) back; unloading waits for a
+        // run in progress, so it stays off the main loop.
+        std::thread::spawn(bigimage_ai::unload_all);
     }
     refresh(state);
     sync_sensitivity(state);

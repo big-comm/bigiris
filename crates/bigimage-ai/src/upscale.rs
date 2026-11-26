@@ -90,7 +90,7 @@ pub fn availability() -> Availability {
     MODEL.availability()
 }
 
-/// Where the loaded model runs; `None` before the first run.
+/// Where the loaded model runs; `None` while none is loaded.
 pub fn device() -> Option<Device> {
     SLOT.device()
 }

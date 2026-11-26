@@ -1671,11 +1671,9 @@ fn center_film_strip(state: &Rc<RefCell<ViewerState>>) -> bool {
     true
 }
 
-/// Make a vertical wheel scroll `scroller` along `axis` by GTK's own step.
-/// The controller runs in the capture phase, before the widget under the
-/// pointer: a slider or spin button that the content brings under a still
-/// pointer would otherwise take the wheel and change its value, and a
-/// horizontal-only scroller would drop the vertical steps.
+/// Make a vertical wheel scroll `scroller` along `axis` by GTK's own step,
+/// in the capture phase: before a slider or spin button under the pointer
+/// takes the wheel as a value change.
 pub(in crate::gui) fn scroll_on_wheel(scroller: &gtk::ScrolledWindow, axis: gtk::Orientation) {
     let wheel = gtk::EventControllerScroll::new(gtk::EventControllerScrollFlags::VERTICAL);
     wheel.set_propagation_phase(gtk::PropagationPhase::Capture);

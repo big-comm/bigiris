@@ -219,10 +219,8 @@ fn selected_overwrite(row: &adw::ComboRow) -> OverwritePolicy {
 }
 
 /// Run `start` once the user agrees to overwrite the inputs that `naming`
-/// would replace (see [`crate::output_plan::replaced_inputs`]); at once
-/// when it replaces none. Cancel is the default answer. The count resolves
-/// every input, slow on a network folder, so it runs off the GTK loop with
-/// `apply_btn` held insensitive.
+/// would replace (Cancel is the default), at once when there are none. The
+/// count, slow on a network folder, runs off the GTK loop with Apply held.
 fn confirm_replacing_originals(
     window: &adw::ApplicationWindow,
     apply_btn: &gtk::Button,

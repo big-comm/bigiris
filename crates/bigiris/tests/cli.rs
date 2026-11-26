@@ -486,7 +486,7 @@ fn colliding_outputs_are_refused_before_any_work() {
 /// `a.png` rotated beside `a_rot90.png` would replace that input while it
 /// is being read: refused under replace, nothing written; skip leaves it.
 #[test]
-fn replace_refuses_an_output_naming_an_input() {
+fn replace_refuses_writing_an_input() {
     let dir = tempfile::tempdir().unwrap();
     sized_fixture(dir.path(), "a.png", 32, 24);
     std::fs::write(dir.path().join("a_rot90.png"), b"another input").unwrap();

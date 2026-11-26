@@ -114,6 +114,17 @@ pub(crate) fn plan_outputs(
             }
         }
     }
+    refuse_unsafe_writes(files, &groups, naming)?;
+    Ok(groups)
+}
+
+/// The refusal of a plan that would write two inputs' outputs to one file,
+/// or, under replace, write an output over another input of the run.
+fn refuse_unsafe_writes(
+    files: &[PathBuf],
+    groups: &[Vec<PathBuf>],
+    naming: &Naming,
+) -> Result<(), String> {
     // Under skip, inputs writing over one of themselves all leave it as it
     // is (`x.png` and `x.webp` converted to WebP): nothing to refuse.
     let unsuffixed = matches!(naming.suffix, OutputSuffix::None);
@@ -140,7 +151,7 @@ pub(crate) fn plan_outputs(
             return Err(replaced_input_refusal(&replaced));
         }
     }
-    Ok(groups)
+    Ok(())
 }
 
 /// `(input, other)` pairs where the output of `input` under `naming` is,

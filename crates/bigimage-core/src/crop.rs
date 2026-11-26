@@ -91,7 +91,7 @@ pub fn crop_file_with_options(
 
     rect.validate_against(src.width(), src.height())?;
 
-    let output = pipeline::resolve_output(input, Some(&rect.filename_suffix()), target, policy)?;
+    let output = pipeline::resolve_output(input, Some(&rect.filename_suffix()), target)?;
 
     if pipeline::existing_output(&output, target, policy) {
         tracing::debug!(?output, "crop: skipping existing output");

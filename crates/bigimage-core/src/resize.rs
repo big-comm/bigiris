@@ -164,7 +164,7 @@ pub fn resize_file(
 
     let (src, target) = pipeline::decode_for_target(input, target)?;
 
-    let output = pipeline::resolve_output(input, Some(&suffix), target, policy)?;
+    let output = pipeline::resolve_output(input, Some(&suffix), target)?;
 
     if pipeline::existing_output(&output, target, policy) {
         tracing::debug!(?output, "resize: skipping existing output");

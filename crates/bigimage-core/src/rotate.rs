@@ -61,7 +61,7 @@ pub fn rotate_file_with_options(
 
     let (src, target) = pipeline::decode_for_target(input, target)?;
 
-    let output = pipeline::resolve_output(input, Some(rotation.filename_suffix()), target, policy)?;
+    let output = pipeline::resolve_output(input, Some(rotation.filename_suffix()), target)?;
 
     if pipeline::existing_output(&output, target, policy) {
         tracing::debug!(?output, "rotate: skipping existing output");
@@ -115,7 +115,7 @@ pub fn rotate_file_auto_with_options(
     // orientation tag for every op. Re-applying it here would double-rotate.
     let (src, target) = crate::pipeline::decode_for_target(input, target)?;
 
-    let output = crate::pipeline::resolve_output(input, Some("_auto"), target, policy)?;
+    let output = crate::pipeline::resolve_output(input, Some("_auto"), target)?;
     if pipeline::existing_output(&output, target, policy) {
         return Ok(ConvertOutcome::Skipped { output });
     }

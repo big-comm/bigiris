@@ -238,7 +238,7 @@ pub fn extent_file_with_options(
 
     let (nw, nh) = opts.size.resolve(src.width(), src.height())?;
     let suffix = filename_suffix(nw, nh);
-    let output = pipeline::resolve_output(input, Some(&suffix), target, policy)?;
+    let output = pipeline::resolve_output(input, Some(&suffix), target)?;
 
     if pipeline::existing_output(&output, target, policy) {
         tracing::debug!(?output, "extent: skipping existing output");

@@ -93,7 +93,7 @@ pub fn transform_file(
         return Ok(skipped);
     }
     let (src, target) = pipeline::decode_for_target(input, target)?;
-    let output = pipeline::resolve_output(input, Some(suffix), target, policy)?;
+    let output = pipeline::resolve_output(input, Some(suffix), target)?;
     if pipeline::existing_output(&output, target, policy) {
         return Ok(ConvertOutcome::Skipped { output });
     }

@@ -291,7 +291,7 @@ pub(crate) fn skip_before_decode(
     let Some(target) = target.or_else(|| sniff_format(input)) else {
         return Ok(None);
     };
-    let Ok(output) = resolve_output(input, Some(suffix), target, policy) else {
+    let Ok(output) = resolve_output(input, Some(suffix), target) else {
         return Ok(None);
     };
     skip_existing(input, output, target, validate)
@@ -372,9 +372,8 @@ pub(crate) fn resolve_output(
     input: &Path,
     suffix: Option<&str>,
     target: Format,
-    policy: OverwritePolicy,
 ) -> Result<PathBuf> {
-    resolve_output_to(input, None, suffix, target, policy)
+    resolve_output_to(input, None, suffix, target)
 }
 
 /// Like [`resolve_output`] but takes an explicit `output_dir`: `None` writes
@@ -384,7 +383,6 @@ pub(crate) fn resolve_output_to(
     output_dir: Option<&Path>,
     suffix: Option<&str>,
     target: Format,
-    policy: OverwritePolicy,
 ) -> Result<PathBuf> {
     let stem = input
         .file_stem()
@@ -401,7 +399,6 @@ pub(crate) fn resolve_output_to(
         parent.join(name)
     };
 
-    let _ = policy;
     Ok(naive)
 }
 

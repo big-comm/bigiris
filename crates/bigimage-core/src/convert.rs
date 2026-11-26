@@ -108,7 +108,7 @@ pub fn convert_file_report(
     policy: OverwritePolicy,
 ) -> Result<ConvertReport> {
     let input = input.as_ref();
-    let output = pipeline::resolve_output_to(input, output_dir, None, target, policy)?;
+    let output = pipeline::resolve_output_to(input, output_dir, None, target)?;
 
     if matches!(policy, OverwritePolicy::Skip)
         && let Some(skipped) =

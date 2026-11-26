@@ -126,7 +126,7 @@ pub fn adjust_file_with_options(
 
     let (src, target) = pipeline::decode_for_target(input, target)?;
 
-    let output = pipeline::resolve_output(input, Some(&suffix), target, policy)?;
+    let output = pipeline::resolve_output(input, Some(&suffix), target)?;
 
     if pipeline::existing_output(&output, target, policy) {
         tracing::debug!(?output, "adjust: skipping existing output");

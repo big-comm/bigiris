@@ -1018,13 +1018,15 @@ fn trim_metadata(mut meta: Metadata) -> Metadata {
     }
     meta
 }
-/// EXIF names and values come from the file: see [`sanitize_text`].
+/// EXIF names and values come from the file, and a hostile worker may skip
+/// its own trimming: see [`sanitize_text`] and [`trim_metadata`].
 fn sanitize_metadata(mut meta: Metadata) -> Metadata {
+    meta.tags.truncate(MAX_TAGS);
     for (name, value) in &mut meta.tags {
         *name = sanitize_text(name);
         *value = sanitize_text(value);
     }
-    meta
+    trim_metadata(meta)
 }
 #[cfg(feature = "gui")]
 pub fn information(path: &Path) -> ImageResult<Information> {
@@ -1674,11 +1676,13 @@ mod tests {
     /// The fake worker replays a forged answer stored as the input file.
     #[cfg(feature = "gui")]
     #[test]
-    fn worker_metadata_text_is_sanitized() {
-        let forged = Metadata {
-            tags: vec![("Make\u{202E}".into(), "a\u{2066}b\x1b[2J".into())],
-            ..Metadata::default()
-        };
+    fn worker_metadata_is_sanitized_and_bounded() {
+        // Each tag one GTK row: a worker that skips trim_metadata could send
+        // tens of thousands within the JSON cap.
+        let mut tags =
+            vec![("Make\u{202E}".into(), format!("a\u{2066}b\x1b[2J{}", "x".repeat(9000)))];
+        tags.extend((0..2000).map(|_| ("n".to_owned(), "v".to_owned())));
+        let forged = Metadata { tags, ..Metadata::default() };
         let information = Information {
             dimensions: Some((1, 1)),
             color: None,
@@ -1698,7 +1702,8 @@ mod tests {
         let info = info.ok().unwrap();
         assert!(clean(info.format.as_deref().unwrap()));
         for tags in [meta.unwrap().tags, info.metadata.unwrap().tags] {
-            assert!(tags.iter().all(|(name, value)| clean(name) && clean(value)), "{tags:?}");
+            assert!(tags.iter().all(|(name, value)| clean(name) && clean(value)));
+            assert_eq!((tags.len(), tags[0].1.len()), (MAX_TAGS, MAX_TAG_VALUE));
         }
     }
 

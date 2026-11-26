@@ -186,25 +186,20 @@ impl ExtentOptions {
 /// leading `#`) into RGBA bytes. Returns a user-friendly error string for
 /// CLI/GUI surfacing.
 pub fn parse_hex_color(s: &str) -> std::result::Result<[u8; 4], String> {
-    let stripped = s.strip_prefix('#').unwrap_or(s);
-    let bytes: Vec<u8> = match stripped.len() {
-        6 | 8 => stripped
-            .as_bytes()
-            .chunks(2)
-            .map(|c| {
-                let pair = std::str::from_utf8(c).map_err(|_| ())?;
-                u8::from_str_radix(pair, 16).map_err(|_| ())
-            })
-            .collect::<std::result::Result<Vec<u8>, ()>>()
-            .map_err(|_| format!("invalid hex color: {s:?}; use digits 0-9 a-f"))?,
-        _ => {
-            return Err(format!(
-                "invalid hex color: {s:?}; use #RRGGBB or #RRGGBBAA (6 or 8 digits)"
-            ));
-        }
+    let digits = s.strip_prefix('#').unwrap_or(s).as_bytes();
+    if !matches!(digits.len(), 6 | 8) {
+        return Err(format!("invalid hex color: {s:?}; use #RRGGBB or #RRGGBBAA (6 or 8 digits)"));
+    }
+    // `from_str_radix` alone would accept a sign: "+f" parses as 15.
+    if !digits.iter().all(u8::is_ascii_hexdigit) {
+        return Err(format!("invalid hex color: {s:?}; use digits 0-9 a-f"));
+    }
+    let value = |pair: &[u8]| {
+        let text = std::str::from_utf8(pair).expect("ASCII hex digits");
+        u8::from_str_radix(text, 16).expect("two hex digits")
     };
-    let alpha = if bytes.len() == 4 { bytes[3] } else { 0xFF };
-    Ok([bytes[0], bytes[1], bytes[2], alpha])
+    let alpha = if digits.len() == 8 { value(&digits[6..8]) } else { 0xFF };
+    Ok([value(&digits[0..2]), value(&digits[2..4]), value(&digits[4..6]), alpha])
 }
 
 /// Extend the canvas of a file and write it next to the source.
@@ -347,9 +342,11 @@ mod tests {
 
     #[test]
     fn parse_hex_rejects_bad_input() {
-        assert!(parse_hex_color("#zzz").is_err());
-        assert!(parse_hex_color("#12345").is_err());
-        assert!(parse_hex_color("notacolor").is_err());
+        for input in
+            ["#zzz", "#12345", "notacolor", "+f+f+f", "#+1+2+3+4", "#1234", "#1234567890", "ééé"]
+        {
+            assert!(parse_hex_color(input).is_err(), "{input:?}");
+        }
     }
 
     #[test]

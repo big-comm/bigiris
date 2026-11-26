@@ -96,6 +96,7 @@ pub fn uninstall(scope: Scope) -> Result<Report, InstallError> {
     let mut report = run_all(&paths, InstallOp::Uninstall, false);
     if matches!(scope, Scope::User) {
         report.app_files = uninstall_app_files(&paths);
+        refresh_xdg_caches(&paths);
     }
     Ok(report)
 }
@@ -394,40 +395,52 @@ fn install_app_files_with_system(
     }
 }
 
-/// Best effort: refresh the user's desktop database and icon cache. GNOME
-/// Shell reads the `.desktop` name directly, but search and MIME handlers
-/// depend on these caches; a missing tool is skipped silently.
+/// Best effort: refresh the user's desktop database, icon cache and KService
+/// cache after a user install or uninstall. GNOME Shell reads the `.desktop`
+/// name directly, but search and MIME handlers depend on these caches; a
+/// missing tool is skipped silently.
 fn refresh_xdg_caches(paths: &ScopePaths) {
     use std::process::{Command, Stdio};
-    let apps = paths.applications_dir();
-    let icon_dir = paths.app_icon_dir();
-    let hicolor = icon_dir.parent().and_then(|p| p.parent()); // .../hicolor
     let _ = Command::new("update-desktop-database")
-        .arg(&apps)
+        .arg(paths.applications_dir())
         .stdout(Stdio::null())
         .stderr(Stdio::null())
         .status();
-    if let Some(hicolor) = hicolor {
-        for bin in ["gtk4-update-icon-cache", "gtk-update-icon-cache"] {
-            // `~/.local/share/icons/hicolor` has no `index.theme`, so without
-            // this flag the tool refuses with "No theme index file" and the
-            // icon stays out of GNOME search until the next login.
-            let _ = Command::new(bin)
-                .arg("-q")
-                .arg("-f")
-                .arg("--ignore-theme-index")
-                .arg(hicolor)
-                .stdout(Stdio::null())
-                .stderr(Stdio::null())
-                .status();
-        }
-    }
+    refresh_icon_cache(&paths.data.join("icons/hicolor"));
     // Plasma/Dolphin discovers ServiceMenus through the KService cache.
     let _ = Command::new("kbuildsycoca6")
         .arg("--noincremental")
         .stdout(Stdio::null())
         .stderr(Stdio::null())
         .status();
+}
+
+/// Rebuild `hicolor/icon-theme.cache` only where one already exists. GTK
+/// trusts a cache no older than the theme directory and then lists icons
+/// from it alone, and adding a file to `hicolor/<size>/apps` leaves that
+/// directory's time unchanged: a cache we created would hide every icon
+/// other programs install later, and one left stale would hide ours.
+fn refresh_icon_cache(hicolor: &std::path::Path) {
+    use std::process::{Command, Stdio};
+    if !hicolor.join("icon-theme.cache").is_file() {
+        return;
+    }
+    for bin in ["gtk4-update-icon-cache", "gtk-update-icon-cache"] {
+        // The user's hicolor tree has no `index.theme`, which the tool
+        // otherwise requires.
+        let rebuilt = Command::new(bin)
+            .arg("-q")
+            .arg("-f")
+            .arg("--ignore-theme-index")
+            .arg(hicolor)
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .status()
+            .is_ok_and(|status| status.success());
+        if rebuilt {
+            return;
+        }
+    }
 }
 
 /// Remove the files [`install_app_files`] wrote, leaving directories in
@@ -568,6 +581,44 @@ mod tests {
         assert_eq!(std::fs::read_to_string(&icon).unwrap(), "<svg>my own icon</svg>");
         assert!(std::fs::symlink_metadata(&metainfo).unwrap().is_symlink());
         assert_eq!(std::fs::read(&linked).unwrap(), APP_METAINFO);
+    }
+
+    #[test]
+    fn icon_cache_never_created() {
+        let tmp = TempDir::new().unwrap();
+        let hicolor = tmp.path().join("hicolor");
+        std::fs::create_dir_all(hicolor.join("scalable/apps")).unwrap();
+        std::fs::write(hicolor.join("scalable/apps").join(APP_ICON_NAME), APP_ICON_SVG).unwrap();
+        refresh_icon_cache(&hicolor);
+        assert!(!hicolor.join("icon-theme.cache").exists());
+    }
+
+    #[test]
+    fn existing_icon_cache_follows_uninstall() {
+        let tmp = TempDir::new().unwrap();
+        let paths = ScopePaths::rooted_at(tmp.path());
+        install_app_files(&paths);
+        // Another program's icon keeps the cache alive once ours is gone.
+        std::fs::write(paths.app_icon_dir().join("org.example.Other.svg"), APP_ICON_SVG).unwrap();
+        let hicolor = paths.data.join("icons/hicolor");
+        let built = std::process::Command::new("gtk4-update-icon-cache")
+            .args(["-q", "-f", "--ignore-theme-index"])
+            .arg(&hicolor)
+            .status();
+        if !built.is_ok_and(|status| status.success()) {
+            // allow-noisy-log: a skipped check says so in the test output.
+            eprintln!("skipped: gtk4-update-icon-cache is not installed");
+            return;
+        }
+        let cache = hicolor.join("icon-theme.cache");
+        let lists = |name: &[u8]| {
+            std::fs::read(&cache).unwrap().windows(name.len()).any(|window| window == name)
+        };
+        assert!(lists(b"com.biglinux.Iris"));
+        uninstall_app_files(&paths);
+        refresh_icon_cache(&hicolor);
+        assert!(lists(b"org.example.Other"));
+        assert!(!lists(b"com.biglinux.Iris"), "cache still lists the removed icon");
     }
 
     #[test]

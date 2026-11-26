@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: bigiris 0.1.0\n"
 "Report-Msgid-Bugs-To: https://github.com/big-comm/bigiris/issues\n"
-"POT-Creation-Date: 2026-11-26 17:20-0300\n"
+"POT-Creation-Date: 2026-11-26 17:42-0300\n"
 "PO-Revision-Date: 2026-10-14 01:36-0300\n"
 "Last-Translator: BigCommunity Team\n"
 "Language-Team: BigCommunity Team\n"
@@ -648,15 +648,15 @@ msgstr ""
 msgid "Processing ended unexpectedly. Please try again."
 msgstr "העיבוד הסתיים באופן בלתי צפוי. נא לנסות שוב."
 
-#: crates/bigiris/src/gui/batch_runner.rs:298 crates/bigiris/src/main.rs:1767
+#: crates/bigiris/src/gui/batch_runner.rs:296 crates/bigiris/src/main.rs:1791
 msgid "a worker ended unexpectedly"
 msgstr "תהליכון עיבוד הסתיים באופן בלתי צפוי"
 
-#: crates/bigiris/src/gui/batch_runner.rs:388
+#: crates/bigiris/src/gui/batch_runner.rs:386
 msgid "unexpected worker failure"
 msgstr "כשל בלתי צפוי בתהליכון עיבוד"
 
-#: crates/bigiris/src/gui/batch_runner.rs:393 crates/bigiris/src/main.rs:1193
+#: crates/bigiris/src/gui/batch_runner.rs:391 crates/bigiris/src/main.rs:1212
 msgid "replaced the output of another input: {path}"
 msgstr "דרס את הפלט של קלט אחר: {path}"
 
@@ -799,7 +799,7 @@ msgstr "מהירות המקודד"
 msgid "higher = faster, slightly lower palette quality · default 10"
 msgstr "גבוה יותר = מהיר יותר, פלטה מעט פחות טובה · ברירת מחדל 10"
 
-#: crates/bigiris/src/gui/dialogs/animate.rs:79 crates/bigiris/src/main.rs:679
+#: crates/bigiris/src/gui/dialogs/animate.rs:79 crates/bigiris/src/main.rs:685
 msgid "Output file (.gif)"
 msgstr "קובץ פלט (.gif)"
 
@@ -2082,22 +2082,28 @@ msgstr ""
 "תבנית היעד: png, jpg, webp, avif, tiff, bmp, gif, ico, pnm/ppm/pgm/pbm, tga, "
 "qoi, hdr, exr"
 
-#: crates/bigiris/src/main.rs:448 crates/bigiris/src/main.rs:460
-#: crates/bigiris/src/main.rs:485 crates/bigiris/src/main.rs:512
+#: crates/bigiris/src/main.rs:448 crates/bigiris/src/main.rs:466
+#: crates/bigiris/src/main.rs:491 crates/bigiris/src/main.rs:518
 msgid "What to do when the output file already exists"
 msgstr "מדיניות כאשר קובץ הפלט כבר קיים"
 
-#: crates/bigiris/src/main.rs:451 crates/bigiris/src/main.rs:463
+#: crates/bigiris/src/main.rs:454
+msgid ""
+"Write each output over its own input; an input whose output would be another "
+"file is refused"
+msgstr ""
+
+#: crates/bigiris/src/main.rs:457 crates/bigiris/src/main.rs:469
 msgid "Input files"
 msgstr "קובצי קלט"
 
-#: crates/bigiris/src/main.rs:454
+#: crates/bigiris/src/main.rs:460
 msgid ""
 "Remove the metadata (EXIF, IPTC, XMP, comments) of each file by re-encoding "
 "it in its own format (headless)"
 msgstr ""
 
-#: crates/bigiris/src/main.rs:466
+#: crates/bigiris/src/main.rs:472
 msgid ""
 "Resize files (headless). Exactly one mode among --max-edge / --percent / --"
 "exact / --fit is required"
@@ -2105,15 +2111,15 @@ msgstr ""
 "שינוי גודל קבצים (headless). נדרש בדיוק מצב אחד מבין --max-edge / --"
 "percent / --exact / --fit"
 
-#: crates/bigiris/src/main.rs:474
+#: crates/bigiris/src/main.rs:480
 msgid "Interpolation kernel (default: lanczos3)"
 msgstr "ליבת אינטרפולציה (ברירת מחדל: lanczos3)"
 
-#: crates/bigiris/src/main.rs:477 crates/bigiris/src/main.rs:506
+#: crates/bigiris/src/main.rs:483 crates/bigiris/src/main.rs:512
 msgid "Target format (optional; keeps the original format if omitted)"
 msgstr "תבנית היעד (רשות; אם הושמטה, נשמרת התבנית המקורית)"
 
-#: crates/bigiris/src/main.rs:491
+#: crates/bigiris/src/main.rs:497
 msgid ""
 "Rotate files (headless). Right-angle rotations through a re-encode pipeline; "
 "`--auto` reads the EXIF Orientation tag and applies the right rotation"
@@ -2121,39 +2127,39 @@ msgstr ""
 "סיבוב קבצים (headless). סיבובים בזוויות ישרות באמצעות קידוד מחדש; `--auto` "
 "קורא את תגית ה־EXIF Orientation ומחיל את הסיבוב הנכון"
 
-#: crates/bigiris/src/main.rs:497
+#: crates/bigiris/src/main.rs:503
 msgid "Rotation in degrees: 90 | 180 | 270"
 msgstr "מעלות (זוויות ישרות): 90 | 180 | 270"
 
-#: crates/bigiris/src/main.rs:503
+#: crates/bigiris/src/main.rs:509
 msgid "Auto-orient from EXIF (Orientation tag)"
 msgstr "כיוון אוטומטי לפי EXIF (תגית Orientation)"
 
-#: crates/bigiris/src/main.rs:518
+#: crates/bigiris/src/main.rs:524
 msgid "Mirror files horizontally or vertically (headless)"
 msgstr "היפוך קבצים אופקית או אנכית (headless)"
 
-#: crates/bigiris/src/main.rs:520
+#: crates/bigiris/src/main.rs:526
 msgid "Axis: horizontal | vertical"
 msgstr "ציר: horizontal | vertical"
 
-#: crates/bigiris/src/main.rs:522 crates/bigiris/src/main.rs:536
-#: crates/bigiris/src/main.rs:560 crates/bigiris/src/main.rs:600
+#: crates/bigiris/src/main.rs:528 crates/bigiris/src/main.rs:542
+#: crates/bigiris/src/main.rs:566 crates/bigiris/src/main.rs:606
 msgid "Target format (optional)"
 msgstr "תבנית היעד (רשות)"
 
-#: crates/bigiris/src/main.rs:529
+#: crates/bigiris/src/main.rs:535
 msgid ""
 "Crop a rectangle from images (headless). Use --rect WxH+X+Y, ImageMagick "
 "style"
 msgstr ""
 "חיתוך מלבן מהתמונות (headless). יש להשתמש ב־--rect WxH+X+Y בסגנון ImageMagick"
 
-#: crates/bigiris/src/main.rs:533
+#: crates/bigiris/src/main.rs:539
 msgid "Crop geometry in the WxH+X+Y format (e.g. 800x600+100+50)"
 msgstr "גאומטריית החיתוך בפורמט WxH+X+Y (למשל 800x600+100+50)"
 
-#: crates/bigiris/src/main.rs:543
+#: crates/bigiris/src/main.rs:549
 msgid ""
 "Extend the canvas around the image (letterbox). Exactly one mode among --"
 "size and --aspect is required. The canvas is filled with --bg and the "
@@ -2162,35 +2168,35 @@ msgstr ""
 "הרחבת הקנבס סביב התמונה (letterbox). נדרש בדיוק מצב אחד מבין --size ו־--"
 "aspect. הקנבס ממולא לפי --bg והתמונה המקורית ממוקמת לפי --gravity"
 
-#: crates/bigiris/src/main.rs:550
+#: crates/bigiris/src/main.rs:556
 msgid "Background color in hexadecimal (#RRGGBB or #RRGGBBAA)"
 msgstr "צבע רקע בהקסדצימלי (#RRGGBB או #RRGGBBAA)"
 
-#: crates/bigiris/src/main.rs:557
+#: crates/bigiris/src/main.rs:563
 msgid "Position of the original image on the extended canvas"
 msgstr "מיקום התמונה המקורית בקנבס המורחב"
 
-#: crates/bigiris/src/main.rs:567
+#: crates/bigiris/src/main.rs:573
 msgid "Adjust color/tone (brightness, contrast, saturation, gamma)"
 msgstr "כוונון צבע/גוון (בהירות, ניגודיות, רוויה, גאמא)"
 
-#: crates/bigiris/src/main.rs:574
+#: crates/bigiris/src/main.rs:580
 msgid "Brightness -100..100 (0 = no change)"
 msgstr "בהירות -100..100 (0 = ללא שינוי)"
 
-#: crates/bigiris/src/main.rs:582
+#: crates/bigiris/src/main.rs:588
 msgid "Contrast -100..100 (0 = no change)"
 msgstr "ניגודיות -100..100 (0 = ללא שינוי)"
 
-#: crates/bigiris/src/main.rs:590
+#: crates/bigiris/src/main.rs:596
 msgid "Saturation -100..100 (-100 = gray, 0 = no change)"
 msgstr "רוויה -100..100 (-100 = אפור, 0 = ללא שינוי)"
 
-#: crates/bigiris/src/main.rs:597
+#: crates/bigiris/src/main.rs:603
 msgid "Gamma 0.1..10.0 (< 1 brightens midtones, > 1 darkens)"
 msgstr "גאמא 0.1..10.0 (< 1 מבהיר את גווני הביניים, > 1 מכהה)"
 
-#: crates/bigiris/src/main.rs:607
+#: crates/bigiris/src/main.rs:613
 msgid ""
 "Remove the background with local AI (BiRefNet-lite, birefnet-native "
 "package). Writes `<name>_nobg.png` (PNG with alpha) next to each image"
@@ -2198,15 +2204,15 @@ msgstr ""
 "הסרת רקע בעזרת בינה מלאכותית מקומית (BiRefNet-lite, החבילה birefnet-native). "
 "כותב `<name>_nobg.png` (PNG עם אלפא) לצד כל תמונה"
 
-#: crates/bigiris/src/main.rs:613
+#: crates/bigiris/src/main.rs:619
 msgid "Segmentation model"
 msgstr "מודל פילוח"
 
-#: crates/bigiris/src/main.rs:620
+#: crates/bigiris/src/main.rs:626
 msgid "What to do when `<name>_nobg.png` already exists"
 msgstr "מדיניות כאשר `<name>_nobg.png` כבר קיים"
 
-#: crates/bigiris/src/main.rs:626
+#: crates/bigiris/src/main.rs:632
 msgid ""
 "Increase resolution by 2, 3 or 4. With the realesrgan-native package it uses "
 "AI (Real-ESRGAN); without it, Lanczos3. Writes `<name>_<pct>pct.<ext>`"
@@ -2214,11 +2220,11 @@ msgstr ""
 "הגדלת רזולוציה פי 2, 3 או 4. עם החבילה realesrgan-native משתמש בבינה "
 "מלאכותית (Real-ESRGAN); בלעדיה, Lanczos3. כותב `<name>_<pct>pct.<ext>`"
 
-#: crates/bigiris/src/main.rs:628
+#: crates/bigiris/src/main.rs:634
 msgid "Integer factor (2, 3 or 4)"
 msgstr "מקדם שלם (2, 3 או 4)"
 
-#: crates/bigiris/src/main.rs:634
+#: crates/bigiris/src/main.rs:640
 msgid ""
 "Engine: auto (Real-ESRGAN if installed, otherwise Lanczos3), realesrgan "
 "(fails if missing) or lanczos"
@@ -2226,12 +2232,12 @@ msgstr ""
 "מנוע: auto (Real-ESRGAN אם מותקן, אחרת Lanczos3), realesrgan (נכשל אם חסר) "
 "או lanczos"
 
-#: crates/bigiris/src/main.rs:641 crates/bigiris/src/main.rs:653
-#: crates/bigiris/src/main.rs:671 crates/bigiris/src/main.rs:704
+#: crates/bigiris/src/main.rs:647 crates/bigiris/src/main.rs:659
+#: crates/bigiris/src/main.rs:677 crates/bigiris/src/main.rs:710
 msgid "Overwrite policy for the output file"
 msgstr "מדיניות דריסה של קובץ הפלט"
 
-#: crates/bigiris/src/main.rs:647
+#: crates/bigiris/src/main.rs:653
 msgid ""
 "Remove noise and compression artifacts with local AI (SCUNet, scunet-native "
 "package). Writes `<name>_denoised.<ext>`"
@@ -2239,7 +2245,7 @@ msgstr ""
 "הסרת רעש וארטיפקטים של דחיסה בעזרת בינה מלאכותית מקומית (SCUNet, החבילה "
 "scunet-native). כותב `<name>_denoised.<ext>`"
 
-#: crates/bigiris/src/main.rs:659
+#: crates/bigiris/src/main.rs:665
 msgid ""
 "Erase objects: fills the area marked in the mask with local AI (LaMa, lama-"
 "native package). Writes `<name>_inpaint.<ext>`"
@@ -2247,53 +2253,53 @@ msgstr ""
 "מחיקת עצמים: ממלא את האזור המסומן במסכה בעזרת בינה מלאכותית מקומית (LaMa, "
 "החבילה lama-native). כותב `<name>_inpaint.<ext>`"
 
-#: crates/bigiris/src/main.rs:664
+#: crates/bigiris/src/main.rs:670
 msgid ""
 "Mask the same size as the image: white = fill, black = keep (transparent "
 "areas are kept)"
 msgstr "מסכה בגודל התמונה: לבן = מילוי, שחור = שמירה (אזורים שקופים נשמרים)"
 
-#: crates/bigiris/src/main.rs:677
+#: crates/bigiris/src/main.rs:683
 msgid "Create an animated GIF from a sequence of images (headless)"
 msgstr "יצירת GIF מונפש מרצף תמונות (headless)"
 
-#: crates/bigiris/src/main.rs:684
+#: crates/bigiris/src/main.rs:690
 msgid "Delay between frames in milliseconds (100 ≈ 10 fps)"
 msgstr "השהיה בין פריימים באלפיות שנייה (100 ≈ 10 fps)"
 
-#: crates/bigiris/src/main.rs:690
+#: crates/bigiris/src/main.rs:696
 msgid "Number of repetitions: 0 = infinite (default), 1+ = fixed"
 msgstr "מספר חזרות: 0 = אינסוף (ברירת מחדל), 1+ = קבוע"
 
-#: crates/bigiris/src/main.rs:697
+#: crates/bigiris/src/main.rs:703
 msgid "Encoder speed 1..30 (higher = faster, worse palette)"
 msgstr "מהירות המקודד 1..30 (גבוה יותר = מהיר יותר, פלטה גרועה יותר)"
 
-#: crates/bigiris/src/main.rs:707
+#: crates/bigiris/src/main.rs:713
 msgid "Frames in order (at least 1)"
 msgstr "פריימים לפי הסדר (לפחות 1)"
 
-#: crates/bigiris/src/main.rs:710
+#: crates/bigiris/src/main.rs:716
 msgid "Process files or folders in parallel from a TOML profile"
 msgstr "עיבוד מקבילי של קבצים או תיקיות לפי פרופיל TOML"
 
-#: crates/bigiris/src/main.rs:712
+#: crates/bigiris/src/main.rs:718
 msgid "Profile file (.toml)"
 msgstr "קובץ פרופיל .toml"
 
-#: crates/bigiris/src/main.rs:717
+#: crates/bigiris/src/main.rs:723
 msgid "Install file manager integrations"
 msgstr "התקנת שילובים עם מנהלי קבצים"
 
-#: crates/bigiris/src/main.rs:719
+#: crates/bigiris/src/main.rs:725
 msgid "Install in ~/.local/share (default)"
 msgstr "התקנה ב־~/.local/share (ברירת מחדל)"
 
-#: crates/bigiris/src/main.rs:724
+#: crates/bigiris/src/main.rs:730
 msgid "Stage the system-wide integrations under --destdir (packaging only)"
 msgstr ""
 
-#: crates/bigiris/src/main.rs:732
+#: crates/bigiris/src/main.rs:738
 msgid ""
 "DESTDIR prefix for packaging (e.g. $pkgdir in the PKGBUILD). Only makes "
 "sense together with --system"
@@ -2301,11 +2307,11 @@ msgstr ""
 "קידומת DESTDIR לאריזה (למשל $pkgdir ב־PKGBUILD). רלוונטי רק בשילוב עם --"
 "system"
 
-#: crates/bigiris/src/main.rs:736
+#: crates/bigiris/src/main.rs:742
 msgid "Remove previously installed integrations"
 msgstr "הסרת שילובים שהותקנו קודם"
 
-#: crates/bigiris/src/main.rs:738
+#: crates/bigiris/src/main.rs:744
 msgid ""
 "Convert documents (ODT, DOCX, TXT, MD, RTF, XLSX, PPTX, etc.) to PDF with "
 "headless LibreOffice. The output is written next to the source file"
@@ -2313,132 +2319,136 @@ msgstr ""
 "המרת מסמכים (ODT, DOCX, TXT, MD, RTF, XLSX, PPTX וכו') ל־PDF באמצעות "
 "LibreOffice במצב headless. הפלט נכתב לצד קובץ המקור"
 
-#: crates/bigiris/src/main.rs:744
+#: crates/bigiris/src/main.rs:750
 msgid "What to do when `<name>.pdf` already exists"
 msgstr "מדיניות כאשר `<name>.pdf` כבר קיים"
 
-#: crates/bigiris/src/main.rs:751
+#: crates/bigiris/src/main.rs:757
 msgid "Maximum time per document, in seconds"
 msgstr "זמן מרבי לכל מסמך, בשניות"
 
-#: crates/bigiris/src/main.rs:764
+#: crates/bigiris/src/main.rs:770
 msgid "BiRefNet-lite (the only model available)"
 msgstr "BiRefNet-lite (המודל היחיד הזמין)"
 
-#: crates/bigiris/src/main.rs:772
+#: crates/bigiris/src/main.rs:778
 msgid ""
 "Real-ESRGAN when the realesrgan-native package is installed, otherwise "
 "Lanczos3"
 msgstr "Real-ESRGAN כאשר החבילה realesrgan-native מותקנת, אחרת Lanczos3"
 
-#: crates/bigiris/src/main.rs:777
+#: crates/bigiris/src/main.rs:783
 msgid "Real-ESRGAN AI (requires realesrgan-native)"
 msgstr "בינה מלאכותית Real-ESRGAN (דורש realesrgan-native)"
 
-#: crates/bigiris/src/main.rs:780
+#: crates/bigiris/src/main.rs:786
 msgid "Lanczos3 resampling (no AI)"
 msgstr "דגימה מחדש Lanczos3 (ללא בינה מלאכותית)"
 
-#: crates/bigiris/src/main.rs:912
+#: crates/bigiris/src/main.rs:918
 msgid "BigIris: the operation failed"
 msgstr "BigIris: הפעולה נכשלה"
 
-#: crates/bigiris/src/main.rs:925
+#: crates/bigiris/src/main.rs:931
 msgid "Some files were not processed; see the details in the terminal."
 msgstr "חלק מהקבצים לא עובדו; הפרטים מופיעים במסוף."
 
-#: crates/bigiris/src/main.rs:1000
+#: crates/bigiris/src/main.rs:1006
 msgid "invalid quality target: {value}; use maximum, balanced or smallest"
 msgstr "יעד איכות לא תקין: {value}; יש להשתמש ב־maximum, balanced או smallest"
 
-#: crates/bigiris/src/main.rs:1013 crates/bigiris/src/main.rs:1155
+#: crates/bigiris/src/main.rs:1023 crates/bigiris/src/main.rs:1174
 msgid "invalid target format: {error}"
 msgstr "תבנית יעד לא תקינה: {error}"
 
-#: crates/bigiris/src/main.rs:1047
+#: crates/bigiris/src/main.rs:1032
+msgid "not converted in place: the output would be {path}"
+msgstr ""
+
+#: crates/bigiris/src/main.rs:1066
 msgid "the original was already smaller; copied without recompression"
 msgstr "המקור כבר היה קטן יותר; הועתק ללא דחיסה מחדש"
 
-#: crates/bigiris/src/main.rs:1084
+#: crates/bigiris/src/main.rs:1103
 msgid "rotate: use --degrees 90|180|270 or --auto"
 msgstr "rotate: יש להשתמש ב־--degrees 90|180|270 או ב־--auto"
 
-#: crates/bigiris/src/main.rs:1129
+#: crates/bigiris/src/main.rs:1148
 msgid "invalid --bg: {error}"
 msgstr "ערך --bg לא תקין: {error}"
 
-#: crates/bigiris/src/main.rs:1231
+#: crates/bigiris/src/main.rs:1250
 msgid "the color profile is corrupted; colors were treated as sRGB"
 msgstr "פרופיל הצבע פגום; הצבעים טופלו כ־sRGB"
 
-#: crates/bigiris/src/main.rs:1237
+#: crates/bigiris/src/main.rs:1256
 msgid "already exists: {path}"
 msgstr "כבר קיים: {path}"
 
-#: crates/bigiris/src/main.rs:1243
+#: crates/bigiris/src/main.rs:1262
 msgid "{operation}: {written} written, {skipped} skipped, {failed} failed"
 msgstr "{operation}: נכתבו: {written}, דולגו: {skipped}, נכשלו: {failed}"
 
-#: crates/bigiris/src/main.rs:1345
+#: crates/bigiris/src/main.rs:1364
 msgid ""
 "{model} is not installed ({path} does not exist). Install it with: {command}"
 msgstr "{model} אינו מותקן ({path} אינו קיים). להתקנה: {command}"
 
-#: crates/bigiris/src/main.rs:1382
+#: crates/bigiris/src/main.rs:1401
 msgid "invalid factor: {factor}. Use 2, 3 or 4."
 msgstr "מקדם לא תקין: {factor}. יש להשתמש ב־2, 3 או 4."
 
-#: crates/bigiris/src/main.rs:1398
+#: crates/bigiris/src/main.rs:1417
 msgid "Real-ESRGAN unavailable; using Lanczos3. To use AI: {command}"
 msgstr ""
 "Real-ESRGAN אינו זמין; נעשה שימוש ב־Lanczos3. לשימוש בבינה מלאכותית: "
 "{command}"
 
-#: crates/bigiris/src/main.rs:1457
+#: crates/bigiris/src/main.rs:1476
 msgid "mask {path}: {error}"
 msgstr "מסכה {path}: {error}"
 
-#: crates/bigiris/src/main.rs:1469
+#: crates/bigiris/src/main.rs:1488
 msgid "marks no area (paint the areas to erase white)"
 msgstr "אינה מסמנת אף אזור (יש לצבוע בלבן את מה שצריך למחוק)"
 
-#: crates/bigiris/src/main.rs:1503
+#: crates/bigiris/src/main.rs:1522
 msgid "{count} frame(s)"
 msgstr "פריימים: {count}"
 
-#: crates/bigiris/src/main.rs:1542
+#: crates/bigiris/src/main.rs:1561
 msgid "could not read {path}: {error}"
 msgstr "לא ניתן לקרוא את {path}: {error}"
 
-#: crates/bigiris/src/main.rs:1623
+#: crates/bigiris/src/main.rs:1647
 msgid "invalid TOML profile: {error}"
 msgstr "פרופיל TOML לא תקין: {error}"
 
-#: crates/bigiris/src/main.rs:1626
+#: crates/bigiris/src/main.rs:1650
 msgid "quality must be between 1 and 100"
 msgstr "הערך quality חייב להיות בין 1 ל־100"
 
-#: crates/bigiris/src/main.rs:1629
+#: crates/bigiris/src/main.rs:1653
 msgid "invalid profile format: {error}"
 msgstr "מבנה הפרופיל אינו תקין: {error}"
 
-#: crates/bigiris/src/main.rs:1641
+#: crates/bigiris/src/main.rs:1665
 msgid "invalid overwrite: {value}; use skip, replace or increment"
 msgstr "ערך overwrite לא תקין: {value}; יש להשתמש ב־skip, replace או increment"
 
-#: crates/bigiris/src/main.rs:1650
+#: crates/bigiris/src/main.rs:1674
 msgid "no images found for the batch"
 msgstr "לא נמצאו תמונות לעיבוד באצווה"
 
-#: crates/bigiris/src/main.rs:1666
+#: crates/bigiris/src/main.rs:1690
 msgid "could not create {path}: {error}"
 msgstr "לא ניתן ליצור את {path}: {error}"
 
-#: crates/bigiris/src/main.rs:1723
+#: crates/bigiris/src/main.rs:1747
 msgid "the output of {path} in this batch"
 msgstr ""
 
-#: crates/bigiris/src/main.rs:1789
+#: crates/bigiris/src/main.rs:1813
 msgid ""
 "LibreOffice (`soffice`) not found in PATH. Install `libreoffice-fresh` "
 "(recommended) or `libreoffice-still` (e.g. `sudo pacman -S libreoffice-"
@@ -2447,87 +2457,91 @@ msgstr ""
 "LibreOffice (`soffice`) לא נמצא ב־PATH. יש להתקין את `libreoffice-fresh` "
 "(מומלץ) או את `libreoffice-still` (למשל `sudo pacman -S libreoffice-fresh`)."
 
-#: crates/bigiris/src/main.rs:1850
+#: crates/bigiris/src/main.rs:1874
 msgid "not a regular file"
 msgstr "אינו קובץ רגיל"
 
-#: crates/bigiris/src/main.rs:1853
+#: crates/bigiris/src/main.rs:1877
 msgid "invalid file name"
 msgstr "שם קובץ לא תקין"
 
-#: crates/bigiris/src/main.rs:1874
+#: crates/bigiris/src/main.rs:1898
 msgid "could not run soffice: {error}"
 msgstr "הפעלת soffice נכשלה: {error}"
 
-#: crates/bigiris/src/main.rs:1885
+#: crates/bigiris/src/main.rs:1909
 msgid "soffice exceeded the {seconds} s limit"
 msgstr "soffice חרג מהמגבלה של {seconds} s"
 
-#: crates/bigiris/src/main.rs:1898
+#: crates/bigiris/src/main.rs:1922
 msgid "soffice did not produce the PDF ({status})"
 msgstr "soffice לא יצר את ה־PDF ({status})"
 
-#: crates/bigiris/src/main.rs:1945
+#: crates/bigiris/src/main.rs:1969
 msgid "installation failed: {error}"
 msgstr "ההתקנה נכשלה: {error}"
 
-#: crates/bigiris/src/main.rs:1951
+#: crates/bigiris/src/main.rs:1975
 msgid "installed"
 msgstr "הותקן"
 
-#: crates/bigiris/src/main.rs:1952
+#: crates/bigiris/src/main.rs:1976
 msgid "installed in total: {files} file(s) in {managers} file manager(s)"
 msgstr "סה״כ הותקנו: קבצים: {files}, מנהלי קבצים: {managers}"
 
-#: crates/bigiris/src/main.rs:1968
+#: crates/bigiris/src/main.rs:1992
 msgid "removal failed: {error}"
 msgstr "ההסרה נכשלה: {error}"
 
-#: crates/bigiris/src/main.rs:1971
+#: crates/bigiris/src/main.rs:1995
 msgid "removed"
 msgstr "הוסר"
 
-#: crates/bigiris/src/main.rs:1972
+#: crates/bigiris/src/main.rs:1996
 msgid "removed in total: {files} file(s) in {managers} file manager(s)"
 msgstr "סה״כ הוסרו: קבצים: {files}, מנהלי קבצים: {managers}"
 
-#: crates/bigiris/src/main.rs:1986
+#: crates/bigiris/src/main.rs:2010
 msgid "FAILED"
 msgstr "נכשל"
 
-#: crates/bigiris/src/main.rs:1991
+#: crates/bigiris/src/main.rs:2015
 msgid "provided by the package"
 msgstr "מסופק על ידי החבילה"
 
-#: crates/bigiris/src/main.rs:1993
+#: crates/bigiris/src/main.rs:2017
 msgid "unchanged"
 msgstr "ללא שינויים"
 
-#: crates/bigiris/src/main.rs:1993
+#: crates/bigiris/src/main.rs:2017
 msgid "skipped"
 msgstr "דולג"
 
-#: crates/bigiris/src/main.rs:1997
+#: crates/bigiris/src/main.rs:2021
 msgid "detected"
 msgstr "זוהה"
 
-#: crates/bigiris/src/main.rs:1997
+#: crates/bigiris/src/main.rs:2021
 msgid "not in PATH"
 msgstr "חסר ב־PATH"
 
-#: crates/bigiris/src/main.rs:1999
+#: crates/bigiris/src/main.rs:2023
 msgid "{count} file(s)"
 msgstr "קבצים: {count}"
 
-#: crates/bigiris/src/main.rs:2009
+#: crates/bigiris/src/main.rs:2034
 msgid "kept, not written by BigIris: {path}"
 msgstr ""
 
-#: crates/bigiris/src/main.rs:2013
+#: crates/bigiris/src/main.rs:2041
+msgid "removed, the package provides it: {path}"
+msgstr ""
+
+#: crates/bigiris/src/main.rs:2045
 msgid "FAILED: {error}"
 msgstr ""
 
-#: crates/bigiris/src/main.rs:2035
+#: crates/bigiris/src/main.rs:2067
 msgid ""
 "warning: this build lacks the `gui` feature. Dialog '{dialog}' ignored "
 "(rebuild with --features gui)."
@@ -2535,7 +2549,7 @@ msgstr ""
 "אזהרה: הבנייה הנוכחית היא ללא התכונה `gui`. הדו־שיח '{dialog}' לא נפתח (יש "
 "לקמפל מחדש עם --features gui)."
 
-#: crates/bigiris/src/main.rs:2044
+#: crates/bigiris/src/main.rs:2076
 msgid ""
 "warning: this build lacks the `gui` feature. Viewer unavailable (rebuild "
 "with --features gui)."
@@ -2543,18 +2557,18 @@ msgstr ""
 "אזהרה: הבנייה הנוכחית היא ללא התכונה `gui`. המציג אינו זמין (יש לקמפל מחדש "
 "עם --features gui)."
 
-#: crates/bigiris/src/main.rs:2051
+#: crates/bigiris/src/main.rs:2083
 msgid ""
 "warning: this build lacks the `gui` feature. Viewer unavailable; files "
 "received:"
 msgstr ""
 "אזהרה: הבנייה הנוכחית היא ללא התכונה `gui`. המציג אינו זמין; קבצים שהתקבלו:"
 
-#: crates/bigiris/src/output_plan.rs:120
+#: crates/bigiris/src/output_plan.rs:102
 msgid "several inputs would write the same output file:"
 msgstr "מספר קלטים היו כותבים לאותו קובץ פלט:"
 
-#: crates/bigiris/src/output_plan.rs:128
+#: crates/bigiris/src/output_plan.rs:110
 msgid "Rename the inputs, process them separately or use the increment policy."
 msgstr "יש לשנות את שמות הקלטים, לעבד אותם בנפרד או להשתמש במדיניות increment."
 

@@ -748,7 +748,7 @@ mod tests {
     /// An AVIF `meta` over the 1 MiB read cap: an EXIF loss only when it
     /// declares an Exif item.
     #[test]
-    fn oversized_meta_loses_exif_only_when_declared() {
+    fn oversized_meta_exif_loss_when_declared() {
         let file = |item_type: &[u8; 4]| {
             let infe = bx(b"infe", &[&[2, 0, 0, 0, 0, 1, 0, 0][..], item_type, b"\0"].concat());
             let iinf = bx(b"iinf", &[&[0, 0, 0, 0, 0, 1][..], &infe].concat());

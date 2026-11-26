@@ -110,8 +110,8 @@ fn png_chunks(bytes: &[u8]) -> Option<Vec<(&[u8], &[u8])>> {
     let mut at = 8;
     while let Some(&[a, b, c, d, ref kind @ ..]) = bytes.get(at..at + 8) {
         let len = usize::try_from(u32::from_be_bytes([a, b, c, d])).ok()?;
-        let data = bytes.get(at + 8..at.checked_add(8)?.checked_add(len)?)?;
-        chunks.push((kind, data));
+        let chunk_data = bytes.get(at + 8..at.checked_add(8)?.checked_add(len)?)?;
+        chunks.push((kind, chunk_data));
         at = at.checked_add(12)?.checked_add(len)?;
         if kind == b"IEND" {
             return (at == bytes.len()).then_some(chunks);

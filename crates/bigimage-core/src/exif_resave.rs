@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-//! EXIF for an in-place re-save: the source block rebuilt from its parsed
-//! primary-image fields, so nothing of the old layout (the IFD1 thumbnail
-//! showing the pre-edit image above all) is copied byte for byte.
+//! EXIF for an in-place re-save, written anew from the parsed primary-image
+//! fields so no byte of the source layout (above all the IFD1 thumbnail of
+//! the unedited image) is copied.
 
 use std::collections::{HashMap, HashSet};
 
@@ -23,16 +23,10 @@ pub(crate) struct RebuiltExif {
     pub(crate) dropped_fields: bool,
 }
 
-/// The primary-image fields of `exif` (IFD0, Exif, GPS and
-/// interoperability) written into a new TIFF block for upright pixels of
-/// `width` x `height`: `Orientation` 1, `PixelXDimension` and
-/// `PixelYDimension` set where present, no IFD1 and so no thumbnail.
-///
-/// The `MakerNote` is copied as opaque bytes: a vendor note that addresses
-/// its own data by absolute offsets into the block (some cameras do) points
-/// at the wrong bytes afterwards, and previews inside it stay. `None` when
-/// the block is not TIFF, repeats a sub-IFD pointer, holds an IFD too
-/// large to write, or cannot be read at all.
+/// IFD0, Exif, GPS and interoperability fields of `exif` written anew for
+/// upright pixels of the given size, without IFD1 (no thumbnail). The
+/// `MakerNote` is copied as opaque bytes: one using absolute offsets breaks,
+/// and previews inside it stay. `None` when the block cannot be rebuilt.
 pub(crate) fn resave_exif(exif: &[u8], (width, height): (u32, u32)) -> Option<RebuiltExif> {
     let tiff = exif.strip_prefix(b"Exif\0\0").unwrap_or(exif);
     if !sub_ifd_pointers_unique(tiff) {

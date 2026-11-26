@@ -516,6 +516,16 @@ fn pnm_outputs_are_named_after_the_written_pixels() {
     assert_eq!(std::fs::read(dir.path().join("gray_rot90.pgm")).unwrap(), b"keep");
     let skipped = convert_file(&gray, Format::Pnm, &opts, OverwritePolicy::Skip).unwrap();
     assert_eq!(skipped, ConvertOutcome::Skipped { output: dir.path().join("gray.pgm") });
+    // An existing file of the naive .ppm name is not the output of gray pixels.
+    let fresh = dir.path().join("fresh.png");
+    std::fs::copy(&gray, &fresh).unwrap();
+    std::fs::write(dir.path().join("fresh.ppm"), b"keep").unwrap();
+    let written = convert_file(&fresh, Format::Pnm, &opts, OverwritePolicy::Skip).unwrap();
+    assert_eq!(written, ConvertOutcome::Written { output: dir.path().join("fresh.pgm") });
+    std::fs::write(dir.path().join("fresh_rot90.ppm"), b"keep").unwrap();
+    let rotated =
+        rotate_file(&fresh, Rotation::Deg90, Some(Format::Pnm), OverwritePolicy::Skip).unwrap();
+    assert_eq!(rotated, ConvertOutcome::Written { output: dir.path().join("fresh_rot90.pgm") });
 
     // A smaller PBM original is never published under the .pgm name.
     let pbm = dir.path().join("mono.pbm");

@@ -1,5 +1,6 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 """Contract tests without importing or modifying the running Nautilus."""
+
 import importlib.util
 from pathlib import Path
 import sys
@@ -7,53 +8,101 @@ from types import ModuleType, SimpleNamespace
 import unittest
 from unittest.mock import patch
 
+
 class Item:
     def __init__(self, **kwargs):
         self.options = kwargs
         self.callback = None
+
     def set_submenu(self, menu):
         self.submenu = menu
+
     def connect(self, _signal, callback, *args):
         self.callback = (callback, args)
+
 
 class Menu:
     def __init__(self):
         self.items = []
+
     def append_item(self, item):
         self.items.append(item)
 
+
 class GObjectBase:
     pass
+
+
 class ProviderBase:
     pass
+
 
 gi = ModuleType("gi")
 gi.require_version = lambda *_: None
 repository = ModuleType("gi.repository")
 repository.GObject = SimpleNamespace(GObject=GObjectBase)
-repository.Nautilus = SimpleNamespace(MenuProvider=ProviderBase, MenuItem=Item, Menu=Menu)
-spec = importlib.util.spec_from_file_location("bigiris_menu", Path(__file__).resolve().parents[1] / "data/nautilus/bigiris-menu.py")
+repository.Nautilus = SimpleNamespace(
+    MenuProvider=ProviderBase, MenuItem=Item, Menu=Menu
+)
+spec = importlib.util.spec_from_file_location(
+    "bigiris_menu",
+    Path(__file__).resolve().parents[1] / "data/nautilus/bigiris-menu.py",
+)
 module = importlib.util.module_from_spec(spec)
 with patch.dict(sys.modules, {"gi": gi, "gi.repository": repository}):
     spec.loader.exec_module(module)
 # The installer fills the table from action.rs; these rows have its shape.
 module._ACTIONS = [
     ("view", None, None, None, "View in BigIris", [], "com.biglinux.Iris", ["image/*"]),
-    ("batch-folder", None, None, None, "Process this folder…", ["--dialog=batch"],
-     "folder-pictures-symbolic", ["inode/directory"]),
-    ("convert-png", "convert", "Convert", "document-save-as-symbolic", "PNG",
-     ["convert", "--to", "png", "--overwrite", "skip"], "image-x-generic-symbolic", ["image/*"]),
-    ("web-optimize-png", "web", "For the web", "applications-internet-symbolic",
-     "Optimize PNG (maximum compression)",
-     ["convert", "--to", "png", "--in-place"], "applications-internet-symbolic",
-     ["image/png"]),
-    ("pdf-convert", "pdf", "PDF", "application-pdf-symbolic", "Convert to PDF (LibreOffice)",
-     ["to-pdf"], "application-pdf-symbolic", ["text/plain"]),
+    (
+        "batch-folder",
+        None,
+        None,
+        None,
+        "Process this folder…",
+        ["--dialog=batch"],
+        "folder-pictures-symbolic",
+        ["inode/directory"],
+    ),
+    (
+        "convert-png",
+        "convert",
+        "Convert",
+        "document-save-as-symbolic",
+        "PNG",
+        ["convert", "--to", "png", "--overwrite", "skip"],
+        "image-x-generic-symbolic",
+        ["image/*"],
+    ),
+    (
+        "web-optimize-png",
+        "web",
+        "For the web",
+        "applications-internet-symbolic",
+        "Optimize PNG (maximum compression)",
+        ["convert", "--to", "png", "--in-place"],
+        "applications-internet-symbolic",
+        ["image/png"],
+    ),
+    (
+        "pdf-convert",
+        "pdf",
+        "PDF",
+        "application-pdf-symbolic",
+        "Convert to PDF (LibreOffice)",
+        ["to-pdf"],
+        "application-pdf-symbolic",
+        ["text/plain"],
+    ),
 ]
 
+
 def file(mime, path):
-    return SimpleNamespace(get_mime_type=lambda: mime,
-                           get_location=lambda: SimpleNamespace(get_path=lambda: path))
+    return SimpleNamespace(
+        get_mime_type=lambda: mime,
+        get_location=lambda: SimpleNamespace(get_path=lambda: path),
+    )
+
 
 class NautilusContract(unittest.TestCase):
     def setUp(self):
@@ -69,8 +118,9 @@ class NautilusContract(unittest.TestCase):
         self.assertEqual(self.provider.get_file_items(files), [])
 
     def test_mixed_selection_hides_format_specific_actions(self):
-        top = self.provider.get_file_items([file("image/png", "/tmp/a.png"),
-                                            file("text/plain", "/tmp/a.txt")])[0]
+        top = self.provider.get_file_items(
+            [file("image/png", "/tmp/a.png"), file("text/plain", "/tmp/a.txt")]
+        )[0]
         self.assertEqual(len(top.submenu.items), 1)  # Only image viewing.
 
     def test_png_action_runs_on_png_only(self):
@@ -78,11 +128,15 @@ class NautilusContract(unittest.TestCase):
             top = self.provider.get_file_items(files)[0]
             return {item.options["name"]: item for item in top.submenu.items}
 
-        self.assertNotIn("BigIrisExtension::Sub::web", submenus([file("image/jpeg", "/tmp/a.jpg")]))
+        self.assertNotIn(
+            "BigIrisExtension::Sub::web", submenus([file("image/jpeg", "/tmp/a.jpg")])
+        )
         png = submenus([file("image/png", "/tmp/b.png")])
         self.assertIn("BigIrisExtension::Sub::convert", png)
         self.assertIn("BigIrisExtension::Sub::web", png)
-        both = submenus([file("image/jpeg", "/tmp/a.jpg"), file("image/png", "/tmp/b.png")])
+        both = submenus(
+            [file("image/jpeg", "/tmp/a.jpg"), file("image/png", "/tmp/b.png")]
+        )
         optimize = both["BigIrisExtension::Sub::web"].submenu.items[0]
         callback, args = optimize.callback
         with patch.object(module.subprocess, "Popen") as popen:
@@ -94,21 +148,29 @@ class NautilusContract(unittest.TestCase):
         paths = ["/tmp/$(touch hacked); ' ç.png", "/tmp/line\nbreak.png"]
         with patch.object(module.subprocess, "Popen") as popen:
             self.provider._run_action(None, ["convert", "--to", "png"], paths)
-        self.assertEqual(popen.call_args.args[0], ["bigiris", "convert", "--to", "png"] + paths)
+        self.assertEqual(
+            popen.call_args.args[0], ["bigiris", "convert", "--to", "png"] + paths
+        )
         self.assertNotIn("shell", popen.call_args.kwargs)
         self.assertTrue(popen.call_args.kwargs["close_fds"])
 
     def test_folder_selection_and_background_dispatch_batch(self):
         folder = file("inode/directory", "/tmp/photos")
-        for items in (self.provider.get_file_items([folder]),
-                      self.provider.get_background_items(folder),
-                      self.provider.get_background_items(object(), folder)):
+        for items in (
+            self.provider.get_file_items([folder]),
+            self.provider.get_background_items(folder),
+            self.provider.get_background_items(object(), folder),
+        ):
             self.assertEqual(len(items), 1)
             callback, args = items[0].callback
             with patch.object(module.subprocess, "Popen") as popen:
                 callback(items[0], *args)
-            self.assertEqual(popen.call_args.args[0], ["bigiris", "--dialog=batch", "/tmp/photos"])
-        self.assertEqual(self.provider.get_background_items(file("inode/directory", None)), [])
+            self.assertEqual(
+                popen.call_args.args[0], ["bigiris", "--dialog=batch", "/tmp/photos"]
+            )
+        self.assertEqual(
+            self.provider.get_background_items(file("inode/directory", None)), []
+        )
 
     def test_localized_labels_keep_action_ids_and_argv_stable(self):
         folder = file("inode/directory", "/tmp/photos")
@@ -123,19 +185,24 @@ class NautilusContract(unittest.TestCase):
             # Every entry, including top-level actions such as "View in
             # BigIris", is translated; menu item ids stay in the source text.
             for entry in top.submenu.items:
-                self.assertTrue(entry.options["label"].startswith("localized "),
-                                entry.options["name"])
+                self.assertTrue(
+                    entry.options["label"].startswith("localized "),
+                    entry.options["name"],
+                )
                 self.assertNotIn("localized", entry.options["name"])
             callback, args = folder_item.callback
             with patch.object(module.subprocess, "Popen") as popen:
                 callback(folder_item, *args)
-            self.assertEqual(popen.call_args.args[0], ["bigiris", "--dialog=batch", "/tmp/photos"])
+            self.assertEqual(
+                popen.call_args.args[0], ["bigiris", "--dialog=batch", "/tmp/photos"]
+            )
 
     def test_extension_errors_do_not_escape_to_file_manager(self):
         with patch.object(module.subprocess, "Popen", side_effect=FileNotFoundError):
             self.provider._run_action(None, [], ["/tmp/a.png"])
         with patch.object(self.provider, "_build_items", side_effect=RuntimeError):
             self.assertEqual(self.provider.get_file_items([]), [])
+
 
 if __name__ == "__main__":
     unittest.main()

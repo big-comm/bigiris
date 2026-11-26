@@ -14,9 +14,13 @@ import sys
 import gettext
 import os
 
-_ = gettext.translation("bigiris", localedir=os.environ.get("BIGIRIS_LOCALE_DIR", "/usr/share/locale"), fallback=True).gettext
-
 import gi
+
+_ = gettext.translation(
+    "bigiris",
+    localedir=os.environ.get("BIGIRIS_LOCALE_DIR", "/usr/share/locale"),
+    fallback=True,
+).gettext
 
 # Nautilus 43 and later may expose `Nautilus` without a versioned typelib,
 # so pinning is best effort: nautilus-python injects the module either way.
@@ -43,7 +47,9 @@ _ACTIONS = []
 
 
 def _matches(mime, patterns):
-    return any(mime == p or (p.endswith("/*") and mime.startswith(p[:-1])) for p in patterns)
+    return any(
+        mime == p or (p.endswith("/*") and mime.startswith(p[:-1])) for p in patterns
+    )
 
 
 class BigIrisMenuProvider(GObject.GObject, Nautilus.MenuProvider):
@@ -63,7 +69,9 @@ class BigIrisMenuProvider(GObject.GObject, Nautilus.MenuProvider):
         # `get_file_items(files)`; the last argument is the files in both.
         files = args[-1] if args else []
         selected = self._local_files(files)
-        folder_paths = [path for path, mime in selected if _matches(mime, _FOLDER_MIMES)]
+        folder_paths = [
+            path for path, mime in selected if _matches(mime, _FOLDER_MIMES)
+        ]
         if folder_paths:
             image_paths = [path for path, mime in selected if mime.startswith("image/")]
             return self._folder_items(folder_paths + image_paths)
@@ -76,13 +84,24 @@ class BigIrisMenuProvider(GObject.GObject, Nautilus.MenuProvider):
         for action in _ACTIONS:
             patterns = tuple(action[7])
             if patterns != _FOLDER_MIMES:
-                paths_by_filter[patterns] = [path for path, mime in selected if _matches(mime, patterns)]
+                paths_by_filter[patterns] = [
+                    path for path, mime in selected if _matches(mime, patterns)
+                ]
         matched = {path for paths in paths_by_filter.values() for path in paths}
         mixed = not any(set(paths) == matched for paths in paths_by_filter.values())
 
         entries = []
         submenus = {}
-        for action_id, sub_id, sub_label, sub_icon, label, argv, icon, patterns in _ACTIONS:
+        for (
+            action_id,
+            sub_id,
+            sub_label,
+            sub_icon,
+            label,
+            argv,
+            icon,
+            patterns,
+        ) in _ACTIONS:
             paths = paths_by_filter.get(tuple(patterns))
             if not paths or (sub_id is not None and mixed):
                 continue
@@ -134,7 +153,9 @@ class BigIrisMenuProvider(GObject.GObject, Nautilus.MenuProvider):
         return out
 
     def _folder_items(self, paths):
-        folder_action = next((a for a in _ACTIONS if tuple(a[7]) == _FOLDER_MIMES), None)
+        folder_action = next(
+            (a for a in _ACTIONS if tuple(a[7]) == _FOLDER_MIMES), None
+        )
         if not paths or folder_action is None:
             return []
         item = Nautilus.MenuItem(
@@ -149,7 +170,11 @@ class BigIrisMenuProvider(GObject.GObject, Nautilus.MenuProvider):
     def get_background_items(self, *args):
         try:
             folder = args[-1] if args else None
-            paths = [path for path, mime in self._local_files([folder]) if _matches(mime, _FOLDER_MIMES)]
+            paths = [
+                path
+                for path, mime in self._local_files([folder])
+                if _matches(mime, _FOLDER_MIMES)
+            ]
             return self._folder_items(paths)
         except Exception as exc:
             sys.stderr.write(f"BigIris: get_background_items failed: {exc!r}\n")

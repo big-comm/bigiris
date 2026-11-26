@@ -19,7 +19,7 @@ msgstr ""
 
 #: crates/bigiris/src/codec.rs:255
 msgid "the isolated codec answered with invalid data: {error}"
-msgstr ""
+msgstr "codecul izolat a răspuns cu date nevalide: {error}"
 
 #: crates/bigiris/src/codec.rs:324
 msgid "the BigIris executable was removed; restart BigIris"
@@ -36,11 +36,11 @@ msgstr "codecul a depășit limita de timp"
 
 #: crates/bigiris/src/codec.rs:619
 msgid "exit code {code}"
-msgstr ""
+msgstr "cod de ieșire {code}"
 
 #: crates/bigiris/src/codec.rs:623
 msgid "signal {signal}"
-msgstr ""
+msgstr "semnal {signal}"
 
 #: crates/bigiris/src/codec.rs:630
 msgid "BigIris was updated; restart it"
@@ -60,42 +60,46 @@ msgstr "BigIris a fost actualizat în timp ce era deschis; reporniți-l"
 
 #: crates/bigiris/src/codec.rs:801
 msgid "the isolated codec rejected the image{hint}: {details}"
-msgstr ""
+msgstr "codecul izolat a respins imaginea{hint}: {details}"
 
 #: crates/bigiris/src/codec.rs:807
 msgid "the isolated codec rejected the image ({status}){hint}"
-msgstr ""
+msgstr "codecul izolat a respins imaginea ({status}){hint}"
 
 #: crates/bigiris/src/error_text.rs:20
 msgid "could not read or write the file: {error}"
-msgstr ""
+msgstr "nu s-a putut citi sau scrie fișierul: {error}"
 
 #: crates/bigiris/src/error_text.rs:23
 msgid "invalid input: {error}"
-msgstr ""
+msgstr "intrare nevalidă: {error}"
 
 #: crates/bigiris/src/error_text.rs:26
 msgid "unsupported format: {error}"
-msgstr ""
+msgstr "format neacceptat: {error}"
 
 #: crates/bigiris/src/error_text.rs:29
 msgid "could not read the image {path}: {error}"
-msgstr ""
+msgstr "nu s-a putut citi imaginea {path}: {error}"
 
 #: crates/bigiris/src/error_text.rs:33
 msgid "could not write {path}: {error}"
-msgstr ""
+msgstr "nu s-a putut scrie {path}: {error}"
 
 #: crates/bigiris/src/error_text.rs:38
 msgid ""
 "animated or multi-page image: static editing stopped to avoid losing content"
 msgstr ""
+"imagine animată sau cu mai multe pagini: editarea statică a fost oprită "
+"pentru a evita pierderea conținutului"
 
 #: crates/bigiris/src/error_text.rs:41
 msgid ""
 "icon with several sizes or multi-part EXR: writing it back would keep only "
 "one"
 msgstr ""
+"pictogramă cu mai multe dimensiuni sau EXR cu mai multe părți: la rescriere "
+"s-ar păstra doar una"
 
 #: crates/bigiris/src/error_text.rs:44
 msgid "too many files with the same name: {path}"
@@ -103,23 +107,23 @@ msgstr "prea multe fișiere cu același nume: {path}"
 
 #: crates/bigiris/src/error_text.rs:61
 msgid "damaged or unreadable image data: {error}"
-msgstr ""
+msgstr "date de imagine deteriorate sau ilizibile: {error}"
 
 #: crates/bigiris/src/error_text.rs:63
 msgid "the encoder failed: {error}"
-msgstr ""
+msgstr "encoderul a eșuat: {error}"
 
 #: crates/bigiris/src/error_text.rs:64
 msgid "invalid parameter: {error}"
-msgstr ""
+msgstr "parametru nevalid: {error}"
 
 #: crates/bigiris/src/error_text.rs:65
 msgid "the image is larger than BigIris can process"
-msgstr ""
+msgstr "imaginea este mai mare decât poate procesa BigIris"
 
 #: crates/bigiris/src/error_text.rs:67
 msgid "unsupported image: {error}"
-msgstr ""
+msgstr "imagine neacceptată: {error}"
 
 #: crates/bigiris/src/error_text.rs:97 crates/bigiris/src/gui.rs:2453
 #: crates/bigiris/src/gui/dialogs/batch.rs:296
@@ -133,10 +137,13 @@ msgid ""
 "{available} GiB. Close other programs or use a smaller image. Swap does not "
 "count as free RAM."
 msgstr ""
+"{model} necesită aproximativ {need} GiB de RAM liberă pentru acest pas; "
+"disponibili acum: {available} GiB. Închideți alte programe sau folosiți o "
+"imagine mai mică. Memoria swap nu se numără ca RAM liberă."
 
 #: crates/bigiris/src/error_text.rs:109
 msgid "could not check the memory free for AI: {error}"
-msgstr ""
+msgstr "nu s-a putut verifica memoria liberă pentru IA: {error}"
 
 #: crates/bigiris/src/error_text.rs:112
 msgid "AI failed: {error}"
@@ -156,7 +163,7 @@ msgstr "{model} nu este instalat. Instalați-l cu: sudo pacman -S {package}"
 
 #: crates/bigiris/src/error_text.rs:136
 msgid "not a weights file"
-msgstr ""
+msgstr "nu este un fișier de ponderi"
 
 #: crates/bigiris/src/error_text.rs:140
 msgid "could not read the {model} weights at {path}: {error}"
@@ -346,7 +353,7 @@ msgstr "formatul nu păstrează EXIF"
 
 #: crates/bigiris/src/gui.rs:3022
 msgid "EXIF too large for this format"
-msgstr ""
+msgstr "EXIF prea mare pentru acest format"
 
 #: crates/bigiris/src/gui.rs:3023
 msgid "invalid EXIF"
@@ -669,19 +676,20 @@ msgstr "Finalizat în {time} · {counts}"
 
 #: crates/bigiris/src/gui/batch_runner.rs:183
 msgid "Saved: {path}"
-msgstr ""
+msgstr "Salvat: {path}"
 
 #: crates/bigiris/src/gui/batch_runner.rs:185
 msgid "Already exists, nothing written: {path}"
-msgstr ""
+msgstr "Există deja, nu s-a scris nimic: {path}"
 
 #: crates/bigiris/src/gui/batch_runner.rs:190
 msgid "Nothing would change: the image already has that size or ratio."
 msgstr ""
+"Nu s-ar schimba nimic: imaginea are deja această dimensiune sau proporție."
 
 #: crates/bigiris/src/gui/batch_runner.rs:198
 msgid "Already at that size or ratio, left as they were: {count}"
-msgstr ""
+msgstr "Deja la această dimensiune sau proporție, lăsate neschimbate: {count}"
 
 #: crates/bigiris/src/gui/batch_runner.rs:223
 #: crates/bigiris/src/gui/dialogs/animate.rs:288
@@ -779,7 +787,7 @@ msgstr "Aplică"
 
 #: crates/bigiris/src/gui/dialogs/adjust.rs:147
 msgid "Every value is neutral: nothing would change."
-msgstr ""
+msgstr "Toate valorile sunt neutre: nu s-ar schimba nimic."
 
 #: crates/bigiris/src/gui/dialogs/adjust.rs:154
 msgid "Adjusting…"
@@ -973,7 +981,7 @@ msgstr "Finalizat în {timing}. Scrise: {ok}, omise: {skip}, eșuate: {fail}."
 
 #: crates/bigiris/src/gui/dialogs/batch.rs:364
 msgid "Skipped as outputs of earlier runs: {files}"
-msgstr ""
+msgstr "Omise ca ieșiri ale unor rulări anterioare: {files}"
 
 #: crates/bigiris/src/gui/dialogs/batch.rs:424
 msgid "Add image folder"
@@ -1110,7 +1118,7 @@ msgstr "Decupare"
 
 #: crates/bigiris/src/gui/viewer/crop.rs:392
 msgid "Crop selection"
-msgstr ""
+msgstr "Selecția de decupare"
 
 #: crates/bigiris/src/gui/viewer/crop.rs:396
 msgid "Free"
@@ -1128,11 +1136,11 @@ msgstr "Raport de aspect"
 
 #: crates/bigiris/src/gui/viewer/crop.rs:476
 msgid "{width} × {height} px"
-msgstr ""
+msgstr "{width} × {height} px"
 
 #: crates/bigiris/src/gui/viewer/crop.rs:642
 msgid "Wait for the running tool to finish"
-msgstr ""
+msgstr "Așteptați să se termine instrumentul în curs"
 
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:46
 #: crates/bigiris/src/gui/dialogs/mod.rs:56
@@ -1207,7 +1215,7 @@ msgstr "Ajustări"
 
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:338
 msgid "Applies on top of earlier edits"
-msgstr ""
+msgstr "Se aplică peste editările anterioare"
 
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:353
 msgid "Reset adjustments"
@@ -1440,7 +1448,7 @@ msgstr "Destinație prevăzută"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:164
 msgid "This format cannot store transparency: the bars will be white."
-msgstr ""
+msgstr "Acest format nu poate stoca transparența: barele vor fi albe."
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:174
 msgid "Extend"
@@ -1603,11 +1611,12 @@ msgstr "Păstrează formatul original"
 
 #: crates/bigiris/src/gui/dialogs/mod.rs:247
 msgid "Replace the original files?"
-msgstr ""
+msgstr "Înlocuiți fișierele originale?"
 
 #: crates/bigiris/src/gui/dialogs/mod.rs:249
 msgid "Originals that will be overwritten: {count}. This cannot be undone."
 msgstr ""
+"Originale care vor fi suprascrise: {count}. Acțiunea nu poate fi anulată."
 
 #: crates/bigiris/src/gui/dialogs/mod.rs:449
 msgid "{first} and {count} more"
@@ -1697,7 +1706,7 @@ msgstr "Dimensiuni"
 
 #: crates/bigiris/src/gui/dialogs/properties.rs:192
 msgid "(could not read the image data)"
-msgstr ""
+msgstr "(nu s-au putut citi datele imaginii)"
 
 #: crates/bigiris/src/gui/dialogs/properties.rs:208
 msgid "EXIF orientation"
@@ -1709,7 +1718,7 @@ msgstr "{orientation} · folosiți Rotire ▸ Automat pentru corectare"
 
 #: crates/bigiris/src/gui/dialogs/properties.rs:227
 msgid "{width} × {height} px (stored as {stored_width} × {stored_height})"
-msgstr ""
+msgstr "{width} × {height} px (stocată ca {stored_width} × {stored_height})"
 
 #: crates/bigiris/src/gui/dialogs/properties.rs:241
 msgid "Megapixels"
@@ -1729,83 +1738,83 @@ msgstr "Câmpuri prezente: {count}"
 
 #: crates/bigiris/src/gui/dialogs/properties.rs:302
 msgid "Camera maker"
-msgstr ""
+msgstr "Producătorul aparatului foto"
 
 #: crates/bigiris/src/gui/dialogs/properties.rs:303
 msgid "Camera model"
-msgstr ""
+msgstr "Modelul aparatului foto"
 
 #: crates/bigiris/src/gui/dialogs/properties.rs:304
 msgid "Lens"
-msgstr ""
+msgstr "Obiectiv"
 
 #: crates/bigiris/src/gui/dialogs/properties.rs:305
 msgid "Software"
-msgstr ""
+msgstr "Software"
 
 #: crates/bigiris/src/gui/dialogs/properties.rs:306
 msgid "Author"
-msgstr ""
+msgstr "Autor"
 
 #: crates/bigiris/src/gui/dialogs/properties.rs:307
 msgid "Copyright"
-msgstr ""
+msgstr "Drepturi de autor"
 
 #: crates/bigiris/src/gui/dialogs/properties.rs:308
 msgid "Description"
-msgstr ""
+msgstr "Descriere"
 
 #: crates/bigiris/src/gui/dialogs/properties.rs:309
 msgid "Date taken"
-msgstr ""
+msgstr "Data capturii"
 
 #: crates/bigiris/src/gui/dialogs/properties.rs:310
 msgid "Date modified"
-msgstr ""
+msgstr "Data modificării"
 
 #: crates/bigiris/src/gui/dialogs/properties.rs:311
 msgid "Orientation"
-msgstr ""
+msgstr "Orientare"
 
 #: crates/bigiris/src/gui/dialogs/properties.rs:312
 msgid "Exposure time"
-msgstr ""
+msgstr "Timp de expunere"
 
 #: crates/bigiris/src/gui/dialogs/properties.rs:313
 msgid "Aperture"
-msgstr ""
+msgstr "Diafragmă"
 
 #: crates/bigiris/src/gui/dialogs/properties.rs:314
 msgid "ISO"
-msgstr ""
+msgstr "ISO"
 
 #: crates/bigiris/src/gui/dialogs/properties.rs:315
 msgid "Exposure compensation"
-msgstr ""
+msgstr "Compensarea expunerii"
 
 #: crates/bigiris/src/gui/dialogs/properties.rs:316
 msgid "Focal length"
-msgstr ""
+msgstr "Distanță focală"
 
 #: crates/bigiris/src/gui/dialogs/properties.rs:317
 msgid "Flash"
-msgstr ""
+msgstr "Bliț"
 
 #: crates/bigiris/src/gui/dialogs/properties.rs:318
 msgid "White balance"
-msgstr ""
+msgstr "Balans de alb"
 
 #: crates/bigiris/src/gui/dialogs/properties.rs:319
 msgid "Latitude"
-msgstr ""
+msgstr "Latitudine"
 
 #: crates/bigiris/src/gui/dialogs/properties.rs:320
 msgid "Longitude"
-msgstr ""
+msgstr "Longitudine"
 
 #: crates/bigiris/src/gui/dialogs/properties.rs:321
 msgid "Altitude"
-msgstr ""
+msgstr "Altitudine"
 
 #: crates/bigiris/src/gui/dialogs/remove_bg.rs:16
 msgid "Could not read the image: {error}"
@@ -2188,15 +2197,15 @@ msgstr "decalaj Y nevalid: {error}"
 
 #: crates/bigiris/src/main.rs:286
 msgid "width and height must be at least 1, got: {value}"
-msgstr ""
+msgstr "lățimea și înălțimea trebuie să fie cel puțin 1, s-a primit: {value}"
 
 #: crates/bigiris/src/main.rs:295
 msgid "not a number: {error}"
-msgstr ""
+msgstr "nu este un număr: {error}"
 
 #: crates/bigiris/src/main.rs:299
 msgid "{value} is outside {range}"
-msgstr ""
+msgstr "{value} este în afara intervalului {range}"
 
 #: crates/bigiris/src/main.rs:332
 msgid "expected W:H (e.g. 1:1, 9:16), got: {value}"
@@ -2276,6 +2285,8 @@ msgid ""
 "Write each output over its own input; an input whose output would be another "
 "file is refused"
 msgstr ""
+"Scrie fiecare ieșire peste propria intrare; o intrare a cărei ieșire ar fi "
+"alt fișier este refuzată"
 
 #: crates/bigiris/src/main.rs:457 crates/bigiris/src/main.rs:469
 msgid "Input files"
@@ -2286,6 +2297,8 @@ msgid ""
 "Remove the metadata (EXIF, IPTC, XMP, comments) of each file by re-encoding "
 "it in its own format (headless)"
 msgstr ""
+"Elimină metadatele (EXIF, IPTC, XMP, comentarii) fiecărui fișier prin "
+"recodificare în propriul format (headless)"
 
 #: crates/bigiris/src/main.rs:472
 msgid ""
@@ -2488,6 +2501,8 @@ msgstr "Instalează în ~/.local/share (implicit)"
 #: crates/bigiris/src/main.rs:730
 msgid "Stage the system-wide integrations under --destdir (packaging only)"
 msgstr ""
+"Pregătește integrările la nivel de sistem în --destdir (doar pentru "
+"împachetare)"
 
 #: crates/bigiris/src/main.rs:738
 msgid ""
@@ -2551,11 +2566,11 @@ msgstr ""
 
 #: crates/bigiris/src/main.rs:1059
 msgid "not converted in place: {path} is a symbolic link"
-msgstr ""
+msgstr "nu s-a convertit pe loc: {path} este o legătură simbolică"
 
 #: crates/bigiris/src/main.rs:1070
 msgid "not converted in place: the output would be {path}"
-msgstr ""
+msgstr "nu s-a convertit pe loc: ieșirea ar fi {path}"
 
 #: crates/bigiris/src/main.rs:1126
 msgid "the original was already smaller; copied without recompression"
@@ -2567,7 +2582,7 @@ msgstr "rotate: folosiți --degrees 90|180|270 sau --auto"
 
 #: crates/bigiris/src/main.rs:1214
 msgid "invalid --bg: {value}; use #RRGGBB or #RRGGBBAA"
-msgstr ""
+msgstr "--bg nevalid: {value}; folosiți #RRGGBB sau #RRGGBBAA"
 
 #: crates/bigiris/src/main.rs:1250
 msgid "invalid target format: {error}"
@@ -2579,7 +2594,7 @@ msgstr "profilul de culoare este corupt; culorile au fost tratate ca sRGB"
 
 #: crates/bigiris/src/main.rs:1332
 msgid "nothing would change"
-msgstr ""
+msgstr "nu s-ar schimba nimic"
 
 #: crates/bigiris/src/main.rs:1341
 msgid "already exists: {path}"
@@ -2644,7 +2659,7 @@ msgstr "nu s-a putut crea {path}: {error}"
 
 #: crates/bigiris/src/main.rs:1755
 msgid "the output of {path} in this batch"
-msgstr ""
+msgstr "ieșirea lui {path} din acest lot"
 
 #: crates/bigiris/src/main.rs:1821
 msgid ""
@@ -2666,11 +2681,11 @@ msgstr "nume de fișier nevalid"
 
 #: crates/bigiris/src/main.rs:1897
 msgid "could not write in the document's folder: {error}"
-msgstr ""
+msgstr "nu s-a putut scrie în dosarul documentului: {error}"
 
 #: crates/bigiris/src/main.rs:1901
 msgid "could not create a temporary folder: {error}"
-msgstr ""
+msgstr "nu s-a putut crea un dosar temporar: {error}"
 
 #: crates/bigiris/src/main.rs:1905
 msgid "could not run soffice: {error}"
@@ -2738,15 +2753,15 @@ msgstr "fișiere: {count}"
 
 #: crates/bigiris/src/main.rs:2054
 msgid "kept, not written by BigIris: {path}"
-msgstr ""
+msgstr "păstrat, nu a fost scris de BigIris: {path}"
 
 #: crates/bigiris/src/main.rs:2061
 msgid "removed, the package provides it: {path}"
-msgstr ""
+msgstr "eliminat, pachetul îl furnizează: {path}"
 
 #: crates/bigiris/src/main.rs:2065
 msgid "FAILED: {error}"
-msgstr ""
+msgstr "EȘUAT: {error}"
 
 #: crates/bigiris/src/main.rs:2087
 msgid ""
@@ -2774,11 +2789,11 @@ msgstr ""
 
 #: crates/bigiris/src/output_plan.rs:190
 msgid "these outputs would replace other inputs of the same run:"
-msgstr ""
+msgstr "aceste ieșiri ar înlocui alte intrări din aceeași rulare:"
 
 #: crates/bigiris/src/output_plan.rs:198
 msgid "Process them separately or use the skip or increment policy."
-msgstr ""
+msgstr "Procesați-le separat sau folosiți politica skip sau increment."
 
 #: crates/bigiris/src/output_plan.rs:248
 msgid "several inputs would write the same output file:"

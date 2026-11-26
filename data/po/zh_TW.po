@@ -17,7 +17,7 @@ msgstr ""
 
 #: crates/bigiris/src/codec.rs:255
 msgid "the isolated codec answered with invalid data: {error}"
-msgstr ""
+msgstr "隔離的編解碼器回傳了無效的資料：{error}"
 
 #: crates/bigiris/src/codec.rs:324
 msgid "the BigIris executable was removed; restart BigIris"
@@ -34,11 +34,11 @@ msgstr "編解碼器逾時"
 
 #: crates/bigiris/src/codec.rs:619
 msgid "exit code {code}"
-msgstr ""
+msgstr "結束代碼 {code}"
 
 #: crates/bigiris/src/codec.rs:623
 msgid "signal {signal}"
-msgstr ""
+msgstr "訊號 {signal}"
 
 #: crates/bigiris/src/codec.rs:630
 msgid "BigIris was updated; restart it"
@@ -58,42 +58,42 @@ msgstr "BigIris 在執行期間已更新；請重新啟動"
 
 #: crates/bigiris/src/codec.rs:801
 msgid "the isolated codec rejected the image{hint}: {details}"
-msgstr ""
+msgstr "隔離的編解碼器拒絕處理此影像{hint}：{details}"
 
 #: crates/bigiris/src/codec.rs:807
 msgid "the isolated codec rejected the image ({status}){hint}"
-msgstr ""
+msgstr "隔離的編解碼器拒絕處理此影像（{status}）{hint}"
 
 #: crates/bigiris/src/error_text.rs:20
 msgid "could not read or write the file: {error}"
-msgstr ""
+msgstr "無法讀取或寫入檔案：{error}"
 
 #: crates/bigiris/src/error_text.rs:23
 msgid "invalid input: {error}"
-msgstr ""
+msgstr "輸入無效：{error}"
 
 #: crates/bigiris/src/error_text.rs:26
 msgid "unsupported format: {error}"
-msgstr ""
+msgstr "不支援的格式：{error}"
 
 #: crates/bigiris/src/error_text.rs:29
 msgid "could not read the image {path}: {error}"
-msgstr ""
+msgstr "無法讀取影像 {path}：{error}"
 
 #: crates/bigiris/src/error_text.rs:33
 msgid "could not write {path}: {error}"
-msgstr ""
+msgstr "無法寫入 {path}：{error}"
 
 #: crates/bigiris/src/error_text.rs:38
 msgid ""
 "animated or multi-page image: static editing stopped to avoid losing content"
-msgstr ""
+msgstr "動畫或多頁影像：為避免遺失內容，已停止靜態編輯"
 
 #: crates/bigiris/src/error_text.rs:41
 msgid ""
 "icon with several sizes or multi-part EXR: writing it back would keep only "
 "one"
-msgstr ""
+msgstr "含多種尺寸的圖示或多部分 EXR：寫回後只會保留其中一個"
 
 #: crates/bigiris/src/error_text.rs:44
 msgid "too many files with the same name: {path}"
@@ -101,23 +101,23 @@ msgstr "同名檔案過多：{path}"
 
 #: crates/bigiris/src/error_text.rs:61
 msgid "damaged or unreadable image data: {error}"
-msgstr ""
+msgstr "影像資料已損毀或無法讀取：{error}"
 
 #: crates/bigiris/src/error_text.rs:63
 msgid "the encoder failed: {error}"
-msgstr ""
+msgstr "編碼器失敗：{error}"
 
 #: crates/bigiris/src/error_text.rs:64
 msgid "invalid parameter: {error}"
-msgstr ""
+msgstr "參數無效：{error}"
 
 #: crates/bigiris/src/error_text.rs:65
 msgid "the image is larger than BigIris can process"
-msgstr ""
+msgstr "影像超出 BigIris 可處理的大小"
 
 #: crates/bigiris/src/error_text.rs:67
 msgid "unsupported image: {error}"
-msgstr ""
+msgstr "不支援的影像：{error}"
 
 #: crates/bigiris/src/error_text.rs:97 crates/bigiris/src/gui.rs:2453
 #: crates/bigiris/src/gui/dialogs/batch.rs:296
@@ -131,10 +131,12 @@ msgid ""
 "{available} GiB. Close other programs or use a smaller image. Swap does not "
 "count as free RAM."
 msgstr ""
+"{model} 在此步驟需要約 {need} GiB 的可用 RAM；目前可用：{available} GiB。請關"
+"閉其他程式，或改用較小的影像。交換空間不計入可用 RAM。"
 
 #: crates/bigiris/src/error_text.rs:109
 msgid "could not check the memory free for AI: {error}"
-msgstr ""
+msgstr "無法檢查可供 AI 使用的記憶體：{error}"
 
 #: crates/bigiris/src/error_text.rs:112
 msgid "AI failed: {error}"
@@ -154,7 +156,7 @@ msgstr "尚未安裝 {model}。請使用以下指令安裝：sudo pacman -S {pac
 
 #: crates/bigiris/src/error_text.rs:136
 msgid "not a weights file"
-msgstr ""
+msgstr "不是權重檔案"
 
 #: crates/bigiris/src/error_text.rs:140
 msgid "could not read the {model} weights at {path}: {error}"
@@ -339,7 +341,7 @@ msgstr "此格式不儲存 EXIF"
 
 #: crates/bigiris/src/gui.rs:3022
 msgid "EXIF too large for this format"
-msgstr ""
+msgstr "EXIF 對此格式而言過大"
 
 #: crates/bigiris/src/gui.rs:3023
 msgid "invalid EXIF"
@@ -659,19 +661,19 @@ msgstr "耗時 {time} 完成 · {counts}"
 
 #: crates/bigiris/src/gui/batch_runner.rs:183
 msgid "Saved: {path}"
-msgstr ""
+msgstr "已儲存：{path}"
 
 #: crates/bigiris/src/gui/batch_runner.rs:185
 msgid "Already exists, nothing written: {path}"
-msgstr ""
+msgstr "已存在，未寫入任何內容：{path}"
 
 #: crates/bigiris/src/gui/batch_runner.rs:190
 msgid "Nothing would change: the image already has that size or ratio."
-msgstr ""
+msgstr "不會有任何變更：影像已是該尺寸或比例。"
 
 #: crates/bigiris/src/gui/batch_runner.rs:198
 msgid "Already at that size or ratio, left as they were: {count}"
-msgstr ""
+msgstr "已是該尺寸或比例，維持原樣：{count}"
 
 #: crates/bigiris/src/gui/batch_runner.rs:223
 #: crates/bigiris/src/gui/dialogs/animate.rs:288
@@ -769,7 +771,7 @@ msgstr "套用"
 
 #: crates/bigiris/src/gui/dialogs/adjust.rs:147
 msgid "Every value is neutral: nothing would change."
-msgstr ""
+msgstr "所有數值皆為中性：不會有任何變更。"
 
 #: crates/bigiris/src/gui/dialogs/adjust.rs:154
 msgid "Adjusting…"
@@ -962,7 +964,7 @@ msgstr "耗時 {timing} 完成。已寫入 {ok} 個，已略過 {skip} 個，失
 
 #: crates/bigiris/src/gui/dialogs/batch.rs:364
 msgid "Skipped as outputs of earlier runs: {files}"
-msgstr ""
+msgstr "因屬先前執行的輸出而略過：{files}"
 
 #: crates/bigiris/src/gui/dialogs/batch.rs:424
 msgid "Add image folder"
@@ -1096,7 +1098,7 @@ msgstr "正在裁切"
 
 #: crates/bigiris/src/gui/viewer/crop.rs:392
 msgid "Crop selection"
-msgstr ""
+msgstr "裁切選取範圍"
 
 #: crates/bigiris/src/gui/viewer/crop.rs:396
 msgid "Free"
@@ -1114,11 +1116,11 @@ msgstr "長寬比"
 
 #: crates/bigiris/src/gui/viewer/crop.rs:476
 msgid "{width} × {height} px"
-msgstr ""
+msgstr "{width} × {height} 像素"
 
 #: crates/bigiris/src/gui/viewer/crop.rs:642
 msgid "Wait for the running tool to finish"
-msgstr ""
+msgstr "請等候執行中的工具完成"
 
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:46
 #: crates/bigiris/src/gui/dialogs/mod.rs:56
@@ -1191,7 +1193,7 @@ msgstr "調整"
 
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:338
 msgid "Applies on top of earlier edits"
-msgstr ""
+msgstr "會套用在先前的編輯之上"
 
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:353
 msgid "Reset adjustments"
@@ -1420,7 +1422,7 @@ msgstr "預計目的地"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:164
 msgid "This format cannot store transparency: the bars will be white."
-msgstr ""
+msgstr "此格式無法儲存透明度：邊條將為白色。"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:174
 msgid "Extend"
@@ -1582,11 +1584,11 @@ msgstr "保留原始格式"
 
 #: crates/bigiris/src/gui/dialogs/mod.rs:247
 msgid "Replace the original files?"
-msgstr ""
+msgstr "要取代原始檔案嗎？"
 
 #: crates/bigiris/src/gui/dialogs/mod.rs:249
 msgid "Originals that will be overwritten: {count}. This cannot be undone."
-msgstr ""
+msgstr "將被覆寫的原始檔案：{count} 個。此操作無法復原。"
 
 #: crates/bigiris/src/gui/dialogs/mod.rs:449
 msgid "{first} and {count} more"
@@ -1676,7 +1678,7 @@ msgstr "尺寸"
 
 #: crates/bigiris/src/gui/dialogs/properties.rs:192
 msgid "(could not read the image data)"
-msgstr ""
+msgstr "（無法讀取影像資料）"
 
 #: crates/bigiris/src/gui/dialogs/properties.rs:208
 msgid "EXIF orientation"
@@ -1688,7 +1690,7 @@ msgstr "{orientation} · 請使用「旋轉 ▸ 自動」修正"
 
 #: crates/bigiris/src/gui/dialogs/properties.rs:227
 msgid "{width} × {height} px (stored as {stored_width} × {stored_height})"
-msgstr ""
+msgstr "{width} × {height} 像素（儲存為 {stored_width} × {stored_height}）"
 
 #: crates/bigiris/src/gui/dialogs/properties.rs:241
 msgid "Megapixels"
@@ -1708,83 +1710,83 @@ msgstr "現有欄位：{count}"
 
 #: crates/bigiris/src/gui/dialogs/properties.rs:302
 msgid "Camera maker"
-msgstr ""
+msgstr "相機製造商"
 
 #: crates/bigiris/src/gui/dialogs/properties.rs:303
 msgid "Camera model"
-msgstr ""
+msgstr "相機型號"
 
 #: crates/bigiris/src/gui/dialogs/properties.rs:304
 msgid "Lens"
-msgstr ""
+msgstr "鏡頭"
 
 #: crates/bigiris/src/gui/dialogs/properties.rs:305
 msgid "Software"
-msgstr ""
+msgstr "軟體"
 
 #: crates/bigiris/src/gui/dialogs/properties.rs:306
 msgid "Author"
-msgstr ""
+msgstr "作者"
 
 #: crates/bigiris/src/gui/dialogs/properties.rs:307
 msgid "Copyright"
-msgstr ""
+msgstr "版權"
 
 #: crates/bigiris/src/gui/dialogs/properties.rs:308
 msgid "Description"
-msgstr ""
+msgstr "說明"
 
 #: crates/bigiris/src/gui/dialogs/properties.rs:309
 msgid "Date taken"
-msgstr ""
+msgstr "拍攝日期"
 
 #: crates/bigiris/src/gui/dialogs/properties.rs:310
 msgid "Date modified"
-msgstr ""
+msgstr "修改日期"
 
 #: crates/bigiris/src/gui/dialogs/properties.rs:311
 msgid "Orientation"
-msgstr ""
+msgstr "方向"
 
 #: crates/bigiris/src/gui/dialogs/properties.rs:312
 msgid "Exposure time"
-msgstr ""
+msgstr "曝光時間"
 
 #: crates/bigiris/src/gui/dialogs/properties.rs:313
 msgid "Aperture"
-msgstr ""
+msgstr "光圈"
 
 #: crates/bigiris/src/gui/dialogs/properties.rs:314
 msgid "ISO"
-msgstr ""
+msgstr "ISO"
 
 #: crates/bigiris/src/gui/dialogs/properties.rs:315
 msgid "Exposure compensation"
-msgstr ""
+msgstr "曝光補償"
 
 #: crates/bigiris/src/gui/dialogs/properties.rs:316
 msgid "Focal length"
-msgstr ""
+msgstr "焦距"
 
 #: crates/bigiris/src/gui/dialogs/properties.rs:317
 msgid "Flash"
-msgstr ""
+msgstr "閃光燈"
 
 #: crates/bigiris/src/gui/dialogs/properties.rs:318
 msgid "White balance"
-msgstr ""
+msgstr "白平衡"
 
 #: crates/bigiris/src/gui/dialogs/properties.rs:319
 msgid "Latitude"
-msgstr ""
+msgstr "緯度"
 
 #: crates/bigiris/src/gui/dialogs/properties.rs:320
 msgid "Longitude"
-msgstr ""
+msgstr "經度"
 
 #: crates/bigiris/src/gui/dialogs/properties.rs:321
 msgid "Altitude"
-msgstr ""
+msgstr "海拔"
 
 #: crates/bigiris/src/gui/dialogs/remove_bg.rs:16
 msgid "Could not read the image: {error}"
@@ -2159,15 +2161,15 @@ msgstr "Y 位移無效：{error}"
 
 #: crates/bigiris/src/main.rs:286
 msgid "width and height must be at least 1, got: {value}"
-msgstr ""
+msgstr "寬度與高度至少須為 1，目前為：{value}"
 
 #: crates/bigiris/src/main.rs:295
 msgid "not a number: {error}"
-msgstr ""
+msgstr "不是數字：{error}"
 
 #: crates/bigiris/src/main.rs:299
 msgid "{value} is outside {range}"
-msgstr ""
+msgstr "{value} 超出 {range} 的範圍"
 
 #: crates/bigiris/src/main.rs:332
 msgid "expected W:H (e.g. 1:1, 9:16), got: {value}"
@@ -2241,7 +2243,7 @@ msgstr "輸出檔案已存在時的策略"
 msgid ""
 "Write each output over its own input; an input whose output would be another "
 "file is refused"
-msgstr ""
+msgstr "將每個輸出寫回其自身的輸入；若輸入的輸出會是另一個檔案，則拒絕處理"
 
 #: crates/bigiris/src/main.rs:457 crates/bigiris/src/main.rs:469
 msgid "Input files"
@@ -2252,6 +2254,7 @@ msgid ""
 "Remove the metadata (EXIF, IPTC, XMP, comments) of each file by re-encoding "
 "it in its own format (headless)"
 msgstr ""
+"以原格式重新編碼，移除每個檔案的中繼資料（EXIF、IPTC、XMP、註解）（無介面）"
 
 #: crates/bigiris/src/main.rs:472
 msgid ""
@@ -2446,7 +2449,7 @@ msgstr "安裝到 ~/.local/share（預設）"
 
 #: crates/bigiris/src/main.rs:730
 msgid "Stage the system-wide integrations under --destdir (packaging only)"
-msgstr ""
+msgstr "將系統整合項目暫存於 --destdir 下（僅供打包使用）"
 
 #: crates/bigiris/src/main.rs:738
 msgid ""
@@ -2508,11 +2511,11 @@ msgstr "品質目標無效：{value}；請使用 maximum、balanced 或 smallest
 
 #: crates/bigiris/src/main.rs:1059
 msgid "not converted in place: {path} is a symbolic link"
-msgstr ""
+msgstr "未就地轉換：{path} 是符號連結"
 
 #: crates/bigiris/src/main.rs:1070
 msgid "not converted in place: the output would be {path}"
-msgstr ""
+msgstr "未就地轉換：輸出會是 {path}"
 
 #: crates/bigiris/src/main.rs:1126
 msgid "the original was already smaller; copied without recompression"
@@ -2524,7 +2527,7 @@ msgstr "rotate：請使用 --degrees 90|180|270 或 --auto"
 
 #: crates/bigiris/src/main.rs:1214
 msgid "invalid --bg: {value}; use #RRGGBB or #RRGGBBAA"
-msgstr ""
+msgstr "--bg 無效：{value}；請使用 #RRGGBB 或 #RRGGBBAA"
 
 #: crates/bigiris/src/main.rs:1250
 msgid "invalid target format: {error}"
@@ -2536,7 +2539,7 @@ msgstr "色彩描述檔已損毀；色彩已視為 sRGB 處理"
 
 #: crates/bigiris/src/main.rs:1332
 msgid "nothing would change"
-msgstr ""
+msgstr "不會有任何變更"
 
 #: crates/bigiris/src/main.rs:1341
 msgid "already exists: {path}"
@@ -2602,7 +2605,7 @@ msgstr "無法建立 {path}：{error}"
 
 #: crates/bigiris/src/main.rs:1755
 msgid "the output of {path} in this batch"
-msgstr ""
+msgstr "此批次中 {path} 的輸出"
 
 #: crates/bigiris/src/main.rs:1821
 msgid ""
@@ -2623,11 +2626,11 @@ msgstr "檔名無效"
 
 #: crates/bigiris/src/main.rs:1897
 msgid "could not write in the document's folder: {error}"
-msgstr ""
+msgstr "無法寫入文件所在的資料夾：{error}"
 
 #: crates/bigiris/src/main.rs:1901
 msgid "could not create a temporary folder: {error}"
-msgstr ""
+msgstr "無法建立暫存資料夾：{error}"
 
 #: crates/bigiris/src/main.rs:1905
 msgid "could not run soffice: {error}"
@@ -2695,15 +2698,15 @@ msgstr "{count} 個檔案"
 
 #: crates/bigiris/src/main.rs:2054
 msgid "kept, not written by BigIris: {path}"
-msgstr ""
+msgstr "已保留，非由 BigIris 寫入：{path}"
 
 #: crates/bigiris/src/main.rs:2061
 msgid "removed, the package provides it: {path}"
-msgstr ""
+msgstr "已移除，套件已提供：{path}"
 
 #: crates/bigiris/src/main.rs:2065
 msgid "FAILED: {error}"
-msgstr ""
+msgstr "失敗：{error}"
 
 #: crates/bigiris/src/main.rs:2087
 msgid ""
@@ -2729,11 +2732,11 @@ msgstr "警告：目前的建置未包含 `gui` 功能。無法使用檢視器�
 
 #: crates/bigiris/src/output_plan.rs:190
 msgid "these outputs would replace other inputs of the same run:"
-msgstr ""
+msgstr "以下輸出會取代同一次執行中的其他輸入："
 
 #: crates/bigiris/src/output_plan.rs:198
 msgid "Process them separately or use the skip or increment policy."
-msgstr ""
+msgstr "請分別處理，或使用 skip 或 increment 策略。"
 
 #: crates/bigiris/src/output_plan.rs:248
 msgid "several inputs would write the same output file:"

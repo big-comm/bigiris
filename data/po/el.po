@@ -18,7 +18,7 @@ msgstr ""
 
 #: crates/bigiris/src/codec.rs:255
 msgid "the isolated codec answered with invalid data: {error}"
-msgstr ""
+msgstr "ο απομονωμένος codec απάντησε με μη έγκυρα δεδομένα: {error}"
 
 #: crates/bigiris/src/codec.rs:324
 msgid "the BigIris executable was removed; restart BigIris"
@@ -35,11 +35,11 @@ msgstr "ο codec ξεπέρασε το χρονικό όριο"
 
 #: crates/bigiris/src/codec.rs:619
 msgid "exit code {code}"
-msgstr ""
+msgstr "κωδικός εξόδου {code}"
 
 #: crates/bigiris/src/codec.rs:623
 msgid "signal {signal}"
-msgstr ""
+msgstr "σήμα {signal}"
 
 #: crates/bigiris/src/codec.rs:630
 msgid "BigIris was updated; restart it"
@@ -61,42 +61,46 @@ msgstr "το BigIris ενημερώθηκε ενώ ήταν ανοιχτό· ε�
 
 #: crates/bigiris/src/codec.rs:801
 msgid "the isolated codec rejected the image{hint}: {details}"
-msgstr ""
+msgstr "ο απομονωμένος codec απέρριψε την εικόνα{hint}: {details}"
 
 #: crates/bigiris/src/codec.rs:807
 msgid "the isolated codec rejected the image ({status}){hint}"
-msgstr ""
+msgstr "ο απομονωμένος codec απέρριψε την εικόνα ({status}){hint}"
 
 #: crates/bigiris/src/error_text.rs:20
 msgid "could not read or write the file: {error}"
-msgstr ""
+msgstr "δεν ήταν δυνατή η ανάγνωση ή η εγγραφή του αρχείου: {error}"
 
 #: crates/bigiris/src/error_text.rs:23
 msgid "invalid input: {error}"
-msgstr ""
+msgstr "μη έγκυρη είσοδος: {error}"
 
 #: crates/bigiris/src/error_text.rs:26
 msgid "unsupported format: {error}"
-msgstr ""
+msgstr "μη υποστηριζόμενη μορφή: {error}"
 
 #: crates/bigiris/src/error_text.rs:29
 msgid "could not read the image {path}: {error}"
-msgstr ""
+msgstr "δεν ήταν δυνατή η ανάγνωση της εικόνας {path}: {error}"
 
 #: crates/bigiris/src/error_text.rs:33
 msgid "could not write {path}: {error}"
-msgstr ""
+msgstr "δεν ήταν δυνατή η εγγραφή του {path}: {error}"
 
 #: crates/bigiris/src/error_text.rs:38
 msgid ""
 "animated or multi-page image: static editing stopped to avoid losing content"
 msgstr ""
+"κινούμενη εικόνα ή εικόνα πολλών σελίδων: η στατική επεξεργασία διακόπηκε "
+"για να μην χαθεί περιεχόμενο"
 
 #: crates/bigiris/src/error_text.rs:41
 msgid ""
 "icon with several sizes or multi-part EXR: writing it back would keep only "
 "one"
 msgstr ""
+"εικονίδιο με πολλά μεγέθη ή EXR πολλών τμημάτων: η επανεγγραφή του θα "
+"διατηρούσε μόνο ένα"
 
 #: crates/bigiris/src/error_text.rs:44
 msgid "too many files with the same name: {path}"
@@ -104,23 +108,23 @@ msgstr "πάρα πολλά αρχεία με το ίδιο όνομα: {path}"
 
 #: crates/bigiris/src/error_text.rs:61
 msgid "damaged or unreadable image data: {error}"
-msgstr ""
+msgstr "κατεστραμμένα ή μη αναγνώσιμα δεδομένα εικόνας: {error}"
 
 #: crates/bigiris/src/error_text.rs:63
 msgid "the encoder failed: {error}"
-msgstr ""
+msgstr "ο κωδικοποιητής απέτυχε: {error}"
 
 #: crates/bigiris/src/error_text.rs:64
 msgid "invalid parameter: {error}"
-msgstr ""
+msgstr "μη έγκυρη παράμετρος: {error}"
 
 #: crates/bigiris/src/error_text.rs:65
 msgid "the image is larger than BigIris can process"
-msgstr ""
+msgstr "η εικόνα είναι μεγαλύτερη από όσο μπορεί να επεξεργαστεί το BigIris"
 
 #: crates/bigiris/src/error_text.rs:67
 msgid "unsupported image: {error}"
-msgstr ""
+msgstr "μη υποστηριζόμενη εικόνα: {error}"
 
 #: crates/bigiris/src/error_text.rs:97 crates/bigiris/src/gui.rs:2453
 #: crates/bigiris/src/gui/dialogs/batch.rs:296
@@ -134,10 +138,13 @@ msgid ""
 "{available} GiB. Close other programs or use a smaller image. Swap does not "
 "count as free RAM."
 msgstr ""
+"Το {model} χρειάζεται περίπου {need} GiB ελεύθερης RAM για αυτό το βήμα· "
+"διαθέσιμη τώρα: {available} GiB. Κλείστε άλλα προγράμματα ή χρησιμοποιήστε "
+"μικρότερη εικόνα. Η μνήμη swap δεν υπολογίζεται ως ελεύθερη RAM."
 
 #: crates/bigiris/src/error_text.rs:109
 msgid "could not check the memory free for AI: {error}"
-msgstr ""
+msgstr "δεν ήταν δυνατός ο έλεγχος της ελεύθερης μνήμης για την ΤΝ: {error}"
 
 #: crates/bigiris/src/error_text.rs:112
 msgid "AI failed: {error}"
@@ -159,7 +166,7 @@ msgstr ""
 
 #: crates/bigiris/src/error_text.rs:136
 msgid "not a weights file"
-msgstr ""
+msgstr "δεν είναι αρχείο βαρών"
 
 #: crates/bigiris/src/error_text.rs:140
 msgid "could not read the {model} weights at {path}: {error}"
@@ -349,7 +356,7 @@ msgstr "η μορφή δεν αποθηκεύει EXIF"
 
 #: crates/bigiris/src/gui.rs:3022
 msgid "EXIF too large for this format"
-msgstr ""
+msgstr "το EXIF είναι πολύ μεγάλο για αυτή τη μορφή"
 
 #: crates/bigiris/src/gui.rs:3023
 msgid "invalid EXIF"
@@ -675,19 +682,21 @@ msgstr "Ολοκληρώθηκε σε {time} · {counts}"
 
 #: crates/bigiris/src/gui/batch_runner.rs:183
 msgid "Saved: {path}"
-msgstr ""
+msgstr "Αποθηκεύτηκε: {path}"
 
 #: crates/bigiris/src/gui/batch_runner.rs:185
 msgid "Already exists, nothing written: {path}"
-msgstr ""
+msgstr "Υπάρχει ήδη, δεν γράφτηκε τίποτα: {path}"
 
 #: crates/bigiris/src/gui/batch_runner.rs:190
 msgid "Nothing would change: the image already has that size or ratio."
 msgstr ""
+"Τίποτα δεν θα άλλαζε: η εικόνα έχει ήδη αυτό το μέγεθος ή τον λόγο "
+"διαστάσεων."
 
 #: crates/bigiris/src/gui/batch_runner.rs:198
 msgid "Already at that size or ratio, left as they were: {count}"
-msgstr ""
+msgstr "Ήδη στο ίδιο μέγεθος ή λόγο διαστάσεων, παρέμειναν ως είχαν: {count}"
 
 #: crates/bigiris/src/gui/batch_runner.rs:223
 #: crates/bigiris/src/gui/dialogs/animate.rs:288
@@ -787,7 +796,7 @@ msgstr "Εφαρμογή"
 
 #: crates/bigiris/src/gui/dialogs/adjust.rs:147
 msgid "Every value is neutral: nothing would change."
-msgstr ""
+msgstr "Όλες οι τιμές είναι ουδέτερες: τίποτα δεν θα άλλαζε."
 
 #: crates/bigiris/src/gui/dialogs/adjust.rs:154
 msgid "Adjusting…"
@@ -983,7 +992,7 @@ msgstr ""
 
 #: crates/bigiris/src/gui/dialogs/batch.rs:364
 msgid "Skipped as outputs of earlier runs: {files}"
-msgstr ""
+msgstr "Παραλείφθηκαν ως έξοδοι προηγούμενων εκτελέσεων: {files}"
 
 #: crates/bigiris/src/gui/dialogs/batch.rs:424
 msgid "Add image folder"
@@ -1121,7 +1130,7 @@ msgstr "Περικοπή"
 
 #: crates/bigiris/src/gui/viewer/crop.rs:392
 msgid "Crop selection"
-msgstr ""
+msgstr "Επιλογή περικοπής"
 
 #: crates/bigiris/src/gui/viewer/crop.rs:396
 msgid "Free"
@@ -1139,11 +1148,11 @@ msgstr "Αναλογία διαστάσεων"
 
 #: crates/bigiris/src/gui/viewer/crop.rs:476
 msgid "{width} × {height} px"
-msgstr ""
+msgstr "{width} × {height} px"
 
 #: crates/bigiris/src/gui/viewer/crop.rs:642
 msgid "Wait for the running tool to finish"
-msgstr ""
+msgstr "Περιμένετε να ολοκληρωθεί το εργαλείο που εκτελείται"
 
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:46
 #: crates/bigiris/src/gui/dialogs/mod.rs:56
@@ -1219,7 +1228,7 @@ msgstr "Προσαρμογές"
 
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:338
 msgid "Applies on top of earlier edits"
-msgstr ""
+msgstr "Εφαρμόζεται πάνω από τις προηγούμενες επεξεργασίες"
 
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:353
 msgid "Reset adjustments"
@@ -1454,7 +1463,7 @@ msgstr "Αναμενόμενο αποτέλεσμα"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:164
 msgid "This format cannot store transparency: the bars will be white."
-msgstr ""
+msgstr "Αυτή η μορφή δεν υποστηρίζει διαφάνεια: οι ζώνες θα είναι λευκές."
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:174
 msgid "Extend"
@@ -1617,11 +1626,13 @@ msgstr "Διατήρηση αρχικής μορφής"
 
 #: crates/bigiris/src/gui/dialogs/mod.rs:247
 msgid "Replace the original files?"
-msgstr ""
+msgstr "Αντικατάσταση των αρχικών αρχείων;"
 
 #: crates/bigiris/src/gui/dialogs/mod.rs:249
 msgid "Originals that will be overwritten: {count}. This cannot be undone."
 msgstr ""
+"Αρχικά αρχεία που θα αντικατασταθούν: {count}. Η ενέργεια δεν μπορεί να "
+"αναιρεθεί."
 
 #: crates/bigiris/src/gui/dialogs/mod.rs:449
 msgid "{first} and {count} more"
@@ -1711,7 +1722,7 @@ msgstr "Διαστάσεις"
 
 #: crates/bigiris/src/gui/dialogs/properties.rs:192
 msgid "(could not read the image data)"
-msgstr ""
+msgstr "(δεν ήταν δυνατή η ανάγνωση των δεδομένων της εικόνας)"
 
 #: crates/bigiris/src/gui/dialogs/properties.rs:208
 msgid "EXIF orientation"
@@ -1724,6 +1735,7 @@ msgstr "{orientation} · χρησιμοποιήστε Περιστροφή ▸ �
 #: crates/bigiris/src/gui/dialogs/properties.rs:227
 msgid "{width} × {height} px (stored as {stored_width} × {stored_height})"
 msgstr ""
+"{width} × {height} px (αποθηκευμένη ως {stored_width} × {stored_height})"
 
 #: crates/bigiris/src/gui/dialogs/properties.rs:241
 msgid "Megapixels"
@@ -1743,83 +1755,83 @@ msgstr "Πεδία που υπάρχουν: {count}"
 
 #: crates/bigiris/src/gui/dialogs/properties.rs:302
 msgid "Camera maker"
-msgstr ""
+msgstr "Κατασκευαστής φωτογραφικής μηχανής"
 
 #: crates/bigiris/src/gui/dialogs/properties.rs:303
 msgid "Camera model"
-msgstr ""
+msgstr "Μοντέλο φωτογραφικής μηχανής"
 
 #: crates/bigiris/src/gui/dialogs/properties.rs:304
 msgid "Lens"
-msgstr ""
+msgstr "Φακός"
 
 #: crates/bigiris/src/gui/dialogs/properties.rs:305
 msgid "Software"
-msgstr ""
+msgstr "Λογισμικό"
 
 #: crates/bigiris/src/gui/dialogs/properties.rs:306
 msgid "Author"
-msgstr ""
+msgstr "Δημιουργός"
 
 #: crates/bigiris/src/gui/dialogs/properties.rs:307
 msgid "Copyright"
-msgstr ""
+msgstr "Πνευματικά δικαιώματα"
 
 #: crates/bigiris/src/gui/dialogs/properties.rs:308
 msgid "Description"
-msgstr ""
+msgstr "Περιγραφή"
 
 #: crates/bigiris/src/gui/dialogs/properties.rs:309
 msgid "Date taken"
-msgstr ""
+msgstr "Ημερομηνία λήψης"
 
 #: crates/bigiris/src/gui/dialogs/properties.rs:310
 msgid "Date modified"
-msgstr ""
+msgstr "Ημερομηνία τροποποίησης"
 
 #: crates/bigiris/src/gui/dialogs/properties.rs:311
 msgid "Orientation"
-msgstr ""
+msgstr "Προσανατολισμός"
 
 #: crates/bigiris/src/gui/dialogs/properties.rs:312
 msgid "Exposure time"
-msgstr ""
+msgstr "Χρόνος έκθεσης"
 
 #: crates/bigiris/src/gui/dialogs/properties.rs:313
 msgid "Aperture"
-msgstr ""
+msgstr "Διάφραγμα"
 
 #: crates/bigiris/src/gui/dialogs/properties.rs:314
 msgid "ISO"
-msgstr ""
+msgstr "ISO"
 
 #: crates/bigiris/src/gui/dialogs/properties.rs:315
 msgid "Exposure compensation"
-msgstr ""
+msgstr "Αντιστάθμιση έκθεσης"
 
 #: crates/bigiris/src/gui/dialogs/properties.rs:316
 msgid "Focal length"
-msgstr ""
+msgstr "Εστιακή απόσταση"
 
 #: crates/bigiris/src/gui/dialogs/properties.rs:317
 msgid "Flash"
-msgstr ""
+msgstr "Φλας"
 
 #: crates/bigiris/src/gui/dialogs/properties.rs:318
 msgid "White balance"
-msgstr ""
+msgstr "Ισορροπία λευκού"
 
 #: crates/bigiris/src/gui/dialogs/properties.rs:319
 msgid "Latitude"
-msgstr ""
+msgstr "Γεωγραφικό πλάτος"
 
 #: crates/bigiris/src/gui/dialogs/properties.rs:320
 msgid "Longitude"
-msgstr ""
+msgstr "Γεωγραφικό μήκος"
 
 #: crates/bigiris/src/gui/dialogs/properties.rs:321
 msgid "Altitude"
-msgstr ""
+msgstr "Υψόμετρο"
 
 #: crates/bigiris/src/gui/dialogs/remove_bg.rs:16
 msgid "Could not read the image: {error}"
@@ -2205,15 +2217,15 @@ msgstr "μη έγκυρη μετατόπιση Y: {error}"
 
 #: crates/bigiris/src/main.rs:286
 msgid "width and height must be at least 1, got: {value}"
-msgstr ""
+msgstr "το πλάτος και το ύψος πρέπει να είναι τουλάχιστον 1, δόθηκε: {value}"
 
 #: crates/bigiris/src/main.rs:295
 msgid "not a number: {error}"
-msgstr ""
+msgstr "δεν είναι αριθμός: {error}"
 
 #: crates/bigiris/src/main.rs:299
 msgid "{value} is outside {range}"
-msgstr ""
+msgstr "το {value} είναι εκτός του {range}"
 
 #: crates/bigiris/src/main.rs:332
 msgid "expected W:H (e.g. 1:1, 9:16), got: {value}"
@@ -2292,6 +2304,8 @@ msgid ""
 "Write each output over its own input; an input whose output would be another "
 "file is refused"
 msgstr ""
+"Εγγραφή κάθε εξόδου πάνω στη δική της είσοδο· απορρίπτεται κάθε είσοδος της "
+"οποίας η έξοδος θα ήταν άλλο αρχείο"
 
 #: crates/bigiris/src/main.rs:457 crates/bigiris/src/main.rs:469
 msgid "Input files"
@@ -2302,6 +2316,8 @@ msgid ""
 "Remove the metadata (EXIF, IPTC, XMP, comments) of each file by re-encoding "
 "it in its own format (headless)"
 msgstr ""
+"Αφαίρεση των μεταδεδομένων (EXIF, IPTC, XMP, σχόλια) κάθε αρχείου με "
+"επανακωδικοποίησή του στη δική του μορφή (headless)"
 
 #: crates/bigiris/src/main.rs:472
 msgid ""
@@ -2504,6 +2520,8 @@ msgstr "Εγκατάσταση στο ~/.local/share (προεπιλογή)"
 #: crates/bigiris/src/main.rs:730
 msgid "Stage the system-wide integrations under --destdir (packaging only)"
 msgstr ""
+"Προετοιμασία των ενσωματώσεων για όλο το σύστημα κάτω από το --destdir (μόνο "
+"για τη δημιουργία πακέτων)"
 
 #: crates/bigiris/src/main.rs:738
 msgid ""
@@ -2571,11 +2589,11 @@ msgstr ""
 
 #: crates/bigiris/src/main.rs:1059
 msgid "not converted in place: {path} is a symbolic link"
-msgstr ""
+msgstr "δεν μετατράπηκε επιτόπου: το {path} είναι συμβολικός σύνδεσμος"
 
 #: crates/bigiris/src/main.rs:1070
 msgid "not converted in place: the output would be {path}"
-msgstr ""
+msgstr "δεν μετατράπηκε επιτόπου: η έξοδος θα ήταν το {path}"
 
 #: crates/bigiris/src/main.rs:1126
 msgid "the original was already smaller; copied without recompression"
@@ -2587,7 +2605,7 @@ msgstr "rotate: χρησιμοποιήστε --degrees 90|180|270 ή --auto"
 
 #: crates/bigiris/src/main.rs:1214
 msgid "invalid --bg: {value}; use #RRGGBB or #RRGGBBAA"
-msgstr ""
+msgstr "μη έγκυρο --bg: {value}· χρησιμοποιήστε #RRGGBB ή #RRGGBBAA"
 
 #: crates/bigiris/src/main.rs:1250
 msgid "invalid target format: {error}"
@@ -2600,7 +2618,7 @@ msgstr ""
 
 #: crates/bigiris/src/main.rs:1332
 msgid "nothing would change"
-msgstr ""
+msgstr "τίποτα δεν θα άλλαζε"
 
 #: crates/bigiris/src/main.rs:1341
 msgid "already exists: {path}"
@@ -2671,7 +2689,7 @@ msgstr "δεν ήταν δυνατή η δημιουργία του {path}: {err
 
 #: crates/bigiris/src/main.rs:1755
 msgid "the output of {path} in this batch"
-msgstr ""
+msgstr "η έξοδος του {path} σε αυτή τη μαζική επεξεργασία"
 
 #: crates/bigiris/src/main.rs:1821
 msgid ""
@@ -2693,11 +2711,11 @@ msgstr "μη έγκυρο όνομα αρχείου"
 
 #: crates/bigiris/src/main.rs:1897
 msgid "could not write in the document's folder: {error}"
-msgstr ""
+msgstr "δεν ήταν δυνατή η εγγραφή στον φάκελο του εγγράφου: {error}"
 
 #: crates/bigiris/src/main.rs:1901
 msgid "could not create a temporary folder: {error}"
-msgstr ""
+msgstr "δεν ήταν δυνατή η δημιουργία προσωρινού φακέλου: {error}"
 
 #: crates/bigiris/src/main.rs:1905
 msgid "could not run soffice: {error}"
@@ -2765,15 +2783,15 @@ msgstr "αρχεία: {count}"
 
 #: crates/bigiris/src/main.rs:2054
 msgid "kept, not written by BigIris: {path}"
-msgstr ""
+msgstr "διατηρήθηκε, δεν γράφτηκε από το BigIris: {path}"
 
 #: crates/bigiris/src/main.rs:2061
 msgid "removed, the package provides it: {path}"
-msgstr ""
+msgstr "αφαιρέθηκε, το παρέχει το πακέτο: {path}"
 
 #: crates/bigiris/src/main.rs:2065
 msgid "FAILED: {error}"
-msgstr ""
+msgstr "ΑΠΟΤΥΧΙΑ: {error}"
 
 #: crates/bigiris/src/main.rs:2087
 msgid ""
@@ -2801,11 +2819,12 @@ msgstr ""
 
 #: crates/bigiris/src/output_plan.rs:190
 msgid "these outputs would replace other inputs of the same run:"
-msgstr ""
+msgstr "αυτές οι έξοδοι θα αντικαθιστούσαν άλλες εισόδους της ίδιας εκτέλεσης:"
 
 #: crates/bigiris/src/output_plan.rs:198
 msgid "Process them separately or use the skip or increment policy."
 msgstr ""
+"Επεξεργαστείτε τες χωριστά ή χρησιμοποιήστε την πολιτική skip ή increment."
 
 #: crates/bigiris/src/output_plan.rs:248
 msgid "several inputs would write the same output file:"

@@ -18,7 +18,7 @@ msgstr ""
 
 #: crates/bigiris/src/codec.rs:255
 msgid "the isolated codec answered with invalid data: {error}"
-msgstr ""
+msgstr "izolovaný kodek vrátil neplatná data: {error}"
 
 #: crates/bigiris/src/codec.rs:324
 msgid "the BigIris executable was removed; restart BigIris"
@@ -35,11 +35,11 @@ msgstr "kodek překročil časový limit"
 
 #: crates/bigiris/src/codec.rs:619
 msgid "exit code {code}"
-msgstr ""
+msgstr "kód ukončení {code}"
 
 #: crates/bigiris/src/codec.rs:623
 msgid "signal {signal}"
-msgstr ""
+msgstr "signál {signal}"
 
 #: crates/bigiris/src/codec.rs:630
 msgid "BigIris was updated; restart it"
@@ -60,42 +60,46 @@ msgstr "BigIris byl aktualizován, zatímco byl spuštěn; restartujte jej"
 
 #: crates/bigiris/src/codec.rs:801
 msgid "the isolated codec rejected the image{hint}: {details}"
-msgstr ""
+msgstr "izolovaný kodek obrázek odmítl{hint}: {details}"
 
 #: crates/bigiris/src/codec.rs:807
 msgid "the isolated codec rejected the image ({status}){hint}"
-msgstr ""
+msgstr "izolovaný kodek obrázek odmítl ({status}){hint}"
 
 #: crates/bigiris/src/error_text.rs:20
 msgid "could not read or write the file: {error}"
-msgstr ""
+msgstr "soubor nelze číst ani zapisovat: {error}"
 
 #: crates/bigiris/src/error_text.rs:23
 msgid "invalid input: {error}"
-msgstr ""
+msgstr "neplatný vstup: {error}"
 
 #: crates/bigiris/src/error_text.rs:26
 msgid "unsupported format: {error}"
-msgstr ""
+msgstr "nepodporovaný formát: {error}"
 
 #: crates/bigiris/src/error_text.rs:29
 msgid "could not read the image {path}: {error}"
-msgstr ""
+msgstr "obrázek {path} nelze načíst: {error}"
 
 #: crates/bigiris/src/error_text.rs:33
 msgid "could not write {path}: {error}"
-msgstr ""
+msgstr "soubor {path} nelze zapsat: {error}"
 
 #: crates/bigiris/src/error_text.rs:38
 msgid ""
 "animated or multi-page image: static editing stopped to avoid losing content"
 msgstr ""
+"animovaný nebo vícestránkový obrázek: statická úprava byla zastavena, aby "
+"nedošlo ke ztrátě obsahu"
 
 #: crates/bigiris/src/error_text.rs:41
 msgid ""
 "icon with several sizes or multi-part EXR: writing it back would keep only "
 "one"
 msgstr ""
+"ikona s více velikostmi nebo víceúsekový EXR: při zpětném zápisu by zůstala "
+"jen jedna"
 
 #: crates/bigiris/src/error_text.rs:44
 msgid "too many files with the same name: {path}"
@@ -103,23 +107,23 @@ msgstr "příliš mnoho souborů se stejným názvem: {path}"
 
 #: crates/bigiris/src/error_text.rs:61
 msgid "damaged or unreadable image data: {error}"
-msgstr ""
+msgstr "poškozená nebo nečitelná obrazová data: {error}"
 
 #: crates/bigiris/src/error_text.rs:63
 msgid "the encoder failed: {error}"
-msgstr ""
+msgstr "kodér selhal: {error}"
 
 #: crates/bigiris/src/error_text.rs:64
 msgid "invalid parameter: {error}"
-msgstr ""
+msgstr "neplatný parametr: {error}"
 
 #: crates/bigiris/src/error_text.rs:65
 msgid "the image is larger than BigIris can process"
-msgstr ""
+msgstr "obrázek je větší, než dokáže BigIris zpracovat"
 
 #: crates/bigiris/src/error_text.rs:67
 msgid "unsupported image: {error}"
-msgstr ""
+msgstr "nepodporovaný obrázek: {error}"
 
 #: crates/bigiris/src/error_text.rs:97 crates/bigiris/src/gui.rs:2453
 #: crates/bigiris/src/gui/dialogs/batch.rs:296
@@ -133,10 +137,14 @@ msgid ""
 "{available} GiB. Close other programs or use a smaller image. Swap does not "
 "count as free RAM."
 msgstr ""
+"Model {model} potřebuje pro tento krok přibližně {need} GiB volné paměti "
+"RAM; nyní je k dispozici {available} GiB. Zavřete jiné programy nebo "
+"použijte menší obrázek. Odkládací prostor (swap) se do volné paměti RAM "
+"nepočítá."
 
 #: crates/bigiris/src/error_text.rs:109
 msgid "could not check the memory free for AI: {error}"
-msgstr ""
+msgstr "nelze zjistit volnou paměť pro AI: {error}"
 
 #: crates/bigiris/src/error_text.rs:112
 msgid "AI failed: {error}"
@@ -157,7 +165,7 @@ msgstr ""
 
 #: crates/bigiris/src/error_text.rs:136
 msgid "not a weights file"
-msgstr ""
+msgstr "nejde o soubor vah"
 
 #: crates/bigiris/src/error_text.rs:140
 msgid "could not read the {model} weights at {path}: {error}"
@@ -345,7 +353,7 @@ msgstr "formát neuchovává EXIF"
 
 #: crates/bigiris/src/gui.rs:3022
 msgid "EXIF too large for this format"
-msgstr ""
+msgstr "EXIF je pro tento formát příliš velký"
 
 #: crates/bigiris/src/gui.rs:3023
 msgid "invalid EXIF"
@@ -665,19 +673,20 @@ msgstr "Dokončeno za {time} · {counts}"
 
 #: crates/bigiris/src/gui/batch_runner.rs:183
 msgid "Saved: {path}"
-msgstr ""
+msgstr "Uloženo: {path}"
 
 #: crates/bigiris/src/gui/batch_runner.rs:185
 msgid "Already exists, nothing written: {path}"
-msgstr ""
+msgstr "Již existuje, nic nebylo zapsáno: {path}"
 
 #: crates/bigiris/src/gui/batch_runner.rs:190
 msgid "Nothing would change: the image already has that size or ratio."
-msgstr ""
+msgstr "Nic by se nezměnilo: obrázek už má tuto velikost nebo poměr stran."
 
 #: crates/bigiris/src/gui/batch_runner.rs:198
 msgid "Already at that size or ratio, left as they were: {count}"
 msgstr ""
+"Již s touto velikostí nebo poměrem stran, ponecháno beze změny: {count}"
 
 #: crates/bigiris/src/gui/batch_runner.rs:223
 #: crates/bigiris/src/gui/dialogs/animate.rs:288
@@ -775,7 +784,7 @@ msgstr "Použít"
 
 #: crates/bigiris/src/gui/dialogs/adjust.rs:147
 msgid "Every value is neutral: nothing would change."
-msgstr ""
+msgstr "Všechny hodnoty jsou neutrální: nic by se nezměnilo."
 
 #: crates/bigiris/src/gui/dialogs/adjust.rs:154
 msgid "Adjusting…"
@@ -969,7 +978,7 @@ msgstr ""
 
 #: crates/bigiris/src/gui/dialogs/batch.rs:364
 msgid "Skipped as outputs of earlier runs: {files}"
-msgstr ""
+msgstr "Přeskočeno jako výstupy dřívějších běhů: {files}"
 
 #: crates/bigiris/src/gui/dialogs/batch.rs:424
 msgid "Add image folder"
@@ -1105,7 +1114,7 @@ msgstr "Oříznutí"
 
 #: crates/bigiris/src/gui/viewer/crop.rs:392
 msgid "Crop selection"
-msgstr ""
+msgstr "Výběr pro oříznutí"
 
 #: crates/bigiris/src/gui/viewer/crop.rs:396
 msgid "Free"
@@ -1123,11 +1132,11 @@ msgstr "Poměr stran"
 
 #: crates/bigiris/src/gui/viewer/crop.rs:476
 msgid "{width} × {height} px"
-msgstr ""
+msgstr "{width} × {height} px"
 
 #: crates/bigiris/src/gui/viewer/crop.rs:642
 msgid "Wait for the running tool to finish"
-msgstr ""
+msgstr "Počkejte na dokončení spuštěného nástroje"
 
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:46
 #: crates/bigiris/src/gui/dialogs/mod.rs:56
@@ -1201,7 +1210,7 @@ msgstr "Úpravy"
 
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:338
 msgid "Applies on top of earlier edits"
-msgstr ""
+msgstr "Použije se na již provedené úpravy"
 
 #: crates/bigiris/src/gui/viewer/edit_panel.rs:353
 msgid "Reset adjustments"
@@ -1434,7 +1443,7 @@ msgstr "Předpokládaná destinace"
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:164
 msgid "This format cannot store transparency: the bars will be white."
-msgstr ""
+msgstr "Tento formát neumí ukládat průhlednost: pruhy budou bílé."
 
 #: crates/bigiris/src/gui/dialogs/extent.rs:174
 msgid "Extend"
@@ -1596,11 +1605,12 @@ msgstr "Zachovat původní formát"
 
 #: crates/bigiris/src/gui/dialogs/mod.rs:247
 msgid "Replace the original files?"
-msgstr ""
+msgstr "Nahradit původní soubory?"
 
 #: crates/bigiris/src/gui/dialogs/mod.rs:249
 msgid "Originals that will be overwritten: {count}. This cannot be undone."
 msgstr ""
+"Počet originálů, které budou přepsány: {count}. Tuto akci nelze vrátit zpět."
 
 #: crates/bigiris/src/gui/dialogs/mod.rs:449
 msgid "{first} and {count} more"
@@ -1690,7 +1700,7 @@ msgstr "Rozměry"
 
 #: crates/bigiris/src/gui/dialogs/properties.rs:192
 msgid "(could not read the image data)"
-msgstr ""
+msgstr "(obrazová data nelze načíst)"
 
 #: crates/bigiris/src/gui/dialogs/properties.rs:208
 msgid "EXIF orientation"
@@ -1702,7 +1712,7 @@ msgstr "{orientation} · k opravě použijte Otočit ▸ Automaticky"
 
 #: crates/bigiris/src/gui/dialogs/properties.rs:227
 msgid "{width} × {height} px (stored as {stored_width} × {stored_height})"
-msgstr ""
+msgstr "{width} × {height} px (uloženo jako {stored_width} × {stored_height})"
 
 #: crates/bigiris/src/gui/dialogs/properties.rs:241
 msgid "Megapixels"
@@ -1722,83 +1732,83 @@ msgstr "Počet polí: {count}"
 
 #: crates/bigiris/src/gui/dialogs/properties.rs:302
 msgid "Camera maker"
-msgstr ""
+msgstr "Výrobce fotoaparátu"
 
 #: crates/bigiris/src/gui/dialogs/properties.rs:303
 msgid "Camera model"
-msgstr ""
+msgstr "Model fotoaparátu"
 
 #: crates/bigiris/src/gui/dialogs/properties.rs:304
 msgid "Lens"
-msgstr ""
+msgstr "Objektiv"
 
 #: crates/bigiris/src/gui/dialogs/properties.rs:305
 msgid "Software"
-msgstr ""
+msgstr "Software"
 
 #: crates/bigiris/src/gui/dialogs/properties.rs:306
 msgid "Author"
-msgstr ""
+msgstr "Autor"
 
 #: crates/bigiris/src/gui/dialogs/properties.rs:307
 msgid "Copyright"
-msgstr ""
+msgstr "Autorská práva"
 
 #: crates/bigiris/src/gui/dialogs/properties.rs:308
 msgid "Description"
-msgstr ""
+msgstr "Popis"
 
 #: crates/bigiris/src/gui/dialogs/properties.rs:309
 msgid "Date taken"
-msgstr ""
+msgstr "Datum pořízení"
 
 #: crates/bigiris/src/gui/dialogs/properties.rs:310
 msgid "Date modified"
-msgstr ""
+msgstr "Datum změny"
 
 #: crates/bigiris/src/gui/dialogs/properties.rs:311
 msgid "Orientation"
-msgstr ""
+msgstr "Orientace"
 
 #: crates/bigiris/src/gui/dialogs/properties.rs:312
 msgid "Exposure time"
-msgstr ""
+msgstr "Expoziční čas"
 
 #: crates/bigiris/src/gui/dialogs/properties.rs:313
 msgid "Aperture"
-msgstr ""
+msgstr "Clona"
 
 #: crates/bigiris/src/gui/dialogs/properties.rs:314
 msgid "ISO"
-msgstr ""
+msgstr "ISO"
 
 #: crates/bigiris/src/gui/dialogs/properties.rs:315
 msgid "Exposure compensation"
-msgstr ""
+msgstr "Expoziční korekce"
 
 #: crates/bigiris/src/gui/dialogs/properties.rs:316
 msgid "Focal length"
-msgstr ""
+msgstr "Ohnisková vzdálenost"
 
 #: crates/bigiris/src/gui/dialogs/properties.rs:317
 msgid "Flash"
-msgstr ""
+msgstr "Blesk"
 
 #: crates/bigiris/src/gui/dialogs/properties.rs:318
 msgid "White balance"
-msgstr ""
+msgstr "Vyvážení bílé"
 
 #: crates/bigiris/src/gui/dialogs/properties.rs:319
 msgid "Latitude"
-msgstr ""
+msgstr "Zeměpisná šířka"
 
 #: crates/bigiris/src/gui/dialogs/properties.rs:320
 msgid "Longitude"
-msgstr ""
+msgstr "Zeměpisná délka"
 
 #: crates/bigiris/src/gui/dialogs/properties.rs:321
 msgid "Altitude"
-msgstr ""
+msgstr "Nadmořská výška"
 
 #: crates/bigiris/src/gui/dialogs/remove_bg.rs:16
 msgid "Could not read the image: {error}"
@@ -2180,15 +2190,15 @@ msgstr "neplatný posun Y: {error}"
 
 #: crates/bigiris/src/main.rs:286
 msgid "width and height must be at least 1, got: {value}"
-msgstr ""
+msgstr "šířka a výška musí být alespoň 1, zadáno: {value}"
 
 #: crates/bigiris/src/main.rs:295
 msgid "not a number: {error}"
-msgstr ""
+msgstr "není číslo: {error}"
 
 #: crates/bigiris/src/main.rs:299
 msgid "{value} is outside {range}"
-msgstr ""
+msgstr "{value} je mimo rozsah {range}"
 
 #: crates/bigiris/src/main.rs:332
 msgid "expected W:H (e.g. 1:1, 9:16), got: {value}"
@@ -2266,6 +2276,8 @@ msgid ""
 "Write each output over its own input; an input whose output would be another "
 "file is refused"
 msgstr ""
+"Zapsat každý výstup přes jeho vlastní vstup; vstup, jehož výstupem by byl "
+"jiný soubor, se odmítne"
 
 #: crates/bigiris/src/main.rs:457 crates/bigiris/src/main.rs:469
 msgid "Input files"
@@ -2276,6 +2288,8 @@ msgid ""
 "Remove the metadata (EXIF, IPTC, XMP, comments) of each file by re-encoding "
 "it in its own format (headless)"
 msgstr ""
+"Odstranit metadata (EXIF, IPTC, XMP, komentáře) každého souboru jeho "
+"překódováním do vlastního formátu (bez grafického rozhraní)"
 
 #: crates/bigiris/src/main.rs:472
 msgid ""
@@ -2476,6 +2490,7 @@ msgstr "Nainstalovat do ~/.local/share (výchozí)"
 #: crates/bigiris/src/main.rs:730
 msgid "Stage the system-wide integrations under --destdir (packaging only)"
 msgstr ""
+"Připravit systémové integrace v adresáři --destdir (pouze pro balíčkování)"
 
 #: crates/bigiris/src/main.rs:738
 msgid ""
@@ -2539,11 +2554,11 @@ msgstr ""
 
 #: crates/bigiris/src/main.rs:1059
 msgid "not converted in place: {path} is a symbolic link"
-msgstr ""
+msgstr "nepřevedeno přímo v místě: {path} je symbolický odkaz"
 
 #: crates/bigiris/src/main.rs:1070
 msgid "not converted in place: the output would be {path}"
-msgstr ""
+msgstr "nepřevedeno přímo v místě: výstupem by byl {path}"
 
 #: crates/bigiris/src/main.rs:1126
 msgid "the original was already smaller; copied without recompression"
@@ -2555,7 +2570,7 @@ msgstr "rotate: použijte --degrees 90|180|270 nebo --auto"
 
 #: crates/bigiris/src/main.rs:1214
 msgid "invalid --bg: {value}; use #RRGGBB or #RRGGBBAA"
-msgstr ""
+msgstr "neplatná hodnota --bg: {value}; použijte #RRGGBB nebo #RRGGBBAA"
 
 #: crates/bigiris/src/main.rs:1250
 msgid "invalid target format: {error}"
@@ -2567,7 +2582,7 @@ msgstr "barevný profil je poškozený; barvy byly zpracovány jako sRGB"
 
 #: crates/bigiris/src/main.rs:1332
 msgid "nothing would change"
-msgstr ""
+msgstr "nic by se nezměnilo"
 
 #: crates/bigiris/src/main.rs:1341
 msgid "already exists: {path}"
@@ -2634,7 +2649,7 @@ msgstr "nelze vytvořit {path}: {error}"
 
 #: crates/bigiris/src/main.rs:1755
 msgid "the output of {path} in this batch"
-msgstr ""
+msgstr "výstup souboru {path} v této dávce"
 
 #: crates/bigiris/src/main.rs:1821
 msgid ""
@@ -2656,11 +2671,11 @@ msgstr "neplatný název souboru"
 
 #: crates/bigiris/src/main.rs:1897
 msgid "could not write in the document's folder: {error}"
-msgstr ""
+msgstr "do složky dokumentu nelze zapisovat: {error}"
 
 #: crates/bigiris/src/main.rs:1901
 msgid "could not create a temporary folder: {error}"
-msgstr ""
+msgstr "nelze vytvořit dočasnou složku: {error}"
 
 #: crates/bigiris/src/main.rs:1905
 msgid "could not run soffice: {error}"
@@ -2728,15 +2743,15 @@ msgstr "souborů: {count}"
 
 #: crates/bigiris/src/main.rs:2054
 msgid "kept, not written by BigIris: {path}"
-msgstr ""
+msgstr "ponecháno, nevytvořil jej BigIris: {path}"
 
 #: crates/bigiris/src/main.rs:2061
 msgid "removed, the package provides it: {path}"
-msgstr ""
+msgstr "odstraněno, poskytuje jej balíček: {path}"
 
 #: crates/bigiris/src/main.rs:2065
 msgid "FAILED: {error}"
-msgstr ""
+msgstr "SELHÁNÍ: {error}"
 
 #: crates/bigiris/src/main.rs:2087
 msgid ""
@@ -2764,11 +2779,11 @@ msgstr ""
 
 #: crates/bigiris/src/output_plan.rs:190
 msgid "these outputs would replace other inputs of the same run:"
-msgstr ""
+msgstr "tyto výstupy by nahradily jiné vstupy téhož běhu:"
 
 #: crates/bigiris/src/output_plan.rs:198
 msgid "Process them separately or use the skip or increment policy."
-msgstr ""
+msgstr "Zpracujte je odděleně nebo použijte postup skip nebo increment."
 
 #: crates/bigiris/src/output_plan.rs:248
 msgid "several inputs would write the same output file:"

@@ -88,7 +88,7 @@ fn fill_resize_dialog(
     page_fit.add(&fit_w);
     page_fit.add(&fit_h);
 
-    let stack = gtk::Stack::new();
+    let stack = gtk::Stack::builder().vhomogeneous(false).build();
     stack.add_named(&page_max_edge, Some("max-edge"));
     stack.add_named(&page_percent, Some("percent"));
     stack.add_named(&page_exact, Some("exact"));

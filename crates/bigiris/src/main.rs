@@ -723,12 +723,19 @@ enum UpscaleEngineArg {
     Lanczos,
 }
 
-fn main() -> color_eyre::Result<()> {
+fn main() -> std::process::ExitCode {
     if std::env::args_os().nth(1).is_some_and(|arg| arg == "--codec-worker") {
-        return codec::worker();
+        // The parent quotes this text inside its own sentence. Only the
+        // outer message: the errors raised here already print their cause.
+        return match codec::worker() {
+            Ok(()) => std::process::ExitCode::SUCCESS,
+            Err(error) => {
+                eprintln!("{error}");
+                std::process::ExitCode::FAILURE
+            }
+        };
     }
     apply_user_locale();
-    color_eyre::install()?;
     tracing_subscriber::fmt()
         .with_env_filter(
             tracing_subscriber::EnvFilter::try_from_default_env()
@@ -739,19 +746,34 @@ fn main() -> color_eyre::Result<()> {
     init_i18n();
 
     // clap exits with 2 on usage errors; 2 means partial failure here.
-    let cli = Cli::try_parse().unwrap_or_else(|error| {
-        let _ = error.print();
-        std::process::exit(i32::from(error.use_stderr()));
-    });
+    let cli = match Cli::try_parse() {
+        Ok(cli) => cli,
+        Err(error) => {
+            let _ = error.print();
+            return std::process::ExitCode::from(u8::from(error.use_stderr()));
+        }
+    };
 
     codec::configure();
     NOTIFY.store(cli.notify, std::sync::atomic::Ordering::Relaxed);
 
+    match run_command(cli) {
+        Ok(()) => std::process::ExitCode::SUCCESS,
+        Err(error) => {
+            let message = codec::sanitize_text(&error.to_string());
+            eprintln!("bigiris: {message}");
+            notify_failure(&message);
+            std::process::ExitCode::FAILURE
+        }
+    }
+}
+
+fn run_command(cli: Cli) -> color_eyre::Result<()> {
     if cli.self_test {
         return self_test();
     }
 
-    let result = match cli.command {
+    match cli.command {
         Some(Command::Convert { to, encode, overwrite, files }) => {
             run_convert(&to, encode.options(), overwrite.into(), &files)
         }
@@ -830,11 +852,7 @@ fn main() -> color_eyre::Result<()> {
             run_to_pdf(&files, overwrite.into(), std::time::Duration::from_secs(timeout))
         }
         None => dispatch_gui(cli.dialog, &cli.files),
-    };
-    if let Err(error) = &result {
-        notify_failure(&error.to_string());
     }
-    result
 }
 
 /// Set by `--notify`: a file-manager menu started this run.

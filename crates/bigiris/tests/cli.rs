@@ -279,6 +279,38 @@ fn exit_codes_follow_one_convention() {
 }
 
 #[test]
+fn fatal_errors_are_one_plain_line() {
+    let dir = tempfile::tempdir().unwrap();
+    let output = run(dir.path(), &["convert", "--to", "bogus", "x.png"]);
+    assert_eq!(output.status.code(), Some(1));
+    let error = String::from_utf8_lossy(&output.stderr);
+    assert!(error.starts_with("bigiris: invalid target format"), "{error}");
+    assert_eq!(error.lines().count(), 1, "{error}");
+    assert!(!error.contains('\x1b') && !error.contains("Location"), "{error}");
+}
+
+/// The worker's refusal reaches the parent's sentence without the report
+/// decoration of a Rust `main` (location, source path, backtrace hint).
+#[test]
+fn worker_refusals_carry_no_report_decoration() {
+    if !sandbox_available() {
+        return;
+    }
+    use image::codecs::gif::GifEncoder;
+    let dir = tempfile::tempdir().unwrap();
+    let file = std::fs::File::create(dir.path().join("a.gif")).unwrap();
+    let frame =
+        || image::Frame::new(image::RgbaImage::from_pixel(4, 4, image::Rgba([9, 9, 9, 255])));
+    GifEncoder::new(file).encode_frames([frame(), frame()]).unwrap();
+    let output = run(dir.path(), &["flip", "--axis", "horizontal", "a.gif"]);
+    assert_eq!(output.status.code(), Some(2));
+    let error = String::from_utf8_lossy(&output.stderr);
+    assert!(error.contains("animated"), "{error}");
+    assert!(!error.contains("Location") && !error.contains(".rs:"), "{error}");
+    assert!(!error.contains("RUST_BACKTRACE") && !error.contains('\x1b'), "{error}");
+}
+
+#[test]
 fn colliding_outputs_are_refused_before_any_work() {
     let dir = tempfile::tempdir().unwrap();
     sized_fixture(dir.path(), "a.png", 32, 24);

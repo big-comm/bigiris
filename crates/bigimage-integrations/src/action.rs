@@ -45,8 +45,8 @@ pub const TOP_LEVEL_LABEL: &str = "BigIris";
 
 /// Mime filter reused for every action (all image formats).
 const IMAGE_MIME: &[&str] = &["image/*"];
-/// Convert names its output `<stem>.png`, so an in-place PNG rewrite run on
-/// any other format would replace an unrelated sibling `<stem>.png`.
+/// Optimize PNG rewrites PNG files in place; `--in-place` also refuses a
+/// PNG whose output would be another file (no `.png` extension).
 const PNG_MIME: &[&str] = &["image/png"];
 const DIRECTORY_MIME: &[&str] = &["inode/directory"];
 
@@ -128,8 +128,8 @@ pub const SUB_PDF: Submenu =
 /// at the top, ahead of the multi-step Convert/Resize/etc. submenus.
 ///
 /// Quick actions never clobber an existing sibling file: most keep the
-/// default `--overwrite skip`, `increment` writes a numbered copy, and the
-/// one `replace` (Optimize PNG) only rewrites its own PNG input in place.
+/// default `--overwrite skip`, `increment` writes a numbered copy, and
+/// Optimize PNG uses `--in-place`, which only ever replaces its own input.
 pub const ACTIONS: &[Action] = &[
     // View (top level, one click): the most common entry point.
     Action {
@@ -417,7 +417,7 @@ pub const ACTIONS: &[Action] = &[
         id: "web-optimize-png",
         submenu: Some(SUB_WEB),
         label: n_("Optimize PNG (maximum compression)"),
-        command: "bigiris --notify convert --to png --target maximum --optimize --overwrite replace %F",
+        command: "bigiris --notify convert --to png --target maximum --optimize --in-place %F",
         icon: "applications-internet-symbolic",
         mime_types: PNG_MIME,
     },
@@ -577,10 +577,9 @@ mod tests {
     }
 
     #[test]
-    fn replace_actions_match_output_format() {
-        for a in ACTIONS.iter().filter(|a| a.command.contains("--overwrite replace")) {
-            let to = a.command.split_whitespace().skip_while(|w| *w != "--to").nth(1).unwrap();
-            assert_eq!(a.mime_types, [format!("image/{to}")], "{}", a.id);
+    fn no_action_replaces_other_files() {
+        for a in ACTIONS {
+            assert!(!a.command.contains("--overwrite replace"), "{}: use --in-place", a.id);
         }
     }
 

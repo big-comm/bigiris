@@ -45,7 +45,7 @@ module._ACTIONS = [
      ["convert", "--to", "png", "--overwrite", "skip"], "image-x-generic-symbolic", ["image/*"]),
     ("web-optimize-png", "web", "For the web", "applications-internet-symbolic",
      "Optimize PNG (maximum compression)",
-     ["convert", "--to", "png", "--overwrite", "replace"], "applications-internet-symbolic",
+     ["convert", "--to", "png", "--in-place"], "applications-internet-symbolic",
      ["image/png"]),
     ("pdf-convert", "pdf", "PDF", "application-pdf-symbolic", "Convert to PDF (LibreOffice)",
      ["to-pdf"], "application-pdf-symbolic", ["text/plain"]),

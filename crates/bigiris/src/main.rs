@@ -448,6 +448,12 @@ enum Command {
             help = gettext("What to do when the output file already exists")
         )]
         overwrite: OverwriteArg,
+        #[arg(
+            long,
+            conflicts_with = "overwrite",
+            help = gettext("Write each output over its own input; an input whose output would be another file is refused")
+        )]
+        in_place: bool,
         #[arg(value_name = "FILE", required = true, help = gettext("Input files"))]
         files: Vec<PathBuf>,
     },
@@ -836,8 +842,8 @@ fn run_command(cli: Cli) -> color_eyre::Result<()> {
     }
 
     match cli.command {
-        Some(Command::Convert { to, encode, overwrite, files }) => {
-            run_convert(&to, encode.options(), overwrite.into(), &files)
+        Some(Command::Convert { to, encode, overwrite, in_place, files }) => {
+            run_convert(&to, encode.options(), overwrite.into(), in_place, &files)
         }
         Some(Command::StripMetadata { overwrite, files }) => {
             run_strip_metadata(overwrite.into(), &files)
@@ -1003,17 +1009,30 @@ fn parse_target(value: &str) -> Result<QualityTarget, String> {
     })
 }
 
+/// `in_place` replaces each input with its output and refuses an input
+/// whose output is another file (another format, or no extension), which
+/// a replace would clobber.
 fn run_convert(
     to: &str,
     opts: EncodeOptions,
     policy: OverwritePolicy,
+    in_place: bool,
     files: &[PathBuf],
 ) -> color_eyre::Result<()> {
     let target = Format::parse(to).map_err(|e| {
         color_eyre::eyre::eyre!(with_error(&gettext("invalid target format: {error}"), e))
     })?;
-    tracing::info!(?target, ?opts, ?policy, count = files.len(), "convert");
+    let policy = if in_place { OverwritePolicy::Replace } else { policy };
+    tracing::info!(?target, ?opts, ?policy, in_place, count = files.len(), "convert");
     run_per_file(files, "convert", Naming::image(Some(target), policy), |f| {
+        let output_extension = target.output_extension(f);
+        if in_place && f.extension() != Some(output_extension) {
+            let output = codec::printable_path(&f.with_extension(output_extension));
+            return Err(bigimage_core::BigImageError::InvalidInput(fill(
+                &gettext("not converted in place: the output would be {path}"),
+                &[("path", &output)],
+            )));
+        }
         let report = bigimage_core::convert_file_report(f, None, target, &opts, policy)?;
         note_kept_original(f, report.kept_original);
         Ok(report.outcome)

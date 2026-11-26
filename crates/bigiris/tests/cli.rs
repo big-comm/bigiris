@@ -1040,3 +1040,32 @@ fn strip_metadata_writes_clean_copy() {
     assert!(clean.starts_with(&[0xFF, 0xD8]));
     assert!(!clean.windows(6).any(|w| w == b"Exif\0\0"), "EXIF kept");
 }
+
+/// Optimize PNG runs `convert --to png --in-place`: it rewrites the PNG it
+/// was given and never the differently named file its output would be.
+#[test]
+fn in_place_convert_never_replaces_siblings() {
+    if !sandbox_available() {
+        return;
+    }
+    let dir = tempfile::tempdir().unwrap();
+    fixture(dir.path(), "photo.PNG");
+    std::fs::copy(dir.path().join("photo.PNG"), dir.path().join("noext")).unwrap();
+    fixture(dir.path(), "shot.jpg");
+    for sibling in ["photo.png", "noext.png", "shot.png"] {
+        std::fs::write(dir.path().join(sibling), sibling).unwrap();
+    }
+    let output = run(dir.path(), &["convert", "--to", "png", "--in-place", "photo.PNG"]);
+    success(output);
+    image::open(dir.path().join("photo.PNG")).unwrap();
+    for input in ["noext", "shot.jpg"] {
+        let output = run(dir.path(), &["convert", "--to", "png", "--in-place", input]);
+        assert_eq!(output.status.code(), Some(2), "{input}");
+        assert!(String::from_utf8_lossy(&output.stderr).contains("not converted in place"));
+    }
+    for sibling in ["photo.png", "noext.png", "shot.png"] {
+        assert_eq!(std::fs::read(dir.path().join(sibling)).unwrap(), sibling.as_bytes());
+    }
+    let both = ["convert", "--to", "png", "--in-place", "--overwrite", "skip", "photo.PNG"];
+    assert_eq!(run(dir.path(), &both).status.code(), Some(1));
+}

@@ -284,6 +284,7 @@ bigiris --dialog=upscale photo.jpg
 bigiris convert --to avif --overwrite increment *.jpg
 bigiris convert --to webp --target smallest *.png
 bigiris convert --to jpg --quality 90 photo.png
+bigiris convert --to png --target maximum --optimize --in-place photo.png
 bigiris strip-metadata --overwrite increment photo.jpeg  # photo_1.jpeg, no EXIF
 bigiris resize --max-edge 1080 *.png
 bigiris resize --percent 50 photo.jpg
@@ -323,6 +324,9 @@ An output in the input's own format keeps the input's file name and extension
 extension, uses the standard extension (`photo.jpeg` to PNG writes
 `photo.png`). The same rule names the outputs of the menus and the dialogs.
 
+- `convert --in-place` writes each output over its own input and refuses an
+  input whose output would be another file (another format, or no
+  extension); the "Optimize PNG" menu action uses it.
 - `upscale --engine` accepts `auto` (default: Real-ESRGAN if installed,
   otherwise Lanczos3), `realesrgan` (fails if the package is missing) and
   `lanczos`.

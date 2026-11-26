@@ -133,13 +133,13 @@ ok "Dependency check finished"
 # honors config.toml, CARGO_TARGET_DIR and the default without restating the rule.
 TARGET_DIR=""
 if command -v python3 >/dev/null; then
+    # A failed query falls back below instead of ending the script under set -e.
     TARGET_DIR="$(
         cd "$SRC" && cargo metadata --no-deps --format-version 1 2>/dev/null |
             python3 -c 'import json,sys; print(json.load(sys.stdin)["target_directory"])' 2>/dev/null
-    )"
+    )" || TARGET_DIR=""
 fi
 [ -n "$TARGET_DIR" ] || TARGET_DIR="${CARGO_TARGET_DIR:-$SRC/target}"
-[ -n "$TARGET_DIR" ] || TARGET_DIR="$SRC/target"
 BIN="$TARGET_DIR/release/bigiris"
 if [ "$BUILD" -eq 1 ]; then
     say "Building bigiris (release, features: gui ai); this can take a few minutes"
@@ -150,8 +150,9 @@ else
 fi
 [ -x "$BIN" ] || die "Binary not found at $BIN (target-dir: $TARGET_DIR; run without --no-build)"
 
-# Refuse a headless build, which would replace the GUI binary.
-if ! ldd "$BIN" 2>/dev/null | grep -qi gtk-4; then
+# Refuse a headless build, which would replace the GUI binary. The output is
+# captured whole: `ldd | grep -q` fails under pipefail when ldd dies of SIGPIPE.
+if [[ $(ldd "$BIN" 2>/dev/null) != *[Gg][Tt][Kk]-4* ]]; then
     die "The binary is NOT linked against GTK4 (headless build). Rebuild with --features \"gui ai\"."
 fi
 

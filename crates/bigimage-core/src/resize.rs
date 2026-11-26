@@ -39,7 +39,8 @@ pub enum ResizeMode {
 }
 
 impl ResizeMode {
-    fn filename_suffix(&self) -> String {
+    /// What [`resize_file`] appends to the input's stem (`_1920`, `_50pct`).
+    pub fn filename_suffix(&self) -> String {
         match self {
             ResizeMode::MaxEdge(e) => format!("_{e}"),
             ResizeMode::Percent(p) => format!("_{p}pct"),

@@ -43,7 +43,7 @@ use bigimage_core::{
 };
 use clap::{Args, Parser, Subcommand, ValueEnum};
 use gettextrs::gettext;
-use output_plan::{Naming, plan_outputs};
+use output_plan::{Naming, OutputSuffix, plan_outputs};
 
 #[derive(Parser, Debug)]
 #[command(
@@ -1051,7 +1051,7 @@ fn run_convert(
     let target = parse_format(to)?;
     let policy = if in_place { OverwritePolicy::Replace } else { policy };
     tracing::info!(?target, ?opts, ?policy, in_place, count = files.len(), "convert");
-    let naming = Naming { suffixed: false, ..Naming::image(Some(target), policy) };
+    let naming = Naming::image(Some(target), policy, OutputSuffix::None);
     run_per_file(files, "convert", naming, |f| {
         // Publishing replaces the link itself and leaves its target as it was.
         if in_place && std::fs::symlink_metadata(f).is_ok_and(|meta| meta.is_symlink()) {
@@ -1083,7 +1083,7 @@ fn run_convert(
 fn run_strip_metadata(policy: OverwritePolicy, files: &[PathBuf]) -> color_eyre::Result<()> {
     let opts = EncodeOptions::default();
     tracing::info!(?policy, count = files.len(), "strip-metadata");
-    let naming = Naming { suffixed: false, ..Naming::image(None, policy) };
+    let naming = Naming::image(None, policy, OutputSuffix::None);
     run_per_file(files, "strip-metadata", naming, |f| {
         let format = bigimage_core::sniff_format(f).ok_or_else(|| {
             bigimage_core::BigImageError::UnsupportedFormat(codec::printable_path(f))
@@ -1138,7 +1138,8 @@ fn run_resize(
 ) -> color_eyre::Result<()> {
     let target = parse_optional_target(to)?;
     tracing::info!(?mode, ?filter, ?target, ?opts, ?policy, count = files.len(), "resize");
-    run_per_file(files, "resize", Naming::image(target, policy), |f| {
+    let naming = Naming::image(target, policy, OutputSuffix::Fixed(mode.filename_suffix()));
+    run_per_file(files, "resize", naming, |f| {
         bigimage_core::resize_file(f, mode, filter, target, &opts, policy)
     })
 }
@@ -1154,7 +1155,8 @@ fn run_rotate(
     let target = parse_optional_target(to)?;
     if auto {
         tracing::info!(?target, ?policy, count = files.len(), "rotate auto (EXIF)");
-        return run_per_file(files, "rotate", Naming::image(target, policy), |f| {
+        let suffix = OutputSuffix::Fixed(bigimage_core::rotate::AUTO_ROTATE_SUFFIX.into());
+        return run_per_file(files, "rotate", Naming::image(target, policy, suffix), |f| {
             bigimage_core::rotate_file_auto(f, target, policy)
         });
     }
@@ -1164,7 +1166,8 @@ fn run_rotate(
         })?
         .into();
     tracing::info!(?rotation, ?target, ?policy, count = files.len(), "rotate");
-    run_per_file(files, "rotate", Naming::image(target, policy), |f| {
+    let suffix = OutputSuffix::Fixed(rotation.filename_suffix().into());
+    run_per_file(files, "rotate", Naming::image(target, policy, suffix), |f| {
         bigimage_core::rotate_file(f, rotation, target, policy)
     })
 }
@@ -1177,7 +1180,8 @@ fn run_flip(
 ) -> color_eyre::Result<()> {
     let target = parse_optional_target(to)?;
     tracing::info!(?axis, ?target, ?policy, count = files.len(), "flip");
-    run_per_file(files, "flip", Naming::image(target, policy), |f| {
+    let suffix = OutputSuffix::Fixed(axis.filename_suffix().into());
+    run_per_file(files, "flip", Naming::image(target, policy, suffix), |f| {
         bigimage_core::flip_file(f, axis, target, policy)
     })
 }
@@ -1190,7 +1194,8 @@ fn run_crop(
 ) -> color_eyre::Result<()> {
     let target = parse_optional_target(to)?;
     tracing::info!(?rect, ?target, ?policy, count = files.len(), "crop");
-    run_per_file(files, "crop", Naming::image(target, policy), |f| {
+    let suffix = OutputSuffix::Fixed(rect.filename_suffix());
+    run_per_file(files, "crop", Naming::image(target, policy, suffix), |f| {
         bigimage_core::crop_file(f, rect, target, policy)
     })
 }
@@ -1211,10 +1216,11 @@ fn run_extent(
     })?;
     let opts = ExtentOptions { size, background, gravity };
     tracing::info!(?opts, ?target, ?policy, count = files.len(), "extent");
-    let naming = Naming {
-        per_image_suffix: matches!(size, ExtentSize::Aspect { .. }),
-        ..Naming::image(target, policy)
+    let suffix = match size.filename_suffix() {
+        Some(suffix) => OutputSuffix::Fixed(suffix),
+        None => OutputSuffix::PerImage(bigimage_core::extent::EXTENT_SUFFIX),
     };
+    let naming = Naming::image(target, policy, suffix);
     run_per_file(files, "extent", naming, |f| bigimage_core::extent_file(f, opts, target, policy))
 }
 
@@ -1226,7 +1232,8 @@ fn run_adjust(
 ) -> color_eyre::Result<()> {
     let target = parse_optional_target(to)?;
     tracing::info!(?ops, ?target, ?policy, count = files.len(), "adjust");
-    run_per_file(files, "adjust", Naming::image(target, policy), |f| {
+    let suffix = OutputSuffix::Fixed(ops.filename_suffix());
+    run_per_file(files, "adjust", Naming::image(target, policy, suffix), |f| {
         bigimage_core::adjust_file(f, ops, target, policy)
     })
 }
@@ -1268,7 +1275,8 @@ where
         }
         match result {
             Ok(ConvertOutcome::Written { output })
-                if naming.per_image_suffix && !outputs.insert(output.clone()) =>
+                if matches!(naming.suffix, OutputSuffix::PerImage(_))
+                    && !outputs.insert(output.clone()) =>
             {
                 failed += 1;
                 let output = codec::printable_path(&output);
@@ -1353,7 +1361,7 @@ fn run_remove_bg(
 ) -> color_eyre::Result<()> {
     tracing::info!(?model, ?policy, count = files.len(), "remove-bg");
     require_model(&bigimage_ai::background::MODEL)?;
-    let naming = Naming::image(Some(Format::Png), policy);
+    let naming = Naming::image(Some(Format::Png), policy, OutputSuffix::Fixed("_nobg".into()));
     let groups =
         plan_outputs(files, &naming).map_err(|message| color_eyre::eyre::eyre!(message))?;
 
@@ -1495,13 +1503,15 @@ fn run_upscale(
     let opts = bigimage_core::EncodeOptions::default();
     if method == Method::Lanczos {
         let mode = ResizeMode::Percent(f32::from(factor) * 100.0);
-        return run_per_file(files, "upscale", Naming::image(None, policy), |f| {
+        let suffix = OutputSuffix::Fixed(mode.filename_suffix());
+        return run_per_file(files, "upscale", Naming::image(None, policy, suffix), |f| {
             bigimage_core::resize_file(f, mode, Filter::Lanczos3, None, &opts, policy)
         });
     }
     let suffix = format!("_{}pct", u32::from(factor) * 100);
     let mut reported = false;
-    run_per_file(files, "upscale", Naming::image(None, policy), |f| {
+    let naming = Naming::image(None, policy, OutputSuffix::Fixed(suffix.clone()));
+    run_per_file(files, "upscale", naming, |f| {
         let outcome = bigimage_core::transform_file(f, &suffix, None, &opts, policy, |img| {
             bigimage_ai::upscale::upscale(&img, factor, method, |_| Continue(())).map_err(ai_error)
         });
@@ -1525,7 +1535,8 @@ fn run_denoise(policy: OverwritePolicy, files: &[PathBuf]) -> color_eyre::Result
     tracing::info!(?policy, count = files.len(), "denoise");
     let opts = retouch_options();
     let mut reported = false;
-    run_per_file(files, "denoise", Naming::image(None, policy), |f| {
+    let naming = Naming::image(None, policy, OutputSuffix::Fixed("_denoised".into()));
+    run_per_file(files, "denoise", naming, |f| {
         let outcome = bigimage_core::transform_file(f, "_denoised", None, &opts, policy, |img| {
             bigimage_ai::denoise::denoise(&img, |_| Continue(())).map_err(ai_error)
         });
@@ -1559,7 +1570,8 @@ fn run_inpaint(mask: &Path, policy: OverwritePolicy, files: &[PathBuf]) -> color
     tracing::info!(?mask, ?policy, count = files.len(), "inpaint");
     let opts = retouch_options();
     let mut reported = false;
-    run_per_file(files, "inpaint", Naming::image(None, policy), |f| {
+    let naming = Naming::image(None, policy, OutputSuffix::Fixed("_inpaint".into()));
+    run_per_file(files, "inpaint", naming, |f| {
         let outcome = bigimage_core::transform_file(f, "_inpaint", None, &opts, policy, |img| {
             bigimage_ai::inpaint::inpaint(&img, &mask_image, |_| Continue(())).map_err(ai_error)
         });
@@ -1673,8 +1685,7 @@ fn run_batch(profile: &std::path::Path, inputs: &[PathBuf]) -> color_eyre::Resul
         output_dir: profile.output_dir.clone(),
         extension: Some(format.extension()),
         policy,
-        per_image_suffix: false,
-        suffixed: false,
+        suffix: OutputSuffix::None,
     };
     // Each group shares one destination and runs in order on one worker,
     // which keeps `increment` numbering deterministic.
@@ -1810,13 +1821,8 @@ fn run_to_pdf(
             "LibreOffice (`soffice`) not found in PATH. Install `libreoffice-fresh` (recommended) or `libreoffice-still` (e.g. `sudo pacman -S libreoffice-fresh`)."
         ))
     })?;
-    let naming = Naming {
-        output_dir: None,
-        extension: Some("pdf"),
-        policy,
-        per_image_suffix: false,
-        suffixed: false,
-    };
+    let naming =
+        Naming { output_dir: None, extension: Some("pdf"), policy, suffix: OutputSuffix::None };
     let groups =
         plan_outputs(files, &naming).map_err(|message| color_eyre::eyre::eyre!(message))?;
 

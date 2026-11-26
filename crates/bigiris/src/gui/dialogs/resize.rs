@@ -254,7 +254,11 @@ fn fill_resize_dialog(
             let work_files: Vec<PathBuf> = (*files).clone();
             run_batch_async(
                 work_files,
-                crate::output_plan::Naming::image(target, policy),
+                crate::output_plan::Naming::image(
+                    target,
+                    policy,
+                    crate::output_plan::OutputSuffix::Fixed(mode.filename_suffix()),
+                ),
                 move |f| resize_file(f, mode, filter, target, &opts, policy),
                 gettext("Resizing"),
                 status.clone(),

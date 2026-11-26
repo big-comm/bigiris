@@ -39,6 +39,16 @@ pub enum ExtentSize {
 }
 
 impl ExtentSize {
+    /// What [`extent_file`] appends to the input's stem, when every image
+    /// gets the same canvas; an aspect target names each output after its
+    /// own canvas (see [`EXTENT_SUFFIX`]).
+    pub fn filename_suffix(&self) -> Option<String> {
+        match *self {
+            ExtentSize::Exact { width, height } => Some(filename_suffix(width, height)),
+            ExtentSize::Aspect { .. } => None,
+        }
+    }
+
     /// Resolve to concrete `(width, height)` against a `(src_w, src_h)`.
     /// Validates that the resolved canvas can contain the source — extent
     /// is an extend-only operation; smaller targets are rejected so users
@@ -318,8 +328,12 @@ pub fn apply_to(src: &DynamicImage, opts: &ExtentOptions) -> Result<DynamicImage
     })
 }
 
+/// Start of what [`extent_file`] appends to the input's stem:
+/// `_extent-<width>x<height>`, the canvas it wrote.
+pub const EXTENT_SUFFIX: &str = "_extent-";
+
 fn filename_suffix(width: u32, height: u32) -> String {
-    format!("_extent-{width}x{height}")
+    format!("{EXTENT_SUFFIX}{width}x{height}")
 }
 
 #[cfg(test)]

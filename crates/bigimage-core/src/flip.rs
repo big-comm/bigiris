@@ -16,7 +16,8 @@ pub enum FlipAxis {
 }
 
 impl FlipAxis {
-    fn filename_suffix(&self) -> &'static str {
+    /// What [`flip_file`] appends to the input's stem (`_flipH`).
+    pub fn filename_suffix(&self) -> &'static str {
         match self {
             FlipAxis::Horizontal => "_flipH",
             FlipAxis::Vertical => "_flipV",

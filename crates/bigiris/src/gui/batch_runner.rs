@@ -559,10 +559,11 @@ pub(super) fn run_batch_async<W>(
 #[cfg(test)]
 mod worker_tests {
     use super::*;
+    use crate::output_plan::OutputSuffix;
     use bigimage_core::{Format, OverwritePolicy};
 
     fn png_naming(policy: OverwritePolicy) -> crate::output_plan::Naming {
-        crate::output_plan::Naming::image(Some(Format::Png), policy)
+        crate::output_plan::Naming::image(Some(Format::Png), policy, OutputSuffix::None)
     }
 
     /// Awaits the events the way the dialogs do, through the wake-up.
@@ -760,7 +761,9 @@ mod worker_tests {
         image::RgbImage::new(32, 24).save(&first).unwrap();
         image::RgbImage::new(16, 12).save(&second).unwrap();
         let files = vec![first, second];
-        let webp = |policy| crate::output_plan::Naming::image(Some(Format::WebP), policy);
+        let webp = |policy| {
+            crate::output_plan::Naming::image(Some(Format::WebP), policy, OutputSuffix::None)
+        };
         let convert = |policy| {
             move |path: &Path| {
                 let opts = bigimage_core::EncodeOptions::default();

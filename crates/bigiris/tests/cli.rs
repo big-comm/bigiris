@@ -483,6 +483,29 @@ fn colliding_outputs_are_refused_before_any_work() {
     assert!(!dir.path().join("out").exists());
 }
 
+/// `a.png` rotated beside `a_rot90.png` would replace that input while it
+/// is being read: refused under replace, nothing written; skip leaves it.
+#[test]
+fn replace_refuses_an_output_naming_an_input() {
+    let dir = tempfile::tempdir().unwrap();
+    sized_fixture(dir.path(), "a.png", 32, 24);
+    std::fs::write(dir.path().join("a_rot90.png"), b"another input").unwrap();
+    let rotate = |policy| {
+        run(
+            dir.path(),
+            &["rotate", "--degrees", "90", "--overwrite", policy, "a.png", "a_rot90.png"],
+        )
+    };
+    let output = rotate("replace");
+    assert_eq!(output.status.code(), Some(1));
+    let error = String::from_utf8_lossy(&output.stderr);
+    assert!(error.contains("a.png → ") && error.contains("a_rot90.png"), "{error}");
+    assert_eq!(std::fs::read(dir.path().join("a_rot90.png")).unwrap(), b"another input");
+    assert!(!dir.path().join("a_rot90_rot90.png").exists(), "work ran after the refusal");
+    rotate("skip");
+    assert_eq!(std::fs::read(dir.path().join("a_rot90.png")).unwrap(), b"another input");
+}
+
 /// A link to an input from another folder writes its own output there,
 /// while two spellings of one path still run once.
 #[test]

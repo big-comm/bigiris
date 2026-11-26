@@ -76,7 +76,11 @@ pub(in crate::gui) fn build_rotate_dialog(
             let work_files: Vec<PathBuf> = (*files).clone();
             run_batch_async(
                 work_files,
-                crate::output_plan::Naming::image(target, policy),
+                crate::output_plan::Naming::image(
+                    target,
+                    policy,
+                    crate::output_plan::OutputSuffix::Fixed(rotation.filename_suffix().into()),
+                ),
                 move |f| rotate_file(f, rotation, target, policy),
                 gettext("Rotating"),
                 status.clone(),

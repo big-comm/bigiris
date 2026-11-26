@@ -332,10 +332,16 @@ fn fill_extent_dialog(
             let work_files: Vec<PathBuf> = (*files).clone();
             run_batch_async(
                 work_files,
-                crate::output_plan::Naming {
-                    per_image_suffix: matches!(opts.size, ExtentSize::Aspect { .. }),
-                    ..crate::output_plan::Naming::image(target, policy)
-                },
+                crate::output_plan::Naming::image(
+                    target,
+                    policy,
+                    match opts.size.filename_suffix() {
+                        Some(suffix) => crate::output_plan::OutputSuffix::Fixed(suffix),
+                        None => crate::output_plan::OutputSuffix::PerImage(
+                            bigimage_core::extent::EXTENT_SUFFIX,
+                        ),
+                    },
+                ),
                 move |f| {
                     let format = target.or_else(|| bigimage_core::sniff_format(f));
                     let background = written_background(opts.background, format);

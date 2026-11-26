@@ -201,8 +201,7 @@ pub(in crate::gui) fn build_batch_dialog(
                 output_dir: out_dir_snapshot.clone(),
                 extension: Some(fmt.extension()),
                 policy,
-                per_image_suffix: false,
-                suffixed: false,
+                suffix: crate::output_plan::OutputSuffix::None,
             };
             let controls = RunControls {
                 window: window.clone(),
@@ -244,7 +243,7 @@ pub(in crate::gui) fn build_batch_dialog(
                     });
                 }
             };
-            confirm_replacing_originals(&window, &inputs, &naming, start);
+            confirm_replacing_originals(&window, &apply_btn, &inputs, &naming, start);
         });
     }
 

@@ -21,7 +21,8 @@ pub enum Rotation {
 }
 
 impl Rotation {
-    fn filename_suffix(&self) -> &'static str {
+    /// What [`rotate_file`] appends to the input's stem (`_rot90`).
+    pub fn filename_suffix(&self) -> &'static str {
         match self {
             Rotation::Deg90 => "_rot90",
             Rotation::Deg180 => "_rot180",
@@ -77,6 +78,9 @@ pub fn rotate_file_auto(
     rotate_file_auto_with_options(input, target, &crate::EncodeOptions::default(), policy)
 }
 
+/// What [`rotate_file_auto`] appends to the input's stem.
+pub const AUTO_ROTATE_SUFFIX: &str = "_auto";
+
 /// Like [`rotate_file_auto`], with caller-supplied encoder options.
 pub fn rotate_file_auto_with_options(
     input: impl AsRef<Path>,
@@ -86,7 +90,7 @@ pub fn rotate_file_auto_with_options(
 ) -> Result<ConvertOutcome> {
     // Every decode applies the orientation tag already: the upright pixels
     // are written as they are.
-    crate::transform_file(input, "_auto", target, opts, policy, Ok)
+    crate::transform_file(input, AUTO_ROTATE_SUFFIX, target, opts, policy, Ok)
 }
 
 /// Largest axis-aligned rectangle (width, height) that fits inside a

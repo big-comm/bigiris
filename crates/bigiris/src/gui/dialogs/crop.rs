@@ -470,7 +470,11 @@ fn fill_crop_dialog(
             let work_files: Vec<PathBuf> = (*files).clone();
             run_batch_async(
                 work_files,
-                crate::output_plan::Naming::image(target, policy),
+                crate::output_plan::Naming::image(
+                    target,
+                    policy,
+                    crate::output_plan::OutputSuffix::Fixed(rect.filename_suffix()),
+                ),
                 move |f| crop_file(f, rect, target, policy),
                 gettext("Cropping"),
                 status.clone(),

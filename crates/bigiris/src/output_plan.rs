@@ -13,9 +13,7 @@ use gettextrs::gettext;
 use crate::codec::printable_path;
 use crate::fill;
 
-/// How a command names outputs: `<dir>/<stem><suffix>.<ext>`. The suffix is
-/// usually fixed per invocation, so inputs sharing directory, stem and
-/// extension resolve to the same file.
+/// How a command names outputs: `<dir>/<stem><suffix>.<ext>`.
 #[derive(Clone)]
 pub(crate) struct Naming {
     /// `None` writes each output next to its input.
@@ -23,26 +21,36 @@ pub(crate) struct Naming {
     /// `None` keeps each input's own format.
     pub(crate) extension: Option<&'static str>,
     pub(crate) policy: OverwritePolicy,
-    /// The suffix depends on each image (`extent --aspect` names the output
-    /// after the resulting canvas), so a shared stem is only a possible
-    /// collision: it is not refused up front, and the runner reports an
+    pub(crate) suffix: OutputSuffix,
+}
+
+/// What an output adds to its input's stem.
+#[derive(Clone)]
+pub(crate) enum OutputSuffix {
+    /// Nothing: an output in the input's own format is the input itself.
+    None,
+    /// The same text for every input (`_rot90`, `_1920`), as the core's
+    /// `filename_suffix` gives it.
+    Fixed(String),
+    /// Text that depends on each image and starts with this (`extent
+    /// --aspect` names the output after its canvas): a shared stem is only a
+    /// possible collision, not refused up front, and the runner reports an
     /// input that really replaced an earlier output.
-    pub(crate) per_image_suffix: bool,
-    /// Outputs add a suffix to the input's stem (`_1920`, `_rot90`). Without
-    /// one, an output in the input's own format is the input itself.
-    pub(crate) suffixed: bool,
+    PerImage(&'static str),
 }
 
 impl Naming {
-    /// Suffixed outputs next to their inputs, in `target` or each input's
-    /// own format.
-    pub(crate) fn image(target: Option<Format>, policy: OverwritePolicy) -> Naming {
+    /// Outputs next to their inputs, in `target` or each input's own format.
+    pub(crate) fn image(
+        target: Option<Format>,
+        policy: OverwritePolicy,
+        suffix: OutputSuffix,
+    ) -> Naming {
         Naming {
             output_dir: None,
             extension: target.map(|format| format.extension()),
             policy,
-            per_image_suffix: false,
-            suffixed: true,
+            suffix,
         }
     }
 }
@@ -108,31 +116,97 @@ pub(crate) fn plan_outputs(
     }
     // Under skip, inputs writing over one of themselves all leave it as it
     // is (`x.png` and `x.webp` converted to WebP): nothing to refuse.
+    let unsuffixed = matches!(naming.suffix, OutputSuffix::None);
     let collisions: Vec<_> = groups
         .iter()
         .filter(|group| group.len() > 1)
         .filter(|group| {
             naming.policy != OverwritePolicy::Skip
-                || naming.suffixed
+                || !unsuffixed
                 || !group.iter().any(|file| writes_itself(file, naming))
         })
         .collect();
     if !collisions.is_empty()
         && naming.policy != OverwritePolicy::Increment
-        && !naming.per_image_suffix
+        && !matches!(naming.suffix, OutputSuffix::PerImage(_))
     {
         return Err(collision_refusal(&collisions));
+    }
+    // `a_rot90.png` replaced by the output of `a.png` while it is an input
+    // of the same run, read before or after by another worker.
+    if naming.policy == OverwritePolicy::Replace {
+        let replaced = inputs_written_over(files, naming);
+        if !replaced.is_empty() {
+            return Err(replaced_input_refusal(&replaced));
+        }
     }
     Ok(groups)
 }
 
+/// `(input, other)` pairs where the output of `input` under `naming` is,
+/// or for a per-image suffix may be, `other`, another input of the run.
+/// Outputs without a suffix that name another input share its output and
+/// are refused as a collision already.
+fn inputs_written_over<'a>(files: &'a [PathBuf], naming: &Naming) -> Vec<(&'a Path, &'a Path)> {
+    let folders: Vec<PathBuf> = files
+        .iter()
+        .map(|file| {
+            let dir = file.parent().filter(|dir| !dir.as_os_str().is_empty());
+            let dir = dir.unwrap_or(Path::new("."));
+            std::fs::canonicalize(dir).unwrap_or_else(|_| dir.to_path_buf())
+        })
+        .collect();
+    let mut pairs = Vec::new();
+    for file in files {
+        let (dir, stem, extension) = output_key(file, naming);
+        for (other, other_dir) in files.iter().zip(&folders) {
+            let other_extension = other.extension().unwrap_or_default();
+            if *other_dir != dir || other_extension != extension.as_os_str() {
+                continue;
+            }
+            let other_stem = other.file_stem().unwrap_or_default().as_encoded_bytes();
+            let mut output_stem = stem.clone();
+            let names_other = match &naming.suffix {
+                OutputSuffix::None => false,
+                OutputSuffix::Fixed(suffix) => {
+                    output_stem.push(suffix);
+                    other_stem == output_stem.as_encoded_bytes()
+                }
+                OutputSuffix::PerImage(prefix) => {
+                    output_stem.push(prefix);
+                    other_stem.starts_with(output_stem.as_encoded_bytes())
+                }
+            };
+            if names_other {
+                pairs.push((file.as_path(), other.as_path()));
+            }
+        }
+    }
+    pairs
+}
+
+/// The refusal naming each input whose output would replace another input.
+fn replaced_input_refusal(pairs: &[(&Path, &Path)]) -> String {
+    let mut message = gettext("these outputs would replace other inputs of the same run:");
+    for (input, other) in pairs {
+        message.push_str("\n  ");
+        message.push_str(&printable_path(input));
+        message.push_str(" → ");
+        message.push_str(&printable_path(other));
+    }
+    message.push('\n');
+    message.push_str(&gettext("Process them separately or use the skip or increment policy."));
+    message
+}
+
 /// How many inputs a run under `replace` would write over: a same-format
-/// conversion next to its source is named like the source. Valid for
-/// namings without a suffix, as convert and batch name their outputs.
+/// conversion next to its source is named like the source. Suffixed
+/// outputs never are, and [`plan_outputs`] refuses those that would replace
+/// another input.
 #[cfg(feature = "gui")]
 pub(crate) fn replaced_inputs(files: &[PathBuf], naming: &Naming) -> usize {
     use std::collections::HashSet;
-    if naming.policy != OverwritePolicy::Replace {
+    if naming.policy != OverwritePolicy::Replace || !matches!(naming.suffix, OutputSuffix::None) {
         return 0;
     }
     let inputs: HashSet<PathBuf> =
@@ -383,7 +457,11 @@ mod tests {
         for file in &files {
             std::fs::write(file, b"").unwrap();
         }
-        let naming = Naming::image(Some(Format::Png), OverwritePolicy::Increment);
+        let naming = Naming::image(
+            Some(Format::Png),
+            OverwritePolicy::Increment,
+            OutputSuffix::Fixed("_x".into()),
+        );
         let groups = plan_outputs(&files, &naming).unwrap();
         let named: Vec<Vec<_>> = groups
             .iter()
@@ -398,7 +476,11 @@ mod tests {
         ];
         assert_eq!(named, expected);
         // Other policies never number outputs, so nothing is merged.
-        let naming = Naming::image(Some(Format::Png), OverwritePolicy::Skip);
+        let naming = Naming::image(
+            Some(Format::Png),
+            OverwritePolicy::Skip,
+            OutputSuffix::Fixed("_x".into()),
+        );
         assert_eq!(plan_outputs(&files, &naming).unwrap().len(), names.len());
     }
 
@@ -411,7 +493,14 @@ mod tests {
         let file = |name: &str| dir.path().join(name);
         let png = |names: &[&str]| {
             let files: Vec<_> = names.iter().map(|name| file(name)).collect();
-            plan_outputs(&files, &Naming::image(Some(Format::Png), OverwritePolicy::Skip))
+            plan_outputs(
+                &files,
+                &Naming::image(
+                    Some(Format::Png),
+                    OverwritePolicy::Skip,
+                    OutputSuffix::Fixed("_x".into()),
+                ),
+            )
         };
         assert_eq!(png(&["photo.PNG", "photo.png"]).unwrap().len(), 2);
         assert!(png(&["photo.jpeg", "photo.jpg"]).is_err());
@@ -429,7 +518,7 @@ mod tests {
         for file in &files {
             std::fs::write(file, b"").unwrap();
         }
-        let naming = |format, policy| Naming::image(Some(format), policy);
+        let naming = |format, policy| Naming::image(Some(format), policy, OutputSuffix::None);
         assert_eq!(replaced_inputs(&files, &naming(Format::Jpeg, OverwritePolicy::Replace)), 2);
         assert_eq!(replaced_inputs(&files, &naming(Format::Png, OverwritePolicy::Replace)), 1);
         assert_eq!(replaced_inputs(&files, &naming(Format::WebP, OverwritePolicy::Replace)), 0);
@@ -440,6 +529,38 @@ mod tests {
             ..naming(Format::Jpeg, OverwritePolicy::Replace)
         };
         assert_eq!(replaced_inputs(&files, &other_folder), 0);
+    }
+
+    /// Under replace, a suffixed output may not name another input: it
+    /// would be replaced while another worker reads it. Skip and increment
+    /// leave it alone, and an aspect letterbox refuses any name its canvas
+    /// could take.
+    #[test]
+    fn replace_refuses_writing_another_input() {
+        let dir = tempfile::tempdir().unwrap();
+        let files: Vec<_> = ["a.png", "a_rot90.png", "b.png", "b_extent-9x9.png"]
+            .map(|name| dir.path().join(name))
+            .into();
+        for file in &files {
+            std::fs::write(file, b"").unwrap();
+        }
+        let rotate = |policy| Naming::image(None, policy, OutputSuffix::Fixed("_rot90".into()));
+        let refusal = plan_outputs(&files, &rotate(OverwritePolicy::Replace)).unwrap_err();
+        assert!(refusal.contains("a.png") && refusal.contains("a_rot90.png"), "{refusal}");
+        assert!(!refusal.contains("b.png"), "{refusal}");
+        for policy in [OverwritePolicy::Skip, OverwritePolicy::Increment] {
+            assert!(plan_outputs(&files, &rotate(policy)).is_ok(), "{policy:?}");
+        }
+        let flip =
+            Naming::image(None, OverwritePolicy::Replace, OutputSuffix::Fixed("_flipH".into()));
+        assert!(plan_outputs(&files, &flip).is_ok());
+        let letterbox = Naming::image(
+            Some(Format::Png),
+            OverwritePolicy::Replace,
+            OutputSuffix::PerImage(bigimage_core::extent::EXTENT_SUFFIX),
+        );
+        let refusal = plan_outputs(&files, &letterbox).unwrap_err();
+        assert!(refusal.contains("b_extent-9x9.png") && !refusal.contains("a.png"), "{refusal}");
     }
 
     const EARLIER_NAMES: [&str; 10] = [

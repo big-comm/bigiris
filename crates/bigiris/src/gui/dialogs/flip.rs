@@ -69,7 +69,11 @@ pub(in crate::gui) fn build_flip_dialog(
             let work_files: Vec<PathBuf> = (*files).clone();
             run_batch_async(
                 work_files,
-                crate::output_plan::Naming::image(target, policy),
+                crate::output_plan::Naming::image(
+                    target,
+                    policy,
+                    crate::output_plan::OutputSuffix::Fixed(axis.filename_suffix().into()),
+                ),
                 move |f| flip_file(f, axis, target, policy),
                 gettext("Flipping"),
                 status.clone(),

@@ -130,8 +130,7 @@ fn fill_convert_dialog(
                 output_dir: out_dir_snapshot.clone(),
                 extension: Some(fmt.extension()),
                 policy,
-                per_image_suffix: false,
-                suffixed: false,
+                suffix: crate::output_plan::OutputSuffix::None,
             };
             let start = {
                 let (files, naming) = (files.clone(), naming.clone());
@@ -153,7 +152,7 @@ fn fill_convert_dialog(
                     );
                 }
             };
-            confirm_replacing_originals(&window, &files, &naming, start);
+            confirm_replacing_originals(&window, &apply_btn, &files, &naming, start);
         });
     }
 

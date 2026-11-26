@@ -25,8 +25,9 @@ impl CropRect {
         Self { x, y, width, height }
     }
 
-    fn filename_suffix(&self) -> String {
-        // ImageMagick-style geometry: WxH+X+Y.
+    /// What [`crop_file`] appends to the input's stem: the ImageMagick
+    /// geometry `_crop-WxH+X+Y`.
+    pub fn filename_suffix(&self) -> String {
         format!("_crop-{}x{}+{}+{}", self.width, self.height, self.x, self.y)
     }
 

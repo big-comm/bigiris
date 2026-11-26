@@ -37,6 +37,12 @@ impl Default for AdjustOps {
 }
 
 impl AdjustOps {
+    /// What [`adjust_file`] appends to the input's stem: `_` and
+    /// [`AdjustOps::suffix_tag`].
+    pub fn filename_suffix(&self) -> String {
+        format!("_{}", self.suffix_tag())
+    }
+
     /// Short human-readable tag suitable for file suffixes, showing only
     /// non-neutral axes: `"b10"`, `"c-20_s40"`, `"g1.80"`, etc.
     pub fn suffix_tag(&self) -> String {
@@ -114,8 +120,7 @@ pub fn adjust_file_with_options(
     policy: OverwritePolicy,
 ) -> Result<ConvertOutcome> {
     ops.validate()?;
-    let suffix = format!("_{}", ops.suffix_tag());
-    crate::transform_file(input, &suffix, target, opts, policy, |src| {
+    crate::transform_file(input, &ops.filename_suffix(), target, opts, policy, |src| {
         Ok(if ops.is_identity() { src } else { apply_to(src, ops) })
     })
 }

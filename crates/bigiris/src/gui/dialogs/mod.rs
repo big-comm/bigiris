@@ -220,37 +220,52 @@ fn selected_overwrite(row: &adw::ComboRow) -> OverwritePolicy {
 
 /// Run `start` once the user agrees to overwrite the inputs that `naming`
 /// would replace (see [`crate::output_plan::replaced_inputs`]); at once
-/// when it replaces none. Cancel is the default answer.
+/// when it replaces none. Cancel is the default answer. The count resolves
+/// every input, slow on a network folder, so it runs off the GTK loop with
+/// `apply_btn` held insensitive.
 fn confirm_replacing_originals(
     window: &adw::ApplicationWindow,
+    apply_btn: &gtk::Button,
     files: &[PathBuf],
     naming: &crate::output_plan::Naming,
     start: impl FnOnce() + 'static,
 ) {
-    let count = crate::output_plan::replaced_inputs(files, naming);
-    if count == 0 {
-        start();
-        return;
-    }
-    let alert = adw::AlertDialog::builder()
-        .heading(gettext("Replace the original files?"))
-        .body(fill(
-            &gettext("Originals that will be overwritten: {count}. This cannot be undone."),
-            &[("count", &count.to_string())],
-        ))
-        .build();
-    alert.add_response("cancel", &gettext("Cancel"));
-    alert.add_response("replace", &gettext("Replace"));
-    alert.set_response_appearance("replace", adw::ResponseAppearance::Destructive);
-    alert.set_default_response(Some("cancel"));
-    alert.set_close_response("cancel");
-    let start = Cell::new(Some(start));
-    alert.connect_response(Some("replace"), move |_, _| {
-        if let Some(start) = start.take() {
+    apply_btn.set_sensitive(false);
+    let (files, naming) = (files.to_vec(), naming.clone());
+    let job = gio::spawn_blocking(move || crate::output_plan::replaced_inputs(&files, &naming));
+    let (window, apply_btn) = (window.clone(), apply_btn.clone());
+    glib::MainContext::default().spawn_local(async move {
+        let count = job.await.unwrap_or_else(|panic| std::panic::resume_unwind(panic));
+        if count == 0 {
             start();
+            return;
         }
+        if !window.is_visible() {
+            return;
+        }
+        let alert = adw::AlertDialog::builder()
+            .heading(gettext("Replace the original files?"))
+            .body(fill(
+                &gettext("Originals that will be overwritten: {count}. This cannot be undone."),
+                &[("count", &count.to_string())],
+            ))
+            .build();
+        alert.add_response("cancel", &gettext("Cancel"));
+        alert.add_response("replace", &gettext("Replace"));
+        alert.set_response_appearance("replace", adw::ResponseAppearance::Destructive);
+        alert.set_default_response(Some("cancel"));
+        alert.set_close_response("cancel");
+        let start = Cell::new(Some(start));
+        alert.connect_response(None, move |_, response| match response {
+            "replace" => {
+                if let Some(start) = start.take() {
+                    start();
+                }
+            }
+            _ => apply_btn.set_sensitive(true),
+        });
+        alert.present(Some(&window));
     });
-    alert.present(Some(window));
 }
 
 /// "<title>: N" row summarizing the selected files.

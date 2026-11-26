@@ -441,6 +441,7 @@ pub(in crate::gui) fn build() -> EditPanelUi {
         .propagate_natural_height(true)
         .child(&content)
         .build();
+    crate::gui::scroll_on_wheel(&scroll, gtk::Orientation::Vertical);
     let frame = gtk::Box::new(gtk::Orientation::Vertical, 0);
     frame.add_css_class("osd");
     frame.add_css_class("edit-panel");

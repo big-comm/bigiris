@@ -28,17 +28,16 @@ pub(super) fn wait(context: &glib::MainContext, what: &str, condition: &dyn Fn()
     }
 }
 
-fn window_scroll_controller(window: &adw::ApplicationWindow) -> gtk::EventControllerScroll {
-    let controllers = window.observe_controllers();
-    (0..controllers.n_items())
+/// `true` when the canvas wheel controller swallowed a wheel step. It sits
+/// on the picture's scroller, so a wheel over the edit panel or the film
+/// strip, overlays beside it, never reaches it.
+fn wheel_is_consumed(state: &Rc<RefCell<ViewerState>>) -> bool {
+    let controllers = state.borrow().scroller.observe_controllers();
+    let wheel = (0..controllers.n_items())
         .filter_map(|i| controllers.item(i).and_downcast::<gtk::EventControllerScroll>())
         .next()
-        .expect("window wheel controller")
-}
-
-/// `true` when the wheel controller swallowed the event.
-fn wheel_is_consumed(window: &adw::ApplicationWindow) -> bool {
-    window_scroll_controller(window).emit_by_name::<bool>("scroll", &[&0.0f64, &1.0f64])
+        .expect("canvas wheel controller");
+    wheel.emit_by_name::<bool>("scroll", &[&0.0f64, &1.0f64])
 }
 
 fn thumb_size(state: &Rc<RefCell<ViewerState>>, offset: usize) -> Option<(i32, i32)> {
@@ -67,10 +66,13 @@ fn viewer_review_fixes() {
 
     // Start page: the wheel scrolls the page instead of zooming nothing.
     {
-        let (window, _state) = build_window_tracked(&app, Rc::new(Vec::new()), 0);
+        let (window, start_page) = build_window_tracked(&app, Rc::new(Vec::new()), 0);
         window.present();
         settle(&context, 100);
-        assert!(!wheel_is_consumed(&window), "start page wheel was swallowed");
+        assert!(
+            !wheel_is_consumed(&start_page.upgrade().unwrap()),
+            "start page wheel was swallowed"
+        );
         window.destroy();
     }
 
@@ -99,11 +101,11 @@ fn viewer_review_fixes() {
     assert_eq!(thumb_size(&state, 2), Some((60, 40)), "small image was upscaled");
 
     // Finding 3: with an image the wheel zooms; with a dialog it does not.
-    assert!(wheel_is_consumed(&window), "wheel no longer zooms the image");
+    assert!(wheel_is_consumed(&state), "wheel no longer zooms the image");
     present_shortcuts_dialog(&window);
     settle(&context, 100);
     assert!(window.visible_dialog().is_some());
-    assert!(!wheel_is_consumed(&window), "wheel zoomed behind the shortcuts dialog");
+    assert!(!wheel_is_consumed(&state), "wheel zoomed behind the shortcuts dialog");
     window.visible_dialog().unwrap().close();
     settle(&context, 300);
     set_zoom(&state, ZoomState::Fit);
@@ -613,8 +615,11 @@ fn viewer_inline_crop() {
     // Arrow keys and the wheel do not navigate or zoom under the selection.
     handle_key(&state, gdk::Key::Right, gdk::ModifierType::empty());
     assert_eq!(state.borrow().idx, 0, "navigated while cropping");
-    assert!(wheel_is_consumed(&window));
-    assert!(matches!(state.borrow().zoom, ZoomState::Fit), "zoomed while cropping");
+    assert!(wheel_is_consumed(&state));
+    settle(&context, 300);
+    let s = state.borrow();
+    assert!(matches!(s.zoom, ZoomState::Fit) && s.pending_zoom.is_none(), "zoomed while cropping");
+    drop(s);
 
     // Keyboard selection: Shift+arrows move the bottom-right corner and
     // arrows move the selection, one step being 1 % of 400 px.

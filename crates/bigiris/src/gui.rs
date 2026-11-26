@@ -844,32 +844,8 @@ fn build_window_preloaded(
         .child(&film_strip_box)
         .build();
     film_strip_scroll.add_css_class("film-strip-bar");
-    // A horizontal-only ScrolledWindow ignores vertical wheel steps, and
-    // most mice only have those: map them onto the horizontal axis.
-    // Capture phase: the ScrolledWindow's own controller would otherwise
-    // claim the event first and drop the vertical part.
-    let strip_wheel = gtk::EventControllerScroll::new(gtk::EventControllerScrollFlags::VERTICAL);
-    strip_wheel.set_propagation_phase(gtk::PropagationPhase::Capture);
-    {
-        let strip = film_strip_scroll.downgrade();
-        strip_wheel.connect_scroll(move |controller, _dx, dy| {
-            let Some(strip) = strip.upgrade() else { return glib::Propagation::Proceed };
-            if dy == 0.0 {
-                return glib::Propagation::Proceed;
-            }
-            let adjustment = strip.hadjustment();
-            // Same step GTK uses for discrete wheel clicks.
-            let step = if controller.unit() == gdk::ScrollUnit::Surface {
-                dy
-            } else {
-                dy * adjustment.page_size().powf(2.0 / 3.0)
-            };
-            let max = (adjustment.upper() - adjustment.page_size()).max(adjustment.lower());
-            adjustment.set_value((adjustment.value() + step).clamp(adjustment.lower(), max));
-            glib::Propagation::Stop
-        });
-    }
-    film_strip_scroll.add_controller(strip_wheel);
+    // Most mice only have a vertical wheel: it scrolls the strip sideways.
+    scroll_on_wheel(&film_strip_scroll, gtk::Orientation::Horizontal);
 
     let film_strip_buttons = Vec::new();
 
@@ -1301,59 +1277,33 @@ fn build_window_preloaded(
     viewer::crop::connect(&state, &window);
     viewer::edit_panel::connect(&state, &window);
 
-    // Mouse-wheel zoom — live on the window so revealed chrome (film strip,
-    // header) doesn't steal wheel events. Capture phase pre-empts the
-    // ScrolledWindow's own scroll-to-scroll handler on the image area.
+    // Mouse-wheel zoom on the canvas only, in the capture phase so it comes
+    // before the ScrolledWindow's own scrolling: the edit panel and the film
+    // strip are overlays beside it and keep their wheel.
     let scroll_controller =
         gtk::EventControllerScroll::new(gtk::EventControllerScrollFlags::VERTICAL);
     scroll_controller.set_propagation_phase(gtk::PropagationPhase::Capture);
     {
         let state = Rc::downgrade(&state);
-        let scroller = scroller.downgrade();
         scroll_controller.connect_scroll(move |controller, _dx, dy| {
             let Some(state) = state.upgrade() else {
                 return glib::Propagation::Proceed;
             };
-            let Some(scroller) = scroller.upgrade() else {
-                return glib::Propagation::Proceed;
-            };
-            // Without an image (start page, error page) or with an in-window
-            // dialog open, the wheel must scroll that content instead.
+            // Nothing to zoom, or an in-window dialog over the picture.
+            if state.borrow().texture.is_none()
+                || state.borrow().window().visible_dialog().is_some()
             {
-                let s = state.borrow();
-                if s.texture.is_none()
-                    || s.stack.visible_child_name().as_deref() != Some("picture")
-                    || s.window().visible_dialog().is_some()
-                {
-                    return glib::Propagation::Proceed;
-                }
+                return glib::Propagation::Proceed;
             }
-            // Over the revealed film strip the wheel scrolls the strip; the
-            // strip's own controller turns vertical steps into horizontal.
-            let position = controller.current_event().and_then(|e| e.position());
-            if let Some((wx, wy)) = position {
-                let s = state.borrow();
-                let over_chrome =
-                    s.window().pick(wx, wy, gtk::PickFlags::DEFAULT).is_some_and(|widget| {
-                        widget.is_ancestor(&s.strip_revealer)
-                            || widget.is_ancestor(&s.edit_ui.revealer)
-                    });
-                if over_chrome {
-                    return glib::Propagation::Proceed;
-                }
+            // The selection is drawn for the picture at Fit: zooming would
+            // move the picture under it (as + and - are held back).
+            if viewer::crop::is_active(&state) {
+                return glib::Propagation::Stop;
             }
-            // The scroll controller lives on the window, so event.position()
-            // is in window-root coords. Convert to scroller-local coords so
-            // adjust_zoom can anchor the re-scroll on the pixel under the
-            // pointer: root.compute_point(&scroller, pt) — NOT the reverse.
-            let cursor = position.and_then(|(wx, wy)| {
-                let root = scroller.root()?;
-                let pt = graphene::Point::new(wx as f32, wy as f32);
-                root.compute_point(&scroller, &pt).map(|p| (f64::from(p.x()), f64::from(p.y())))
-            });
             let surface = controller.unit() == gdk::ScrollUnit::Surface;
             if let Some(factor) = zoom::scroll_factor(dy, surface) {
-                adjust_zoom(&state, factor, cursor);
+                // Anchored on the pointer the motion controller records.
+                adjust_zoom(&state, factor, None);
                 pulse_osd(&state);
                 glib::Propagation::Stop
             } else {
@@ -1361,7 +1311,7 @@ fn build_window_preloaded(
             }
         });
     }
-    window.add_controller(scroll_controller);
+    scroller.add_controller(scroll_controller);
 
     let zoom_motion = gtk::EventControllerMotion::new();
     zoom_motion.set_name(Some("bigiris-zoom-pointer"));
@@ -1720,6 +1670,36 @@ fn center_film_strip(state: &Rc<RefCell<ViewerState>>) -> bool {
     let target = rect.x() as f64 - (viewport_w - rect.width() as f64) / 2.0;
     strip.hadjustment().set_value(target.max(0.0));
     true
+}
+
+/// Make a vertical wheel scroll `scroller` along `axis` by GTK's own step.
+/// The controller runs in the capture phase, before the widget under the
+/// pointer: a slider or spin button that the content brings under a still
+/// pointer would otherwise take the wheel and change its value, and a
+/// horizontal-only scroller would drop the vertical steps.
+pub(in crate::gui) fn scroll_on_wheel(scroller: &gtk::ScrolledWindow, axis: gtk::Orientation) {
+    let wheel = gtk::EventControllerScroll::new(gtk::EventControllerScrollFlags::VERTICAL);
+    wheel.set_propagation_phase(gtk::PropagationPhase::Capture);
+    let weak = scroller.downgrade();
+    wheel.connect_scroll(move |controller, _dx, dy| {
+        let Some(scroller) = weak.upgrade() else { return glib::Propagation::Proceed };
+        if dy == 0.0 {
+            return glib::Propagation::Proceed;
+        }
+        let adjustment = match axis {
+            gtk::Orientation::Horizontal => scroller.hadjustment(),
+            _ => scroller.vadjustment(),
+        };
+        let step = if controller.unit() == gdk::ScrollUnit::Surface {
+            dy
+        } else {
+            dy * adjustment.page_size().powf(2.0 / 3.0)
+        };
+        let max = (adjustment.upper() - adjustment.page_size()).max(adjustment.lower());
+        adjustment.set_value((adjustment.value() + step).clamp(adjustment.lower(), max));
+        glib::Propagation::Stop
+    });
+    scroller.add_controller(wheel);
 }
 
 /// Register a CssProvider carrying [`THEATER_CSS`] on the default display.

@@ -328,29 +328,13 @@ mod tests {
         assert!(ensure_static_local(&path).is_err());
     }
 
-    /// Real animated AVIF from libavif, when `avifenc` is available.
+    /// Two-frame sequence written by libavif's `avifenc -s 10 -q 50`.
     #[test]
     fn avifenc_image_sequence_is_not_static() {
         let dir = tempfile::tempdir().unwrap();
-        let mut frames = Vec::new();
-        for (i, color) in [[255, 0, 0], [0, 0, 255]].into_iter().enumerate() {
-            let frame = dir.path().join(format!("f{i}.png"));
-            image::RgbImage::from_pixel(8, 8, image::Rgb(color)).save(&frame).unwrap();
-            frames.push(frame);
-        }
-        let output = dir.path().join("anim.avif");
-        let status = std::process::Command::new("avifenc")
-            .args(["-s", "10", "-q", "50"])
-            .args(&frames)
-            .arg(&output)
-            .stdout(std::process::Stdio::null())
-            .stderr(std::process::Stdio::null())
-            .status();
-        if !status.is_ok_and(|status| status.success()) {
-            eprintln!("avifenc unavailable; skipping real image-sequence check");
-            return;
-        }
-        assert!(matches!(ensure_static_local(&output), Err(BigImageError::InvalidInput(_))));
+        let path = dir.path().join("anim.avif");
+        std::fs::write(&path, include_bytes!("../tests/fixtures/avif-sequence.avif")).unwrap();
+        assert!(matches!(ensure_static_local(&path), Err(BigImageError::InvalidInput(_))));
     }
 
     #[test]

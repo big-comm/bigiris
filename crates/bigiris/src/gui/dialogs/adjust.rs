@@ -159,6 +159,10 @@ fn fill_adjust_dialog(
                 saturation: saturation.value() as f32,
                 gamma: gamma.value() as f32,
             };
+            if ops == AdjustOps::default() {
+                status.set_text(&gettext("Every value is neutral: nothing would change."));
+                return;
+            }
             let target = selected_target_format(&target_row);
             let policy = selected_overwrite(&overwrite_row);
 

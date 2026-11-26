@@ -100,6 +100,25 @@ fn viewer_review_fixes() {
     wait(&context, "ordinary thumbnail", &|| thumb_size(&state, 2).is_some());
     assert_eq!(thumb_size(&state, 2), Some((60, 40)), "small image was upscaled");
 
+    // The OSD line shows the zoom of the frame on screen, not the last one:
+    // with nothing cached, the frame arrives after the pulse.
+    state.borrow_mut().frame_cache.clear();
+    navigate_relative(&state, -1);
+    wait(&context, "tall frame", &|| {
+        let s = state.borrow();
+        s.current_ready && s.idx == 0
+    });
+    {
+        let s = state.borrow();
+        let (osd, zoom) = (s.osd_label.label(), s.zoom_level.label());
+        assert!(osd.ends_with(zoom.as_str()), "OSD {osd:?}, header {zoom:?}");
+    }
+    navigate_relative(&state, 1);
+    wait(&context, "back to the first", &|| {
+        let s = state.borrow();
+        s.current_ready && s.idx == 1
+    });
+
     // Finding 3: with an image the wheel zooms; with a dialog it does not.
     assert!(wheel_is_consumed(&state), "wheel no longer zooms the image");
     present_shortcuts_dialog(&window);

@@ -1217,7 +1217,7 @@ fn build_window_preloaded(
         let state = Rc::downgrade(&state);
         scroller.hadjustment().connect_changed(move |_| {
             if let Some(Ok(s)) = state.upgrade().as_ref().map(|state| state.try_borrow()) {
-                s.zoom_level.set_label(&zoom_percent_label(&s));
+                show_zoom_level(&s);
             }
         });
     }
@@ -1762,22 +1762,34 @@ fn toggle_theater(state: &Rc<RefCell<ViewerState>>) {
 
 /// Compose the OSD pill text for the current file/zoom, mpv-style:
 /// `name.jpg · 3/12 · 85%`.
-fn osd_text(state: &Rc<RefCell<ViewerState>>) -> String {
-    let s = state.borrow();
+fn osd_text(s: &ViewerState) -> String {
     if s.files.is_empty() {
         return String::new();
     }
     let name = crate::codec::printable_name(&s.files[s.idx]);
-    format!("{} · {}/{} · {}", name, s.idx + 1, s.files.len(), zoom_percent_label(&s))
+    format!("{} · {}/{} · {}", name, s.idx + 1, s.files.len(), zoom_percent_label(s))
+}
+
+/// Show the current zoom in the header and, while the OSD holds the file
+/// line rather than a notice, in the OSD too: the one owner of both, so the
+/// pill never keeps the zoom of the previous frame.
+fn show_zoom_level(s: &ViewerState) {
+    s.zoom_level.set_label(&zoom_percent_label(s));
+    let line = osd_text(s);
+    if let Some((file, _zoom)) = line.rsplit_once(" · ")
+        && s.osd_label.label().starts_with(file)
+    {
+        s.osd_label.set_label(&line);
+    }
 }
 
 /// Sync the OSD label to the current file/zoom without touching visibility.
 fn refresh_osd(state: &Rc<RefCell<ViewerState>>) {
-    let text = osd_text(state);
-    let revealer = {
+    let (revealer, text) = {
         let s = state.borrow();
+        let text = osd_text(&s);
         s.osd_label.set_label(&text);
-        s.osd_revealer.clone()
+        (s.osd_revealer.clone(), text)
     };
     revealer.set_visible(!text.is_empty());
 }
@@ -3157,7 +3169,7 @@ fn show_frame(
     }
     s.texture = Some(texture);
     apply_zoom(s);
-    s.zoom_level.set_label(&zoom_percent_label(s));
+    show_zoom_level(s);
     s.histogram_area.queue_draw();
 }
 
@@ -3398,7 +3410,7 @@ fn apply_decoded_frame(state: &Rc<RefCell<ViewerState>>, frame: DecodedFrame) {
             let name = crate::codec::printable_name(&frame.path);
             let description = format!("{name}\n{error}");
             s.error_page.set_description(Some(&glib::markup_escape_text(&description)));
-            s.zoom_level.set_label(&zoom_percent_label(&s));
+            show_zoom_level(&s);
             drop(s);
             show_page(state, "error");
         }

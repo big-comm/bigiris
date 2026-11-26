@@ -621,13 +621,10 @@ mod tests {
         assert!(matches!(back, ConvertOutcome::Written { .. }));
     }
 
+    /// Regression: an in-place Replace once deleted the source; it must
+    /// publish a complete file through the temporary sibling.
     #[test]
-    fn replace_in_place_failure_keeps_source() {
-        // Regression: Replace with output == input must never destroy the
-        // original on an encode failure. We force a failure by feeding an
-        // EXR target a path whose parent we make unwritable is brittle, so
-        // instead assert the happy in-place replace leaves a valid image
-        // (the atomic temp+rename path) — the destructive bug deleted it.
+    fn in_place_replace_publishes_whole_file() {
         let dir = TempDir::new().unwrap();
         let src = write_fixture_png(dir.path(), "inplace.png");
         let before = std::fs::read(&src).unwrap();

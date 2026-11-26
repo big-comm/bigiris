@@ -71,22 +71,18 @@ pub(crate) fn image_error_text(error: &ImageError) -> String {
 }
 
 /// An I/O error as the system words it in the user's language. tempfile
-/// wraps OS errors in an English "at path" text that drops the error code,
-/// so the common kinds are mapped back to theirs.
+/// wraps an OS error in an English "... (os error N) at path ..." text that
+/// hides its code from `raw_os_error`, so the code is read back from that
+/// text; an error with its own message keeps it.
 pub(crate) fn io_error_text(error: &std::io::Error) -> String {
-    use std::io::ErrorKind;
-    let code = error.raw_os_error().or(match error.kind() {
-        ErrorKind::PermissionDenied => Some(libc::EACCES),
-        ErrorKind::NotFound => Some(libc::ENOENT),
-        ErrorKind::AlreadyExists => Some(libc::EEXIST),
-        ErrorKind::ReadOnlyFilesystem => Some(libc::EROFS),
-        ErrorKind::StorageFull => Some(libc::ENOSPC),
-        ErrorKind::QuotaExceeded => Some(libc::EDQUOT),
-        _ => None,
+    let text = error.to_string();
+    let code = error.raw_os_error().or_else(|| {
+        let (_, rest) = text.split_once("(os error ")?;
+        rest.split_once(')')?.0.parse().ok()
     });
     match code {
         Some(code) => std::io::Error::from_raw_os_error(code).to_string(),
-        None => error.to_string(),
+        None => text,
     }
 }
 
@@ -167,6 +163,19 @@ mod tests {
         assert!(!ai_error_text(&AiError::Processing("x\nok".into())).contains('\n'));
         let image = ImageError::IoError(std::io::Error::other("x\nok"));
         assert!(!image_error_text(&image).contains('\n'));
+    }
+
+    /// The system's own words for an OS error, also inside tempfile's
+    /// wrapper; a message of our own stays as it is.
+    #[test]
+    fn io_errors_keep_their_own_message() {
+        let removed =
+            std::io::Error::new(std::io::ErrorKind::NotFound, "the executable was removed");
+        assert_eq!(io_error_text(&removed), "the executable was removed");
+        let os = std::io::Error::from_raw_os_error(libc::EACCES);
+        let wrapped = std::io::Error::new(os.kind(), format!("{os} at path \"/x/.tmp\""));
+        assert_eq!(io_error_text(&wrapped), os.to_string());
+        assert_eq!(io_error_text(&os), os.to_string());
     }
 
     #[test]

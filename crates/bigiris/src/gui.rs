@@ -63,8 +63,16 @@ const DEFAULT_SLIDESHOW_INTERVAL_S: u32 = 5;
 /// `.theater-off` is the escape hatch that restores Adwaita chrome when
 /// the user toggles theater off.
 const THEATER_CSS: &str = "
-.theater, .theater scrolledwindow, .theater scrolledwindow > viewport {
+/* The canvas is dark in either color scheme, so the chrome drawn on it
+   (header, error page, loading notices) takes the dark palette's colors;
+   popovers and dialogs keep the scheme's own. */
+.theater {
     background-color: #101216;
+    --window-bg-color: #222226;
+    --window-fg-color: #ffffff;
+    --headerbar-bg-color: #2e2e32;
+    --headerbar-fg-color: #ffffff;
+    --headerbar-backdrop-color: #222226;
 }
 .film-strip-bar { border-radius: 14px; background-color: rgba(0, 0, 0, 0.6); }
 .film-strip { padding: 6px; }
@@ -86,9 +94,6 @@ const THEATER_CSS: &str = "
 /* The editing panel takes room from the picture: keep that room dark. */
 .theater .viewer-canvas { background-color: #101216; }
 .edit-panel { border-radius: 14px; background-color: rgba(24, 26, 31, 0.78); color: white; }
-.theater .edit-panel scrolledwindow, .theater .edit-panel scrolledwindow > viewport {
-    background-color: transparent;
-}
 .edit-panel .edit-section-title { font-weight: 700; font-size: 0.85em; opacity: 0.7; }
 .edit-panel scale { padding-top: 2px; padding-bottom: 2px; }
 ";

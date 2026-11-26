@@ -28,6 +28,7 @@ use crate::action::{ACTIONS, Action, TOP_LEVEL_LABEL};
 use crate::safe_fs::{FileMode, safe_write_with_mode};
 use crate::scope::{Scope, ScopePaths};
 
+const XML_DECLARATION: &str = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n";
 const EMPTY_XML: &str = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<actions>\n</actions>\n";
 
 /// `uca.xml` may hold hosts, users or tokens in custom commands. Thunar
@@ -57,9 +58,11 @@ pub fn install(paths: &ScopePaths) -> io::Result<Vec<PathBuf>> {
 }
 
 /// Drop every bigiris-owned `<action>` from `uca.xml`. In user scope, if
-/// what remains is just what Thunar would show without a personal file
-/// (no actions at all, or exactly the system defaults we seeded it with),
-/// the file is removed so Thunar falls back to the system defaults again.
+/// what remains is exactly what Thunar shows without a personal file (the
+/// system defaults we seeded it with, or nothing when there are none), the
+/// file is removed so Thunar falls back to the system defaults again. A
+/// file that is a symbolic link (a dotfile manager's) is rewritten instead,
+/// since removing the link would leave our actions in the real file.
 ///
 /// The CLI only runs this in user scope. The system-scope branch (strip
 /// actions an old BigIris package merged into `/etc/xdg/Thunar/uca.xml`,
@@ -67,17 +70,16 @@ pub fn install(paths: &ScopePaths) -> io::Result<Vec<PathBuf>> {
 /// file without any of our actions is left untouched.
 pub fn uninstall(paths: &ScopePaths) -> io::Result<Vec<PathBuf>> {
     let target = paths.thunar_uca();
-    if !target.exists() {
+    let Some(existing) = read_existing(&target)? else {
         return Ok(Vec::new());
-    }
-    let existing = std::fs::read_to_string(&target)?;
+    };
     let stripped = strip_bigiris_actions(&existing);
     if stripped == existing {
         return Ok(Vec::new());
     }
-    let only_defaults = !stripped.contains("<action>")
-        || same_xml(&stripped, &seed_from_system(&paths.xdg_config_dirs));
-    if paths.scope == Scope::User && only_defaults {
+    let only_defaults = same_xml(&stripped, &seed_from_system(&paths.xdg_config_dirs));
+    let is_link = std::fs::symlink_metadata(&target)?.is_symlink();
+    if paths.scope == Scope::User && only_defaults && !is_link {
         std::fs::remove_file(&target)?;
     } else {
         safe_write_with_mode(&target, stripped, paths.scope, UCA_MODE)?;
@@ -89,11 +91,20 @@ pub fn uninstall(paths: &ScopePaths) -> io::Result<Vec<PathBuf>> {
 /// empty file counts as none: Thunar cannot parse it either). A file that
 /// lost its closing `</actions>` is refused rather than rebuilt, because
 /// rebuilding would drop every custom action the user still has in it.
+/// Anything but a regular file (or a link to one) is refused: reading a
+/// FIFO would block.
 fn read_existing(path: &Path) -> io::Result<Option<String>> {
-    if !path.exists() {
-        return Ok(None);
-    }
-    let body = std::fs::read_to_string(path)?;
+    let body = match std::fs::metadata(path) {
+        Ok(meta) if meta.is_file() => std::fs::read_to_string(path)?,
+        Ok(_) => {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                format!("{} is not a regular file", path.display()),
+            ));
+        }
+        Err(e) if e.kind() == io::ErrorKind::NotFound => return Ok(None),
+        Err(e) => return Err(e),
+    };
     if body.trim().is_empty() {
         return Ok(None);
     }
@@ -108,6 +119,11 @@ fn read_existing(path: &Path) -> io::Result<Option<String>> {
                 path.display()
             ),
         ));
+    }
+    if !body.contains("<actions") {
+        // Earlier releases dropped the lines before the first action when
+        // it was ours, leaving a file Thunar cannot parse.
+        return Ok(Some(format!("{XML_DECLARATION}<actions>\n{}", body.trim_start())));
     }
     Ok(Some(body))
 }
@@ -150,13 +166,8 @@ fn strip_bigiris_actions(xml: &str) -> String {
         let is_ours = body.contains("<unique-id>bigiris-");
 
         if is_ours {
-            // Rewind out of the leading whitespace that used to separate this
-            // block from the previous line — we don't want to leave a gap.
-            let rtrimmed_len = out.trim_end_matches([' ', '\t']).len();
-            out.truncate(rtrimmed_len);
-            if out.ends_with('\n') {
-                // keep exactly one newline between surviving blocks
-            }
+            // Keep what precedes the block but not its indentation.
+            out.push_str(xml[cursor..action_start].trim_end_matches([' ', '\t']));
             cursor = action_end;
             // Eat exactly one trailing newline so blocks don't accumulate gaps.
             if xml.as_bytes().get(cursor).copied() == Some(b'\n') {
@@ -186,9 +197,7 @@ fn inject_before_close(xml: &str, new_actions: &str) -> String {
         }
         None => {
             // No sensible root element — produce one from scratch.
-            format!(
-                "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<actions>\n{new_actions}\n</actions>\n"
-            )
+            format!("{XML_DECLARATION}<actions>\n{new_actions}\n</actions>\n")
         }
     }
 }
@@ -397,6 +406,7 @@ mod tests {
         let second_count = second.matches(needle).count();
         assert_eq!(first_count, 1, "first run duplicated the action ({first_count})");
         assert_eq!(second_count, 1, "second run duplicated the action ({second_count})");
+        assert_eq!(first, second, "reinstall changed the file");
     }
 
     #[test]
@@ -569,6 +579,102 @@ mod tests {
         assert!(read(&real).contains("<unique-id>bigiris-view</unique-id>"));
     }
 
+    #[test]
+    fn uninstall_keeps_users_dotfile_symlink() {
+        let tmp = TempDir::new().unwrap();
+        let paths = ScopePaths::rooted_at(tmp.path());
+        std::fs::create_dir_all(paths.thunar_uca().parent().unwrap()).unwrap();
+        let real = tmp.path().join("dotfiles-uca.xml");
+        std::fs::write(&real, EMPTY_XML).unwrap();
+        std::os::unix::fs::symlink(&real, paths.thunar_uca()).unwrap();
+        install(&paths).unwrap();
+        assert_eq!(uninstall(&paths).unwrap(), [paths.thunar_uca()]);
+        assert!(std::fs::symlink_metadata(paths.thunar_uca()).unwrap().is_symlink());
+        let body = read(&real);
+        assert!(!body.contains("bigiris-") && body.contains("</actions>"), "{body}");
+    }
+
+    #[test]
+    fn uninstall_keeps_uca_emptied_by_user() {
+        let tmp = TempDir::new().unwrap();
+        let paths = home_with_system_defaults(&tmp);
+        // The user deleted Thunar's default actions before installing.
+        std::fs::create_dir_all(paths.thunar_uca().parent().unwrap()).unwrap();
+        std::fs::write(paths.thunar_uca(), EMPTY_XML).unwrap();
+        install(&paths).unwrap();
+        uninstall(&paths).unwrap();
+        let body = read(&paths.thunar_uca());
+        assert!(!body.contains("bigiris-") && !body.contains("1-default-terminal"), "{body}");
+    }
+
+    #[test]
+    fn user_action_mentioning_bigiris_survives() {
+        let tmp = TempDir::new().unwrap();
+        let paths = ScopePaths::rooted_at(tmp.path());
+        std::fs::create_dir_all(paths.thunar_uca().parent().unwrap()).unwrap();
+        let mine = "<action>\n\t<name>bigiris-convert to GIF</name>\n\
+                    \t<unique-id>1700000000-1</unique-id>\n\
+                    \t<command>bigiris-convert-helper %F</command>\n</action>";
+        std::fs::write(paths.thunar_uca(), format!("<actions>\n{mine}\n</actions>\n")).unwrap();
+        install(&paths).unwrap();
+        assert!(read(&paths.thunar_uca()).contains(mine));
+        uninstall(&paths).unwrap();
+        assert_eq!(read(&paths.thunar_uca()), format!("<actions>\n{mine}\n</actions>\n"));
+    }
+
+    #[test]
+    fn install_repairs_uca_missing_its_opening() {
+        let tmp = TempDir::new().unwrap();
+        let paths = ScopePaths::rooted_at(tmp.path());
+        std::fs::create_dir_all(paths.thunar_uca().parent().unwrap()).unwrap();
+        let mine = "<action><unique-id>user-1</unique-id></action>";
+        let broken = format!(
+            "\n<action>\n\t<unique-id>bigiris-view</unique-id>\n</action>\n{mine}\n</actions>\n"
+        );
+        std::fs::write(paths.thunar_uca(), broken).unwrap();
+        install(&paths).unwrap();
+        let body = read(&paths.thunar_uca());
+        assert!(body.starts_with(&format!("{XML_DECLARATION}<actions>\n{mine}\n")), "{body}");
+        assert_eq!(body.matches("<unique-id>bigiris-view</unique-id>").count(), 1);
+    }
+
+    #[test]
+    fn non_regular_uca_refused() {
+        let tmp = TempDir::new().unwrap();
+        let paths = ScopePaths::rooted_at(tmp.path());
+        let uca = paths.thunar_uca();
+        std::fs::create_dir_all(uca.parent().unwrap()).unwrap();
+        let fifo = tmp.path().join("fifo");
+        assert!(std::process::Command::new("mkfifo").arg(&fifo).status().unwrap().success());
+        let dir = tmp.path().join("dir");
+        std::fs::create_dir(&dir).unwrap();
+        for (target, is_link) in [(&fifo, false), (&fifo, true), (&dir, false), (&dir, true)] {
+            if is_link {
+                std::os::unix::fs::symlink(target, &uca).unwrap();
+            } else {
+                std::fs::rename(target, &uca).unwrap();
+            }
+            assert!(install(&paths).is_err(), "{target:?} link={is_link}");
+            assert!(uninstall(&paths).is_err(), "{target:?} link={is_link}");
+            if is_link {
+                std::fs::remove_file(&uca).unwrap();
+            } else {
+                std::fs::rename(&uca, target).unwrap();
+            }
+            let kind = std::fs::symlink_metadata(target).unwrap().file_type();
+            assert!(!kind.is_file(), "{target:?} replaced by a file");
+        }
+    }
+
+    #[test]
+    fn wrap_for_shell_escapes_single_quotes() {
+        let action = Action { command: "bigiris --bg 'dark gray' %F", ..ACTIONS[0] };
+        assert_eq!(
+            wrap_for_shell(&action),
+            r#"sh -c 'bigiris --bg '\''dark gray'\'' -- "$@"' bigiris-view %F"#
+        );
+    }
+
     /// A user home plus one system config dir holding Thunar's defaults
     /// (and a stray action an old BigIris package merged into it).
     fn home_with_system_defaults(tmp: &TempDir) -> ScopePaths {
@@ -713,8 +819,15 @@ mod tests {
                    <action><unique-id>bigiris-test</unique-id></action>\n\
                    <action><unique-id>other</unique-id></action>\n\
                    </actions>\n";
-        let stripped = strip_bigiris_actions(xml);
-        assert!(!stripped.contains("bigiris-test"));
-        assert!(stripped.contains("<unique-id>other</unique-id>"));
+        assert_eq!(
+            strip_bigiris_actions(xml),
+            "<actions>\n<action><unique-id>other</unique-id></action>\n</actions>\n"
+        );
+        let indented = "<?xml version=\"1.0\"?>\n<actions>\n  <action><unique-id>bigiris-a</unique-id>\
+                        </action>\n  <!-- mine -->\n</actions>\n";
+        assert_eq!(
+            strip_bigiris_actions(indented),
+            "<?xml version=\"1.0\"?>\n<actions>\n  <!-- mine -->\n</actions>\n"
+        );
     }
 }

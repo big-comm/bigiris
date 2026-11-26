@@ -25,6 +25,7 @@ pub mod extent;
 pub mod flip;
 mod format;
 pub mod metadata;
+mod metadata_scan;
 mod optimize;
 mod pipeline;
 pub mod preview;

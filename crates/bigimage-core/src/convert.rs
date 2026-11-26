@@ -97,8 +97,8 @@ pub struct ConvertReport {
 /// Never larger: when the target format is the source's own format and the
 /// re-encoded file would be larger than the input, the input bytes are
 /// published instead — unless `opts.strip_metadata` is set and the input
-/// carries EXIF/XMP/IPTC/text metadata the re-encode would have removed
-/// (privacy wins over size). Across formats the sizes are not comparable
+/// holds anything the encoders would not write (EXIF, XMP, text, C2PA,
+/// private chunks, bytes after the image): privacy wins over size. Across formats the sizes are not comparable
 /// and the encode is always written.
 pub fn convert_file_report(
     input: impl AsRef<Path>,

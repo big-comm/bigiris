@@ -601,7 +601,7 @@ fn smaller_original(
     let bytes = std::fs::read(original).ok()?;
     let format = image::guess_format(&bytes).ok().and_then(Format::from_image_format)?;
     if format != target
-        || (opts.strip_metadata && crate::metadata::carries_metadata(&bytes, format))
+        || (opts.strip_metadata && crate::metadata_scan::carries_metadata(&bytes, format))
     {
         return None;
     }

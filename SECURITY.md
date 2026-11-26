@@ -67,10 +67,13 @@ For context on what is already defense in depth:
   `prlimit` enforces 2 GiB of virtual address space, 30 s of CPU, a 60 s
   supervision deadline, 64 descriptors and a per-output-file limit of 512 MiB
   plus header. `bigiris --self-test` has a worker check from inside the hidden
-  host directories and network, each read-only mount, the `/tmp` size, the
+  host directories and network; that every mount but `/proc`, `/tmp`,
+  `/dev/pts` and six `/dev` device nodes is read-only; the `/tmp` size, the
   `prlimit` values, empty capability sets, its own session, the parent-death
-  signal, the environment and that every namespace differs from the caller's;
-  the deadline is the caller's and is tested there. This is not a total
+  signal and the environment; and that its cgroup, IPC, mount, network, PID
+  and UTS namespaces differ from the caller's, as does its user namespace
+  unless bwrap is installed setuid root (the one way it runs without one).
+  The deadline is the caller's and is tested there. This is not a total
   RSS/cgroup quota nor a seccomp filter.
 - Service menus written with `O_NOFOLLOW` to prevent following symlinks during
   `sudo install-integrations --system`.

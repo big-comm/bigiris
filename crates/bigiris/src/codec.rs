@@ -61,8 +61,9 @@ pub fn self_test() -> color_eyre::Result<()> {
     Ok(())
 }
 
-/// Namespaces `--unshare-all` gives the worker on every host; `user` is
-/// checked too when [`userns_hardening`] asks bwrap for one explicitly.
+/// Namespaces `--unshare-all` gives the worker on every host. `user` is
+/// checked too unless bwrap is setuid root, the one way it can run without
+/// creating a user namespace.
 const NAMESPACES: [&str; 6] = ["cgroup", "ipc", "mnt", "net", "pid", "uts"];
 
 /// Have a worker check, from inside, that its sandbox is the one
@@ -80,7 +81,9 @@ fn attest(input: &Path) -> ImageResult<()> {
     if !report.lines().next().is_some_and(|userns| accepted.contains(&userns)) {
         return Err(invalid(format!("invalid sandbox attestation: {}", sanitize_text(&report))));
     }
-    let user = userns_hardening().then_some("user");
+    use std::os::unix::fs::PermissionsExt;
+    let setuid = std::fs::metadata("/usr/bin/bwrap")?.permissions().mode() & 0o4000 != 0;
+    let user = (userns_hardening() || !setuid).then_some("user");
     for kind in NAMESPACES.into_iter().chain(user) {
         let own = std::fs::read_link(format!("/proc/self/ns/{kind}"))?;
         let theirs = report.lines().find_map(|line| line.strip_prefix(kind)?.strip_prefix(' '));
@@ -179,17 +182,38 @@ fn attest_process() -> color_eyre::Result<()> {
     Ok(())
 }
 
-/// Every mount but the 64 MiB `/tmp` is read-only.
+/// Mounts bwrap leaves writable (`--proc`, `--dev`, the 64 MiB `/tmp`),
+/// as a run of the [`execute`] command lists them in `/proc/self/mountinfo`.
+const WRITABLE_MOUNTS: [&str; 9] = [
+    "/proc",
+    "/dev/null",
+    "/dev/zero",
+    "/dev/full",
+    "/dev/random",
+    "/dev/urandom",
+    "/dev/tty",
+    "/dev/pts",
+    "/tmp",
+];
+
+/// Every mount outside [`WRITABLE_MOUNTS`] is read-only, the input included.
 fn attest_mounts(input: &Path) -> color_eyre::Result<()> {
-    let read_only = |path: &Path| -> rustix::io::Result<bool> {
-        Ok(rustix::fs::statvfs(path)?.f_flag.contains(rustix::fs::StatVfsMountFlags::RDONLY))
-    };
-    for mount in
-        [Path::new("/"), Path::new("/usr"), Path::new("/dev"), Path::new("/app/bigiris"), input]
-    {
-        if !read_only(mount)? {
-            color_eyre::eyre::bail!("{} is writable", mount.display());
+    let mounts = std::fs::read_to_string("/proc/self/mountinfo")?;
+    let mut input_mounted = false;
+    for line in mounts.lines() {
+        // Mount point and per-mount options are the fifth and sixth fields.
+        let mut fields = line.split(' ').skip(4);
+        let (Some(point), Some(options)) = (fields.next(), fields.next()) else {
+            color_eyre::eyre::bail!("unreadable mountinfo line: {line}");
+        };
+        input_mounted |= Path::new(point) == input;
+        let read_only = options.split(',').any(|option| option == "ro");
+        if !read_only && !WRITABLE_MOUNTS.contains(&point) {
+            color_eyre::eyre::bail!("{point} is writable");
         }
+    }
+    if !input_mounted {
+        color_eyre::eyre::bail!("{} is not its own mount", input.display());
     }
     let tmp = rustix::fs::statvfs("/tmp")?;
     if tmp.f_blocks.saturating_mul(tmp.f_frsize) != WORKER_TMP {
@@ -1906,13 +1930,13 @@ mod tests {
     }
 
     /// A sandbox edit (tokens replaced, their replacement) and the refusal
-    /// attest must give for it.
+    /// attest must give for it, or `|`-separated refusals of which one.
     type Weakened = (Vec<String>, Vec<String>, String);
 
     /// One row per limit `execute` sets. `--clearenv` and `--cap-drop ALL`
     /// have none: `env_clear` and bwrap's own capability drop for a user that
     /// is not root hide their removal.
-    fn weakened_sandboxes(app: &str) -> Vec<Weakened> {
+    fn weakened_sandboxes(app: &str, scratch: &str) -> Vec<Weakened> {
         let strings = |tokens: &[&str]| tokens.iter().map(|token| token.to_string()).collect();
         let row = |from: &[&str], to: &[&str], expected: &str| {
             (strings(from), strings(to), expected.to_owned())
@@ -1939,11 +1963,19 @@ mod tests {
                 "host directory visible",
             ),
         ];
+        // A writable mount the command does not make today, anywhere.
+        for (source, point) in
+            [(scratch, "/mnt"), ("/usr/share", "/usr/share"), (scratch, "/tmp/x")]
+        {
+            let to = ["--bind", source, point, "--dir", "/app"];
+            weakened.push(row(&["--dir", "/app"], &to, &format!("{point} is writable")));
+        }
         // `--unshare-all` with one namespace left out.
         let all = ["user-try", "ipc", "pid", "net", "uts", "cgroup-try"];
         for (left_out, expected) in [
             ("ipc", "ipc namespace"),
-            ("pid", "pid namespace"),
+            // The host's /proc may carry its own writable submounts.
+            ("pid", "pid namespace|/proc/"),
             ("net", "host network visible"),
             ("uts", "uts namespace"),
             ("cgroup-try", "cgroup namespace"),
@@ -1973,9 +2005,12 @@ mod tests {
         };
         let Some(result) = attest_with(None) else { return };
         result.unwrap();
-        for (from, to, expected) in weakened_sandboxes(binary.to_str().unwrap()) {
+        let scratch = tempfile::tempdir().unwrap();
+        let scratch = scratch.path().to_str().unwrap();
+        for (from, to, expected) in weakened_sandboxes(binary.to_str().unwrap(), scratch) {
             let error = attest_with(Some((from.clone(), to))).unwrap().unwrap_err().to_string();
-            assert!(error.contains(&expected), "without {from:?}: {error}");
+            let refused = expected.split('|').any(|expected| error.contains(expected));
+            assert!(refused, "without {from:?}: {error}");
         }
     }
 

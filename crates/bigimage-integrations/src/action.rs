@@ -45,6 +45,9 @@ pub const TOP_LEVEL_LABEL: &str = "BigIris";
 
 /// Mime filter reused for every action (all image formats).
 const IMAGE_MIME: &[&str] = &["image/*"];
+/// Convert names its output `<stem>.png`, so an in-place PNG rewrite run on
+/// any other format would replace an unrelated sibling `<stem>.png`.
+const PNG_MIME: &[&str] = &["image/png"];
 const DIRECTORY_MIME: &[&str] = &["inode/directory"];
 
 /// Mime filter for documents LibreOffice converts to PDF: the text,
@@ -123,9 +126,9 @@ pub const SUB_PDF: Submenu =
 /// single-click action: open the image in BigIris) deliberately sits
 /// at the top, ahead of the multi-step Convert/Resize/etc. submenus.
 ///
-/// `--overwrite skip` means the quick actions never clobber an existing
-/// sibling file; users who want to replace or increment go through the
-/// modal "More options…" path.
+/// Quick actions never clobber an existing sibling file: most keep the
+/// default `--overwrite skip`, `increment` writes a numbered copy, and the
+/// one `replace` (Optimize PNG) only rewrites its own PNG input in place.
 pub const ACTIONS: &[Action] = &[
     // View (top level, one click): the most common entry point.
     Action {
@@ -415,7 +418,7 @@ pub const ACTIONS: &[Action] = &[
         label: n_("Optimize PNG (maximum compression)"),
         command: "bigiris --notify convert --to png --target maximum --optimize --overwrite replace %F",
         icon: "applications-internet-symbolic",
-        mime_types: IMAGE_MIME,
+        mime_types: PNG_MIME,
     },
     // Letterbox presets extend the canvas instead of cropping when a network
     // forces a fixed ratio; 0d0e12 (soft black) matches the YouTube and
@@ -571,6 +574,14 @@ mod tests {
     fn every_command_uses_file_placeholder() {
         for a in ACTIONS {
             assert!(a.command.contains("%F"), "command without %F: {}: {}", a.id, a.command);
+        }
+    }
+
+    #[test]
+    fn replacing_actions_run_only_on_their_output_format() {
+        for a in ACTIONS.iter().filter(|a| a.command.contains("--overwrite replace")) {
+            let to = a.command.split_whitespace().skip_while(|w| *w != "--to").nth(1).unwrap();
+            assert_eq!(a.mime_types, [format!("image/{to}")], "{}", a.id);
         }
     }
 

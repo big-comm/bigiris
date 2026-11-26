@@ -43,6 +43,10 @@ module._ACTIONS = [
      "folder-pictures-symbolic", ["inode/directory"]),
     ("convert-png", "convert", "Convert", "document-save-as-symbolic", "PNG",
      ["convert", "--to", "png", "--overwrite", "skip"], "image-x-generic-symbolic", ["image/*"]),
+    ("web-optimize-png", "web", "For the web", "applications-internet-symbolic",
+     "Optimize PNG (maximum compression)",
+     ["convert", "--to", "png", "--overwrite", "replace"], "applications-internet-symbolic",
+     ["image/png"]),
     ("pdf-convert", "pdf", "PDF", "application-pdf-symbolic", "Convert to PDF (LibreOffice)",
      ["to-pdf"], "application-pdf-symbolic", ["text/plain"]),
 ]
@@ -68,6 +72,23 @@ class NautilusContract(unittest.TestCase):
         top = self.provider.get_file_items([file("image/png", "/tmp/a.png"),
                                             file("text/plain", "/tmp/a.txt")])[0]
         self.assertEqual(len(top.submenu.items), 1)  # Only image viewing.
+
+    def test_png_action_runs_on_png_only(self):
+        def submenus(files):
+            top = self.provider.get_file_items(files)[0]
+            return {item.options["name"]: item for item in top.submenu.items}
+
+        self.assertNotIn("BigIrisExtension::Sub::web", submenus([file("image/jpeg", "/tmp/a.jpg")]))
+        png = submenus([file("image/png", "/tmp/b.png")])
+        self.assertIn("BigIrisExtension::Sub::convert", png)
+        self.assertIn("BigIrisExtension::Sub::web", png)
+        both = submenus([file("image/jpeg", "/tmp/a.jpg"), file("image/png", "/tmp/b.png")])
+        optimize = both["BigIrisExtension::Sub::web"].submenu.items[0]
+        callback, args = optimize.callback
+        with patch.object(module.subprocess, "Popen") as popen:
+            callback(optimize, *args)
+        self.assertEqual(popen.call_args.args[0][-1], "/tmp/b.png")
+        self.assertNotIn("/tmp/a.jpg", popen.call_args.args[0])
 
     def test_untrusted_filenames_are_passed_as_literal_argv(self):
         paths = ["/tmp/$(touch hacked); ' ç.png", "/tmp/line\nbreak.png"]

@@ -248,6 +248,7 @@ fn wrap_for_shell(action: &Action) -> String {
 /// wildcards (`image/*`), directories and anything not mapped here.
 fn extensions_for(mime: &str) -> Option<&'static [&'static str]> {
     Some(match mime {
+        "image/png" => &["png"],
         "application/vnd.oasis.opendocument.text" => &["odt", "ott", "fodt"],
         "application/vnd.oasis.opendocument.spreadsheet" => &["ods", "ots", "fods"],
         "application/vnd.oasis.opendocument.presentation" => &["odp", "otp", "fodp"],
@@ -688,6 +689,14 @@ mod tests {
         assert_eq!(patterns(&["inode/directory"]), "*");
         assert_eq!(patterns(&["application/pdf", "text/plain"]), "*", "unmapped MIME → *");
         assert_eq!(patterns(&["text/csv"]), "*.csv;*.CSV");
+    }
+
+    #[test]
+    fn png_optimize_is_offered_on_png_files_only() {
+        let a = ACTIONS.iter().find(|a| a.id == "web-optimize-png").unwrap();
+        let xml = render_action(a);
+        assert!(xml.contains("<patterns>*.png;*.PNG</patterns>"), "{xml}");
+        assert!(xml.contains("<image-files/>"));
     }
 
     #[test]

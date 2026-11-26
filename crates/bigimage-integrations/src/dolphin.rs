@@ -142,8 +142,17 @@ mod tests {
             written.iter().map(|p| p.file_name().unwrap().to_string_lossy().into_owned()).collect();
         assert_eq!(
             names,
-            ["bigiris-view.desktop", "bigiris-batch-folder.desktop", "bigiris-pdf-convert.desktop"]
+            [
+                "bigiris-view.desktop",
+                "bigiris-batch-folder.desktop",
+                "bigiris-web-optimize-png.desktop",
+                "bigiris-pdf-convert.desktop"
+            ]
         );
+        let png = std::fs::read_to_string(&written[2]).unwrap();
+        assert!(png.contains("MimeType=image/png;\n"), "{png}");
+        assert_eq!(actions_line(&png).len(), 1, "{png}");
+        assert!(!menu_with("convert-png").contains("OptimizePng"));
         for path in &written {
             #[cfg(target_os = "linux")]
             assert_eq!(

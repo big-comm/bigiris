@@ -68,15 +68,17 @@ class BigIrisMenuProvider(GObject.GObject, Nautilus.MenuProvider):
             image_paths = [path for path, mime in selected if mime.startswith("image/")]
             return self._folder_items(folder_paths + image_paths)
 
-        # Paths per MIME filter. A selection that spans two filters (images
-        # and documents) gets no submenu, so no command runs on a file of the
-        # wrong type; actions outside submenus still run on their own files.
+        # Paths per MIME filter; each action runs only on the files its filter
+        # matches. A selection no single filter covers (images and documents)
+        # gets no submenu, while nested filters (image/* and image/png) do
+        # not; actions outside submenus still run on their own files.
         paths_by_filter = {}
         for action in _ACTIONS:
             patterns = tuple(action[7])
             if patterns != _FOLDER_MIMES:
                 paths_by_filter[patterns] = [path for path, mime in selected if _matches(mime, patterns)]
-        mixed = sum(1 for paths in paths_by_filter.values() if paths) > 1
+        matched = {path for paths in paths_by_filter.values() for path in paths}
+        mixed = not any(set(paths) == matched for paths in paths_by_filter.values())
 
         entries = []
         submenus = {}

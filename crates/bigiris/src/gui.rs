@@ -2477,7 +2477,13 @@ fn apply_op_to_image(img: image::DynamicImage, op: EditOp) -> image::DynamicImag
             }
         }
         EditOp::Straighten { tenths } => {
-            bigimage_core::rotate::straighten(&img, f64::from(tenths) / 10.0)
+            match bigimage_core::rotate::straighten(&img, f64::from(tenths) / 10.0) {
+                Ok(straightened) => straightened,
+                Err(error) => {
+                    tracing::warn!(%error, "straighten edit refused; image kept as is");
+                    img
+                }
+            }
         }
         // Fallible and slow: see `apply_op`.
         EditOp::RemoveBackground | EditOp::Upscale { .. } | EditOp::Denoise => img,

@@ -207,13 +207,20 @@ pub fn straightened_size(width: u32, height: u32, degrees: f64) -> (u32, u32) {
 /// largest axis-aligned rectangle inside, so no empty corner is left.
 /// Bilinear sampling, clamped to the source edge; the sample type and
 /// channel layout of the source are kept.
-pub fn straighten(src: &image::DynamicImage, degrees: f64) -> image::DynamicImage {
+///
+/// # Errors
+///
+/// [`crate::BigImageError::InvalidInput`] when the source widened to RGBA
+/// at its sample depth exceeds the processing limits.
+pub fn straighten(src: &image::DynamicImage, degrees: f64) -> Result<image::DynamicImage> {
     use image::DynamicImage as D;
     if !degrees.is_finite() || degrees.abs() < 1e-9 || src.width() == 0 || src.height() == 0 {
-        return src.clone();
+        return Ok(src.clone());
     }
+    let sample_bytes = src.color().bytes_per_pixel() / src.color().channel_count();
+    pipeline::check_dimensions(src.width(), src.height(), 4 * sample_bytes)?;
     let size = straightened_size(src.width(), src.height(), degrees);
-    match src {
+    Ok(match src {
         D::ImageRgb32F(_) | D::ImageRgba32F(_) => {
             let out = D::ImageRgba32F(rotate_buffer(&src.to_rgba32f(), degrees, size));
             if src.color().has_alpha() { out } else { D::ImageRgb32F(out.to_rgb32f()) }
@@ -236,7 +243,7 @@ pub fn straighten(src: &image::DynamicImage, degrees: f64) -> image::DynamicImag
                 _ => out,
             }
         }
-    }
+    })
 }
 
 /// A sample type [`straighten`] can interpolate.
@@ -371,7 +378,7 @@ mod straighten_tests {
             image::Rgb([255, 255, 255]),
         ));
         for degrees in [-45.0, -12.3, 0.1, 3.0, 30.0] {
-            let out = straighten(&white, degrees);
+            let out = straighten(&white, degrees).unwrap();
             assert_eq!(out.color(), image::ColorType::Rgb8);
             assert_eq!(
                 (out.width(), out.height()),
@@ -385,10 +392,10 @@ mod straighten_tests {
             40,
             image::Rgba([1000u16, 2000, 3000, 65535]),
         ));
-        let out = straighten(&alpha, 10.0);
+        let out = straighten(&alpha, 10.0).unwrap();
         assert_eq!(out.color(), image::ColorType::Rgba16);
         assert!(out.to_rgba16().pixels().all(|p| p.0 == [1000, 2000, 3000, 65535]));
-        assert_eq!(straighten(&white, 0.0), white);
+        assert_eq!(straighten(&white, 0.0).unwrap(), white);
     }
 
     #[test]
@@ -401,7 +408,7 @@ mod straighten_tests {
                 img.put_pixel(x, y, image::Luma([0]));
             }
         }
-        let out = straighten(&image::DynamicImage::ImageLuma8(img), 20.0).to_luma8();
+        let out = straighten(&image::DynamicImage::ImageLuma8(img), 20.0).unwrap().to_luma8();
         let (w, h) = out.dimensions();
         let darkest = out
             .enumerate_pixels()

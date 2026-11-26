@@ -92,6 +92,8 @@ pub fn make_gif_with_policy(
     // Decode first frame to lock canvas dimensions.
     let (first_img, _fmt) = pipeline::decode_with_source_format(&frames[0])?;
     let (w, h) = (first_img.width(), first_img.height());
+    // Every frame is widened to an RGBA8 canvas of this size.
+    pipeline::check_dimensions(w, h, 4)?;
     let delay_cs = u16::try_from(opts.delay_ms.max(MIN_DELAY_MS) / 10).unwrap_or(u16::MAX);
     let speed = (opts.speed.clamp(1, 30) + 2) / 3;
     let encode_error = |source| BigImageError::Encode { path: output.to_path_buf(), source };

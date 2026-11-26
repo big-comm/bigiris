@@ -1298,7 +1298,13 @@ fn render_preview(state: &Rc<RefCell<ViewerState>>) {
                 let degrees = f64::from(s.edit.straighten) / 10.0;
                 let (w, h) = base.natural;
                 let natural = bigimage_core::rotate::straightened_size(w, h, degrees);
-                (bigimage_core::rotate::straighten(&source, degrees), natural)
+                match bigimage_core::rotate::straighten(&source, degrees) {
+                    Ok(straightened) => (straightened, natural),
+                    Err(error) => {
+                        tracing::warn!(%error, "straighten preview refused");
+                        return None;
+                    }
+                }
             }
         })
     });

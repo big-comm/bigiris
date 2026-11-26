@@ -128,7 +128,7 @@ pub(in crate::gui) fn build_animate_dialog(
             // have been appended).
             output_row.set_text(&output.to_string_lossy());
             let exists = output.exists();
-            let shown = output.display().to_string();
+            let shown = crate::codec::printable_path(&output);
 
             let start = {
                 let files = files.clone();
@@ -174,12 +174,15 @@ pub(in crate::gui) fn build_animate_dialog(
 /// Validate the free-text GIF destination. The result always ends in
 /// `.gif` and never names one of the frames: make_gif replaces its output,
 /// so typing a frame's path would otherwise turn that photo into a GIF.
+/// A relative name lands beside the first frame, as the default does, not
+/// in the folder the dialog process happened to start in.
 fn gif_output_path(text: &str, frames: &[PathBuf]) -> Result<PathBuf, String> {
     let text = text.trim();
     if text.is_empty() {
         return Err(gettext("Specify the output file."));
     }
-    let mut output = PathBuf::from(text);
+    let folder = frames.first().and_then(|frame| frame.parent()).unwrap_or(Path::new(""));
+    let mut output = folder.join(text);
     if !output.extension().is_some_and(|ext| ext.eq_ignore_ascii_case("gif")) {
         let mut name = output.into_os_string();
         name.push(".gif");
@@ -266,14 +269,14 @@ fn start_animate_run(
             Some(Ok(ConvertOutcome::Written { output })) => {
                 status.set_text(&fill(
                     &gettext("Done: {file}"),
-                    &[("file", &output.display().to_string())],
+                    &[("file", &crate::codec::printable_path(&output))],
                 ));
                 batch_runner::arm_auto_close(&window, 2);
             }
             Some(Ok(ConvertOutcome::Skipped { output })) => {
                 status.set_text(&fill(
                     &gettext("The file {file} appeared in the meantime and was kept; nothing was written."),
-                    &[("file", &output.display().to_string())],
+                    &[("file", &crate::codec::printable_path(&output))],
                 ));
                 apply_btn.set_sensitive(true);
             }
@@ -327,6 +330,15 @@ mod gif_output_tests {
         assert_eq!(out, dir.path().join("a.png.gif"));
         let out = gif_output_path(&dir.path().join("anim.GIF").to_string_lossy(), &frames).unwrap();
         assert_eq!(out, dir.path().join("anim.GIF"));
+    }
+
+    #[test]
+    fn relative_names_land_beside_the_first_frame() {
+        let dir = tempfile::tempdir().unwrap();
+        let frames = frames(dir.path());
+        assert_eq!(gif_output_path("rel-anim", &frames).unwrap(), dir.path().join("rel-anim.gif"));
+        let absolute = dir.path().join("sub").join("x.gif");
+        assert_eq!(gif_output_path(&absolute.to_string_lossy(), &frames).unwrap(), absolute);
     }
 
     #[test]

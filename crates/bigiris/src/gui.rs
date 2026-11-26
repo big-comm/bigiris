@@ -737,6 +737,7 @@ fn build_window_preloaded(
         settings.as_ref().map_or(DEFAULT_SLIDESHOW_INTERVAL_S, |s| s.uint("slideshow-interval-s"));
     let window = adw::ApplicationWindow::builder()
         .application(app)
+        .title(gettext("BigIris"))
         .default_width(window_width)
         .default_height(window_height)
         .build();
@@ -3354,8 +3355,11 @@ fn apply_decoded_frame(state: &Rc<RefCell<ViewerState>>, frame: DecodedFrame) {
             s.texture = None;
             s.shown_path = None;
             s.picture.set_paintable(gdk::Paintable::NONE);
+            // The reason tells a damaged file from an update that needs a
+            // restart or a missing sandbox.
             let name = crate::codec::printable_name(&frame.path);
-            s.error_page.set_description(Some(&glib::markup_escape_text(&name)));
+            let description = format!("{name}\n{error}");
+            s.error_page.set_description(Some(&glib::markup_escape_text(&description)));
             s.zoom_level.set_label(&zoom_percent_label(&s));
             drop(s);
             show_page(state, "error");
@@ -4215,6 +4219,7 @@ fn present_about_dialog(parent: &adw::ApplicationWindow) -> adw::AboutDialog {
     let about = adw::AboutDialog::builder()
         .application_name("BigIris")
         .application_icon(APP_ID)
+        .version(env!("CARGO_PKG_VERSION"))
         .developer_name("BigCommunity Team")
         .copyright("© 2026 BigCommunity Team")
         .license_type(gtk::License::Gpl30)
@@ -4380,6 +4385,8 @@ fn refresh_title(state: &Rc<RefCell<ViewerState>>) {
         .replace("{total}", &s.files.len().to_string());
     s.title.set_title(&name);
     s.title.set_subtitle(&subtitle);
+    // Screen readers and window switchers read the toplevel's own title.
+    s.window().set_title(Some(&name));
     s.zoom_level.set_label(&zoom_percent_label(&s));
     drop(s);
     refresh_osd(state);
@@ -5571,10 +5578,11 @@ mod lifecycle_tests {
             assert!(std::time::Instant::now() < deadline, "missing file left no error page");
             std::thread::sleep(Duration::from_millis(5));
         }
-        assert_eq!(
-            witness.upgrade().unwrap().borrow().error_page.description().as_deref(),
-            Some("missing &lt;&amp;&gt;.jpg")
-        );
+        let description = witness.upgrade().unwrap().borrow().error_page.description().unwrap();
+        let (name, reason) = description.split_once('\n').unwrap();
+        assert_eq!(name, "missing &lt;&amp;&gt;.jpg");
+        assert!(!reason.is_empty(), "no reason under the name");
+        assert_eq!(window.title().as_deref(), Some("missing <&>.jpg"));
         window.destroy();
         drop(window);
         while context.pending() {

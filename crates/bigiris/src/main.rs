@@ -1964,6 +1964,16 @@ fn print_install_report(report: &bigimage_integrations::Report, done: &str, summ
             eprintln!("    -> {err}");
         }
     }
+    for path in &report.app_files_kept {
+        let path = path.display().to_string();
+        println!(
+            "  {}",
+            fill(&gettext("kept, not written by BigIris: {path}"), &[("path", &path)])
+        );
+    }
+    for error in &report.app_errors {
+        eprintln!("  {}", with_error(&gettext("FAILED: {error}"), error));
+    }
     eprintln!(
         "{}",
         fill(

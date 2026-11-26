@@ -37,12 +37,17 @@ pub struct Report {
     /// only for `Scope::User`; the `--system` packaging path leaves these
     /// to the PKGBUILD.
     pub app_files: Vec<PathBuf>,
+    /// App-level files left as they were because BigIris did not write them
+    /// (a menu editor's copy of the launcher, the user's own icon).
+    pub app_files_kept: Vec<PathBuf>,
+    /// App-level files that could not be written, each with its cause.
+    pub app_errors: Vec<String>,
 }
 
 impl Report {
-    /// Has every attempted FM succeeded?
+    /// Has every attempted FM, and every app-level file, succeeded?
     pub fn is_success(&self) -> bool {
-        self.outcomes.iter().all(|o| o.error.is_none())
+        self.outcomes.iter().all(|o| o.error.is_none()) && self.app_errors.is_empty()
     }
 
     /// Count of files touched across all FMs (plus app-level files).
@@ -79,7 +84,7 @@ pub fn install(scope: Scope) -> Result<Report, InstallError> {
     let detected_only = matches!(scope, Scope::User);
     let mut report = run_all(&paths, InstallOp::Install, detected_only);
     if matches!(scope, Scope::User) {
-        report.app_files = install_app_files(&paths);
+        install_app_files(&paths, &mut report);
         refresh_xdg_caches(&paths);
     }
     Ok(report)
@@ -183,7 +188,7 @@ const FILE_MANAGERS: [FmSpec; 6] = [
 fn run_all(paths: &ScopePaths, op: InstallOp, detected_only: bool) -> Report {
     let outcomes =
         FILE_MANAGERS.iter().map(|spec| run_one(spec, paths, op, detected_only)).collect();
-    Report { outcomes, app_files: Vec::new() }
+    Report { outcomes, ..Report::default() }
 }
 
 fn run_one(spec: &FmSpec, paths: &ScopePaths, op: InstallOp, detected_only: bool) -> FmOutcome {
@@ -343,37 +348,50 @@ fn remove_if_ours(path: &std::path::Path, original: &[u8], kind: AssetKind) -> b
         && std::fs::remove_file(path).is_ok()
 }
 
-/// Write the `.desktop`, SVG icon and metainfo to the scope's XDG paths,
-/// returning only the files written; one failure does not stop the rest.
+/// Write the `.desktop`, SVG icon and metainfo to the scope's XDG paths
+/// into `report`; one failure does not stop the rest. An existing file we
+/// did not write (a menu editor's copy of the launcher) is kept.
 ///
 /// When the distro package already installed the launcher system-wide,
 /// a personal copy would shadow it and go stale on the next package
 /// upgrade, so nothing is written and copies we wrote earlier are removed.
-fn install_app_files(paths: &ScopePaths) -> Vec<PathBuf> {
-    install_app_files_with_system(paths, std::path::Path::new(SYSTEM_APP_DESKTOP))
+fn install_app_files(paths: &ScopePaths, report: &mut Report) {
+    install_app_files_with_system(paths, std::path::Path::new(SYSTEM_APP_DESKTOP), report);
 }
 
 fn install_app_files_with_system(
     paths: &ScopePaths,
     system_desktop: &std::path::Path,
-) -> Vec<PathBuf> {
-    let mut written = Vec::new();
+    report: &mut Report,
+) {
     if paths.scope == Scope::User && system_desktop.exists() {
         for (target, content, kind) in app_assets(paths) {
             remove_if_ours(&target, content, kind);
         }
-        return written;
+        return;
     }
     for (target, content, kind) in app_assets(paths) {
-        let Some(dir) = target.parent() else { continue };
-        if std::fs::create_dir_all(dir).is_err() {
-            continue;
+        let outcome = match std::fs::symlink_metadata(&target) {
+            Ok(meta) if !meta.is_file() => Ok(false),
+            Ok(_) => std::fs::read(&target).map(|body| is_our_app_file(&body, content, kind)),
+            Err(e) if e.kind() == io::ErrorKind::NotFound => Ok(true),
+            Err(e) => Err(e),
         }
-        if crate::safe_fs::safe_write(&target, with_marker(content, kind), paths.scope).is_ok() {
-            written.push(target);
+        .and_then(|ours| {
+            if ours {
+                if let Some(dir) = target.parent() {
+                    std::fs::create_dir_all(dir)?;
+                }
+                crate::safe_fs::safe_write(&target, with_marker(content, kind), paths.scope)?;
+            }
+            Ok(ours)
+        });
+        match outcome {
+            Ok(true) => report.app_files.push(target),
+            Ok(false) => report.app_files_kept.push(target),
+            Err(e) => report.app_errors.push(format!("{}: {e}", target.display())),
         }
     }
-    written
 }
 
 /// Best effort: refresh the user's desktop database and icon cache. GNOME
@@ -430,8 +448,14 @@ mod tests {
 
     const NO_SYSTEM: &str = "/nonexistent/bigiris-test/com.biglinux.Iris.desktop";
 
-    fn install_app_files(paths: &ScopePaths) -> Vec<PathBuf> {
-        install_app_files_with_system(paths, std::path::Path::new(NO_SYSTEM))
+    fn install_app_files_at(paths: &ScopePaths, system_desktop: &std::path::Path) -> Report {
+        let mut report = Report::default();
+        install_app_files_with_system(paths, system_desktop, &mut report);
+        report
+    }
+
+    fn install_app_files(paths: &ScopePaths) -> Report {
+        install_app_files_at(paths, std::path::Path::new(NO_SYSTEM))
     }
 
     #[test]
@@ -440,7 +464,7 @@ mod tests {
         let system = tmp.path().join("system.desktop");
         std::fs::write(&system, "[Desktop Entry]\n").unwrap();
         let paths = ScopePaths::rooted_at(tmp.path().join("home"));
-        assert!(install_app_files_with_system(&paths, &system).is_empty());
+        assert!(install_app_files_at(&paths, &system).app_files.is_empty());
         for (target, _, _) in app_assets(&paths) {
             assert!(!target.exists(), "{} shadows the packaged copy", target.display());
         }
@@ -457,7 +481,7 @@ mod tests {
         // … and a verbatim copy, as install.sh writes it.
         let icon = paths.app_icon_dir().join(APP_ICON_NAME);
         std::fs::write(&icon, APP_ICON_SVG).unwrap();
-        install_app_files_with_system(&paths, &system);
+        install_app_files_at(&paths, &system);
         for (target, _, _) in app_assets(&paths) {
             assert!(!target.exists(), "stale {} kept", target.display());
         }
@@ -487,7 +511,7 @@ mod tests {
         // An unknown SVG under our name is not provably ours.
         std::fs::write(&icon, "<svg>someone else's com.biglinux.Iris</svg>").unwrap();
 
-        install_app_files_with_system(&paths, &system);
+        install_app_files_at(&paths, &system);
         assert!(!desktop.exists() && !metainfo.exists(), "legacy copies kept");
         assert!(icon.exists(), "unknown icon removed");
     }
@@ -514,9 +538,48 @@ mod tests {
         std::fs::create_dir_all(desktop.parent().unwrap()).unwrap();
         let custom = "[Desktop Entry]\nName=Iris\nExec=bigiris %F\nNoDisplay=true\n";
         std::fs::write(&desktop, custom).unwrap();
-        install_app_files_with_system(&paths, &system);
+        install_app_files_at(&paths, &system);
         assert!(uninstall_app_files(&paths).is_empty());
         assert_eq!(std::fs::read_to_string(&desktop).unwrap(), custom);
+    }
+
+    #[test]
+    fn user_app_files_are_never_overwritten() {
+        let tmp = TempDir::new().unwrap();
+        let paths = ScopePaths::rooted_at(tmp.path());
+        let [(desktop, _, _), (icon, _, _), (metainfo, _, _)] = app_assets(&paths);
+        for p in [&desktop, &icon, &metainfo] {
+            std::fs::create_dir_all(p.parent().unwrap()).unwrap();
+        }
+        let custom = "[Desktop Entry]\nName=My Iris\nExec=bigiris --dialog=batch %F\n";
+        std::fs::write(&desktop, custom).unwrap();
+        std::fs::write(&icon, "<svg>my own icon</svg>").unwrap();
+        // A link at the launcher path, even to a copy of ours, is the user's.
+        let linked = tmp.path().join("dotfiles-metainfo.xml");
+        std::fs::write(&linked, APP_METAINFO).unwrap();
+        std::os::unix::fs::symlink(&linked, &metainfo).unwrap();
+
+        let report = install_app_files(&paths);
+        assert!(report.is_success(), "{:?}", report.app_errors);
+        assert!(report.app_files.is_empty());
+        assert_eq!(report.app_files_kept, [desktop.clone(), icon.clone(), metainfo.clone()]);
+        assert!(uninstall_app_files(&paths).is_empty());
+        assert_eq!(std::fs::read_to_string(&desktop).unwrap(), custom);
+        assert_eq!(std::fs::read_to_string(&icon).unwrap(), "<svg>my own icon</svg>");
+        assert!(std::fs::symlink_metadata(&metainfo).unwrap().is_symlink());
+        assert_eq!(std::fs::read(&linked).unwrap(), APP_METAINFO);
+    }
+
+    #[test]
+    fn app_file_failure_fails_the_install() {
+        let tmp = TempDir::new().unwrap();
+        let paths = ScopePaths::rooted_at(tmp.path());
+        std::fs::create_dir_all(paths.data.clone()).unwrap();
+        std::fs::write(paths.applications_dir(), "a file where the directory belongs").unwrap();
+        let report = install_app_files(&paths);
+        assert!(!report.is_success());
+        assert_eq!(report.app_errors.len(), 1, "{:?}", report.app_errors);
+        assert_eq!(report.app_files.len(), 2);
     }
 
     #[test]
@@ -584,8 +647,9 @@ mod tests {
     fn install_app_files_writes_desktop_icon_metainfo() {
         let tmp = TempDir::new().unwrap();
         let paths = ScopePaths::rooted_at(tmp.path());
-        let written = install_app_files(&paths);
-        assert_eq!(written.len(), 3);
+        let report = install_app_files(&paths);
+        assert_eq!(report.app_files.len(), 3);
+        assert!(report.is_success());
         assert!(paths.applications_dir().join(APP_DESKTOP_NAME).exists());
         assert!(paths.app_icon_dir().join(APP_ICON_NAME).exists());
         assert!(paths.metainfo_dir().join(APP_METAINFO_NAME).exists());

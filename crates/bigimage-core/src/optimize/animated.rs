@@ -7,7 +7,9 @@
 //! are both fully opaque, only the rectangle that changed is stored, and
 //! pixels inside it that did not change become transparent — the previous
 //! frame is kept on screen underneath (disposal "keep"). Frames with
-//! transparency are written whole with disposal "background", as before.
+//! transparency are written whole with disposal "background", and so is a
+//! difference frame followed by one: clearing only its rectangle would leave
+//! older frames visible through the transparent pixels.
 //!
 //! Frames are written one behind: a frame's disposal depends on whether
 //! the *next* frame can be stored as a difference.
@@ -29,6 +31,8 @@ struct Pending {
     /// What the viewer shows after this frame is drawn.
     displayed: RgbaImage,
     opaque: bool,
+    /// Stored as the changed rectangle over the frame before it.
+    difference: bool,
 }
 
 /// Streaming animated GIF encoder.
@@ -83,13 +87,19 @@ impl<W: Write> GifAnimation<W> {
             None => self.full_frame(rgba, opaque)?,
         };
         if let Some(mut pending) = self.pending.take() {
-            // A difference frame draws over this one; anything else
-            // replaces it (and must not let it show through transparency).
-            pending.frame.dispose = if difference {
-                gif::DisposalMethod::Keep
+            // A difference frame draws over this one; anything else replaces
+            // it. Background disposal clears only the frame's own rectangle,
+            // so a pending difference frame is first rewritten whole: the
+            // frames under it must not show through the next one's
+            // transparency.
+            if difference {
+                pending.frame.dispose = gif::DisposalMethod::Keep;
             } else {
-                gif::DisposalMethod::Background
-            };
+                if pending.difference {
+                    pending = self.full_frame(&pending.displayed, true)?;
+                }
+                pending.frame.dispose = gif::DisposalMethod::Background;
+            }
             self.encoder.write_frame(&pending.frame).map_err(gif_error)?;
         }
         self.pending = Some(next);
@@ -119,7 +129,7 @@ impl<W: Write> GifAnimation<W> {
             dispose: gif::DisposalMethod::Background,
             ..gif::Frame::default()
         };
-        Ok(Pending { frame, displayed, opaque })
+        Ok(Pending { frame, displayed, opaque, difference: false })
     }
 
     /// Store only what changed since `previous` (both opaque).
@@ -168,7 +178,7 @@ impl<W: Write> GifAnimation<W> {
             dispose: gif::DisposalMethod::Keep,
             ..gif::Frame::default()
         };
-        Ok(Pending { frame, displayed, opaque: true })
+        Ok(Pending { frame, displayed, opaque: true, difference: true })
     }
 
     /// Write the last frame and the trailer.
@@ -247,5 +257,31 @@ mod tests {
         };
         assert_eq!(decoded[0].buffer(), &clear(&a));
         assert_eq!(decoded[1].buffer(), &clear(&b), "the first frame must not show through");
+    }
+
+    #[test]
+    fn transparent_frame_after_a_difference_frame_shows_nothing_older() {
+        let red = RgbaImage::from_pixel(16, 16, image::Rgba([255, 0, 0, 255]));
+        let mut changed = red.clone();
+        changed.put_pixel(3, 3, image::Rgba([0, 255, 0, 255]));
+        let half = RgbaImage::from_fn(16, 16, |x, _| {
+            image::Rgba([0, 0, 255, if x < 8 { 255 } else { 0 }])
+        });
+        let mut animation =
+            GifAnimation::new(Vec::new(), 16, 16, gif::Repeat::Infinite, 5, 4).unwrap();
+        for frame in [&red, &changed, &half] {
+            animation.push(frame).unwrap();
+        }
+        let bytes = animation.finish().unwrap();
+        let decoded = image::codecs::gif::GifDecoder::new(std::io::Cursor::new(&bytes))
+            .unwrap()
+            .into_frames()
+            .collect_frames()
+            .unwrap();
+        assert_eq!(decoded[1].buffer(), &changed);
+        for (x, y, px) in decoded[2].buffer().enumerate_pixels() {
+            let expected = if x < 8 { [0, 0, 255, 255] } else { [0; 4] };
+            assert_eq!(px.0, expected, "pixel {x},{y}");
+        }
     }
 }

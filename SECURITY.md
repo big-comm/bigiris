@@ -61,12 +61,13 @@ For context on what is already defense in depth:
 - Regular inputs limited to 1 GiB, 256 MP and 512 MiB per decoded buffer, in
   the viewer and in conversions alike. The codecs' scratch limits are best
   effort. The executable confines decoding to Bubblewrap processes without
-  network and without access to home/run/etc: `/usr` and the executable are
-  read-only, and only the descriptor of the given image is mounted. `/dev` is
-  remounted read-only and the `/tmp` tmpfs is limited to 64 MiB. `prlimit`
-  enforces 2 GiB of virtual address space, 30 s of CPU, a 60 s supervision
-  deadline, 64 descriptors and a per-output-file limit of 512 MiB plus header.
-  This is not a total RSS/cgroup quota nor a seccomp filter.
+  network and without access to home/run/etc: the sandbox root, `/usr`, `/dev`
+  and the executable are read-only, and only the descriptor of the given image
+  is mounted. The `/tmp` tmpfs, the only writable place, is limited to 64 MiB.
+  `prlimit` enforces 2 GiB of virtual address space, 30 s of CPU, a 60 s
+  supervision deadline, 64 descriptors and a per-output-file limit of 512 MiB
+  plus header. `bigiris --self-test` has a worker check each of these limits
+  from inside. This is not a total RSS/cgroup quota nor a seccomp filter.
 - Service menus written with `O_NOFOLLOW` to prevent following symlinks during
   `sudo install-integrations --system`.
 - Nothing is downloaded: the application has no network client. The AI weights

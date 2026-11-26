@@ -53,10 +53,93 @@ pub fn self_test() -> color_eyre::Result<()> {
     if image.dimensions() != (2, 3) {
         return Err(color_eyre::eyre::eyre!("invalid sandbox decode"));
     }
-    let attested = run(input.path(), "attest", |output| Ok(output.metadata()?.len() == 0))?;
-    if !attested {
-        return Err(color_eyre::eyre::eyre!("invalid sandbox attestation"));
+    attest(input.path())?;
+    Ok(())
+}
+
+/// Have a worker check, from inside, that its sandbox is the one
+/// [`execute`] asks for. The worker answers whether it could create a user
+/// namespace; only this side knows whether bwrap was told to forbid it.
+fn attest(input: &Path) -> ImageResult<()> {
+    let report = run(input, "attest", |output| {
+        let mut report = String::new();
+        output.take(64).read_to_string(&mut report)?;
+        Ok(report)
+    })?;
+    let accepted: &[&str] =
+        if userns_hardening() { &["userns=denied"] } else { &["userns=denied", "userns=allowed"] };
+    if !accepted.contains(&report.trim_end()) {
+        return Err(invalid(format!("invalid sandbox attestation: {}", sanitize_text(&report))));
     }
+    Ok(())
+}
+
+/// Worker side of [`attest`]: fail unless every limit [`execute`] sets is in
+/// force, then print whether a nested user namespace could be created.
+fn attest_sandbox() -> color_eyre::Result<()> {
+    use color_eyre::eyre::bail;
+    for location in ["/home", "/root", "/run", "/etc"] {
+        if Path::new(location).exists() {
+            bail!("host directory visible: {location}");
+        }
+    }
+    let network = std::fs::read_to_string("/proc/net/dev")?;
+    if network.lines().skip(2).any(|line| !line.trim_start().starts_with("lo:")) {
+        bail!("host network visible");
+    }
+    let limits = std::fs::read_to_string("/proc/self/limits")?;
+    for (name, expected) in [
+        ("Max address space", WORKER_ADDRESS_SPACE),
+        ("Max cpu time", WORKER_CPU_SECONDS),
+        ("Max open files", WORKER_FILES),
+        ("Max core file size", 0),
+        ("Max file size", output_limit("attest")),
+    ] {
+        let expected = expected.to_string();
+        let values: Option<Vec<&str>> = limits
+            .lines()
+            .find_map(|line| line.strip_prefix(name))
+            .map(|rest| rest.split_whitespace().take(2).collect());
+        if values.as_deref() != Some(&[expected.as_str(), expected.as_str()]) {
+            bail!("{name} is not {expected}: {values:?}");
+        }
+    }
+    let status = std::fs::read_to_string("/proc/self/status")?;
+    for set in ["CapInh:", "CapPrm:", "CapEff:", "CapBnd:", "CapAmb:"] {
+        let value = status.lines().find_map(|line| line.strip_prefix(set)).map(str::trim);
+        if value != Some("0000000000000000") {
+            bail!("capabilities kept: {set} {value:?}");
+        }
+    }
+    // Session 0: the session leader is outside the sandbox's PID namespace,
+    // so the codec could reach the caller's terminal.
+    let stat = std::fs::read_to_string("/proc/self/stat")?;
+    let session = stat.rsplit_once(')').and_then(|(_, fields)| fields.split_whitespace().nth(3));
+    if session.is_none_or(|session| session == "0") {
+        bail!("the worker shares the caller's session: {session:?}");
+    }
+    let mut environment: Vec<_> = std::env::vars_os().map(|(name, _)| name).collect();
+    environment.sort();
+    // bwrap sets PWD from --chdir.
+    if environment != ["LC_ALL", "PWD", "RAYON_NUM_THREADS"] {
+        bail!("unexpected environment: {environment:?}");
+    }
+    for directory in ["/", "/app", "/dev"] {
+        if std::fs::File::create_new(Path::new(directory).join("attest")).is_ok() {
+            bail!("{directory} is writable");
+        }
+    }
+    let tmp = rustix::fs::statvfs("/tmp")?;
+    if tmp.f_blocks.saturating_mul(tmp.f_frsize) != WORKER_TMP {
+        bail!("/tmp is not limited to {WORKER_TMP} bytes");
+    }
+    let nested = Command::new("/usr/bin/unshare")
+        .args(["--user", "/usr/bin/true"])
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status()?;
+    println!("userns={}", if nested.success() { "allowed" } else { "denied" });
     Ok(())
 }
 
@@ -93,11 +176,33 @@ const VERSION_MISMATCH: i32 = 86;
 const MAX_DIAGNOSTIC: usize = 4096;
 /// Hard wall-clock budget for one isolated codec run.
 const DEADLINE: Duration = Duration::from_secs(60);
+/// Limits `prlimit` sets on every worker (soft and hard), checked again by
+/// the worker's `attest` mode.
+const WORKER_ADDRESS_SPACE: u64 = 2 * 1024 * 1024 * 1024;
+const WORKER_CPU_SECONDS: u64 = 30;
+const WORKER_FILES: u64 = 64;
+/// Size of the worker's `/tmp`, its only writable file system.
+const WORKER_TMP: u64 = 64 * 1024 * 1024;
 
 #[cfg(test)]
 thread_local! {
     /// Test-only replacement for the worker binary (never compiled in releases).
     static TEST_EXECUTABLE: RefCell<Option<(PathBuf, Duration, bool)>> = const { RefCell::new(None) };
+    /// Test-only rewrite of the sandbox command: the first run of tokens
+    /// equal to `.0` becomes `.1`, so a test can weaken one limit.
+    static TEST_SANDBOX_EDIT: RefCell<Option<(Vec<String>, Vec<String>)>> = const { RefCell::new(None) };
+}
+
+#[cfg(test)]
+fn edit_sandbox(argv: &mut Vec<std::ffi::OsString>) {
+    TEST_SANDBOX_EDIT.with(|edit| {
+        let Some((from, to)) = &*edit.borrow() else { return };
+        let at = argv
+            .windows(from.len())
+            .position(|window| window.iter().zip(from).all(|(arg, token)| arg == token.as_str()))
+            .unwrap_or_else(|| panic!("{from:?} is not in the sandbox command"));
+        argv.splice(at..at + from.len(), to.iter().map(std::ffi::OsString::from));
+    });
 }
 
 /// Path that starts a fresh BigIris process. After an upgrade `/proc/self/exe`
@@ -407,6 +512,16 @@ fn run<T>(
     })
 }
 
+/// Largest output file a worker in `mode` may write (`prlimit --fsize`):
+/// only pixel modes need large outputs; everything else is tiny.
+fn output_limit(mode: &str) -> u64 {
+    match mode {
+        "pixels" | "preview" => MAX_BYTES + HEADER as u64,
+        "resave" => MAX_BYTES + (HEADER + RESAVE_TRAILER) as u64 + MAX_RESAVE_EXIF + MAX_RESAVE_ICC,
+        _ => MAX_METADATA + 4096,
+    }
+}
+
 /// `replaced` reports whether failures still need the restart hint.
 fn execute(path: &Path, mode: &str, replaced: &mut bool) -> ImageResult<std::fs::File> {
     if cancelled() {
@@ -428,27 +543,25 @@ fn execute(path: &Path, mode: &str, replaced: &mut bool) -> ImageResult<std::fs:
     let sandbox_input = format!("/input.{extension}");
     let (executable, is_replaced, budget) = worker_executable()?;
     *replaced = is_replaced;
-    // Only pixel modes need large outputs; everything else is tiny.
-    let output_limit = match mode {
-        "pixels" | "preview" => MAX_BYTES + HEADER as u64,
-        "resave" => MAX_BYTES + (HEADER + RESAVE_TRAILER) as u64 + MAX_RESAVE_EXIF + MAX_RESAVE_ICC,
-        _ => MAX_METADATA + 4096,
-    };
     let output = tempfile::tempfile()?;
-    let mut command = Command::new("/usr/bin/prlimit");
-    // Not stdin: a descriptor the codec keeps open would let it reopen the
-    // host file writable through /proc/self/fd, past the read-only mount.
-    // bwrap closes descriptor 3 once the bind is made.
-    close_inherited_descriptors_passing(&mut command, input.as_raw_fd())
-        .env_clear()
-        .args(["--as=2147483648", "--cpu=30", "--nofile=64", "--core=0"])
-        .arg(format!("--fsize={output_limit}"))
-        .args(["--", "/usr/bin/bwrap", "--unshare-all"]);
+    let mut argv: Vec<std::ffi::OsString> = [
+        format!("--as={WORKER_ADDRESS_SPACE}"),
+        format!("--cpu={WORKER_CPU_SECONDS}"),
+        format!("--nofile={WORKER_FILES}"),
+        "--core=0".to_owned(),
+        format!("--fsize={}", output_limit(mode)),
+        "--".to_owned(),
+        "/usr/bin/bwrap".to_owned(),
+        "--unshare-all".to_owned(),
+    ]
+    .map(Into::into)
+    .into();
     if userns_hardening() {
-        command.args(["--unshare-user", "--disable-userns"]);
+        argv.extend(["--unshare-user", "--disable-userns"].map(Into::into));
     }
-    command
-        .args([
+    let tmp_size = WORKER_TMP.to_string();
+    argv.extend(
+        [
             "--die-with-parent",
             "--new-session",
             "--clearenv",
@@ -473,18 +586,23 @@ fn execute(path: &Path, mode: &str, replaced: &mut bool) -> ImageResult<std::fs:
             "--remount-ro",
             "/dev",
             "--size",
-            "67108864",
+            &tmp_size,
             "--tmpfs",
             "/tmp",
             "--dir",
             "/app",
             "--ro-bind",
-        ])
-        .arg(executable)
-        .arg("/app/bigiris")
-        .args(["--ro-bind-fd", "3"])
-        .arg(&sandbox_input)
-        .args([
+        ]
+        .map(Into::into),
+    );
+    argv.extend([executable.into_os_string(), "/app/bigiris".into()]);
+    argv.extend(["--ro-bind-fd", "3", &sandbox_input].map(Into::into));
+    // The root tmpfs has no size limit: once the last mount point exists it
+    // turns read-only, leaving the bounded /tmp as the only writable place.
+    argv.extend(
+        [
+            "--remount-ro",
+            "/",
             "--chdir",
             "/",
             "--setenv",
@@ -496,9 +614,20 @@ fn execute(path: &Path, mode: &str, replaced: &mut bool) -> ImageResult<std::fs:
             "/app/bigiris",
             "--codec-worker",
             WORKER_ID,
-        ])
-        .arg(mode)
-        .arg(&sandbox_input)
+            mode,
+            &sandbox_input,
+        ]
+        .map(Into::into),
+    );
+    #[cfg(test)]
+    edit_sandbox(&mut argv);
+    let mut command = Command::new("/usr/bin/prlimit");
+    // Not stdin: a descriptor the codec keeps open would let it reopen the
+    // host file writable through /proc/self/fd, past the read-only mount.
+    // bwrap closes descriptor 3 once the bind is made.
+    close_inherited_descriptors_passing(&mut command, input.as_raw_fd())
+        .env_clear()
+        .args(&argv)
         .stdin(Stdio::null())
         .stdout(Stdio::from(output.try_clone()?))
         .stderr(Stdio::piped());
@@ -970,17 +1099,7 @@ pub fn worker() -> color_eyre::Result<()> {
             let meta = trim_metadata(bigimage_core::metadata::read(&path)?);
             serde_json::to_writer(std::io::stdout().lock(), &meta)?;
         }
-        "attest" => {
-            for location in ["/home", "/root", "/run", "/etc"] {
-                if std::path::Path::new(location).exists() {
-                    return Err(color_eyre::eyre::eyre!("host directory visible: {location}"));
-                }
-            }
-            let network = std::fs::read_to_string("/proc/net/dev")?;
-            if network.lines().skip(2).any(|line| !line.trim_start().starts_with("lo:")) {
-                return Err(color_eyre::eyre::eyre!("host network visible"));
-            }
-        }
+        "attest" => attest_sandbox()?,
         "static" => {
             bigimage_core::content::ensure_static_local(&path)?;
         }
@@ -1369,6 +1488,59 @@ mod tests {
             std::thread::spawn(move || bigimage_core::open_image(&path)).join().unwrap().unwrap();
         assert_eq!(image.dimensions(), (2, 2));
         drop(leaked);
+    }
+
+    /// `--clearenv` and `--cap-drop ALL` have no row: `env_clear` and bwrap's
+    /// own capability drop for a user that is not root hide their removal.
+    #[test]
+    fn attest_refuses_a_sandbox_missing_any_limit() {
+        let binary = built_worker().expect("bigiris binary missing: cargo test --all-targets");
+        let file = input();
+        let attest_with = |from: &[&str], to: &[&str]| {
+            let edit = (!from.is_empty()).then(|| {
+                (
+                    from.iter().map(|s| s.to_string()).collect(),
+                    to.iter().map(|s| s.to_string()).collect(),
+                )
+            });
+            TEST_SANDBOX_EDIT.with(|slot| *slot.borrow_mut() = edit);
+            let result = with_executable(binary.clone(), DEADLINE, || attest(file.path()));
+            TEST_SANDBOX_EDIT.with(|slot| *slot.borrow_mut() = None);
+            result
+        };
+        let Some(result) = attest_with(&[], &[]) else { return };
+        result.unwrap();
+        let fsize = format!("--fsize={}", output_limit("attest"));
+        let fsize = [fsize.as_str()];
+        let mut weakened: Vec<(&[&str], &[&str], &str)> = vec![
+            (&["--as=2147483648"], &[], "Max address space"),
+            (&["--cpu=30"], &[], "Max cpu time"),
+            (&["--nofile=64"], &[], "Max open files"),
+            (&["--core=0"], &[], "Max core file size"),
+            (&fsize, &[], "Max file size"),
+            (&["--new-session"], &[], "session"),
+            (&["--remount-ro", "/dev"], &[], "/dev is writable"),
+            (&["--remount-ro", "/"], &[], "/ is writable"),
+            (&["--size", "67108864"], &[], "/tmp is not limited"),
+            (&["--chdir"], &["--setenv", "HOME", "/", "--chdir"], "unexpected environment"),
+            (
+                &["--dir", "/app"],
+                &["--ro-bind", "/etc", "/etc", "--dir", "/app"],
+                "host directory visible",
+            ),
+            (
+                &["--unshare-all"],
+                &["--unshare-user-try", "--unshare-ipc", "--unshare-pid", "--unshare-uts"],
+                "host network visible",
+            ),
+        ];
+        if userns_hardening() {
+            weakened.push((&["--disable-userns"], &[], "userns=allowed"));
+        }
+        for (from, to, expected) in weakened {
+            let error = attest_with(from, to).unwrap().unwrap_err().to_string();
+            assert!(error.contains(expected), "without {from:?}: {error}");
+        }
     }
 
     #[test]

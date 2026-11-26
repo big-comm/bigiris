@@ -32,8 +32,13 @@
 
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
-// Without engines, the pre/post-processing helpers only serve the tests.
-#![cfg_attr(not(feature = "native"), allow(dead_code))]
+#![cfg_attr(
+    not(feature = "native"),
+    allow(
+        dead_code,
+        reason = "without engines, the pre/post-processing helpers only serve the tests"
+    )
+)]
 
 pub mod background;
 pub mod denoise;

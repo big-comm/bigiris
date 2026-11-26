@@ -154,6 +154,12 @@ fn budget(width: u32, height: u32, factor: u8, alpha: bool) -> Budget {
 }
 
 /// Enlarge `input` `factor` times (2, 3 or 4) with `method`.
+///
+/// # Errors
+///
+/// - [`AiError::Processing`]: `factor` is not 2, 3 or 4, or the result is over
+///   the size limit.
+/// - For [`Method::RealEsrgan`], as [`crate::denoise::denoise`] for the model run.
 pub fn upscale(
     input: &DynamicImage,
     factor: u8,
@@ -171,6 +177,11 @@ pub fn upscale(
 }
 
 /// Lanczos3 enlargement keeping the source's pixel type.
+///
+/// # Errors
+///
+/// [`AiError::Processing`] when `factor` is not 2, 3 or 4, or the result is
+/// over the processing limits.
 pub fn lanczos(input: &DynamicImage, factor: u8) -> Result<DynamicImage, AiError> {
     check_factor(factor)?;
     bigimage_core::resize::apply_to(

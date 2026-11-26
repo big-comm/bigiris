@@ -80,6 +80,17 @@ fn check_size(width: u32, height: u32) -> Result<(), AiError> {
 }
 
 /// Remove noise and compression artifacts from `input`.
+///
+/// # Errors
+///
+/// - [`AiError::Disabled`]: the build has no `native` engines.
+/// - [`AiError::Missing`] or [`AiError::Unreadable`]: the weights are not
+///   installed or cannot be read.
+/// - [`AiError::Memory`] or [`AiError::MemoryUnknown`]: free RAM is short for
+///   the step, or cannot be read.
+/// - [`AiError::Processing`]: `input` is empty or over the RGBA size limit.
+/// - [`AiError::Cancelled`]: `progress` breaks.
+/// - [`AiError::Inference`] or [`AiError::Gpu`]: the engine fails.
 pub fn denoise(
     input: &DynamicImage,
     mut progress: impl FnMut(Stage) -> ControlFlow<()>,

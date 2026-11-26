@@ -1019,9 +1019,7 @@ fn run_convert(
     in_place: bool,
     files: &[PathBuf],
 ) -> color_eyre::Result<()> {
-    let target = Format::parse(to).map_err(|e| {
-        color_eyre::eyre::eyre!(with_error(&gettext("invalid target format: {error}"), e))
-    })?;
+    let target = parse_format(to)?;
     let policy = if in_place { OverwritePolicy::Replace } else { policy };
     tracing::info!(?target, ?opts, ?policy, in_place, count = files.len(), "convert");
     run_per_file(files, "convert", Naming::image(Some(target), policy), |f| {
@@ -1151,8 +1149,9 @@ fn run_extent(
     files: &[PathBuf],
 ) -> color_eyre::Result<()> {
     let target = parse_optional_target(to)?;
-    let background = bigimage_core::parse_hex_color(bg)
-        .map_err(|e| color_eyre::eyre::eyre!(with_error(&gettext("invalid --bg: {error}"), e)))?;
+    let background = bigimage_core::parse_hex_color(bg).map_err(|_invalid| {
+        color_eyre::eyre::eyre!(with_error(&gettext("invalid --bg: {error}"), format!("{bg:?}")))
+    })?;
     let opts = ExtentOptions { size, background, gravity };
     tracing::info!(?opts, ?target, ?policy, count = files.len(), "extent");
     let naming = Naming {
@@ -1176,12 +1175,16 @@ fn run_adjust(
 }
 
 fn parse_optional_target(to: Option<&str>) -> color_eyre::Result<Option<Format>> {
-    match to {
-        Some(s) => Ok(Some(Format::parse(s).map_err(|e| {
-            color_eyre::eyre::eyre!(with_error(&gettext("invalid target format: {error}"), e))
-        })?)),
-        None => Ok(None),
-    }
+    to.map(parse_format).transpose()
+}
+
+/// `--to`. The refusal quotes the value: core's reason is English and says
+/// no more.
+fn parse_format(value: &str) -> color_eyre::Result<Format> {
+    Format::parse(value).map_err(|_unsupported| {
+        let value = format!("{value:?}");
+        color_eyre::eyre::eyre!(with_error(&gettext("invalid target format: {error}"), value))
+    })
 }
 
 fn run_per_file<F>(
@@ -1573,8 +1576,9 @@ fn run_batch(profile: &std::path::Path, inputs: &[PathBuf]) -> color_eyre::Resul
     if profile.quality.is_some_and(|quality| !(1..=100).contains(&quality)) {
         return Err(color_eyre::eyre::eyre!(gettext("quality must be between 1 and 100")));
     }
-    let format = Format::parse(&profile.format).map_err(|e| {
-        color_eyre::eyre::eyre!(with_error(&gettext("invalid profile format: {error}"), e))
+    let format = Format::parse(&profile.format).map_err(|_unsupported| {
+        let value = format!("{:?}", profile.format);
+        color_eyre::eyre::eyre!(with_error(&gettext("invalid profile format: {error}"), value))
     })?;
     let target = match profile.target.as_deref() {
         None => QualityTarget::default(),

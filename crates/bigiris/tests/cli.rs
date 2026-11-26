@@ -374,8 +374,8 @@ fn fatal_errors_are_one_plain_line() {
     let output = run(dir.path(), &["convert", "--to", "bogus", "x.png"]);
     assert_eq!(output.status.code(), Some(1));
     let error = String::from_utf8_lossy(&output.stderr);
-    assert!(error.starts_with("bigiris: invalid target format"), "{error}");
-    assert_eq!(error.lines().count(), 1, "{error}");
+    // The value is quoted; core's English reason stays out of the sentence.
+    assert_eq!(error, "bigiris: invalid target format: \"bogus\"\n");
     assert!(!error.contains('\x1b') && !error.contains("Location"), "{error}");
 }
 

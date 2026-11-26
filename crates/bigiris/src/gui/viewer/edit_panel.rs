@@ -863,9 +863,7 @@ fn set_open(state: &Rc<RefCell<ViewerState>>, open: bool) {
     }
     if !open {
         flush_commit(state);
-        let original = state.borrow().edit_ui.original.clone();
-        original.set_active(false);
-        show_original(state, Source::Key, false);
+        hide_original(state);
         // Give the AI models' memory (and GPU) back; unloading waits for a
         // run in progress, so it stays off the main loop.
         std::thread::spawn(bigimage_ai::unload_all);
@@ -1458,6 +1456,14 @@ fn downscale(image: image::RgbaImage) -> image::RgbaImage {
 pub(in crate::gui) enum Source {
     Button,
     Key,
+}
+
+/// Show the edited image again, the toggle off and a held backslash
+/// forgotten.
+pub(in crate::gui) fn hide_original(state: &Rc<RefCell<ViewerState>>) {
+    let original = state.borrow().edit_ui.original.clone();
+    original.set_active(false);
+    show_original(state, Source::Key, false);
 }
 
 /// Show (or stop showing) the unedited image.

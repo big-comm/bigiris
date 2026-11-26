@@ -2647,7 +2647,7 @@ fn sync_edit_actions(state: &Rc<RefCell<ViewerState>>) {
     }
     // Trashing during a save would let the save's final rename bring the
     // file back from the trash.
-    for name in ["rotate-cw", "rotate-ccw", "rotate-180", "flip-h", "flip-v", "trash"] {
+    for name in ["rotate-cw", "rotate-ccw", "rotate-180", "flip-h", "flip-v", "crop", "trash"] {
         if let Some(action) = s.window().lookup_action(name)
             && let Some(simple) = action.downcast_ref::<gio::SimpleAction>()
         {

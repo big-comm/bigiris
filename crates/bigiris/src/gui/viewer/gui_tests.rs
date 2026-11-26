@@ -630,6 +630,9 @@ fn viewer_inline_crop() {
     for name in ["next", "rotate-cw", "save-edits", "trash", "crop"] {
         assert!(!action_enabled(&window, name), "{name} stays enabled while cropping");
     }
+    // Return and the arrows act on the selection, wherever the focus was.
+    let area: gtk::Widget = state.borrow().crop_ui.area.clone().upcast();
+    assert_eq!(gtk::prelude::GtkWindowExt::focus(&window), Some(area));
 
     // Arrow keys and the wheel do not navigate or zoom under the selection.
     handle_key(&state, gdk::Key::Right, gdk::ModifierType::empty());
@@ -666,16 +669,65 @@ fn viewer_inline_crop() {
     assert!(window.is_visible(), "Esc closed the window instead of leaving crop");
     assert!(action_enabled(&window, "next"), "actions not restored after cancel");
 
+    // A frame still loading refuses the crop with a word, not silently.
+    state.borrow_mut().current_ready = false;
+    super::crop::enter(&state);
+    assert!(state.borrow().crop.is_none());
+    assert_eq!(state.borrow().osd_label.label(), gettext("Wait for the image to finish loading"));
+    state.borrow_mut().current_ready = true;
+
+    // Entering with View original on draws the selection over the edited
+    // image, and the picture shows it again.
+    apply_edit(&state, EditOp::FlipH);
+    wait(&context, "flipped", &|| state.borrow().current_ready);
+    let edited = state.borrow().texture.clone().unwrap();
+    let original = state.borrow().edit_ui.original_button();
+    original.set_active(true);
+    let picture = state.borrow().picture.clone();
+    wait(&context, "original shown", &|| {
+        picture.paintable().and_downcast::<gdk::Texture>().is_some_and(|t| t != edited)
+    });
+    gtk::prelude::WidgetExt::activate_action(&window, "win.crop", None).unwrap();
+    settle(&context, 100);
+    assert!(!original.is_active(), "View original stayed on in crop mode");
+    assert_eq!(picture.paintable().and_downcast::<gdk::Texture>(), Some(edited));
+    super::crop::cancel(&state);
+    undo_edit(&state);
+    wait(&context, "unflipped", &|| {
+        let s = state.borrow();
+        s.current_ready && s.pending_ops.is_empty()
+    });
+
     // Drag the bottom-right handle to the center: keep the red quadrant.
+    // A double-click outside the selection, where a new one starts, does
+    // not crop; inside it does.
     gtk::prelude::WidgetExt::activate_action(&window, "win.crop", None).unwrap();
     settle(&context, 100);
     drag_selection(&state, (400.0, 300.0), (-200.0, -150.0));
+    let double_click = |natural_point: (f64, f64)| {
+        let (area, fit) = {
+            let s = state.borrow();
+            let natural = s.crop.as_ref().map(|c| c.natural()).unwrap();
+            (s.crop_ui.area.clone(), super::crop::current_fit(&s, natural))
+        };
+        let controllers = area.observe_controllers();
+        let click = (0..controllers.n_items())
+            .filter_map(|i| controllers.item(i).and_downcast::<gtk::GestureClick>())
+            .next()
+            .expect("crop double-click gesture");
+        let x = fit.ox + natural_point.0 * fit.scale;
+        let y = fit.oy + natural_point.1 * fit.scale;
+        click.emit_by_name::<()>("pressed", &[&2i32, &x, &y]);
+    };
+    double_click((300.0, 250.0));
+    settle(&context, 50);
+    assert!(state.borrow().crop.is_some(), "a double-click outside the selection cropped");
     crate::gui::lifecycle_tests::capture_window(&window, "crop-2-selection");
     assert_eq!(
         super::crop::to_pixels(state.borrow().crop.as_ref().map(|c| c.rect()).unwrap(), (400, 300)),
         (0, 0, 200, 150)
     );
-    gtk::prelude::WidgetExt::activate_action(&window, "win.crop-apply", None).unwrap();
+    double_click((100.0, 75.0));
     wait(&context, "cropped frame", &|| {
         let s = state.borrow();
         s.current_ready && s.natural == (200, 150)

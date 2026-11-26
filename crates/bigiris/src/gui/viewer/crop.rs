@@ -381,7 +381,15 @@ const SUSPENDED_ACTIONS: [&str; 22] = [
 ];
 
 pub(in crate::gui) fn build() -> CropUi {
-    let area = gtk::DrawingArea::builder().hexpand(true).vexpand(true).visible(false).build();
+    // Focusable, so Return and the arrows reach the selection once crop
+    // mode starts, whatever had the focus before.
+    let area = gtk::DrawingArea::builder()
+        .hexpand(true)
+        .vexpand(true)
+        .visible(false)
+        .focusable(true)
+        .build();
+    area.update_property(&[gtk::accessible::Property::Label(&gettext("Crop selection"))]);
     let labels: Vec<String> = PRESETS
         .iter()
         .map(|(label, _)| match *label {
@@ -465,7 +473,10 @@ pub(in crate::gui) fn current_fit(s: &ViewerState, natural: (u32, u32)) -> Fit {
 fn refresh(s: &ViewerState) {
     if let Some(session) = s.crop.as_ref() {
         let (_, _, w, h) = to_pixels(session.rect, session.natural);
-        s.crop_ui.size_label.set_text(&format!("{w} × {h} px"));
+        s.crop_ui.size_label.set_text(&fill(
+            &gettext("{width} × {height} px"),
+            &[("width", &w.to_string()), ("height", &h.to_string())],
+        ));
     }
     s.crop_ui.area.queue_draw();
 }
@@ -539,14 +550,18 @@ pub(in crate::gui) fn connect(state: &Rc<RefCell<ViewerState>>, window: &adw::Ap
         });
     }
     area.add_controller(drag);
-    // Double-click inside the selection crops, like confirming in most editors.
+    // Double-click inside the selection crops, like confirming in most
+    // editors; outside it, where a new selection starts, it does nothing.
     let click = gtk::GestureClick::builder().button(1).build();
     {
         let weak = Rc::downgrade(state);
-        click.connect_pressed(move |_, presses, _, _| {
-            if presses == 2
-                && let Some(state) = weak.upgrade()
-            {
+        click.connect_pressed(move |_, presses, x, y| {
+            let Some(state) = weak.upgrade() else { return };
+            let inside = state.borrow().crop.as_ref().is_some_and(|session| {
+                let fit = current_fit(&state.borrow(), session.natural);
+                matches!(hit((x, y), session.rect, fit, session.natural), Drag::Move { .. })
+            });
+            if presses == 2 && inside {
                 apply(&state);
             }
         });
@@ -624,8 +639,10 @@ pub(in crate::gui) fn enter(state: &Rc<RefCell<ViewerState>>) {
         }
         if s.saving {
             Some(gettext("Wait for saving to finish"))
+        } else if s.edit.busy() {
+            Some(gettext("Wait for the running tool to finish"))
         } else if !s.current_ready {
-            return;
+            Some(gettext("Wait for the image to finish loading"))
         } else {
             None
         }
@@ -638,6 +655,9 @@ pub(in crate::gui) fn enter(state: &Rc<RefCell<ViewerState>>) {
     if let Some(id) = state.borrow_mut().slideshow_source.take() {
         id.remove();
     }
+    // The selection is drawn against the edited image: stop showing the
+    // original, as closing the panel does.
+    super::edit_panel::hide_original(state);
     set_zoom(state, ZoomState::Fit);
     // Back to "free" before the session exists, so the preset handler
     // (which needs the state) runs now and finds nothing to update.
@@ -680,6 +700,7 @@ pub(in crate::gui) fn enter(state: &Rc<RefCell<ViewerState>>) {
     area.set_visible(true);
     bar.set_visible(true);
     bar.set_reveal_child(true);
+    area.grab_focus();
     osd_label.set_text(&gettext(
         "Drag the corners to resize · inside the crop to move · outside it for a new selection.",
     ));

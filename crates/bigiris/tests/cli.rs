@@ -807,7 +807,7 @@ fn to_pdf_verifies_output_and_honours_overwrite_policy() {
 /// PDF never replaces a good one, a folder never reaches soffice, and the
 /// caller's descriptors never leak into it.
 #[test]
-fn to_pdf_refuses_what_it_cannot_publish() {
+fn to_pdf_refuses_unpublishable_input() {
     let dir = tempfile::tempdir().unwrap();
     let bin = fake_soffice();
     std::fs::write(dir.path().join("doc.txt"), b"hello").unwrap();

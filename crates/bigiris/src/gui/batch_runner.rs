@@ -234,11 +234,9 @@ impl BatchEvents {
     }
 }
 
-/// Spawn the GTK-independent worker pool. The generic dialog and the richer
-/// folder/batch window share this exact engine, so progress, cancellation,
-/// parallelism and accounting cannot drift apart again. Inputs are planned
-/// as the CLI plans them: those writing one file run in order on one worker,
-/// or the run is refused before any work when `naming` cannot tell them apart.
+/// Plan `files` under `naming` as the CLI does and run them on the shared
+/// pool: a group writing one file runs in order on one worker, and a
+/// collision the policy cannot resolve is refused before any work.
 pub(super) fn spawn_batch_workers<W>(
     files: Vec<PathBuf>,
     naming: crate::output_plan::Naming,

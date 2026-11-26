@@ -1,3 +1,5 @@
+allow-unwrap-in-tests = true
+
 # Outputs are published by bigimage-core: synced with their folder, a
 # replaced file's permission bits kept, skip and increment never overwriting.
 disallowed-methods = [

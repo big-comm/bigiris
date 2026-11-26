@@ -1594,24 +1594,29 @@ fn batch_files(
             .map(|path| (path.file_stem().unwrap_or_default().to_os_string(), path))
             .collect();
         for image in &images {
-            // `x_2.webp` -> `x_1` -> `x`, as `increment` numbers them.
-            let mut source = None;
-            let mut stem =
-                is_target(image).then(|| image.file_stem().unwrap_or_default().to_os_string());
-            while let Some(current) = stem {
-                if let Some(found) = sources.get(&current) {
-                    source = Some(*found);
-                    break;
-                }
-                stem = output_plan::numbered_base(&current);
-            }
-            match source {
+            match is_target(image).then(|| output_source(image, &sources)).flatten() {
                 Some(source) => files.outputs_of_inputs.push((image.clone(), source.clone())),
                 None => files.inputs.push(image.clone()),
             }
         }
     }
     Ok(files)
+}
+
+/// The image of `sources` (by stem) whose output `image` is named after:
+/// the same stem, or `x` for `x_2` and `x_2_1`, as `increment` numbers them.
+fn output_source<'a>(
+    image: &Path,
+    sources: &std::collections::HashMap<std::ffi::OsString, &'a PathBuf>,
+) -> Option<&'a PathBuf> {
+    let mut stem = Some(image.file_stem().unwrap_or_default().to_os_string());
+    while let Some(current) = stem {
+        if let Some(source) = sources.get(&current) {
+            return Some(source);
+        }
+        stem = output_plan::numbered_base(&current);
+    }
+    None
 }
 
 fn run_batch(profile: &std::path::Path, inputs: &[PathBuf]) -> color_eyre::Result<()> {

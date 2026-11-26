@@ -67,28 +67,9 @@ pub(crate) fn plan_outputs(
         let identity = std::fs::canonicalize(file)
             .or_else(|_| std::path::absolute(file))
             .unwrap_or_else(|_| file.clone());
-        if !seen.insert(identity) {
-            continue;
+        if seen.insert(identity) {
+            planned.push((output_key(file, naming), file));
         }
-        let dir = naming
-            .output_dir
-            .as_deref()
-            .or_else(|| file.parent())
-            .filter(|dir| !dir.as_os_str().is_empty())
-            .unwrap_or(Path::new("."));
-        let dir = std::fs::canonicalize(dir).unwrap_or_else(|_| dir.to_path_buf());
-        // Without a target the core keeps the format found in the content,
-        // so `a.jpg` holding a PNG writes `a_<suffix>.png`; plan by the same.
-        let extension = naming.extension.map(str::to_owned).unwrap_or_else(|| {
-            bigimage_core::sniff_format(file).map_or_else(
-                || {
-                    let own = file.extension().and_then(|e| e.to_str()).unwrap_or_default();
-                    own.to_ascii_lowercase()
-                },
-                |format| format.extension().to_owned(),
-            )
-        });
-        planned.push(((dir, file.file_stem().unwrap_or_default().to_os_string(), extension), file));
     }
     let keys: HashSet<_> = planned.iter().map(|(key, _)| key.clone()).collect();
     for (mut key, file) in planned {
@@ -132,6 +113,29 @@ pub(crate) fn plan_outputs(
     Ok(groups)
 }
 
+/// Folder, stem and extension of the file `file` writes under `naming`.
+fn output_key(file: &Path, naming: &Naming) -> (PathBuf, std::ffi::OsString, String) {
+    let dir = naming
+        .output_dir
+        .as_deref()
+        .or_else(|| file.parent())
+        .filter(|dir| !dir.as_os_str().is_empty())
+        .unwrap_or(Path::new("."));
+    let dir = std::fs::canonicalize(dir).unwrap_or_else(|_| dir.to_path_buf());
+    // Without a target the core keeps the format found in the content,
+    // so `a.jpg` holding a PNG writes `a_<suffix>.png`; plan by the same.
+    let extension = naming.extension.map(str::to_owned).unwrap_or_else(|| {
+        bigimage_core::sniff_format(file).map_or_else(
+            || {
+                let own = file.extension().and_then(|e| e.to_str()).unwrap_or_default();
+                own.to_ascii_lowercase()
+            },
+            |format| format.extension().to_owned(),
+        )
+    });
+    (dir, file.file_stem().unwrap_or_default().to_os_string(), extension)
+}
+
 /// `x` for a stem `x_N` as written by the `increment` policy (N >= 1, no
 /// leading zero).
 pub(crate) fn numbered_base(stem: &std::ffi::OsStr) -> Option<std::ffi::OsString> {
@@ -151,7 +155,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn increment_groups_numbered_stems_with_their_base() {
+    fn increment_groups_numbered_stems() {
         let dir = tempfile::tempdir().unwrap();
         let names = ["x_1.png", "IMG_2.png", "x.png", "x_1_1.png", "x_01.png", "_1.png"];
         let files: Vec<_> = names.iter().map(|name| dir.path().join(name)).collect();

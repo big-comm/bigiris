@@ -21,7 +21,7 @@ pub(in crate::gui) fn build_compare_dialog(
     let window = adw::ApplicationWindow::builder()
         .application(app)
         .default_width(1200)
-        .default_height(720)
+        .default_height(640)
         .title(gettext("Compare images — Íris"))
         .build();
 

@@ -38,7 +38,7 @@ impl Default for AdjustOps {
 
 impl AdjustOps {
     /// Short human-readable tag suitable for file suffixes, showing only
-    /// non-neutral axes: `"b10"`, `"c-20_s40"`, `"g1.8"`, etc.
+    /// non-neutral axes: `"b10"`, `"c-20_s40"`, `"g1.80"`, etc.
     pub fn suffix_tag(&self) -> String {
         let mut parts: Vec<String> = Vec::new();
         if self.brightness != 0 {
@@ -77,7 +77,7 @@ impl AdjustOps {
         }
         if !self.gamma.is_finite() || !(0.1..=10.0).contains(&self.gamma) {
             return Err(BigImageError::InvalidInput(format!(
-                "gamma outside (0.1, 10.0]: {}",
+                "gamma outside [0.1, 10.0]: {}",
                 self.gamma
             )));
         }

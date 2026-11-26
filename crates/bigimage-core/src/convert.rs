@@ -624,6 +624,53 @@ mod tests {
         assert!(matches!(back, ConvertOutcome::Written { .. }));
     }
 
+    /// A same-format output keeps the input's name, so `photo.PNG` never
+    /// writes over a different `photo.png`; an extensionless input, whose
+    /// format only its content names, takes the standard extension.
+    #[test]
+    fn same_format_output_keeps_input_name() {
+        let dir = TempDir::new().unwrap();
+        let upper = write_fixture_png(dir.path(), "photo.PNG");
+        let sibling = dir.path().join("photo.png");
+        std::fs::write(&sibling, b"someone else's photo").unwrap();
+        let opts = crate::EncodeOptions::default();
+        let written = |input: &Path, target, policy| match convert_file(
+            input, target, &opts, policy,
+        )
+        .unwrap()
+        {
+            ConvertOutcome::Written { output } => output,
+            other => panic!("{other:?}"),
+        };
+
+        assert_eq!(written(&upper, Format::Png, OverwritePolicy::Replace), upper);
+        assert_eq!(
+            written(&upper, Format::Png, OverwritePolicy::Increment),
+            dir.path().join("photo_1.PNG")
+        );
+        assert_eq!(std::fs::read(&sibling).unwrap(), b"someone else's photo");
+
+        let jpeg = dir.path().join("shot.jpeg");
+        image::open(&upper).unwrap().save(&jpeg).unwrap();
+        assert_eq!(
+            written(&jpeg, Format::Jpeg, OverwritePolicy::Increment),
+            dir.path().join("shot_1.jpeg")
+        );
+        assert_eq!(written(&jpeg, Format::Png, OverwritePolicy::Skip), dir.path().join("shot.png"));
+
+        let noext = dir.path().join("noext");
+        std::fs::copy(&upper, &noext).unwrap();
+        let taken = dir.path().join("noext.png");
+        std::fs::write(&taken, b"keep").unwrap();
+        let outcome = convert_file(&noext, Format::Png, &opts, OverwritePolicy::Skip).unwrap();
+        assert_eq!(outcome, ConvertOutcome::Skipped { output: taken.clone() });
+        assert_eq!(
+            written(&noext, Format::Png, OverwritePolicy::Increment),
+            dir.path().join("noext_1.png")
+        );
+        assert_eq!(std::fs::read(&taken).unwrap(), b"keep");
+    }
+
     /// Regression: an in-place Replace once deleted the source; it must
     /// publish a complete file through the temporary sibling.
     #[test]

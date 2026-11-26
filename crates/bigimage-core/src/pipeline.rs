@@ -408,7 +408,9 @@ pub(crate) fn resolve_output(
 }
 
 /// Like [`resolve_output`] but takes an explicit `output_dir`: `None` writes
-/// next to the source file, a directory keeps the source's stem.
+/// next to the source file, a directory keeps the source's stem. The
+/// extension is [`Format::output_extension`], which the binary's output
+/// planner mirrors.
 pub(crate) fn resolve_output_to(
     input: &Path,
     output_dir: Option<&Path>,
@@ -419,7 +421,7 @@ pub(crate) fn resolve_output_to(
         .file_stem()
         .ok_or_else(|| BigImageError::InvalidInput(format!("no file stem in {input:?}")))?;
     let parent = output_dir.or_else(|| input.parent()).unwrap_or_else(|| Path::new("."));
-    let ext = target.extension();
+    let ext = target.output_extension(input);
     let suffix = suffix.unwrap_or("");
 
     let naive = {

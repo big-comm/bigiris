@@ -275,6 +275,7 @@ bigiris --dialog=convert *.jpg
 bigiris --dialog=resize *.png
 bigiris --dialog=crop photo.jpg
 bigiris --dialog=adjust *.jpg
+bigiris --dialog=metadata photo.jpg
 bigiris --dialog=compare before.png after.png
 bigiris --dialog=remove-bg photo.jpg
 bigiris --dialog=upscale photo.jpg
@@ -283,12 +284,15 @@ bigiris --dialog=upscale photo.jpg
 bigiris convert --to avif --overwrite increment *.jpg
 bigiris convert --to webp --target smallest *.png
 bigiris convert --to jpg --quality 90 photo.png
-bigiris strip-metadata --overwrite increment photo.jpg  # photo_1.jpg, no EXIF
+bigiris strip-metadata --overwrite increment photo.jpeg  # photo_1.jpeg, no EXIF
 bigiris resize --max-edge 1080 *.png
+bigiris resize --percent 50 photo.jpg
+bigiris resize --fit 1920x1080 --filter catmull-rom *.jpg
 bigiris rotate --degrees 90 photo.jpg
 bigiris flip --axis horizontal photo.jpg
 bigiris crop --rect 800x600+100+50 photo.jpg
 bigiris adjust --brightness 15 --contrast 10 photo.jpg
+bigiris extent --aspect 4:5 --bg "#0d0e12" --gravity north photo.jpg
 bigiris animate -o output.gif --delay 100 frame_*.png
 bigiris remove-bg --overwrite increment photo.jpg
 bigiris upscale --factor 4 photo.jpg               # Real-ESRGAN, or Lanczos3
@@ -312,6 +316,12 @@ the output shows `skip`. This also applies to `animate` (the target `.gif`),
 `to-pdf`, which skips an existing `<name>.pdf` instead of replacing it.
 Outputs that would collide with each other in the same command are refused
 before anything is written.
+
+An output in the input's own format keeps the input's file name and extension
+(`photo.PNG` writes `photo.PNG`, `photo.jpeg` with `increment` writes
+`photo_1.jpeg`); converting to another format, or a file without an
+extension, uses the standard extension (`photo.jpeg` to PNG writes
+`photo.png`). The same rule names the outputs of the menus and the dialogs.
 
 - `upscale --engine` accepts `auto` (default: Real-ESRGAN if installed,
   otherwise Lanczos3), `realesrgan` (fails if the package is missing) and

@@ -63,6 +63,19 @@ impl Format {
         }
     }
 
+    /// Extension of an output in this format made from `input`: the input's
+    /// own spelling when it already names this format (`photo.JPEG`,
+    /// `scan.tif`), so a same-format output keeps the input's name, and
+    /// [`Format::extension`] otherwise. PNM always takes the standard one,
+    /// since its extension follows the pixels ([`Format::extension_for`]).
+    pub fn output_extension(self, input: &std::path::Path) -> &std::ffi::OsStr {
+        let names_self = |ext: &&std::ffi::OsStr| {
+            self != Format::Pnm
+                && ext.to_str().and_then(|ext| Format::parse(ext).ok()) == Some(self)
+        };
+        input.extension().filter(names_self).unwrap_or(std::ffi::OsStr::new(self.extension()))
+    }
+
     /// Extension for a file of this format holding pixels of colour type
     /// `color`, as the pipelines write it: PNM is `pgm` for gray (PGM, P5)
     /// and `ppm` for colour (PPM, P6) — alpha is flattened, so PAM is never
@@ -162,6 +175,20 @@ impl Format {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn output_extension_keeps_own_spelling() {
+        let ext = |name: &str, format: Format| {
+            format.output_extension(std::path::Path::new(name)).to_str().unwrap().to_owned()
+        };
+        assert_eq!(ext("a.PNG", Format::Png), "PNG");
+        assert_eq!(ext("a.jpeg", Format::Jpeg), "jpeg");
+        assert_eq!(ext("a.TIF", Format::Tiff), "TIF");
+        assert_eq!(ext("a.jpeg", Format::Png), "png");
+        assert_eq!(ext("a", Format::Png), "png");
+        assert_eq!(ext("a.tar.gz", Format::Png), "png");
+        assert_eq!(ext("a.PGM", Format::Pnm), "ppm", "PNM follows the pixels");
+    }
 
     #[test]
     fn parse_accepts_common_spellings() {

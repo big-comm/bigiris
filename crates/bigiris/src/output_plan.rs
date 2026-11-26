@@ -3,6 +3,7 @@
 //! which inputs write the same file, refused or run in order before any
 //! work starts.
 
+use std::ffi::OsString;
 use std::path::{Path, PathBuf};
 
 use bigimage_core::{Format, OverwritePolicy};
@@ -114,7 +115,7 @@ pub(crate) fn plan_outputs(
 }
 
 /// Folder, stem and extension of the file `file` writes under `naming`.
-fn output_key(file: &Path, naming: &Naming) -> (PathBuf, std::ffi::OsString, String) {
+fn output_key(file: &Path, naming: &Naming) -> (PathBuf, OsString, OsString) {
     let dir = naming
         .output_dir
         .as_deref()
@@ -124,15 +125,15 @@ fn output_key(file: &Path, naming: &Naming) -> (PathBuf, std::ffi::OsString, Str
     let dir = std::fs::canonicalize(dir).unwrap_or_else(|_| dir.to_path_buf());
     // Without a target the core keeps the format found in the content,
     // so `a.jpg` holding a PNG writes `a_<suffix>.png`; plan by the same.
-    let extension = naming.extension.map(str::to_owned).unwrap_or_else(|| {
-        bigimage_core::sniff_format(file).map_or_else(
-            || {
-                let own = file.extension().and_then(|e| e.to_str()).unwrap_or_default();
-                own.to_ascii_lowercase()
-            },
-            |format| format.extension().to_owned(),
-        )
-    });
+    let format = match naming.extension {
+        Some(extension) => Format::parse(extension).ok(),
+        None => bigimage_core::sniff_format(file),
+    };
+    let extension = match (format, naming.extension) {
+        (Some(format), _) => format.output_extension(file).to_os_string(),
+        (None, Some(extension)) => extension.into(),
+        (None, None) => file.extension().unwrap_or_default().to_os_string(),
+    };
     (dir, file.file_stem().unwrap_or_default().to_os_string(), extension)
 }
 
@@ -179,5 +180,21 @@ mod tests {
         // Other policies never number outputs, so nothing is merged.
         let naming = Naming::image(Some(Format::Png), OverwritePolicy::Skip);
         assert_eq!(plan_outputs(&files, &naming).unwrap().len(), names.len());
+    }
+
+    /// Mirrors the core's naming: a same-format output keeps the input's
+    /// extension, so `photo.PNG` and `photo.png` write different files while
+    /// `photo.jpeg` and `photo.jpg` converted to PNG both write `photo.png`.
+    #[test]
+    fn same_format_keeps_input_extension() {
+        let dir = tempfile::tempdir().unwrap();
+        let file = |name: &str| dir.path().join(name);
+        let png = |names: &[&str]| {
+            let files: Vec<_> = names.iter().map(|name| file(name)).collect();
+            plan_outputs(&files, &Naming::image(Some(Format::Png), OverwritePolicy::Skip))
+        };
+        assert_eq!(png(&["photo.PNG", "photo.png"]).unwrap().len(), 2);
+        assert!(png(&["photo.jpeg", "photo.jpg"]).is_err());
+        assert!(png(&["noext", "noext.png"]).is_err(), "an extensionless PNG writes noext.png");
     }
 }

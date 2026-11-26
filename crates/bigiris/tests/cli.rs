@@ -1015,7 +1015,7 @@ fn system_install_needs_destdir() {
 }
 
 /// The menu's "Remove all metadata" runs this: a numbered copy in the same
-/// format, without the source's EXIF, next to the untouched original.
+/// format and extension, without the source's EXIF, next to the original.
 #[test]
 fn strip_metadata_writes_clean_copy() {
     if !sandbox_available() {
@@ -1032,11 +1032,11 @@ fn strip_metadata_writes_clean_copy() {
     tagged.extend_from_slice(&[0xFF, 0xE1, length[0], length[1]]);
     tagged.extend_from_slice(tiff);
     tagged.extend_from_slice(&jpeg[2..]);
-    std::fs::write(dir.path().join("photo.jpg"), &tagged).unwrap();
+    std::fs::write(dir.path().join("photo.JPG"), &tagged).unwrap();
 
-    success(run(dir.path(), &["strip-metadata", "--overwrite", "increment", "photo.jpg"]));
-    assert_eq!(std::fs::read(dir.path().join("photo.jpg")).unwrap(), tagged);
-    let clean = std::fs::read(dir.path().join("photo_1.jpg")).unwrap();
+    success(run(dir.path(), &["strip-metadata", "--overwrite", "increment", "photo.JPG"]));
+    assert_eq!(std::fs::read(dir.path().join("photo.JPG")).unwrap(), tagged);
+    let clean = std::fs::read(dir.path().join("photo_1.JPG")).unwrap();
     assert!(clean.starts_with(&[0xFF, 0xD8]));
     assert!(!clean.windows(6).any(|w| w == b"Exif\0\0"), "EXIF kept");
 }

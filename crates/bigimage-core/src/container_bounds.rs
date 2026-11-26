@@ -272,6 +272,36 @@ mod tests {
         assert_eq!(parse(bytes), ItemTransform::default());
     }
 
+    /// Guards: outside input: each structural refusal before a codec
+    /// allocates from declared box sizes.
+    #[test]
+    fn inspect_refuses_each_malformed_structure() {
+        let check = |bytes: &[u8]| inspect(&mut std::io::Cursor::new(bytes)).is_ok();
+        let nested = |depth: usize| (0..depth).fold(Vec::new(), |inner, _| bx(b"iprp", &inner));
+        let mut child_past_parent = bx(b"iprp", &bx(b"ipco", &[0; 4]));
+        child_past_parent[11] = 200;
+        let mut long_size_short_file = bx(b"free", &[]);
+        long_size_short_file[3] = 1;
+        let cases: [(&str, Vec<u8>, bool); 9] = [
+            ("well formed", file(&[1, 0x82], &[]), true),
+            ("nesting at the limit", nested(16), true),
+            ("nesting past the limit", nested(17), false),
+            (
+                "box past the file",
+                [bx(b"ftyp", b"avif"), vec![0, 0, 1, 0, b'f', b'r', b'e', b'e']].concat(),
+                false,
+            ),
+            ("child past its parent", child_past_parent, false),
+            ("size below its header", vec![0, 0, 0, 4, b'f', b'r', b'e', b'e'], false),
+            ("trailing bytes", [bx(b"ftyp", b"avif"), vec![0; 4]].concat(), false),
+            ("64-bit size cut short", long_size_short_file, false),
+            ("too many boxes", bx(b"free", &[]).repeat(100_001), false),
+        ];
+        for (name, bytes, accepted) in cases {
+            assert_eq!(check(&bytes), accepted, "{name}");
+        }
+    }
+
     #[test]
     fn transform_rotates_then_mirrors() {
         // 2x1: red | green.

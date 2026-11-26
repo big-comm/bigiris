@@ -393,7 +393,19 @@ mod tests {
     }
 
     #[test]
-    fn invalid_percent_is_rejected() {
+    fn invalid_requests_are_rejected() {
+        for mode in [
+            ResizeMode::Percent(0.0),
+            ResizeMode::Percent(1000.5),
+            ResizeMode::Percent(f32::NAN),
+            ResizeMode::Exact { width: 0, height: 5 },
+            ResizeMode::Exact { width: 5, height: 0 },
+            ResizeMode::Fit { width: 0, height: 5 },
+            ResizeMode::Fit { width: 5, height: 0 },
+        ] {
+            let result = mode.target_dims(10, 10);
+            assert!(matches!(result, Err(BigImageError::InvalidInput(_))), "{mode:?}");
+        }
         let dir = TempDir::new().unwrap();
         let src = write_fixture_png(dir.path(), "x.png", 10, 10);
         let err = resize_file(

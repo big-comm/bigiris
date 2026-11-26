@@ -840,4 +840,14 @@ mod tests {
         let err = read("/does/not/exist/fx.jpg").unwrap_err();
         assert!(matches!(err, BigImageError::Io(_)));
     }
+
+    #[test]
+    fn read_refuses_directories_and_oversized_files() {
+        let dir = TempDir::new().unwrap();
+        let sparse = dir.path().join("huge.jpg");
+        std::fs::File::create(&sparse).unwrap().set_len(1024 * 1024 * 1024 + 1).unwrap();
+        for path in [dir.path(), sparse.as_path()] {
+            assert!(matches!(read(path), Err(BigImageError::InvalidInput(_))), "{path:?}");
+        }
+    }
 }

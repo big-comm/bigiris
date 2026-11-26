@@ -155,12 +155,38 @@ fn oversized_file_and_pixel_headers_are_rejected_by_viewer() {
     let sparse = dir.path().join("huge.png");
     std::fs::File::create(&sparse).unwrap().set_len(1024 * 1024 * 1024 + 1).unwrap();
     assert!(matches!(open_image(&sparse), Err(image::ImageError::Limits(_))));
-    let pixels = dir.path().join("pixels.ppm");
-    std::fs::write(&pixels, b"P6\n100000 100000\n255\n").unwrap();
-    assert!(matches!(open_image(&pixels), Err(image::ImageError::Limits(_))));
-    // Below the pixel limit, but RGB16 requires >512 MiB.
-    std::fs::write(&pixels, b"P6\n16000 12000\n65535\n").unwrap();
-    assert!(matches!(open_image(&pixels), Err(image::ImageError::Limits(_))));
+    let pixels = dir.path().join("pixels.pnm");
+    for header in [
+        &b"P6\n100000 100000\n255\n"[..],
+        // Past the pixel limit, but 300 MB of gray fits the buffer limit.
+        b"P5\n20000 15000\n255\n",
+        // Below the pixel limit, but RGB16 requires >512 MiB.
+        b"P6\n16000 12000\n65535\n",
+    ] {
+        std::fs::write(&pixels, header).unwrap();
+        let name = String::from_utf8_lossy(header);
+        assert!(matches!(open_image(&pixels), Err(image::ImageError::Limits(_))), "{name}");
+        let dimensions = bigimage_core::image_dimensions(&pixels);
+        assert!(matches!(dimensions, Err(image::ImageError::Limits(_))), "{name}");
+    }
+}
+
+#[test]
+fn encode_refuses_a_target_buffer_past_the_limit() {
+    // 36 MB of gray becomes 576 MB of RGBA float for OpenEXR.
+    let dir = tempfile::tempdir().unwrap();
+    let gray = DynamicImage::ImageLuma8(image::GrayImage::new(6000, 6000));
+    let output = dir.path().join("big.exr");
+    let result = bigimage_core::save_image(
+        gray,
+        &output,
+        Format::OpenExr,
+        &EncodeOptions::default(),
+        OverwritePolicy::Replace,
+    );
+    assert!(matches!(result, Err(bigimage_core::BigImageError::InvalidInput(_))), "{result:?}");
+    assert!(!output.exists());
+    assert_no_partials(dir.path());
 }
 
 #[test]

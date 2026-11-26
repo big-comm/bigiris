@@ -298,6 +298,23 @@ mod tests {
         path
     }
 
+    /// Guards: process boundary: a preview relayed by the decoder worker is
+    /// checked before it is used.
+    #[test]
+    fn from_cached_refuses_invalid_previews() {
+        let thumbnail = |w, h| DynamicImage::new_rgb8(w, h);
+        let accepted = |natural, image| {
+            PreviewSession::from_cached(natural, Format::Png, image, false).is_ok()
+        };
+        assert!(accepted((1600, 900), thumbnail(800, 450)));
+        assert!(!accepted((0, 900), thumbnail(800, 450)));
+        assert!(!accepted((1600, 0), thumbnail(800, 450)));
+        assert!(!accepted((1600, 900), thumbnail(0, 450)));
+        assert!(!accepted((1600, 900), thumbnail(800, 0)));
+        assert!(!accepted((1600, 900), thumbnail(PREVIEW_MAX_EDGE + 1, 450)));
+        assert!(!accepted((900, 1600), thumbnail(450, PREVIEW_MAX_EDGE + 1)));
+    }
+
     #[test]
     fn session_caches_natural_size_and_format() {
         let dir = TempDir::new().unwrap();

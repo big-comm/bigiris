@@ -195,12 +195,59 @@ fn oversized_gif_frame_is_rejected_without_allocating_its_pixels() {
     assert!(bigimage_core::content::ensure_static_local(&path).is_err());
 }
 
+/// A well-formed GIF whose only frame is wider than its logical screen.
+#[test]
+fn gif_frame_outside_the_screen_is_refused() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("wide-frame.gif");
+    let mut bytes = Vec::new();
+    {
+        let mut encoder = gif::Encoder::new(&mut bytes, 2, 2, &[0, 0, 0, 255, 255, 255]).unwrap();
+        let frame = gif::Frame {
+            width: 2,
+            height: 2,
+            buffer: vec![0, 1, 1, 0].into(),
+            ..Default::default()
+        };
+        encoder.write_frame(&frame).unwrap();
+    }
+    // Logical screen width (bytes 6-7) shrunk to one pixel.
+    bytes[6] = 1;
+    std::fs::write(&path, &bytes).unwrap();
+    assert!(bigimage_core::content::ensure_static_local(&path).is_err());
+    assert!(open_image(&path).is_err());
+}
+
 #[test]
 fn avif_declared_box_beyond_file_is_rejected_before_allocation() {
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().join("malformed.avif");
     std::fs::write(&path, include_bytes!("fixtures/avif-box-overrun.avif")).unwrap();
     assert!(open_image(&path).is_err());
+    assert!(bigimage_core::image_dimensions(&path).is_err());
+}
+
+/// A box structure the AV1 container parser tolerates (an unknown
+/// top-level box nested past the depth limit) is still refused up front.
+#[test]
+fn avif_box_nesting_past_the_limit_is_refused() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("nested.avif");
+    bigimage_core::save_image(
+        DynamicImage::new_rgb8(4, 4),
+        &path,
+        Format::Avif,
+        &EncodeOptions { quality: Some(50), ..EncodeOptions::default() },
+        OverwritePolicy::Replace,
+    )
+    .unwrap();
+    let nested = (0..17).fold(Vec::new(), |inner: Vec<u8>, _| {
+        [&(inner.len() as u32 + 8).to_be_bytes()[..], b"iprp", &inner].concat()
+    });
+    let mut bytes = std::fs::read(&path).unwrap();
+    bytes.extend_from_slice(&nested);
+    std::fs::write(&path, bytes).unwrap();
+    assert!(matches!(open_image(&path), Err(image::ImageError::IoError(_))));
     assert!(bigimage_core::image_dimensions(&path).is_err());
 }
 

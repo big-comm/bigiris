@@ -1251,9 +1251,9 @@ where
                 written += 1;
                 println!("ok  {} -> {}", codec::printable_path(f), codec::printable_path(&output));
             }
-            Ok(ConvertOutcome::Skipped { output }) => {
+            Ok(skip @ (ConvertOutcome::Skipped { .. } | ConvertOutcome::Unchanged { .. })) => {
                 skipped += 1;
-                println!("skip {} ({})", codec::printable_path(f), exists_note(&output));
+                println!("skip {} ({})", codec::printable_path(f), skip_note(&skip));
             }
             Err(error) => {
                 failed += 1;
@@ -1285,6 +1285,16 @@ fn note_ignored_profile(input: &Path) {
 }
 
 /// Why a `skip` line wrote nothing.
+fn skip_note(outcome: &ConvertOutcome) -> String {
+    match outcome {
+        ConvertOutcome::Unchanged { .. } => gettext("nothing would change"),
+        ConvertOutcome::Skipped { output } | ConvertOutcome::Written { output } => {
+            exists_note(output)
+        }
+    }
+}
+
+/// An existing output kept under `skip`.
 fn exists_note(output: &Path) -> String {
     fill(&gettext("already exists: {path}"), &[("path", &codec::printable_path(output))])
 }
@@ -1343,9 +1353,9 @@ fn run_remove_bg(
                 ok += 1;
                 println!("ok  {} -> {}", codec::printable_path(f), codec::printable_path(&output));
             }
-            Ok(ConvertOutcome::Skipped { output }) => {
+            Ok(skip @ (ConvertOutcome::Skipped { .. } | ConvertOutcome::Unchanged { .. })) => {
                 skipped += 1;
-                println!("skip {} ({})", codec::printable_path(f), exists_note(&output));
+                println!("skip {} ({})", codec::printable_path(f), skip_note(&skip));
             }
             Err(error) => {
                 fail += 1;
@@ -1548,8 +1558,8 @@ fn run_animate(
             println!("ok  {count} -> {}", codec::printable_path(&output));
             Ok(())
         }
-        Ok(ConvertOutcome::Skipped { output }) => {
-            println!("skip animate ({})", exists_note(&output));
+        Ok(skip @ (ConvertOutcome::Skipped { .. } | ConvertOutcome::Unchanged { .. })) => {
+            println!("skip animate ({})", skip_note(&skip));
             Ok(())
         }
         // Frames were read but could not be turned into the animation.
@@ -1716,14 +1726,14 @@ fn run_batch(profile: &std::path::Path, inputs: &[PathBuf]) -> color_eyre::Resul
                     codec::printable_path(&output)
                 );
             }
-            Ok(ConvertOutcome::Skipped { output }) => {
+            Ok(skip @ (ConvertOutcome::Skipped { .. } | ConvertOutcome::Unchanged { .. })) => {
                 skipped += 1;
                 println!(
                     "[{}/{}] skip {} ({})",
                     done + 1,
                     total,
                     codec::printable_path(&input),
-                    exists_note(&output)
+                    skip_note(&skip)
                 );
             }
             Err(error) => {
@@ -1783,9 +1793,9 @@ fn run_to_pdf(
                     codec::printable_path(&output)
                 );
             }
-            Ok(ConvertOutcome::Skipped { output }) => {
+            Ok(skip @ (ConvertOutcome::Skipped { .. } | ConvertOutcome::Unchanged { .. })) => {
                 skipped += 1;
-                println!("skip {} ({})", codec::printable_path(file), exists_note(&output));
+                println!("skip {} ({})", codec::printable_path(file), skip_note(&skip));
             }
             Err(e) => {
                 fail += 1;

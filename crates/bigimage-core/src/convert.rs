@@ -37,13 +37,22 @@ pub enum ConvertOutcome {
         /// Path that was left untouched.
         output: PathBuf,
     },
+    /// Nothing would change: a resize or extent to the size the image
+    /// already has, in its own format. Nothing was written.
+    Unchanged {
+        /// The name the output would have had.
+        output: PathBuf,
+    },
 }
 
 impl ConvertOutcome {
-    /// Final path (written or skipped).
+    /// Final path (written or skipped), or the one an unchanged run would
+    /// have written.
     pub fn path(&self) -> &Path {
         match self {
-            ConvertOutcome::Written { output } | ConvertOutcome::Skipped { output } => output,
+            ConvertOutcome::Written { output }
+            | ConvertOutcome::Skipped { output }
+            | ConvertOutcome::Unchanged { output } => output,
         }
     }
 }
@@ -475,7 +484,7 @@ mod tests {
         .unwrap();
         let out = match outcome {
             ConvertOutcome::Written { output } => output,
-            ConvertOutcome::Skipped { .. } => panic!("unexpected skip"),
+            other => panic!("unexpected {other:?}"),
         };
 
         assert_eq!(out, dir.path().join("fx.jpg"));

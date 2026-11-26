@@ -267,6 +267,12 @@ pub(crate) fn decode_for_target(
     Ok((image, target.unwrap_or(source)))
 }
 
+/// Whether an output in `target` (`None`: the source's own) keeps the
+/// format of `input`, so a run that keeps its size changes nothing.
+pub(crate) fn keeps_format(input: &Path, target: Option<Format>) -> bool {
+    target.is_none_or(|format| sniff_format(input) == Some(format))
+}
+
 /// Whether `a` and `b` name one existing file (same device and inode).
 pub(crate) fn same_file(a: &Path, b: &Path) -> bool {
     use std::os::unix::fs::MetadataExt;

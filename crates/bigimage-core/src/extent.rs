@@ -234,11 +234,15 @@ pub fn extent_file_with_options(
         }
     }
 
+    let keeps_format = pipeline::keeps_format(input, target);
     let (src, target) = pipeline::decode_for_target(input, target)?;
 
     let (nw, nh) = opts.size.resolve(src.width(), src.height())?;
     let suffix = filename_suffix(nw, nh);
     let output = pipeline::resolve_output(input, Some(&suffix), target)?;
+    if keeps_format && (nw, nh) == (src.width(), src.height()) {
+        return Ok(ConvertOutcome::Unchanged { output });
+    }
 
     if pipeline::existing_output(&output, target, policy) {
         tracing::debug!(?output, "extent: skipping existing output");
@@ -456,6 +460,21 @@ mod tests {
         assert_eq!(out, dir.path().join("in_extent-10x10.png"));
         let img = image::open(&out).unwrap();
         assert_eq!((img.width(), img.height()), (10, 10));
+    }
+
+    /// A canvas the image already has, in its own format, changes nothing.
+    #[test]
+    fn extent_to_own_ratio_writes_nothing() {
+        let dir = TempDir::new().unwrap();
+        let src = write_fixture(dir.path(), "sq.png", 6, 6, [9, 9, 9]);
+        for size in [ExtentSize::Aspect { w: 1, h: 1 }, ExtentSize::Exact { width: 6, height: 6 }] {
+            let opts =
+                ExtentOptions { size, background: [0, 0, 0, 0xFF], gravity: Gravity::Center };
+            let outcome = extent_file(&src, opts, None, OverwritePolicy::Replace).unwrap();
+            let output = dir.path().join("sq_extent-6x6.png");
+            assert_eq!(outcome, ConvertOutcome::Unchanged { output });
+        }
+        assert_eq!(std::fs::read_dir(dir.path()).unwrap().count(), 1, "something was written");
     }
 
     #[test]

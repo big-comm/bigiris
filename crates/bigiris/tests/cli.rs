@@ -1039,6 +1039,30 @@ fn extent_aspect_names_outputs_per_image() {
     assert!(String::from_utf8_lossy(&output.stderr).contains("b.jpg"));
 }
 
+/// A resize or letterbox that changes nothing writes nothing: a skip line
+/// says why, and that is no failure.
+#[test]
+fn noop_resize_and_extent_write_nothing() {
+    if !sandbox_available() {
+        return;
+    }
+    let dir = tempfile::tempdir().unwrap();
+    sized_fixture(dir.path(), "small.png", 300, 200);
+    sized_fixture(dir.path(), "square.png", 300, 300);
+    for args in
+        [["resize", "--max-edge", "1920", "small.png"], ["extent", "--aspect", "1:1", "square.png"]]
+    {
+        let output = run(dir.path(), &args);
+        success(output.clone());
+        let report = String::from_utf8_lossy(&output.stdout);
+        assert!(
+            report.starts_with(&format!("skip {} (nothing would change)", args[3])),
+            "{report}"
+        );
+    }
+    assert_eq!(std::fs::read_dir(dir.path()).unwrap().count(), 2, "something was written");
+}
+
 #[test]
 fn collisions_are_planned_by_content_not_extension() {
     let dir = tempfile::tempdir().unwrap();

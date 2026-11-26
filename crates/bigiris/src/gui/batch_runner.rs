@@ -156,8 +156,18 @@ pub(super) fn finish_dialog(
     window: &adw::ApplicationWindow,
     summary: RunSummary,
 ) {
-    let RunSummary { ok, skip, fail, first_err, elapsed, bytes_in, bytes_out, single, .. } =
-        summary;
+    let RunSummary {
+        ok,
+        skip,
+        unchanged,
+        fail,
+        first_err,
+        elapsed,
+        bytes_in,
+        bytes_out,
+        single,
+        ..
+    } = summary;
     // Headline: counts and elapsed time; the size delta follows when files
     // were written (both totals count written files only).
     let counts = format_counts(ok, skip, fail);
@@ -174,7 +184,23 @@ pub(super) fn finish_dialog(
         Some(ConvertOutcome::Skipped { output }) => {
             Some((gettext("Already exists, nothing written: {path}"), output))
         }
-        None => None,
+        Some(ConvertOutcome::Unchanged { .. }) => {
+            msg.push('\n');
+            msg.push_str(&gettext(
+                "Nothing would change: the image already has that size or ratio.",
+            ));
+            None
+        }
+        None => {
+            if unchanged > 0 {
+                msg.push('\n');
+                msg.push_str(&crate::fill(
+                    &gettext("Already at that size or ratio, left as they were: {count}"),
+                    &[("count", &unchanged.to_string())],
+                ));
+            }
+            None
+        }
     };
     if let Some((template, output)) = single {
         msg.push('\n');
@@ -202,6 +228,8 @@ pub(super) fn abort_dialog(status: &gtk::Label, apply_btn: &gtk::Button) {
 pub(super) struct RunSummary {
     pub(super) ok: usize,
     pub(super) skip: usize,
+    /// Of `skip`, the inputs nothing would have changed.
+    pub(super) unchanged: usize,
     pub(super) fail: usize,
     pub(super) first_err: Option<String>,
     /// Wall-clock time of the run.
@@ -323,6 +351,7 @@ where
         let _ = tx.send(AsyncBatchEvent::Done(RunSummary {
             ok: tally.ok,
             skip: tally.skip,
+            unchanged: tally.unchanged,
             fail: tally.fail,
             first_err: tally.first_err,
             elapsed: start.elapsed(),
@@ -356,6 +385,8 @@ struct Queue {
 struct Tally {
     ok: usize,
     skip: usize,
+    /// Of `skip`, the inputs nothing would have changed.
+    unchanged: usize,
     fail: usize,
     /// The first failure, shown in the summary.
     first_err: Option<String>,
@@ -367,6 +398,7 @@ impl Tally {
     fn add(&mut self, other: Tally) {
         self.ok += other.ok;
         self.skip += other.skip;
+        self.unchanged += other.unchanged;
         self.fail += other.fail;
         if self.first_err.is_none() {
             self.first_err = other.first_err;
@@ -432,6 +464,11 @@ where
                 }
                 Ok(ConvertOutcome::Skipped { .. }) => {
                     tally.skip += 1;
+                    None
+                }
+                Ok(ConvertOutcome::Unchanged { .. }) => {
+                    tally.skip += 1;
+                    tally.unchanged += 1;
                     None
                 }
                 // These sentences already name the file.
@@ -589,6 +626,7 @@ mod worker_tests {
         let summary = |ok, skip, single| RunSummary {
             ok,
             skip,
+            unchanged: 0,
             fail: 0,
             first_err: None,
             elapsed: Duration::from_millis(10),
@@ -613,6 +651,20 @@ mod worker_tests {
         assert!(auto_close_armed(&window));
         disarm_auto_close(&window);
         window.destroy();
+    }
+
+    /// A run nothing would change counts as skipped, and as unchanged so
+    /// the summary can say why.
+    #[test]
+    fn unchanged_runs_count_as_skipped() {
+        let events = spawn_batch_workers(
+            vec![PathBuf::from("small.png")],
+            png_naming(OverwritePolicy::Skip),
+            |path| Ok(ConvertOutcome::Unchanged { output: path.to_path_buf() }),
+            Arc::new(AtomicBool::new(false)),
+        );
+        let AsyncBatchEvent::Done(summary) = summary(events) else { panic!("refused") };
+        assert_eq!((summary.ok, summary.skip, summary.unchanged), (0, 1, 1));
     }
 
     /// A failure line names the file once, whether or not the error does.

@@ -270,7 +270,9 @@ fn start_animate_run(
                 ));
                 batch_runner::arm_auto_close(&window, 2);
             }
-            Some(Ok(ConvertOutcome::Skipped { output })) => {
+            Some(Ok(
+                ConvertOutcome::Skipped { output } | ConvertOutcome::Unchanged { output },
+            )) => {
                 status.set_text(&fill(
                     &gettext("The file {file} appeared in the meantime and was kept; nothing was written."),
                     &[("file", &crate::codec::printable_path(&output))],

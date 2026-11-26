@@ -162,9 +162,14 @@ pub fn resize_file(
         return Ok(skipped);
     }
 
+    let keeps_format = pipeline::keeps_format(input, target);
     let (src, target) = pipeline::decode_for_target(input, target)?;
 
     let output = pipeline::resolve_output(input, Some(&suffix), target)?;
+    let size = mode.target_dims(src.width(), src.height())?;
+    if keeps_format && size == (src.width(), src.height()) {
+        return Ok(ConvertOutcome::Unchanged { output });
+    }
 
     if pipeline::existing_output(&output, target, policy) {
         tracing::debug!(?output, "resize: skipping existing output");
@@ -250,44 +255,35 @@ mod tests {
         assert_eq!(dims(1, 100_000, 10), (1, 10));
     }
 
+    /// A resize to the size the image already has, in its own format,
+    /// changes nothing: nothing is written and the run says so. Another
+    /// format still converts.
     #[test]
-    fn max_edge_passes_through_small_images() {
+    fn unchanged_size_writes_nothing() {
         let dir = TempDir::new().unwrap();
         let src = write_fixture_png(dir.path(), "s.png", 32, 16);
-        let out = match resize_file(
-            &src,
-            ResizeMode::MaxEdge(1080),
-            Filter::Lanczos3,
-            None,
-            &crate::EncodeOptions::default(),
-            OverwritePolicy::Replace,
-        )
-        .unwrap()
-        {
-            ConvertOutcome::Written { output } => output,
-            _ => panic!("expected write"),
+        let resize = |mode, target| {
+            let opts = crate::EncodeOptions::default();
+            resize_file(&src, mode, Filter::Lanczos3, target, &opts, OverwritePolicy::Replace)
+                .unwrap()
         };
-        assert_eq!(dims_of(&out), (32, 16));
-    }
-
-    #[test]
-    fn percent_100_is_identity() {
-        let dir = TempDir::new().unwrap();
-        let src = write_fixture_png(dir.path(), "p.png", 40, 25);
-        let out = match resize_file(
-            &src,
-            ResizeMode::Percent(100.0),
-            Filter::Lanczos3,
-            None,
-            &crate::EncodeOptions::default(),
-            OverwritePolicy::Replace,
-        )
-        .unwrap()
-        {
-            ConvertOutcome::Written { output } => output,
-            _ => panic!("expected write"),
+        for (mode, name) in [
+            (ResizeMode::MaxEdge(1080), "s_1080.png"),
+            (ResizeMode::Percent(100.0), "s_100pct.png"),
+            (ResizeMode::Fit { width: 64, height: 16 }, "s_fit-64x16.png"),
+            (ResizeMode::Exact { width: 32, height: 16 }, "s_32x16.png"),
+        ] {
+            let output = dir.path().join(name);
+            assert_eq!(resize(mode, None), ConvertOutcome::Unchanged { output: output.clone() });
+            assert_eq!(resize(mode, Some(Format::Png)), ConvertOutcome::Unchanged { output });
+        }
+        assert_eq!(std::fs::read_dir(dir.path()).unwrap().count(), 1, "something was written");
+        let ConvertOutcome::Written { output } =
+            resize(ResizeMode::MaxEdge(1080), Some(Format::Jpeg))
+        else {
+            panic!("a format change converts");
         };
-        assert_eq!(dims_of(&out), (40, 25));
+        assert_eq!(dims_of(&output), (32, 16));
     }
 
     #[test]

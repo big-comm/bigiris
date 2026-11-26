@@ -650,7 +650,8 @@ enum Command {
         user: bool,
         #[arg(
             long,
-            help = gettext("Install in /usr/share (requires root; usually done by the package)")
+            requires = "destdir",
+            help = gettext("Stage the system-wide integrations under --destdir (packaging only)")
         )]
         system: bool,
         #[arg(
@@ -808,9 +809,7 @@ fn main() -> color_eyre::Result<()> {
             run_animate(&output, delay, loop_count, speed, overwrite.into(), &frames)
         }
         Some(Command::Batch { profile, files }) => run_batch(&profile, &files),
-        Some(Command::InstallIntegrations { user, system, destdir }) => {
-            run_install(user, system, destdir)
-        }
+        Some(Command::InstallIntegrations { destdir, .. }) => run_install(destdir),
         Some(Command::UninstallIntegrations) => run_uninstall(),
         Some(Command::ToPdf { overwrite, timeout, files }) => {
             run_to_pdf(&files, overwrite.into(), std::time::Duration::from_secs(timeout))
@@ -1889,14 +1888,16 @@ fn which_soffice() -> Option<PathBuf> {
     None
 }
 
-fn run_install(user: bool, system: bool, destdir: Option<PathBuf>) -> color_eyre::Result<()> {
+/// `--system` requires `--destdir`: a package stages the system-wide files and
+/// owns them, so nothing outside a package writes `/usr/share`.
+fn run_install(destdir: Option<PathBuf>) -> color_eyre::Result<()> {
     let report = match destdir {
         Some(dir) => {
             tracing::info!(destdir = %dir.display(), "install-integrations (destdir)");
             bigimage_integrations::install_to_destdir(&dir)
         }
         None => {
-            let scope = resolve_scope(user, system);
+            let scope = bigimage_integrations::Scope::User;
             tracing::info!(?scope, "install-integrations");
             bigimage_integrations::install(scope).map_err(|e| {
                 color_eyre::eyre::eyre!(with_error(&gettext("installation failed: {error}"), e))
@@ -1933,11 +1934,6 @@ fn run_uninstall() -> color_eyre::Result<()> {
     } else {
         exit_partial();
     }
-}
-
-fn resolve_scope(user: bool, system: bool) -> bigimage_integrations::Scope {
-    let _ = user; // User is the default; the flag exists for clarity.
-    if system { bigimage_integrations::Scope::System } else { bigimage_integrations::Scope::User }
 }
 
 /// `done` is the status of a manager whose files were written or removed;

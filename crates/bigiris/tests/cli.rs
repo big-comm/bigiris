@@ -857,3 +857,17 @@ fn broken_profile_converts_with_note() {
     let output = run(dir.path(), &["convert", "--to", "jpg", "plain.png"]);
     assert!(!String::from_utf8_lossy(&output.stderr).contains("color profile"));
 }
+
+/// Only a package may write the system-wide menus, which it then owns.
+#[test]
+fn system_install_needs_destdir() {
+    let dir = tempfile::tempdir().unwrap();
+    let output = run(dir.path(), &["install-integrations", "--system"]);
+    assert_eq!(output.status.code(), Some(1));
+    assert!(String::from_utf8_lossy(&output.stderr).contains("--destdir"));
+
+    let package = dir.path().join("pkg");
+    let destdir = format!("--destdir={}", package.display());
+    success(run(dir.path(), &["install-integrations", "--system", &destdir]));
+    assert!(package.join("usr/share/kio/servicemenus/bigiris-view.desktop").is_file());
+}

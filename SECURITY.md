@@ -75,8 +75,11 @@ For context on what is already defense in depth:
   unless bwrap is installed setuid root (the one way it runs without one).
   The deadline is the caller's and is tested there. This is not a total
   RSS/cgroup quota nor a seccomp filter.
-- Service menus written with `O_NOFOLLOW` to prevent following symlinks during
-  `sudo install-integrations --system`.
+- Service menus replace their target by renaming a sibling temporary file,
+  which never writes through a symlink. When a package stages them
+  (`install-integrations --system --destdir`, the only system-scope form), a
+  symlink at a target name is refused; a user install writes through a link
+  only to a regular file the same user owns.
 - Nothing is downloaded: the application has no network client. The AI weights
   come from the optional `birefnet-native`, `realesrgan-native`,
   `scunet-native` and `lama-native` packages, read from

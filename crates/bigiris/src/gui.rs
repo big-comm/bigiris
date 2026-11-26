@@ -766,6 +766,19 @@ fn build_window_preloaded(
         .vscrollbar_policy(gtk::PolicyType::Automatic)
         .child(&picture)
         .build();
+    // Space and the arrows reach the viewer only while no header button has
+    // the focus: a click on the canvas gives it to the picture.
+    picture.set_focusable(true);
+    let focus_click = gtk::GestureClick::new();
+    {
+        let picture = picture.downgrade();
+        focus_click.connect_pressed(move |_, _, _, _| {
+            if let Some(picture) = picture.upgrade() {
+                picture.grab_focus();
+            }
+        });
+    }
+    scroller.add_controller(focus_click);
 
     let status = build_dashboard(&window);
     transfers::install(&window, &status, !has_images);
@@ -3433,12 +3446,14 @@ fn install_viewer_actions(
     window: &adw::ApplicationWindow,
     state: &Rc<RefCell<ViewerState>>,
 ) {
+    let picture = state.borrow().picture.clone();
     let about = gio::SimpleAction::new("about", None);
     {
         let window = window.downgrade();
+        let picture = picture.clone();
         about.connect_activate(move |_, _| {
             if let Some(window) = window.upgrade() {
-                present_about_dialog(&window);
+                focus_picture_after(&present_about_dialog(&window), &picture);
             }
         });
     }
@@ -3700,7 +3715,7 @@ fn install_viewer_actions(
         let window = window.downgrade();
         shortcuts.connect_activate(move |_, _| {
             if let Some(window) = window.upgrade() {
-                present_shortcuts_dialog(&window);
+                focus_picture_after(&present_shortcuts_dialog(&window), &picture);
             }
         });
     }
@@ -4100,7 +4115,7 @@ fn remove_current_file(state: &Rc<RefCell<ViewerState>>, path: &Path) {
 }
 
 /// Compact keyboard reference using widgets supported by GTK 4.12 / Adwaita 1.5.
-fn present_shortcuts_dialog(parent: &adw::ApplicationWindow) {
+fn present_shortcuts_dialog(parent: &adw::ApplicationWindow) -> adw::Dialog {
     parent.set_cursor(None);
     let shortcuts: [(String, Vec<(&str, String)>); 6] = [
         (
@@ -4208,6 +4223,18 @@ fn present_shortcuts_dialog(parent: &adw::ApplicationWindow) {
         .child(&layout)
         .build();
     dialog.present(Some(parent));
+    dialog
+}
+
+/// Give the picture the keyboard focus once `dialog` closes, so Space and
+/// the arrows reach the viewer instead of the menu button that opened it.
+fn focus_picture_after(dialog: &impl IsA<adw::Dialog>, picture: &gtk::Picture) {
+    let picture = picture.downgrade();
+    dialog.connect_closed(move |_| {
+        if let Some(picture) = picture.upgrade() {
+            picture.grab_focus();
+        }
+    });
 }
 
 /// About dialog with project, license and support links.
@@ -4387,6 +4414,7 @@ fn refresh_title(state: &Rc<RefCell<ViewerState>>) {
     s.title.set_subtitle(&subtitle);
     // Screen readers and window switchers read the toplevel's own title.
     s.window().set_title(Some(&name));
+    s.picture.update_property(&[gtk::accessible::Property::Label(&name)]);
     s.zoom_level.set_label(&zoom_percent_label(&s));
     drop(s);
     refresh_osd(state);

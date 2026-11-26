@@ -336,7 +336,7 @@ impl<M> Slot<M> {
         }
     }
 
-    /// Where the loaded model runs, `None` before its first load.
+    /// Where the loaded model runs, `None` while none is loaded.
     pub(crate) fn device(&self) -> Option<Device> {
         lock(&self.device).clone()
     }

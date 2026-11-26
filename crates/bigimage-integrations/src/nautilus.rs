@@ -10,13 +10,16 @@ use std::io;
 use std::path::{Path, PathBuf};
 
 use crate::action::ACTIONS;
-use crate::scope::{Scope, ScopePaths};
+use crate::scope::{Installed, Scope, ScopePaths};
 
 const STALE_TREE_ROOT: &str = "BigIris";
 /// How much of a file in the legacy scripts tree is read to identify it;
 /// those scripts were a few lines.
 const MAX_SCRIPT_BYTES: u64 = 64 * 1024;
 const PYTHON_EXTENSION_FILENAME: &str = "bigiris-menu.py";
+/// How much of an existing `bigiris-menu.py` is read to identify it; ours
+/// is a few KiB.
+const MAX_EXTENSION_BYTES: u64 = 1024 * 1024;
 
 /// System-wide install path for the Python extension. nautilus-python
 /// loads from BOTH `/usr/share/nautilus-python/extensions/` AND
@@ -65,7 +68,7 @@ fn render() -> String {
 /// `SYSTEM_EXTENSION_PATH`, and removes any user-scope `.py` and our
 /// `__pycache__` bytecode instead: `nautilus-python` loads bytecode even
 /// without its `.py`, which would show "BigIris ▸" twice.
-pub fn install(paths: &ScopePaths) -> io::Result<Vec<PathBuf>> {
+pub fn install(paths: &ScopePaths) -> io::Result<Installed> {
     install_with_system_path(paths, Path::new(SYSTEM_EXTENSION_PATH))
 }
 
@@ -74,9 +77,7 @@ pub fn install(paths: &ScopePaths) -> io::Result<Vec<PathBuf>> {
 pub(crate) fn install_with_system_path(
     paths: &ScopePaths,
     system_ext: &Path,
-) -> io::Result<Vec<PathBuf>> {
-    let mut written = Vec::new();
-
+) -> io::Result<Installed> {
     // Cleanup of a legacy tree; the next run retries a failure.
     let _ = remove_stale_scripts(&paths.nautilus_scripts().join(STALE_TREE_ROOT));
 
@@ -88,19 +89,32 @@ pub(crate) fn install_with_system_path(
     if is_user_scope && system_ext.exists() {
         // Errors are ignored: the next run retries.
         let stale_py = ext_dir.join(PYTHON_EXTENSION_FILENAME);
-        if stale_py.exists() {
+        if is_our_extension(&stale_py) {
             let _ = std::fs::remove_file(&stale_py);
         }
         remove_own_bytecode(&ext_dir);
-        return Ok(written);
+        return Ok(Installed::default());
     }
 
     std::fs::create_dir_all(&ext_dir)?;
     let ext_file = ext_dir.join(PYTHON_EXTENSION_FILENAME);
+    if std::fs::symlink_metadata(&ext_file).is_ok() && !is_our_extension(&ext_file) {
+        return Ok(Installed { files: Vec::new(), kept: vec![ext_file] });
+    }
     crate::safe_fs::safe_write(&ext_file, render(), paths.scope)?;
-    written.push(ext_file);
+    Ok(Installed { files: vec![ext_file], kept: Vec::new() })
+}
 
-    Ok(written)
+/// Is `path` a regular file holding a BigIris extension, ours from any
+/// release? A file of the user's own under that name is left alone.
+fn is_our_extension(path: &Path) -> bool {
+    use std::io::Read;
+    let mut body = String::new();
+    std::fs::symlink_metadata(path).is_ok_and(|meta| meta.is_file())
+        && std::fs::File::open(path)
+            .and_then(|f| f.take(MAX_EXTENSION_BYTES).read_to_string(&mut body))
+            .is_ok()
+        && body.contains("class BigIrisMenuProvider(")
 }
 
 /// Remove the Python extension, any stale scripts tree, and our bytecode
@@ -112,7 +126,7 @@ pub fn uninstall(paths: &ScopePaths) -> io::Result<Vec<PathBuf>> {
 
     let ext_dir = paths.nautilus_python_extensions();
     let ext_file = ext_dir.join(PYTHON_EXTENSION_FILENAME);
-    if ext_file.exists() {
+    if is_our_extension(&ext_file) {
         std::fs::remove_file(&ext_file)?;
         removed.push(ext_file);
     }
@@ -197,7 +211,7 @@ mod tests {
         // box's real `/usr/share/nautilus-python/extensions/bigiris-menu.py`
         // and skip the user-scope install.
         let written =
-            install_with_system_path(&paths, Path::new("/nonexistent/system-path")).unwrap();
+            install_with_system_path(&paths, Path::new("/nonexistent/system-path")).unwrap().files;
         assert_eq!(written.len(), 1);
         let ext = paths.nautilus_python_extensions().join(PYTHON_EXTENSION_FILENAME);
         assert!(ext.exists(), "python extension not installed");
@@ -209,7 +223,7 @@ mod tests {
         let host = tmp.path().join("host-extension.py");
         std::fs::write(&host, "host stays unchanged").unwrap();
         let paths = ScopePaths::system_with_destdir(tmp.path().join("package"));
-        let written = install_with_system_path(&paths, &host).unwrap();
+        let written = install_with_system_path(&paths, &host).unwrap().files;
         assert_eq!(written.len(), 1);
         assert_eq!(std::fs::read_to_string(&written[0]).unwrap(), render());
         assert_eq!(std::fs::read_to_string(&host).unwrap(), "host stays unchanged");
@@ -224,10 +238,27 @@ mod tests {
         let paths = ScopePaths::rooted_at(tmp.path().join("user"));
         let ext = paths.nautilus_python_extensions().join(PYTHON_EXTENSION_FILENAME);
         std::fs::create_dir_all(ext.parent().unwrap()).unwrap();
-        std::fs::write(&ext, "obsolete personal extension").unwrap();
-        assert!(install_with_system_path(&paths, &host).unwrap().is_empty());
+        std::fs::write(&ext, "class BigIrisMenuProvider(GObject.GObject):\n    pass\n").unwrap();
+        assert!(install_with_system_path(&paths, &host).unwrap().files.is_empty());
         assert!(!ext.exists());
         assert_eq!(std::fs::read_to_string(&host).unwrap(), "host stays unchanged");
+    }
+
+    #[test]
+    fn user_extension_under_our_name_survives() {
+        let tmp = TempDir::new().unwrap();
+        let paths = ScopePaths::rooted_at(tmp.path());
+        let ext = paths.nautilus_python_extensions().join(PYTHON_EXTENSION_FILENAME);
+        std::fs::create_dir_all(ext.parent().unwrap()).unwrap();
+        std::fs::write(&ext, "# my own menu\n").unwrap();
+        let installed =
+            install_with_system_path(&paths, Path::new("/nonexistent/system-path")).unwrap();
+        assert_eq!(installed.kept, std::slice::from_ref(&ext));
+        assert!(uninstall(&paths).unwrap().is_empty());
+        let host = tmp.path().join("host-extension.py");
+        std::fs::write(&host, "system copy").unwrap();
+        install_with_system_path(&paths, &host).unwrap();
+        assert_eq!(std::fs::read_to_string(&ext).unwrap(), "# my own menu\n");
     }
 
     #[test]

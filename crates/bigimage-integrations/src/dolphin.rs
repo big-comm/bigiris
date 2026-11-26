@@ -13,13 +13,13 @@ use std::path::PathBuf;
 
 use crate::action::{ACTIONS, Action, TOP_LEVEL_LABEL};
 use crate::safe_fs::FileMode;
-use crate::scope::{ScopePaths, remove_generated, replace_generated};
+use crate::scope::{Installed, ScopePaths, remove_generated, replace_generated};
 
 const SUFFIX: &str = ".desktop";
 
 /// Install one `.desktop` per MIME filter of [`ACTIONS`] into
 /// `~/.local/share/kio/servicemenus/`, replacing what earlier installs wrote.
-pub fn install(paths: &ScopePaths) -> io::Result<Vec<PathBuf>> {
+pub fn install(paths: &ScopePaths) -> io::Result<Installed> {
     let files = menus()
         .into_iter()
         .map(|menu| (format!("bigiris-{}{SUFFIX}", menu[0].1.id), render(&menu)));
@@ -138,7 +138,7 @@ mod tests {
 
         let tmp = TempDir::new().unwrap();
         let paths = ScopePaths::rooted_at(tmp.path());
-        let written = install(&paths).unwrap();
+        let written = install(&paths).unwrap().files;
         let names: Vec<_> =
             written.iter().map(|p| p.file_name().unwrap().to_string_lossy().into_owned()).collect();
         assert_eq!(
@@ -240,7 +240,7 @@ mod tests {
     fn install_then_uninstall_leaves_clean_dir() {
         let tmp = TempDir::new().unwrap();
         let paths = ScopePaths::rooted_at(tmp.path());
-        let written = install(&paths).unwrap();
+        let written = install(&paths).unwrap().files;
         let removed = uninstall(&paths).unwrap();
         assert_eq!(removed.len(), written.len());
         let remaining: Vec<_> = std::fs::read_dir(paths.kio_servicemenus()).unwrap().collect();

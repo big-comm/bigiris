@@ -7,7 +7,7 @@
 use std::io;
 use std::path::PathBuf;
 
-use crate::scope::{Scope, ScopeError, ScopePaths, is_on_path};
+use crate::scope::{Installed, Scope, ScopeError, ScopePaths, is_on_path};
 use crate::{FileManager, dolphin, nautilus, nemo, pantheon, pcmanfm_qt, thunar};
 
 /// Outcome of installing/uninstalling one file manager.
@@ -19,6 +19,9 @@ pub struct FmOutcome {
     pub detected: bool,
     /// Files touched (written on install, removed on uninstall).
     pub files: Vec<PathBuf>,
+    /// Install only: the user's own files at names we write, left as they
+    /// were.
+    pub kept: Vec<PathBuf>,
     /// Populated only on failure; the rest of the FMs still run.
     pub error: Option<String>,
     /// User install only: the distribution package already ships this
@@ -133,7 +136,7 @@ type DirOf = fn(&ScopePaths) -> PathBuf;
 struct FmSpec {
     fm: FileManager,
     detection_bin: &'static str,
-    install: fn(&ScopePaths) -> io::Result<Vec<PathBuf>>,
+    install: fn(&ScopePaths) -> io::Result<Installed>,
     uninstall: fn(&ScopePaths) -> io::Result<Vec<PathBuf>>,
     /// Directory (relative to a data root) and file suffix of the copies a
     /// distribution package installs. `None` for Thunar, which packages
@@ -194,26 +197,31 @@ fn run_all(paths: &ScopePaths, op: InstallOp, detected_only: bool) -> Report {
 
 fn run_one(spec: &FmSpec, paths: &ScopePaths, op: InstallOp, detected_only: bool) -> FmOutcome {
     let detected = is_on_path(spec.detection_bin);
-    let outcome = |result: io::Result<Vec<PathBuf>>, packaged: bool| match result {
-        Ok(files) => FmOutcome { fm: spec.fm, detected, files, error: None, packaged },
+    let outcome = |result: io::Result<Installed>, packaged: bool| match result {
+        Ok(Installed { files, kept }) => {
+            FmOutcome { fm: spec.fm, detected, files, kept, error: None, packaged }
+        }
         Err(e) => FmOutcome {
             fm: spec.fm,
             detected,
             files: Vec::new(),
+            kept: Vec::new(),
             error: Some(e.to_string()),
             packaged,
         },
     };
     if matches!(op, InstallOp::Install) && is_packaged(spec, paths) {
         // Drop what earlier user installs wrote; the package's copy wins.
-        return outcome((spec.uninstall)(paths).map(|_| Vec::new()), true);
+        return outcome((spec.uninstall)(paths).map(|_| Installed::default()), true);
     }
     if matches!(op, InstallOp::Install) && detected_only && !detected {
-        return outcome(Ok(Vec::new()), false);
+        return outcome(Ok(Installed::default()), false);
     }
     let result = match op {
         InstallOp::Install => (spec.install)(paths),
-        InstallOp::Uninstall => (spec.uninstall)(paths),
+        InstallOp::Uninstall => {
+            (spec.uninstall)(paths).map(|files| Installed { files, kept: Vec::new() })
+        }
     };
     outcome(result, false)
 }

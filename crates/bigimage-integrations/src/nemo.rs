@@ -8,13 +8,13 @@ use std::path::PathBuf;
 
 use crate::action::{ACTIONS, Action, TOP_LEVEL_LABEL};
 use crate::safe_fs::FileMode;
-use crate::scope::{ScopePaths, remove_generated, replace_generated};
+use crate::scope::{Installed, ScopePaths, remove_generated, replace_generated};
 
 const SUFFIX: &str = ".nemo_action";
 
 /// Install one `.nemo_action` per [`Action`], removing those of actions a
 /// release dropped.
-pub fn install(paths: &ScopePaths) -> io::Result<Vec<PathBuf>> {
+pub fn install(paths: &ScopePaths) -> io::Result<Installed> {
     let files =
         ACTIONS.iter().map(|action| (format!("bigiris-{}{SUFFIX}", action.id), render(action)));
     replace_generated(
@@ -73,7 +73,7 @@ mod tests {
     fn install_writes_expected_files() {
         let tmp = TempDir::new().unwrap();
         let paths = ScopePaths::rooted_at(tmp.path());
-        let written = install(&paths).unwrap();
+        let written = install(&paths).unwrap().files;
         assert_eq!(written.len(), ACTIONS.len());
         for path in &written {
             assert!(path.exists());

@@ -9,13 +9,13 @@ use std::path::PathBuf;
 use crate::action::{ACTIONS, Action};
 use crate::nemo::flat_label;
 use crate::safe_fs::FileMode;
-use crate::scope::{ScopePaths, remove_generated, replace_generated};
+use crate::scope::{Installed, ScopePaths, remove_generated, replace_generated};
 
 const SUFFIX: &str = ".contract";
 
 /// Install one `.contract` per [`Action`], removing those of actions a
 /// release dropped.
-pub fn install(paths: &ScopePaths) -> io::Result<Vec<PathBuf>> {
+pub fn install(paths: &ScopePaths) -> io::Result<Installed> {
     let files =
         ACTIONS.iter().map(|action| (format!("bigiris-{}{SUFFIX}", action.id), render(action)));
     replace_generated(

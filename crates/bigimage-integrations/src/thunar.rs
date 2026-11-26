@@ -26,7 +26,7 @@ use std::path::{Path, PathBuf};
 
 use crate::action::{ACTIONS, Action, TOP_LEVEL_LABEL};
 use crate::safe_fs::{FileMode, safe_write_with_mode};
-use crate::scope::{Scope, ScopePaths};
+use crate::scope::{Installed, Scope, ScopePaths};
 
 const XML_DECLARATION: &str = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n";
 const EMPTY_XML: &str = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<actions>\n</actions>\n";
@@ -39,9 +39,9 @@ const UCA_MODE: FileMode = FileMode::KeepExisting(0o600);
 ///
 /// No-op for [`Scope::System`]: see the module docs for why we never write
 /// Thunar's package-owned system file.
-pub fn install(paths: &ScopePaths) -> io::Result<Vec<PathBuf>> {
+pub fn install(paths: &ScopePaths) -> io::Result<Installed> {
     if paths.scope == Scope::System {
-        return Ok(Vec::new());
+        return Ok(Installed::default());
     }
     let target = paths.thunar_uca();
     if let Some(parent) = target.parent() {
@@ -54,7 +54,7 @@ pub fn install(paths: &ScopePaths) -> io::Result<Vec<PathBuf>> {
     let stripped = strip_bigiris_actions(&base);
     let merged = inject_before_close(&stripped, &render_all_actions());
     safe_write_with_mode(&target, merged, paths.scope, UCA_MODE)?;
-    Ok(vec![target])
+    Ok(Installed { files: vec![target], kept: Vec::new() })
 }
 
 /// Drop every bigiris-owned `<action>` from `uca.xml`. In user scope, if
@@ -513,7 +513,7 @@ mod tests {
         // /etc/xdg/Thunar/uca.xml is owned by the thunar package.
         let tmp = TempDir::new().unwrap();
         let paths = ScopePaths::system_with_destdir(tmp.path());
-        assert!(install(&paths).unwrap().is_empty());
+        assert!(install(&paths).unwrap().files.is_empty());
         assert!(!paths.thunar_uca().exists());
     }
 

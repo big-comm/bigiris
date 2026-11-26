@@ -11,13 +11,13 @@ use std::path::PathBuf;
 use crate::action::{ACTIONS, Action, Submenu, TOP_LEVEL_LABEL};
 use crate::i18n::{localized, lookup};
 use crate::safe_fs::FileMode;
-use crate::scope::{ScopePaths, remove_generated, replace_generated};
+use crate::scope::{Installed, ScopePaths, remove_generated, replace_generated};
 
 const SUFFIX: &str = ".desktop";
 
 /// Install the action and menu files, removing those of actions a release
 /// dropped.
-pub fn install(paths: &ScopePaths) -> io::Result<Vec<PathBuf>> {
+pub fn install(paths: &ScopePaths) -> io::Result<Installed> {
     let files = entries().into_iter().map(|(id, body)| (format!("{id}{SUFFIX}"), body));
     replace_generated(
         &paths.libfm_actions(),
@@ -119,7 +119,7 @@ mod tests {
     fn install_and_uninstall_round_trip() {
         let tmp = TempDir::new().unwrap();
         let paths = ScopePaths::rooted_at(tmp.path());
-        let written = install(&paths).unwrap();
+        let written = install(&paths).unwrap().files;
         // Every action, every submenu and the top menu.
         assert_eq!(written.len(), ACTIONS.len() + crate::action::submenus().len() + 1);
         let removed = uninstall(&paths).unwrap();

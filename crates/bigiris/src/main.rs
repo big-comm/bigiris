@@ -2026,7 +2026,8 @@ fn print_install_report(report: &bigimage_integrations::Report, done: &str, summ
             eprintln!("    -> {}", codec::sanitize_text(&err.to_string()));
         }
     }
-    for path in &report.app_files_kept {
+    let kept = report.outcomes.iter().flat_map(|outcome| &outcome.kept);
+    for path in kept.chain(&report.app_files_kept) {
         let path = codec::printable_path(path);
         println!(
             "  {}",

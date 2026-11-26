@@ -257,58 +257,78 @@ fn is_generated_by_us(name: &str, suffix: &str, body: &str) -> bool {
     pre_marker_name && lines.any(|line| line == "Exec=bigiris" || line.starts_with("Exec=bigiris "))
 }
 
-/// Write each `(file name, content)` of `files` into `dir`, then remove the
-/// generated files there that `files` does not name, such as the menu entry
-/// of a dropped or renamed action.
+/// Is `path` a regular file, readable, that [`is_generated_by_us`]? A
+/// symlink is the user's even when it points at one of our files.
+fn holds_generated(path: &Path, suffix: &str) -> io::Result<bool> {
+    use std::io::Read;
+    let meta = match std::fs::symlink_metadata(path) {
+        Ok(meta) => meta,
+        Err(e) if e.kind() == io::ErrorKind::NotFound => return Ok(false),
+        Err(e) => return Err(e),
+    };
+    let name = path.file_name().unwrap_or_default().to_string_lossy();
+    let mut body = String::new();
+    let readable = meta.is_file()
+        && std::fs::File::open(path)
+            .and_then(|f| f.take(MAX_IDENTIFY_BYTES).read_to_string(&mut body))
+            .is_ok();
+    Ok(readable && is_generated_by_us(&name, suffix, &body))
+}
+
+/// Files one generator wrote, and those under its names it left alone
+/// because BigIris did not write them.
+#[derive(Debug, Default)]
+pub struct Installed {
+    /// Files written.
+    pub files: Vec<PathBuf>,
+    /// The user's own files at a name we would write, kept as they were.
+    pub kept: Vec<PathBuf>,
+}
+
+/// Write each `(file name, content)` of `files` into `dir` where nothing,
+/// or a file we generated, is in the way, then remove the generated files
+/// there that `files` does not name, such as the menu entry of a dropped
+/// or renamed action.
 pub(crate) fn replace_generated(
     dir: &Path,
     suffix: &str,
     files: Vec<(String, String)>,
     scope: Scope,
     mode: FileMode,
-) -> io::Result<Vec<PathBuf>> {
+) -> io::Result<Installed> {
     std::fs::create_dir_all(dir)?;
-    let mut written = Vec::with_capacity(files.len());
+    let mut installed = Installed::default();
     for (name, content) in files {
         let path = dir.join(name);
-        safe_write_with_mode(&path, content, scope, mode)?;
-        written.push(path);
+        let free = matches!(std::fs::symlink_metadata(&path), Err(e) if e.kind() == io::ErrorKind::NotFound);
+        if free || holds_generated(&path, suffix)? {
+            safe_write_with_mode(&path, content, scope, mode)?;
+            installed.files.push(path);
+        } else {
+            installed.kept.push(path);
+        }
     }
-    remove_generated(dir, suffix, &written)?;
-    Ok(written)
+    remove_generated(dir, suffix, &installed.files)?;
+    Ok(installed)
 }
 
-/// Remove every regular `bigiris-*<suffix>` file in `dir` that
-/// [`is_generated_by_us`], except those in `keep`. Other files and symlinks
-/// are left alone; a missing `dir` removes nothing, so uninstall is
-/// idempotent.
+/// Remove every `bigiris-*<suffix>` file in `dir` that [`holds_generated`],
+/// except those in `keep`; a missing `dir` removes nothing, so uninstall
+/// is idempotent.
 pub(crate) fn remove_generated(
     dir: &Path,
     suffix: &str,
     keep: &[PathBuf],
 ) -> io::Result<Vec<PathBuf>> {
-    use std::io::Read;
-
     let mut removed = Vec::new();
     if !dir.exists() {
         return Ok(removed);
     }
     for entry in std::fs::read_dir(dir)? {
-        let entry = entry?;
-        let name = entry.file_name();
-        let name = name.to_string_lossy();
-        if !(name.starts_with(FILE_PREFIX) && name.ends_with(suffix)) {
-            continue;
-        }
-        let path = entry.path();
-        if !entry.file_type()?.is_file() || keep.contains(&path) {
-            continue;
-        }
-        let mut body = String::new();
-        let readable = std::fs::File::open(&path)
-            .and_then(|f| f.take(MAX_IDENTIFY_BYTES).read_to_string(&mut body))
-            .is_ok();
-        if readable && is_generated_by_us(&name, suffix, &body) {
+        let path = entry?.path();
+        let name = path.file_name().unwrap_or_default().to_string_lossy();
+        let ours = name.starts_with(FILE_PREFIX) && name.ends_with(suffix);
+        if ours && !keep.contains(&path) && holds_generated(&path, suffix)? {
             std::fs::remove_file(&path)?;
             removed.push(path);
         }
@@ -399,12 +419,42 @@ mod tests {
         std::fs::write(&stale, format!("[Nemo Action]\n{GENERATED_MARKER}\n")).unwrap();
         let body = format!("[Nemo Action]\n{GENERATED_MARKER}\n");
         let files = vec![("bigiris-new.nemo_action".to_owned(), body)];
-        let written =
+        let installed =
             replace_generated(dir, ".nemo_action", files, Scope::User, FileMode::Exact(0o644))
                 .unwrap();
-        assert_eq!(written, [dir.join("bigiris-new.nemo_action")]);
-        assert!(written[0].exists());
+        assert_eq!(installed.files, [dir.join("bigiris-new.nemo_action")]);
+        assert!(installed.files[0].exists());
         assert!(!stale.exists(), "stale action kept");
+    }
+
+    #[test]
+    fn replace_keeps_user_files() {
+        let tmp = TempDir::new().unwrap();
+        let dir = tmp.path().join("menus");
+        std::fs::create_dir(&dir).unwrap();
+        let marked = |name: &str| format!("[Desktop Entry]\n{GENERATED_MARKER}\nName={name}\n");
+        let mine = dir.join("bigiris-view.desktop");
+        std::fs::write(&mine, "[Desktop Entry]\nExec=gimp %F\n").unwrap();
+        // A dotfile manager's link, even to a file we generated, is the user's.
+        let dotfile = tmp.path().join("dotfile");
+        std::fs::write(&dotfile, marked("old")).unwrap();
+        let link = dir.join("bigiris-batch-folder.desktop");
+        std::os::unix::fs::symlink(&dotfile, &link).unwrap();
+        let ours = dir.join("bigiris-pdf-convert.desktop");
+        std::fs::write(&ours, marked("old")).unwrap();
+
+        let files = [&mine, &link, &ours]
+            .iter()
+            .map(|path| (path.file_name().unwrap().to_string_lossy().into_owned(), marked("new")))
+            .collect();
+        let installed =
+            replace_generated(&dir, ".desktop", files, Scope::User, FileMode::Exact(0o644))
+                .unwrap();
+        assert_eq!(installed.files, std::slice::from_ref(&ours));
+        assert_eq!(installed.kept, [mine.clone(), link]);
+        assert_eq!(std::fs::read_to_string(&mine).unwrap(), "[Desktop Entry]\nExec=gimp %F\n");
+        assert_eq!(std::fs::read_to_string(&dotfile).unwrap(), marked("old"));
+        assert_eq!(std::fs::read_to_string(&ours).unwrap(), marked("new"));
     }
 
     #[test]

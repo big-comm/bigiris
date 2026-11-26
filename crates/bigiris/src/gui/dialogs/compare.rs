@@ -84,24 +84,6 @@ pub(in crate::gui) fn build_compare_dialog(
         });
     }
 
-    // Keyboard: Esc closes.
-    let key = gtk::EventControllerKey::new();
-    {
-        let window = window.downgrade();
-        key.connect_key_pressed(move |_, k, _, _| {
-            let Some(window) = window.upgrade() else {
-                return glib::Propagation::Proceed;
-            };
-            if matches!(k, gdk::Key::Escape) {
-                window.close();
-                glib::Propagation::Stop
-            } else {
-                glib::Propagation::Proceed
-            }
-        });
-    }
-    window.add_controller(key);
-
     window
 }
 

@@ -3986,6 +3986,7 @@ fn show_metadata_for_current(state: &Rc<RefCell<ViewerState>>) {
     }
     let Some(app) = window.application().and_downcast::<adw::Application>() else { return };
     let dialog = build_properties_window(&app, &path);
+    close_on_escape(dialog.upcast_ref());
     // Attached to the viewer: GTK then drops minimize/maximize, as for any
     // dialog, and the window closes with its parent.
     dialog.set_transient_for(Some(&window));

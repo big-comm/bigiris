@@ -155,8 +155,20 @@ fn run_dialog_app(activate: impl Fn(&adw::Application) + 'static) -> i32 {
         .flags(gio::ApplicationFlags::NON_UNIQUE)
         .build();
     app.connect_activate(activate);
+    app.connect_window_added(|_, window| close_on_escape(window));
     let code = app.run_with_args::<&str>(&[]);
     i32::from(u8::from(code))
+}
+
+/// Escape closes `window`. The shortcut runs in the bubble phase, so an
+/// open popover, drop-down or alert takes the key first.
+pub(in crate::gui) fn close_on_escape(window: &gtk::Window) {
+    let controller = gtk::ShortcutController::new();
+    controller.add_shortcut(gtk::Shortcut::new(
+        Some(gtk::KeyvalTrigger::new(gdk::Key::Escape, gdk::ModifierType::empty())),
+        Some(gtk::NamedAction::new("window.close")),
+    ));
+    window.add_controller(controller);
 }
 
 /// "Target format" combo listing [`CONVERT_FORMATS`].

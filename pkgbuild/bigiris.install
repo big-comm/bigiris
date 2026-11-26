@@ -26,8 +26,12 @@ post_install() {
 # hint again. Asked before the upgrade, while pacman still knows the owner:
 # package versions are build times, which say nothing about the source.
 pre_upgrade() {
-  [ "$(pacman -Qqo /etc/xdg/Thunar/uca.xml 2>/dev/null)" = bigiris ] || return 0
+  local owners
+  owners=$(pacman -Qqo /etc/xdg/Thunar/uca.xml 2>/dev/null) || return 0
+  # One owner per line: a forced install over thunar lists both.
+  [[ $'\n'$owners$'\n' == *$'\n'bigiris$'\n'* ]] || return 0
   _thunar_hint
+  pacman -Qq thunar &>/dev/null || return 0
   echo '==> This upgrade removes /etc/xdg/Thunar/uca.xml, which the installed'
   echo '    BigIris package owns: reinstall thunar (pacman -S thunar) afterwards'
   echo '    to restore its default custom actions.'

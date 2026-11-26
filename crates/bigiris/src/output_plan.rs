@@ -137,6 +137,16 @@ fn output_key(file: &Path, naming: &Naming) -> (PathBuf, OsString, OsString) {
     (dir, file.file_stem().unwrap_or_default().to_os_string(), extension)
 }
 
+/// `<dir>/<stem>_nobg.png` for a background removal of `input` (`.PNG` for
+/// a `.PNG` input, as [`Format::output_extension`] names it), built from the
+/// raw OS name so non-UTF-8 stems keep distinct outputs.
+pub(crate) fn remove_bg_output(input: &Path) -> PathBuf {
+    let mut name = input.file_stem().unwrap_or_default().to_os_string();
+    name.push("_nobg.");
+    name.push(Format::Png.output_extension(input));
+    input.with_file_name(name)
+}
+
 /// `x` for a stem `x_N` as written by the `increment` policy (N >= 1, no
 /// leading zero).
 pub(crate) fn numbered_base(stem: &std::ffi::OsStr) -> Option<std::ffi::OsString> {

@@ -4835,19 +4835,23 @@ mod anchor_tests {
 
     #[test]
     fn nobg_output_path_is_png_sibling_with_suffix() {
-        use super::nobg_output_path;
+        use crate::output_plan::remove_bg_output;
         use std::path::PathBuf;
 
-        let p = nobg_output_path(&PathBuf::from("/tmp/foo/bar.jpg"));
+        let p = remove_bg_output(&PathBuf::from("/tmp/foo/bar.jpg"));
         assert_eq!(p, PathBuf::from("/tmp/foo/bar_nobg.png"));
 
         // No extension: still a PNG in the same folder.
-        let p = nobg_output_path(&PathBuf::from("/tmp/foo/bar"));
+        let p = remove_bg_output(&PathBuf::from("/tmp/foo/bar"));
         assert_eq!(p, PathBuf::from("/tmp/foo/bar_nobg.png"));
 
         // A bare file name stays relative to the working directory.
-        let p = nobg_output_path(&PathBuf::from("solo.png"));
+        let p = remove_bg_output(&PathBuf::from("solo.png"));
         assert_eq!(p, PathBuf::from("solo_nobg.png"));
+
+        // A PNG keeps its own extension spelling.
+        let p = remove_bg_output(&PathBuf::from("Scan.PNG"));
+        assert_eq!(p, PathBuf::from("Scan_nobg.PNG"));
     }
 }
 

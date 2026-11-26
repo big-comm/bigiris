@@ -48,8 +48,8 @@ impl ConvertOutcome {
     }
 }
 
-/// Convert a single file to `target` and write it next to the input using the
-/// target's canonical extension.
+/// Convert a single file to `target` and write it next to the input, with
+/// the extension [`Format::output_extension`] gives.
 ///
 /// The input is decoded with format auto-detection (by header when possible,
 /// extension as fallback), its pixels converted to sRGB when it carries a

@@ -1286,7 +1286,7 @@ fn run_remove_bg(
     // Loaded on first use: skipping existing outputs needs no model.
     let mut slot = None;
     for f in groups.iter().flatten() {
-        let dest = remove_bg_output(f);
+        let dest = output_plan::remove_bg_output(f);
         if policy == OverwritePolicy::Skip && dest.exists() {
             skipped += 1;
             println!("skip {} ({})", codec::printable_path(f), exists_note(&dest));
@@ -1325,14 +1325,6 @@ fn run_remove_bg(
         exit_partial();
     }
     Ok(())
-}
-
-/// `<dir>/<stem>_nobg.png`, built from the raw OS name so non-UTF-8 stems
-/// keep distinct outputs.
-fn remove_bg_output(path: &Path) -> PathBuf {
-    let mut name = path.file_stem().unwrap_or_default().to_os_string();
-    name.push("_nobg.png");
-    path.parent().filter(|dir| !dir.as_os_str().is_empty()).unwrap_or(Path::new(".")).join(name)
 }
 
 /// The error is the translated sentence the report prints.

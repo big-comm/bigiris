@@ -3,14 +3,6 @@
 
 use super::*;
 
-/// Output path for `remove_background` — always PNG to preserve alpha.
-/// Sibling of the source, stem suffixed with `_nobg`.
-pub(in crate::gui) fn nobg_output_path(src: &Path) -> PathBuf {
-    let stem = src.file_stem().and_then(|s| s.to_str()).unwrap_or("output");
-    let parent = src.parent().unwrap_or_else(|| Path::new("."));
-    parent.join(format!("{stem}_nobg.png"))
-}
-
 /// Run one remove-bg pass over `src`: decode → BiRefNet → save PNG RGBA.
 /// The model stays loaded across calls (see [`bigimage_ai::background`]),
 /// so a 50-file batch loads BiRefNet once. `cancel` stops the network.
@@ -30,7 +22,7 @@ fn remove_bg_one_with_session(
     // `photo.jpg` + `photo.png` in one batch both map to `photo_nobg.png`.
     let outcome = bigimage_core::save_image(
         out,
-        nobg_output_path(src),
+        crate::output_plan::remove_bg_output(src),
         Format::Png,
         &EncodeOptions::default(),
         OverwritePolicy::Increment,

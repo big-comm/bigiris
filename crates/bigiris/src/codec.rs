@@ -1134,6 +1134,100 @@ mod tests {
         assert!(receive(file).is_err());
     }
 
+    /// A raw-protocol header claiming `size`, `natural` and `length`.
+    fn header(
+        color: ColorType,
+        size: (u32, u32),
+        natural: (u32, u32),
+        length: u64,
+    ) -> [u8; HEADER] {
+        let mut header = [0u8; HEADER];
+        header[..8].copy_from_slice(MAGIC);
+        header[8] = color_code(color).unwrap();
+        header[9] = 255;
+        for (offset, value) in [(12, size.0), (16, size.1), (20, natural.0), (24, natural.1)] {
+            header[offset..offset + 4].copy_from_slice(&value.to_le_bytes());
+        }
+        header[28..].copy_from_slice(&length.to_le_bytes());
+        header
+    }
+
+    /// A worker answer: `header`, then `body` bytes left sparse.
+    fn answer(header: &[u8; HEADER], body: u64) -> std::fs::File {
+        let mut file = tempfile::tempfile().unwrap();
+        file.write_all(header).unwrap();
+        file.set_len(HEADER as u64 + body).unwrap();
+        file.rewind().unwrap();
+        file
+    }
+
+    /// Each row breaks one field of a valid answer, sized so that only the
+    /// check under test can refuse it: without that check the row decodes.
+    #[test]
+    fn parent_refuses_each_malformed_pixel_answer() {
+        use ColorType::{L8, Rgb8, Rgba32F};
+        let valid = header(Rgb8, (2, 3), (2, 3), 18);
+        let (pixels, _) = receive_with(answer(&valid, 18), false).ok().unwrap();
+        assert_eq!(
+            (pixels.image.dimensions(), pixels.natural, pixels.format),
+            ((2, 3), (2, 3), None)
+        );
+        let with = |offset: usize, byte: u8| {
+            let mut changed = valid;
+            changed[offset] = byte;
+            changed
+        };
+        // 16385 x 16384 pixels is one row past the 256 Mi pixel cap.
+        let over = 16385 * 16384;
+        let size = "invalid protocol dimensions or size";
+        let rows = [
+            (with(0, b'X'), 18, "invalid codec protocol"),
+            (with(10, 2), 18, "invalid codec protocol"),
+            (with(11, 2), 18, "invalid codec protocol"),
+            (with(8, 0), 18, "invalid pixel type"),
+            (with(8, COLOR_CODES.len() as u8 + 1), 18, "invalid pixel type"),
+            (with(9, Format::all().len() as u8), 18, "invalid format"),
+            (header(Rgb8, (0, 3), (2, 3), 0), 0, size),
+            (header(Rgb8, (2, 0), (2, 3), 0), 0, size),
+            (header(Rgb8, (2, 3), (0, 3), 18), 18, size),
+            (header(Rgb8, (2, 3), (2, 0), 18), 18, size),
+            (header(Rgb8, (2, 3), (16385, 16384), 18), 18, size),
+            (header(L8, (16385, 16384), (2, 3), over), over, size),
+            // 16 bytes per pixel: past MAX_BYTES while under the pixel cap.
+            (header(Rgba32F, (8193, 4096), (2, 3), 16 * 8193 * 4096), 16 * 8193 * 4096, size),
+            (header(Rgb8, (2, 3), (2, 3), 19), 19, size),
+            (valid, 19, size),
+            (valid, 17, size),
+        ];
+        for (index, (header, body, expected)) in rows.into_iter().enumerate() {
+            let error = receive_with(answer(&header, body), false).err().unwrap().to_string();
+            assert!(error.contains(expected), "row {index}: {error}");
+        }
+        // The re-save trailer must be whole before its lengths are trusted.
+        let error = receive_with(answer(&valid, 18 + RESAVE_TRAILER as u64 - 1), true);
+        assert!(error.err().unwrap().to_string().contains(size));
+    }
+
+    #[test]
+    fn parent_refuses_malformed_dimensions_and_oversized_json() {
+        let file = |bytes: &[u8]| {
+            let mut file = tempfile::tempfile().unwrap();
+            file.write_all(bytes).unwrap();
+            file.rewind().unwrap();
+            file
+        };
+        let size = |w: u32, h: u32| [w.to_le_bytes(), h.to_le_bytes()].concat();
+        assert_eq!(read_dimensions(file(&size(16384, 16384))).unwrap(), (16384, 16384));
+        for bytes in [size(16385, 16384), size(0, 1), size(1, 0), [size(1, 1), vec![0]].concat()] {
+            assert!(read_dimensions(file(&bytes)).is_err(), "{bytes:?}");
+        }
+        let json =
+            |length: u64| file(format!("\"{}\"", "a".repeat(length as usize - 2)).as_bytes());
+        assert_eq!(read_json::<String>(json(MAX_METADATA)).unwrap().len() as u64, MAX_METADATA - 2);
+        let error = read_json::<String>(json(MAX_METADATA + 1)).unwrap_err().to_string();
+        assert!(error.contains("excessive metadata"), "{error}");
+    }
+
     #[test]
     fn wide_samples_are_read_across_chunk_boundaries() {
         let values: Vec<u16> = (0..70_000u32).map(|v| v as u16).collect();
@@ -1333,6 +1427,47 @@ mod tests {
         bound_resave_metadata(&mut image, &mut source).unwrap();
         assert_eq!(source.exif, None);
         assert_eq!(source.icc.map(|icc| icc.len()), Some(64));
+    }
+
+    #[test]
+    fn preview_without_a_format_is_refused() {
+        let mut payload = Vec::new();
+        send_to(&mut payload, &DynamicImage::new_rgb8(2, 2), None, (2, 2), false).unwrap();
+        let file = tempfile::Builder::new().suffix(".png").tempfile().unwrap();
+        std::fs::write(file.path(), &payload).unwrap();
+        let Some(result) =
+            with_worker("exec /usr/bin/cat \"$4\"", DEADLINE, || preview(file.path()))
+        else {
+            return;
+        };
+        let error = result.err().unwrap().to_string();
+        assert!(error.contains("preview without a format"), "{error}");
+    }
+
+    /// The input checks run before the sandbox: a FIFO would block the
+    /// worker and a file past the cap is never handed over.
+    #[test]
+    fn only_regular_files_up_to_the_cap_reach_the_sandbox() {
+        let dir = tempfile::tempdir().unwrap();
+        let fifo = dir.path().join("pipe.png");
+        rustix::fs::mknodat(rustix::fs::CWD, &fifo, rustix::fs::FileType::Fifo, 0o600.into(), 0)
+            .unwrap();
+        let at_cap = dir.path().join("cap.png");
+        std::fs::File::create(&at_cap).unwrap().set_len(MAX_INPUT).unwrap();
+        let past_cap = dir.path().join("past.png");
+        std::fs::File::create(&past_cap).unwrap().set_len(MAX_INPUT + 1).unwrap();
+        let script = "echo started >&2; exit 0";
+        let Some(results) = with_worker(script, DEADLINE, || {
+            [dir.path(), &fifo, &past_cap, &at_cap].map(ensure_static)
+        }) else {
+            return;
+        };
+        let [directory, fifo, past_cap, at_cap] = results;
+        for refused in [directory, fifo, past_cap] {
+            let error = refused.unwrap_err().to_string();
+            assert!(error.contains("not a regular file"), "{error}");
+        }
+        at_cap.unwrap();
     }
 
     #[test]

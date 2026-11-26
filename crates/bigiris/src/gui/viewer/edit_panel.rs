@@ -333,6 +333,16 @@ pub(in crate::gui) fn build() -> EditPanelUi {
     transform.append(&crop);
 
     let adjust = section(&gettext("Adjustments"));
+    // The sliders edit the last adjustment only: after another edit they
+    // read 0 again while the earlier adjustment stays applied.
+    let adjust_note = gtk::Label::builder()
+        .label(gettext("Applies on top of earlier edits"))
+        .wrap(true)
+        .xalign(0.0)
+        .build();
+    adjust_note.add_css_class("dim-label");
+    adjust_note.add_css_class("caption");
+    adjust.append(&adjust_note);
     let (brightness_row, brightness) = slider(&gettext("Brightness"), -100.0, 100.0, 1.0, 0.0);
     let (contrast_row, contrast) = slider(&gettext("Contrast"), -100.0, 100.0, 1.0, 0.0);
     let (saturation_row, saturation) = slider(&gettext("Saturation"), -100.0, 100.0, 1.0, 0.0);
@@ -521,6 +531,20 @@ impl EditPanelUi {
         g.reset.set_sensitive(values.gamma_pct != neutral.gamma_pct);
         self.straighten.value.set_text(&degrees_label(tenths));
         self.straighten.reset.set_sensitive(tenths != 0);
+        self.sync_reset_all();
+    }
+
+    /// Reset adjustments works only on sliders away from neutral that the
+    /// panel lets the user move.
+    fn sync_reset_all(&self) {
+        let usable = self.sliders[0].scale.is_sensitive();
+        self.reset_all.set_sensitive(usable && self.values() != AdjustValues::NEUTRAL);
+    }
+
+    /// Apply resizes only to a size other than the image's own.
+    fn sync_resize_apply(&self, natural: (u32, u32)) {
+        let size = (self.width.value() as u32, self.height.value() as u32);
+        self.resize_apply.set_sensitive(self.width.is_sensitive() && size != natural);
     }
 
     /// Move the sliders without treating it as user input.
@@ -561,7 +585,11 @@ struct Handles {
     scales: [gtk::Scale; 5],
     width: gtk::SpinButton,
     height: gtk::SpinButton,
+    lock: gtk::ToggleButton,
+    percent: gtk::SpinButton,
     save_as: gtk::Button,
+    quality: gtk::DropDown,
+    factor: gtk::DropDown,
     resize_apply: gtk::Button,
     remove_bg: gtk::Button,
     denoise: gtk::Button,
@@ -589,7 +617,11 @@ fn handles(s: &ViewerState) -> Handles {
         ],
         width: ui.width.clone(),
         height: ui.height.clone(),
+        lock: ui.lock.clone(),
+        percent: ui.percent.clone(),
         save_as: ui.save_as.clone(),
+        quality: ui.quality.clone(),
+        factor: ui.factor.clone(),
         resize_apply: ui.resize_apply.clone(),
         remove_bg: ui.remove_bg.clone(),
         denoise: ui.denoise.clone(),
@@ -725,6 +757,15 @@ pub(in crate::gui) fn connect(state: &Rc<RefCell<ViewerState>>, window: &adw::Ap
         });
     }
 
+    // Size fields: Apply follows whether the size differs from the image.
+    for spin in [ui.width.clone(), ui.height.clone()] {
+        let weak = Rc::downgrade(state);
+        spin.connect_value_changed(move |_| {
+            if let Some(Ok(s)) = weak.upgrade().as_ref().map(|state| state.try_borrow()) {
+                s.edit_ui.sync_resize_apply(s.natural);
+            }
+        });
+    }
     // Size fields: the lock keeps the proportion of the current image.
     for width_changed in [true, false] {
         let spin = if width_changed { ui.width.clone() } else { ui.height.clone() };
@@ -985,14 +1026,25 @@ pub(in crate::gui) fn sync_sensitivity(state: &Rc<RefCell<ViewerState>>) {
     for scale in &ui.scales {
         scale.set_sensitive(usable);
     }
-    ui.width.set_sensitive(usable);
-    ui.height.set_sensitive(usable);
-    ui.resize_apply.set_sensitive(usable);
-    ui.save_as.set_sensitive(usable);
-    ui.original.set_sensitive(usable);
-    ui.upscale.set_sensitive(usable);
+    for widget in [
+        ui.width.upcast_ref::<gtk::Widget>(),
+        ui.height.upcast_ref(),
+        ui.lock.upcast_ref(),
+        ui.percent.upcast_ref(),
+        ui.save_as.upcast_ref(),
+        ui.quality.upcast_ref(),
+        ui.original.upcast_ref(),
+        ui.upscale.upcast_ref(),
+        ui.factor.upcast_ref(),
+    ] {
+        widget.set_sensitive(usable);
+    }
     sync_ai_tools(&ui, usable, ai);
     ui.content.set_sensitive(!saving);
+    if let Ok(s) = state.try_borrow() {
+        s.edit_ui.sync_reset_all();
+        s.edit_ui.sync_resize_apply(s.natural);
+    }
 }
 
 /// Availability of the AI tools' weights.

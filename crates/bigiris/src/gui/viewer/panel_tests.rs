@@ -466,9 +466,22 @@ fn viewer_edit_panel_tools() {
     // Upscale runs inline with progress and becomes an edit.
     let (remove_bg, upscale, factor, tool_box, status) = state.borrow().edit_ui.tool_controls();
     factor.set_selected(0);
+    // Controls that would do nothing are off: neutral sliders, the
+    // image's own size.
+    let content = state.borrow().edit_ui.content();
+    let reset_all = labeled_button(&content, &gettext("Reset adjustments"));
+    let (width, _, lock, percent, resize_apply) = state.borrow().edit_ui.size_controls();
+    assert!(!reset_all.is_sensitive() && !resize_apply.is_sensitive());
+    width.set_value(320.0);
+    assert!(resize_apply.is_sensitive(), "Apply off for another size");
+    width.set_value(640.0);
+    assert!(!resize_apply.is_sensitive());
     let runs = heavy_runs();
     upscale.emit_clicked();
     assert!(tool_box.is_visible(), "no progress while upscaling");
+    for widget in [lock.upcast_ref::<gtk::Widget>(), percent.upcast_ref(), factor.upcast_ref()] {
+        assert!(!widget.is_sensitive(), "{} usable during a tool run", widget.type_().name());
+    }
     assert!(!action_enabled(&window, "rotate-cw"), "edits live during a tool run");
     // Real-ESRGAN when its weights are there, else Lanczos3; recorded.
     let ai = bigimage_ai::upscale::availability().is_ready();

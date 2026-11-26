@@ -203,10 +203,11 @@ fn build_crop_preview_column(
         });
     }
 
-    // Spin changes → queue redraw of the overlay.
+    // Redraw on the committed value: `changed` fires per keystroke, before
+    // the typed text becomes the value the overlay reads.
     for spin in [x_spin, y_spin, w_spin, h_spin] {
         let area = selection_area.clone();
-        spin.connect_changed(move |_| area.queue_draw());
+        spin.connect_value_notify(move |_| area.queue_draw());
     }
 
     // Drag semantics — three modes, decided at drag_begin from the click
@@ -297,6 +298,34 @@ fn build_crop_preview_column(
     column
 }
 
+/// Keep `origin + size` within `extent` (the first image's side) on one
+/// axis: a new origin lowers the size to what fits, a new size moves the
+/// origin back.
+fn keep_crop_inside(
+    window: &adw::ApplicationWindow,
+    origin: &adw::SpinRow,
+    size: &adw::SpinRow,
+    extent: u32,
+) {
+    let extent = f64::from(extent);
+    {
+        let size = size.clone();
+        dialog_signal!(window, origin, connect_value_notify, move |origin| {
+            if origin.value() + size.value() > extent {
+                size.set_value(extent - origin.value());
+            }
+        });
+    }
+    {
+        let origin = origin.clone();
+        dialog_signal!(window, size, connect_value_notify, move |size| {
+            if origin.value() + size.value() > extent {
+                origin.set_value(extent - size.value());
+            }
+        });
+    }
+}
+
 /// Crop modal: rectangular window by (x, y, w, h) with live preview.
 pub fn run_crop_dialog(files: Vec<PathBuf>) -> i32 {
     let files = Rc::new(files);
@@ -361,6 +390,9 @@ fn fill_crop_dialog(
     let h_spin = adw::SpinRow::with_range(1.0, natural.1 as f64, 1.0);
     h_spin.set_title(&gettext("Height (px)"));
     h_spin.set_value(initial.height as f64);
+
+    keep_crop_inside(&window, &x_spin, &w_spin, natural.0);
+    keep_crop_inside(&window, &y_spin, &h_spin, natural.1);
 
     let target_row = target_format_row();
 
@@ -449,4 +481,49 @@ fn fill_crop_dialog(
     }
 
     window
+}
+
+#[cfg(test)]
+mod bounds_tests {
+    use super::*;
+
+    /// Typing an X near the right edge lowers the width so the rectangle
+    /// stays inside the 640 px image, and a wider width moves X back.
+    #[test]
+    #[ignore = "requires a graphical display; run alone with GSETTINGS_BACKEND=memory"]
+    fn crop_rectangle_stays_inside_the_image() {
+        adw::init().expect("GTK display required");
+        let app = adw::Application::builder()
+            .application_id("com.biglinux.Iris.CropBoundsProbe")
+            .flags(gio::ApplicationFlags::NON_UNIQUE)
+            .build();
+        app.register(None::<&gio::Cancellable>).unwrap();
+        let context = glib::MainContext::default();
+        let dir = tempfile::tempdir().unwrap();
+        let source = dir.path().join("photo.png");
+        image::RgbImage::new(640, 480).save(&source).unwrap();
+
+        let window = build_crop_dialog(&app, Rc::new(vec![source]));
+        window.present();
+        let root: gtk::Widget = window.clone().upcast();
+        let spin = |title: &str| {
+            let title = gettext(title);
+            find_widget(&root, &|row: &adw::SpinRow| row.title() == title)
+        };
+        let deadline = std::time::Instant::now() + Duration::from_secs(30);
+        while spin("X (px)").is_none() {
+            while context.pending() {
+                context.iteration(false);
+            }
+            assert!(std::time::Instant::now() < deadline, "crop form never appeared");
+            std::thread::sleep(Duration::from_millis(5));
+        }
+        let (x, width) = (spin("X (px)").unwrap(), spin("Width (px)").unwrap());
+        assert_eq!((x.value(), width.value()), (160.0, 320.0));
+        x.set_value(600.0);
+        assert_eq!((x.value(), width.value()), (600.0, 40.0));
+        width.set_value(500.0);
+        assert_eq!((x.value(), width.value()), (140.0, 500.0));
+        window.destroy();
+    }
 }

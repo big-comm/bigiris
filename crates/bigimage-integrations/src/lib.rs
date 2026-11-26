@@ -7,7 +7,7 @@
 //! - Nautilus (nautilus-python extension under `~/.local/share/nautilus-python/extensions/`)
 //! - Nemo (`.nemo_action`, flattened with prefix)
 //! - Thunar (merge into `~/.config/Thunar/uca.xml`)
-//! - PCManFM-Qt / libfm (`.desktop` `Type=Action`)
+//! - PCManFM-Qt / libfm-qt (`.desktop` `Type=Action`, nested by `Type=Menu`)
 //! - elementary Files (`.contract`)
 
 #![forbid(unsafe_code)]

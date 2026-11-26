@@ -25,10 +25,7 @@ pub(in crate::gui) fn build_properties_window(
     app: &adw::Application,
     path: &Path,
 ) -> adw::ApplicationWindow {
-    let filename = path
-        .file_name()
-        .map(|n| n.to_string_lossy().into_owned())
-        .unwrap_or_else(|| path.display().to_string());
+    let filename = crate::codec::printable_name(path);
 
     let window = adw::ApplicationWindow::builder()
         .application(app)
@@ -73,7 +70,7 @@ fn fill_properties_window(
     info: Option<&crate::codec::Information>,
     fsmeta: std::result::Result<&std::fs::Metadata, &String>,
 ) -> adw::ApplicationWindow {
-    let filename = path.file_name().unwrap_or_default().to_string_lossy();
+    let filename = crate::codec::printable_name(path);
 
     let header = adw::HeaderBar::new();
     header.set_title_widget(Some(&adw::WindowTitle::new(&gettext("Properties"), &filename)));
@@ -114,14 +111,10 @@ fn build_properties_file_group(
 ) -> adw::PreferencesGroup {
     let group = adw::PreferencesGroup::builder().title(gettext("File")).build();
 
-    let filename = path
-        .file_name()
-        .map(|n| n.to_string_lossy().into_owned())
-        .unwrap_or_else(|| path.display().to_string());
-    group.add(&info_row(&gettext("Name"), &filename));
+    group.add(&info_row(&gettext("Name"), &crate::codec::printable_name(path)));
 
     if let Some(parent) = path.parent() {
-        let parent_str = parent.display().to_string();
+        let parent_str = crate::codec::printable_path(parent);
         if !parent_str.is_empty() {
             group.add(&info_row(&gettext("Folder"), &parent_str));
         }

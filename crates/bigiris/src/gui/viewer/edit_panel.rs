@@ -1787,10 +1787,7 @@ pub(in crate::gui) fn save_copy(state: &Rc<RefCell<ViewerState>>, target: PathBu
         match result {
             Ok(dropped) => {
                 adopt_copy(&state, &target);
-                let name = target.file_name().map_or_else(
-                    || target.display().to_string(),
-                    |n| n.to_string_lossy().into_owned(),
-                );
+                let name = crate::codec::printable_name(&target);
                 let notice = metadata_loss_notice(&dropped)
                     .unwrap_or_else(|| fill(&gettext("Copy saved: {name}"), &[("name", &name)]));
                 state.borrow().osd_label.set_text(&notice);

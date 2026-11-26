@@ -379,7 +379,7 @@ fn files_subtitle(files: &[PathBuf]) -> String {
     if files.is_empty() {
         return "—".to_string();
     }
-    let first = files[0].file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
+    let first = crate::codec::printable_name(&files[0]);
     if files.len() == 1 {
         first
     } else {
@@ -455,7 +455,7 @@ fn pick_output_folder(
     dialog.select_folder(Some(&parent), None::<&gio::Cancellable>, move |result| {
         let Ok(folder) = result else { return };
         let Some(path) = folder.path() else { return };
-        row.set_subtitle(&path.display().to_string());
+        row.set_subtitle(&crate::codec::printable_path(&path));
         *output_dir.borrow_mut() = Some(path);
         clear_btn.set_visible(true);
     });
@@ -528,6 +528,9 @@ mod fill_tests {
         let three = vec![one[0].clone(), PathBuf::from("b.png"), PathBuf::from("c.png")];
         assert_eq!(files_subtitle(&three), "{count}.png and 2 more");
         assert_eq!(files_subtitle(&three[..2]), "{count}.png and 1 more");
+        // A right-to-left override would reorder the rest of the line.
+        let spoofed = vec![PathBuf::from("/x/ab\u{202E}gnp.exe.png")];
+        assert_eq!(files_subtitle(&spoofed), "ab\u{FFFD}gnp.exe.png");
     }
 }
 

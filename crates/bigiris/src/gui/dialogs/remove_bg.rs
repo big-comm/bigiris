@@ -242,10 +242,7 @@ pub(in crate::gui) fn build_remove_bg_dialog(
                         publish(BgUiState::Processing {
                             idx: position,
                             total,
-                            file: path
-                                .file_name()
-                                .map(|n| n.to_string_lossy().into_owned())
-                                .unwrap_or_default(),
+                            file: crate::codec::printable_name(path),
                         });
                         // Scoped cancel lets closing the window stop the
                         // isolated decode instead of waiting for it.

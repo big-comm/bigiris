@@ -595,6 +595,16 @@ pub(crate) fn printable_path(path: &Path) -> String {
     printable_text(&path.display().to_string())
 }
 
+/// The file name of `path` (the whole path when it has none) as
+/// [`printable_text`] shows it: for window titles, labels and messages.
+#[cfg(feature = "gui")]
+pub(crate) fn printable_name(path: &Path) -> String {
+    match path.file_name() {
+        Some(name) => printable_text(&name.to_string_lossy()),
+        None => printable_path(path),
+    }
+}
+
 /// How a child process ended, translated: its exit code or the signal
 /// that killed it.
 pub(crate) fn exit_status_text(status: std::process::ExitStatus) -> String {

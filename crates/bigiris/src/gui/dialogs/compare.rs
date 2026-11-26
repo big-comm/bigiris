@@ -29,10 +29,8 @@ pub(in crate::gui) fn build_compare_dialog(
     let right_path = &files[1];
 
     let header = adw::HeaderBar::new();
-    let left_name =
-        left_path.file_name().map(|s| s.to_string_lossy().into_owned()).unwrap_or_default();
-    let right_name =
-        right_path.file_name().map(|s| s.to_string_lossy().into_owned()).unwrap_or_default();
+    let left_name = crate::codec::printable_name(left_path);
+    let right_name = crate::codec::printable_name(right_path);
     let title = adw::WindowTitle::new(
         &gettext("Compare images"),
         &fill(

@@ -1509,7 +1509,7 @@ fn rebuild_film_strip(state: &Rc<RefCell<ViewerState>>) {
         cell.set_child(Some(&square));
         cell.add_overlay(&picture);
         let button = gtk::Button::builder().child(&cell).overflow(gtk::Overflow::Hidden).build();
-        let name = path.file_name().unwrap_or_default().to_string_lossy();
+        let name = crate::codec::printable_name(path);
         button.set_tooltip_text(Some(&name));
         button.update_property(&[gtk::accessible::Property::Label(&name)]);
         button.add_css_class("flat");
@@ -1757,11 +1757,7 @@ fn osd_text(state: &Rc<RefCell<ViewerState>>) -> String {
     if s.files.is_empty() {
         return String::new();
     }
-    let path = &s.files[s.idx];
-    let name = path
-        .file_name()
-        .map(|n| n.to_string_lossy().into_owned())
-        .unwrap_or_else(|| path.display().to_string());
+    let name = crate::codec::printable_name(&s.files[s.idx]);
     format!("{} · {}/{} · {}", name, s.idx + 1, s.files.len(), zoom_percent_label(&s))
 }
 
@@ -2693,10 +2689,7 @@ fn save_edits(state: &Rc<RefCell<ViewerState>>) {
         present_save_failure(state, &SaveFailure::NoEncoder);
         return;
     }
-    let name = path
-        .file_name()
-        .map(|n| n.to_string_lossy().into_owned())
-        .unwrap_or_else(|| path.display().to_string());
+    let name = crate::codec::printable_name(&path);
     let is_jpeg = path
         .extension()
         .and_then(|e| e.to_str())
@@ -3361,10 +3354,7 @@ fn apply_decoded_frame(state: &Rc<RefCell<ViewerState>>, frame: DecodedFrame) {
             s.texture = None;
             s.shown_path = None;
             s.picture.set_paintable(gdk::Paintable::NONE);
-            let name = frame.path.file_name().map_or_else(
-                || frame.path.display().to_string(),
-                |name| name.to_string_lossy().into_owned(),
-            );
+            let name = crate::codec::printable_name(&frame.path);
             s.error_page.set_description(Some(&glib::markup_escape_text(&name)));
             s.zoom_level.set_label(&zoom_percent_label(&s));
             drop(s);
@@ -4017,10 +4007,7 @@ fn trash_current(state: &Rc<RefCell<ViewerState>>) {
         }
         (s.window().clone(), s.files[s.idx].clone())
     };
-    let name = path
-        .file_name()
-        .map(|n| n.to_string_lossy().into_owned())
-        .unwrap_or_else(|| path.display().to_string());
+    let name = crate::codec::printable_name(&path);
     let alert = adw::AlertDialog::builder()
         .heading(gettext("Move to trash?"))
         .body(format!(
@@ -4385,11 +4372,7 @@ fn refresh_title(state: &Rc<RefCell<ViewerState>>) {
     if s.files.is_empty() {
         return;
     }
-    let path = &s.files[s.idx];
-    let base_name = path
-        .file_name()
-        .map(|n| n.to_string_lossy().into_owned())
-        .unwrap_or_else(|| path.display().to_string());
+    let base_name = crate::codec::printable_name(&s.files[s.idx]);
     // A leading `•` marks unsaved edits, as in GNOME's image viewer and editor.
     let name = if s.pending_ops.is_empty() { base_name } else { format!("• {base_name}") };
     let subtitle = gettext("{current} of {total}")

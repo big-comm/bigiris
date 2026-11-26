@@ -801,7 +801,7 @@ fn build_window_preloaded(
     // ambient rather than chrome-y.
     let osd_label = gtk::Label::builder()
         .label("")
-        .css_classes(["osd", "title-4"])
+        .css_classes(["title-4"])
         // Long notices (dropped metadata after a save) wrap instead of
         // widening the pill past the window.
         .wrap(true)

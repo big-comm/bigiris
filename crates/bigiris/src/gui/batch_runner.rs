@@ -412,12 +412,14 @@ where
             if let Ok(outcome) = &result {
                 tally.last = Some(outcome.clone());
             }
+            let shown = crate::codec::printable_path(path);
             let failure = match result {
                 Ok(ConvertOutcome::Written { output }) if written.contains(&output) => {
-                    Some(crate::fill(
+                    let replaced = crate::fill(
                         &gettext("replaced the output of another input: {path}"),
                         &[("path", &crate::codec::printable_path(&output))],
-                    ))
+                    );
+                    Some(format!("{shown}: {replaced}"))
                 }
                 Ok(ConvertOutcome::Written { output }) => {
                     tally.ok += 1;
@@ -432,12 +434,16 @@ where
                     tally.skip += 1;
                     None
                 }
-                Err(e) => Some(crate::error_text::core_error_text(&e)),
+                // These sentences already name the file.
+                Err(
+                    e @ (bigimage_core::BigImageError::Decode { .. }
+                    | bigimage_core::BigImageError::Encode { .. }),
+                ) => Some(crate::error_text::core_error_text(&e)),
+                Err(e) => Some(format!("{shown}: {}", crate::error_text::core_error_text(&e))),
             };
             if let Some(failure) = failure {
                 tally.fail += 1;
-                let shown = crate::codec::printable_path(path);
-                tally.first_err.get_or_insert_with(|| format!("{shown}: {failure}"));
+                tally.first_err.get_or_insert(failure);
             }
             let done = queue.done.fetch_add(1, Ordering::Relaxed) + 1;
             let progress = AsyncBatchEvent::Progress { done, total: queue.total, file: display };
@@ -607,6 +613,29 @@ mod worker_tests {
         assert!(auto_close_armed(&window));
         disarm_auto_close(&window);
         window.destroy();
+    }
+
+    /// A failure line names the file once, whether or not the error does.
+    #[test]
+    fn failure_names_the_file_once() {
+        let run = |error: fn(&Path) -> bigimage_core::BigImageError| {
+            let events = spawn_batch_workers(
+                vec![PathBuf::from("broken.png")],
+                png_naming(OverwritePolicy::Skip),
+                move |path| Err(error(path)),
+                Arc::new(AtomicBool::new(false)),
+            );
+            let AsyncBatchEvent::Done(summary) = summary(events) else { panic!("refused") };
+            summary.first_err.unwrap()
+        };
+        let decode = run(|path| bigimage_core::BigImageError::Decode {
+            path: path.to_path_buf(),
+            source: image::ImageError::IoError(std::io::ErrorKind::UnexpectedEof.into()),
+        });
+        let invalid = run(|_| bigimage_core::BigImageError::InvalidInput("too small".into()));
+        for line in [decode, invalid] {
+            assert_eq!(line.matches("broken.png").count(), 1, "{line}");
+        }
     }
 
     #[test]

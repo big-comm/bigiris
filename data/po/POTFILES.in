@@ -24,6 +24,7 @@ crates/bigiris/src/gui/dialogs/upscale.rs
 crates/bigiris/src/gui/previews.rs
 crates/bigiris/src/gui/transfers.rs
 crates/bigiris/src/main.rs
+crates/bigiris/src/output_plan.rs
 crates/bigimage-integrations/src/action.rs
 data/nautilus/bigiris-menu.py
 scripts/translations.py

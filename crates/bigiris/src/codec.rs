@@ -237,39 +237,42 @@ static TEST_WORKER: std::sync::OnceLock<PathBuf> = std::sync::OnceLock::new();
 /// bigiris`, built by `cargo test --all-targets` for the CLI tests. The
 /// harness sits in `target/<profile>/deps/` with the classic layout and in
 /// `target/<profile>/build/bigiris/<hash>/out/` with the newer build-dir
-/// layout, so the nearest ancestor holding a `bigiris` file wins.
+/// layout, so the nearest ancestor holding a `bigiris` file wins. Panics when
+/// there is none, or when it comes from another commit: the worker refuses a
+/// parent of another build, which would otherwise surface as an opaque
+/// failure or a GUI timeout.
 #[cfg(test)]
-pub(crate) fn built_worker() -> Option<PathBuf> {
-    let exe = std::env::current_exe().ok()?;
-    exe.ancestors()
-        .skip(1)
-        .take(5)
-        .map(|dir| dir.join("bigiris"))
-        .find(|path| path.is_file() && *path != exe)
+pub(crate) fn built_worker() -> PathBuf {
+    static WORKER: std::sync::OnceLock<PathBuf> = std::sync::OnceLock::new();
+    WORKER
+        .get_or_init(|| {
+            let exe = std::env::current_exe().expect("test harness path");
+            let path = exe
+                .ancestors()
+                .skip(1)
+                .take(5)
+                .map(|dir| dir.join("bigiris"))
+                .find(|path| path.is_file() && *path != exe)
+                .expect("bigiris binary missing: cargo test --all-targets");
+            let binary = std::fs::read(&path).expect("read the bigiris worker binary");
+            assert!(
+                binary.windows(WORKER_ID.len()).any(|w| w == WORKER_ID.as_bytes()),
+                "{} was built from another commit than this test; rebuild it with \
+                 `cargo build -p bigiris --features \"gui ai\"` (or run cargo test --all-targets)",
+                path.display()
+            );
+            path
+        })
+        .clone()
 }
 
 /// Test-only: route every decode in this process through the real sandbox,
 /// like `main` does, with `worker` (default: [`built_worker`]) as the codec
-/// binary on every thread. Idempotent; the first worker path wins. Panics
-/// if no worker binary exists (build it with `cargo test --all-targets`).
+/// binary on every thread. Idempotent; the first worker path wins.
 #[cfg(test)]
 pub(crate) fn configure_for_tests(worker: Option<PathBuf>) -> PathBuf {
     static CONFIGURE: std::sync::Once = std::sync::Once::new();
-    let path = TEST_WORKER
-        .get_or_init(|| {
-            worker.or_else(built_worker).expect("bigiris binary missing: cargo test --all-targets")
-        })
-        .clone();
-    // The worker refuses a parent from another build (WORKER_ID embeds the
-    // git commit), and a stale target/<profile>/bigiris after a commit would
-    // otherwise surface as an opaque GUI timeout. Fail fast instead.
-    let binary = std::fs::read(&path).expect("read the bigiris worker binary");
-    assert!(
-        binary.windows(WORKER_ID.len()).any(|w| w == WORKER_ID.as_bytes()),
-        "{} was built from another commit than this test; rebuild it with \
-         `cargo build -p bigiris --features \"gui ai\"` (or run cargo test --all-targets)",
-        path.display()
-    );
+    let path = TEST_WORKER.get_or_init(|| worker.unwrap_or_else(built_worker)).clone();
     CONFIGURE.call_once(configure);
     path
 }
@@ -1149,9 +1152,9 @@ mod tests {
 
     #[test]
     fn untrusted_text_cannot_drive_the_terminal() {
-        let text = sanitize_text("ok\x1b]0;pwned\x07\r\u{202E}line\nnext\u{9b}2J");
+        let text = sanitize_text("ok\x1b]0;pwned\x07\r\u{202E}line\u{2066}a\u{2069}\nnext\u{9b}2J");
         assert!(!text.chars().any(|c| c.is_control() && c != '\n'), "{text:?}");
-        assert!(!text.contains('\u{202E}'));
+        assert!(!text.contains(['\u{202E}', '\u{2066}', '\u{2069}']), "{text:?}");
         assert!(text.contains("\nnext"));
     }
 
@@ -1361,10 +1364,7 @@ mod tests {
     fn sandboxed_resave_keeps_exif_and_wide_gamut_profile() {
         use bigimage_core::{EncodeOptions, OverwritePolicy};
         use image::{ImageDecoder, ImageEncoder};
-        let Some(binary) = built_worker() else {
-            eprintln!("skipped: build the bigiris binary (cargo test --all-targets)");
-            return;
-        };
+        let binary = built_worker();
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("photo.jpg");
         let p3 = moxcms::ColorProfile::new_display_p3().encode().unwrap();
@@ -1415,10 +1415,7 @@ mod tests {
     #[test]
     fn sandboxed_resave_estimates_and_keeps_the_jpeg_quality() {
         use bigimage_core::{EncodeOptions, OverwritePolicy};
-        let Some(binary) = built_worker() else {
-            eprintln!("skipped: build the bigiris binary (cargo test --all-targets)");
-            return;
-        };
+        let binary = built_worker();
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("photo.jpg");
         let png = dir.path().join("photo.png");
@@ -1456,10 +1453,7 @@ mod tests {
 
     #[test]
     fn sandboxed_decode_survives_inherited_descriptors() {
-        let Some(binary) = built_worker() else {
-            eprintln!("skipped: build the bigiris binary (cargo test --all-targets)");
-            return;
-        };
+        let binary = built_worker();
         // Like the GUI after Mesa starts: a host descriptor without CLOEXEC.
         let leaked = tempfile::tempfile().unwrap();
         rustix::io::fcntl_setfd(&leaked, rustix::io::FdFlags::empty()).unwrap();
@@ -1469,6 +1463,56 @@ mod tests {
         };
         assert_eq!(result.unwrap().0.dimensions(), (2, 2));
         drop(leaked);
+    }
+
+    /// A host descriptor without close-on-exec, numbered 100 or above so it
+    /// never collides with the input the sandbox receives as descriptor 3.
+    fn leaked_descriptor() -> std::os::fd::OwnedFd {
+        let file = tempfile::tempfile().unwrap();
+        let leaked = rustix::io::fcntl_dupfd_cloexec(&file, 100).unwrap();
+        rustix::io::fcntl_setfd(&leaked, rustix::io::FdFlags::empty()).unwrap();
+        leaked
+    }
+
+    #[test]
+    fn host_descriptors_never_reach_the_sandbox() {
+        let leaked = leaked_descriptor();
+        let number = leaked.as_raw_fd();
+        let script =
+            format!("[ -e /proc/self/fd/{number} ] && {{ echo leaked >&2; exit 1; }}; exit 0");
+        let file = input();
+        let Some(result) = with_worker(&script, DEADLINE, || ensure_static(file.path())) else {
+            return;
+        };
+        result.unwrap();
+    }
+
+    fn run_worker(args: &[&std::ffi::OsStr]) -> std::process::Output {
+        Command::new(built_worker()).arg("--codec-worker").args(args).output().unwrap()
+    }
+
+    #[test]
+    fn worker_refuses_inherited_descriptors() {
+        let _leaked = leaked_descriptor();
+        let file = input();
+        let output = run_worker(&[WORKER_ID.as_ref(), "pixels".as_ref(), file.path().as_os_str()]);
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        assert!(!output.status.success(), "{stderr}");
+        assert!(stderr.contains("inherited file descriptors"), "{stderr}");
+        assert!(output.stdout.is_empty());
+    }
+
+    #[test]
+    fn worker_refuses_another_build_and_extra_arguments() {
+        let file = input();
+        let path = file.path().as_os_str();
+        let other = run_worker(&["BIGIRIS2+other".as_ref(), "pixels".as_ref(), path]);
+        assert_eq!(other.status.code(), Some(VERSION_MISMATCH));
+        let short = run_worker(&[WORKER_ID.as_ref(), "pixels".as_ref()]);
+        assert!(String::from_utf8_lossy(&short.stderr).contains("invalid worker arguments"));
+        let long = run_worker(&[WORKER_ID.as_ref(), "pixels".as_ref(), path, path]);
+        assert!(String::from_utf8_lossy(&long.stderr).contains("invalid worker arguments"));
+        assert!(other.stdout.is_empty() && short.stdout.is_empty() && long.stdout.is_empty());
     }
 
     /// What the GUI does after its first frame: decode on a batch worker
@@ -1494,7 +1538,7 @@ mod tests {
     /// own capability drop for a user that is not root hide their removal.
     #[test]
     fn attest_refuses_a_sandbox_missing_any_limit() {
-        let binary = built_worker().expect("bigiris binary missing: cargo test --all-targets");
+        let binary = built_worker();
         let file = input();
         let attest_with = |from: &[&str], to: &[&str]| {
             let edit = (!from.is_empty()).then(|| {

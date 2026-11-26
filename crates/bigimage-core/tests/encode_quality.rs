@@ -281,4 +281,18 @@ fn same_format_conversion_never_grows_the_file() {
             .unwrap();
     assert!(!report.kept_original);
     assert!(image::open(report.outcome.path()).is_ok());
+
+    // A larger original of the same format gives way to the smaller encode.
+    let smooth =
+        image::RgbImage::from_fn(64, 64, |x, y| image::Rgb([x as u8 * 4, y as u8 * 4, 90]));
+    let heavy = dir.path().join("heavy.jpg");
+    image::codecs::jpeg::JpegEncoder::new_with_quality(std::fs::File::create(&heavy).unwrap(), 100)
+        .encode_image(&smooth)
+        .unwrap();
+    let report =
+        convert_file_report(&heavy, Some(&out), Format::Jpeg, &opts, OverwritePolicy::Replace)
+            .unwrap();
+    assert!(!report.kept_original);
+    let written = std::fs::metadata(report.outcome.path()).unwrap().len();
+    assert!(written < std::fs::metadata(&heavy).unwrap().len());
 }

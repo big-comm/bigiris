@@ -103,9 +103,11 @@ pub fn preserved_by(format: crate::Format) -> MetadataSupport {
 }
 
 /// Whether an encoded file carries metadata a stripping re-encode would
-/// remove (EXIF, XMP, IPTC, text comments). Conservative: formats we do not
-/// parse structurally answer `true` when in doubt, so a "keep the original
-/// bytes" shortcut never leaks what a conversion would have dropped.
+/// remove (EXIF, XMP, IPTC, text comments, data after the image). Formats
+/// that are not parsed structurally answer `true` (only BMP and QOI hold
+/// no metadata), and so does a walk that cannot reach a clean end, so a
+/// "keep the original bytes" shortcut never leaks what a conversion would
+/// have dropped.
 pub(crate) fn carries_metadata(bytes: &[u8], format: crate::Format) -> bool {
     use crate::Format;
     let contains = |needle: &[u8]| bytes.windows(needle.len()).any(|w| w == needle);
@@ -115,28 +117,46 @@ pub(crate) fn carries_metadata(bytes: &[u8], format: crate::Format) -> bool {
         Format::WebP => webp_carries_metadata(bytes),
         Format::Avif => contains(b"Exif") || contains(b"mime") || contains(b"xml "),
         Format::Gif => contains(b"XMP DataXMP") || contains(&[0x21, 0xfe]),
-        // TIFF metadata lives in IFD tags of the image itself.
-        Format::Tiff => true,
-        _ => false,
+        // TIFF metadata lives in IFD tags of the image itself; EXR holds
+        // owner and position attributes, HDR its header lines, PNM comments,
+        // TGA an image ID and author fields, ICO PNG entries with text.
+        Format::Tiff | Format::OpenExr | Format::Hdr | Format::Pnm | Format::Tga | Format::Ico => {
+            true
+        }
+        Format::Bmp | Format::Qoi => false,
     }
 }
 
+/// `false` only for a JPEG whose segments, scans included, end at EOI with
+/// no APPn (other than JFIF, Adobe and ICC) or COM on the way.
 fn jpeg_carries_metadata(bytes: &[u8]) -> bool {
     let mut at = 2;
-    while at + 4 <= bytes.len() {
-        if bytes[at] != 0xff {
+    while let Some(&[prefix, marker]) = bytes.get(at..at + 2) {
+        if prefix != 0xff {
             return true;
         }
-        let marker = bytes[at + 1];
-        if marker == 0xff {
-            at += 1;
-            continue;
+        match marker {
+            // Fill byte before a marker.
+            0xff => {
+                at += 1;
+                continue;
+            }
+            // Anything after EOI is kept data.
+            0xd9 => return at + 2 < bytes.len(),
+            // Standalone markers carry no length.
+            0x01 | 0xd0..=0xd7 => {
+                at += 2;
+                continue;
+            }
+            _ => {}
         }
-        // Start of scan: no more header segments.
-        if marker == 0xda {
-            return false;
+        let Some(&[high, low]) = bytes.get(at + 2..at + 4) else {
+            return true;
+        };
+        let len = usize::from(u16::from_be_bytes([high, low]));
+        if len < 2 {
+            return true;
         }
-        let len = usize::from(u16::from_be_bytes([bytes[at + 2], bytes[at + 3]]));
         let payload = bytes.get(at + 4..at + 2 + len).unwrap_or(&[]);
         match marker {
             // APP2 holds ICC profiles (kept: they describe the pixels).
@@ -148,10 +168,29 @@ fn jpeg_carries_metadata(bytes: &[u8]) -> bool {
             _ => {}
         }
         at += 2 + len;
+        if marker == 0xda {
+            // Entropy-coded data runs to the next 0xFF that is neither a
+            // stuffed zero nor a restart marker.
+            loop {
+                let Some(offset) =
+                    bytes.get(at..).and_then(|rest| rest.iter().position(|&b| b == 0xff))
+                else {
+                    return true;
+                };
+                at += offset;
+                match bytes.get(at + 1) {
+                    Some(0x00 | 0xd0..=0xd7) => at += 2,
+                    Some(_) => break,
+                    None => return true,
+                }
+            }
+        }
     }
     true
 }
 
+/// `false` only for a PNG whose last chunk is IEND, with no text or EXIF
+/// chunk before it.
 fn png_carries_metadata(bytes: &[u8]) -> bool {
     let mut at = 8;
     while at + 8 <= bytes.len() {
@@ -159,7 +198,7 @@ fn png_carries_metadata(bytes: &[u8]) -> bool {
             u32::from_be_bytes([bytes[at], bytes[at + 1], bytes[at + 2], bytes[at + 3]]) as usize;
         match &bytes[at + 4..at + 8] {
             b"eXIf" | b"tEXt" | b"zTXt" | b"iTXt" => return true,
-            b"IEND" => return false,
+            b"IEND" => return at.saturating_add(12).saturating_add(len) != bytes.len(),
             _ => {}
         }
         at = at.saturating_add(12).saturating_add(len);
@@ -167,6 +206,8 @@ fn png_carries_metadata(bytes: &[u8]) -> bool {
     true
 }
 
+/// `false` only for a WebP whose chunks end exactly at the end of the file
+/// with no EXIF or XMP chunk among them.
 fn webp_carries_metadata(bytes: &[u8]) -> bool {
     let mut at = 12;
     while at + 8 <= bytes.len() {
@@ -177,7 +218,7 @@ fn webp_carries_metadata(bytes: &[u8]) -> bool {
         }
         at = at.saturating_add(8).saturating_add(len + (len & 1));
     }
-    false
+    at != bytes.len()
 }
 
 /// Normalise an EXIF blob for re-attachment: drop an `Exif\0\0` prefix and
@@ -561,7 +602,87 @@ mod tests {
         };
         assert!(!carries_metadata(&encode_jpeg(false), Format::Jpeg));
         assert!(carries_metadata(&encode_jpeg(true), Format::Jpeg));
-        assert!(carries_metadata(&[0u8; 16], Format::Tiff));
+    }
+
+    /// Guards: privacy: each kind of metadata the never-larger shortcut must
+    /// not republish, and the clean files it may.
+    #[test]
+    fn carries_metadata_flags_each_kind() {
+        use crate::Format;
+        let rgb = image::DynamicImage::ImageRgb8(image::RgbImage::from_fn(8, 8, |x, y| {
+            image::Rgb([x as u8 * 30, y as u8 * 30, 9])
+        }));
+        let encode = |format: image::ImageFormat| {
+            let mut out = std::io::Cursor::new(Vec::new());
+            rgb.write_to(&mut out, format).unwrap();
+            out.into_inner()
+        };
+        let splice =
+            |bytes: &[u8], at: usize, insert: &[u8]| [&bytes[..at], insert, &bytes[at..]].concat();
+        // Chunk walkers do not check CRCs: zeros stand in for them.
+        let png_chunk = |kind: &[u8; 4], data: &[u8]| {
+            [&(data.len() as u32).to_be_bytes()[..], kind, data, &[0; 4]].concat()
+        };
+        let png = encode(image::ImageFormat::Png);
+        let before_iend = png.len() - 12;
+        let jpeg = encode(image::ImageFormat::Jpeg);
+        let before_eoi = jpeg.len() - 2;
+        let webp = encode(image::ImageFormat::WebP);
+        let gif = encode(image::ImageFormat::Gif);
+        let opts = crate::EncodeOptions { quality: Some(60), ..crate::EncodeOptions::default() };
+        let avif = |exif: Option<&[u8]>| {
+            crate::optimize::encode(&rgb, Format::Avif, &opts, None, exif).unwrap().unwrap()
+        };
+        let exif = b"II*\0\x08\0\0\0\0\0\0\0\0\0";
+        let cases: [(&str, Vec<u8>, Format, bool); 21] = [
+            ("plain PNG", png.clone(), Format::Png, false),
+            (
+                "PNG tEXt",
+                splice(&png, before_iend, &png_chunk(b"tEXt", b"Author\0me")),
+                Format::Png,
+                true,
+            ),
+            (
+                "PNG zTXt",
+                splice(&png, before_iend, &png_chunk(b"zTXt", b"k\0\0x")),
+                Format::Png,
+                true,
+            ),
+            (
+                "PNG iTXt",
+                splice(&png, before_iend, &png_chunk(b"iTXt", b"k\0\0\0\0\0x")),
+                Format::Png,
+                true,
+            ),
+            ("PNG data after IEND", [&png[..], b"secret"].concat(), Format::Png, true),
+            ("plain JPEG", jpeg.clone(), Format::Jpeg, false),
+            (
+                "JPEG COM after the scan",
+                splice(&jpeg, before_eoi, b"\xff\xfe\x00\x05abc"),
+                Format::Jpeg,
+                true,
+            ),
+            ("JPEG data after EOI", [&jpeg[..], b"secret"].concat(), Format::Jpeg, true),
+            ("JPEG cut inside the scan", jpeg[..jpeg.len() - 4].to_vec(), Format::Jpeg, true),
+            ("plain WebP", webp.clone(), Format::WebP, false),
+            ("WebP XMP", [&webp[..], b"XMP \x02\0\0\0<x"].concat(), Format::WebP, true),
+            ("WebP truncated", webp[..webp.len() - 1].to_vec(), Format::WebP, true),
+            ("plain AVIF", avif(None), Format::Avif, false),
+            ("AVIF EXIF", avif(Some(exif)), Format::Avif, true),
+            ("plain GIF", gif.clone(), Format::Gif, false),
+            ("GIF comment", splice(&gif, gif.len() - 1, b"\x21\xfe\x03abc\x00"), Format::Gif, true),
+            ("TIFF", encode(image::ImageFormat::Tiff), Format::Tiff, true),
+            ("PNM", b"P5\n# author\n1 1\n255\n\x00".to_vec(), Format::Pnm, true),
+            ("TGA", encode(image::ImageFormat::Tga), Format::Tga, true),
+            ("BMP", encode(image::ImageFormat::Bmp), Format::Bmp, false),
+            ("QOI", encode(image::ImageFormat::Qoi), Format::Qoi, false),
+        ];
+        for (name, bytes, format, expected) in cases {
+            assert_eq!(carries_metadata(&bytes, format), expected, "{name}");
+        }
+        for format in [Format::OpenExr, Format::Hdr, Format::Ico] {
+            assert!(carries_metadata(&[0; 16], format), "{format:?}");
+        }
     }
     use image::{Rgb, RgbImage};
     use tempfile::TempDir;

@@ -145,7 +145,7 @@ fn remove_own_bytecode(ext_dir: &Path) {
             let _ = std::fs::remove_file(entry.path());
         }
     }
-    // Fails (and is ignored) unless the directory is now empty.
+    // Fails, and is ignored, while the directory still holds files.
     let _ = std::fs::remove_dir(&pycache);
 }
 
@@ -179,7 +179,7 @@ fn remove_stale_scripts(dir: &Path) -> io::Result<Vec<PathBuf>> {
             removed.push(path);
         }
     }
-    // Fails (and is ignored) unless the directory is now empty.
+    // Fails, and is ignored, while the directory still holds files.
     let _ = std::fs::remove_dir(dir);
     Ok(removed)
 }

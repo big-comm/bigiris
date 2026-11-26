@@ -415,11 +415,9 @@ fn refresh_xdg_caches(paths: &ScopePaths) {
         .status();
 }
 
-/// Rebuild `hicolor/icon-theme.cache` only where one already exists. GTK
-/// trusts a cache no older than the theme directory and then lists icons
-/// from it alone, and adding a file to `hicolor/<size>/apps` leaves that
-/// directory's time unchanged: a cache we created would hide every icon
-/// other programs install later, and one left stale would hide ours.
+/// Rebuild `hicolor/icon-theme.cache` only where one already exists: GTK
+/// lists icons from a cache alone, and a cache we created would hide icons
+/// other programs add later without changing the theme directory's time.
 fn refresh_icon_cache(hicolor: &std::path::Path) {
     use std::process::{Command, Stdio};
     if !hicolor.join("icon-theme.cache").is_file() {
@@ -685,7 +683,7 @@ mod tests {
     }
 
     #[test]
-    fn package_directory_entry_is_not_a_package() {
+    fn packaged_check_ignores_directories() {
         let tmp = TempDir::new().unwrap();
         let package = tmp.path().join("root/usr/share");
         std::fs::create_dir_all(package.join("kio/servicemenus/bigiris-dir.desktop")).unwrap();

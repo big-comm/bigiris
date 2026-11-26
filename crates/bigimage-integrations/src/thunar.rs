@@ -798,7 +798,7 @@ mod tests {
     }
 
     #[test]
-    fn png_optimize_is_offered_on_png_files_only() {
+    fn png_optimize_matches_png_only() {
         let a = ACTIONS.iter().find(|a| a.id == "web-optimize-png").unwrap();
         let xml = render_action(a);
         assert!(xml.contains("<patterns>*.png;*.PNG</patterns>"), "{xml}");

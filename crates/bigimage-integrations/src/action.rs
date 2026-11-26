@@ -577,7 +577,7 @@ mod tests {
     }
 
     #[test]
-    fn replacing_actions_run_only_on_their_output_format() {
+    fn replace_actions_match_output_format() {
         for a in ACTIONS.iter().filter(|a| a.command.contains("--overwrite replace")) {
             let to = a.command.split_whitespace().skip_while(|w| *w != "--to").nth(1).unwrap();
             assert_eq!(a.mime_types, [format!("image/{to}")], "{}", a.id);

@@ -258,8 +258,8 @@ fn is_generated_by_us(name: &str, suffix: &str, body: &str) -> bool {
 }
 
 /// Write each `(file name, content)` of `files` into `dir`, then remove the
-/// generated files there that `files` no longer names, so an action a
-/// release drops or renames leaves no stale menu entry behind.
+/// generated files there that `files` does not name, such as the menu entry
+/// of a dropped or renamed action.
 pub(crate) fn replace_generated(
     dir: &Path,
     suffix: &str,
@@ -349,7 +349,7 @@ mod tests {
     }
 
     #[test]
-    fn remove_generated_requires_marker_or_pre_marker_name() {
+    fn removal_needs_marker_or_legacy_name() {
         let tmp = TempDir::new().unwrap();
         let dir = tmp.path();
         let write = |name: &str, body: &str| {
@@ -392,7 +392,7 @@ mod tests {
     }
 
     #[test]
-    fn replace_generated_drops_files_of_removed_actions() {
+    fn replace_drops_removed_actions() {
         let tmp = TempDir::new().unwrap();
         let dir = tmp.path();
         let stale = dir.join("bigiris-old.nemo_action");

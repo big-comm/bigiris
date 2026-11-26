@@ -138,7 +138,7 @@ mod tests {
     }
 
     #[test]
-    fn menus_nest_every_action_once_in_order() {
+    fn menus_nest_actions_in_order() {
         let entries = entries();
         let body_of =
             |id: &str| entries.iter().find(|(entry, _)| entry == id).map(|(_, body)| body.as_str());

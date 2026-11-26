@@ -105,9 +105,11 @@ fn attest_sandbox(input: &Path) -> color_eyre::Result<()> {
         .stdout(Stdio::null())
         .stderr(Stdio::null())
         .status()?;
-    println!("userns={}", if nested.success() { "allowed" } else { "denied" });
+    let mut answer = std::io::stdout().lock();
+    writeln!(answer, "userns={}", if nested.success() { "allowed" } else { "denied" })?;
     for kind in NAMESPACES.into_iter().chain(["user"]) {
-        println!("{kind} {}", std::fs::read_link(format!("/proc/self/ns/{kind}"))?.display());
+        let namespace = std::fs::read_link(format!("/proc/self/ns/{kind}"))?;
+        writeln!(answer, "{kind} {}", namespace.display())?;
     }
     Ok(())
 }
@@ -903,11 +905,8 @@ fn resave_with_extras(path: &Path) -> ImageResult<(Pixels, ResaveExtras)> {
 }
 
 /// Decode `path` for an in-place save: upright pixels in the source colour
-/// space, its EXIF and ICC, the quality a JPEG source was estimated at (so
-/// re-encoding keeps it rather than running the perceptual search, which can
-/// lower it on every save), and the metadata the worker dropped. Without the
-/// sandboxed backend (unit tests) the quality is unknown and a JPEG save runs
-/// the perceptual search.
+/// space and the worker's [`ResaveExtras`]. Without the sandboxed backend
+/// (unit tests) the JPEG quality is unknown and a save runs the perceptual search.
 #[cfg(feature = "gui")]
 pub(crate) fn open_for_resave(path: &Path) -> ImageResult<(DynamicImage, ResaveExtras)> {
     if SANDBOXED.load(Ordering::Acquire) {
@@ -1339,7 +1338,7 @@ mod tests {
     }
 
     #[test]
-    fn parent_refuses_malformed_dimensions_and_oversized_json() {
+    fn dimension_and_json_answers_are_capped() {
         let file = |bytes: &[u8]| {
             let mut file = tempfile::tempfile().unwrap();
             file.write_all(bytes).unwrap();
@@ -1582,7 +1581,7 @@ mod tests {
     /// Core keeps EXIF and ICC blobs up to its cap: the worker hands those
     /// over whole and reports a larger one as a save would.
     #[test]
-    fn resave_metadata_is_kept_up_to_cores_cap() {
+    fn resave_blobs_kept_to_core_cap() {
         let cap = MAX_RESAVE_BLOB as usize;
         let at_cap = bigimage_core::SourceMetadata {
             exif: Some(vec![1; cap]),
@@ -1625,7 +1624,7 @@ mod tests {
     /// The input checks run before the sandbox: a FIFO would block the
     /// worker and a file past the cap is never handed over.
     #[test]
-    fn only_regular_files_up_to_the_cap_reach_the_sandbox() {
+    fn irregular_or_oversized_input_refused() {
         let dir = tempfile::tempdir().unwrap();
         let fifo = dir.path().join("pipe.png");
         rustix::fs::mknodat(rustix::fs::CWD, &fifo, rustix::fs::FileType::Fifo, 0o600.into(), 0)
@@ -1875,7 +1874,7 @@ mod tests {
     }
 
     #[test]
-    fn worker_refuses_another_build_and_extra_arguments() {
+    fn worker_refuses_foreign_build_and_arguments() {
         let file = input();
         let path = file.path().as_os_str();
         let other = run_worker(&["BIGIRIS2+other".as_ref(), "pixels".as_ref(), path]);
@@ -1906,26 +1905,19 @@ mod tests {
         drop(leaked);
     }
 
-    /// `--clearenv` and `--cap-drop ALL` have no row: `env_clear` and bwrap's
-    /// own capability drop for a user that is not root hide their removal.
-    #[test]
-    fn attest_refuses_each_weakened_limit() {
-        let binary = built_worker();
-        let file = input();
-        let attest_with = |edit: Option<(Vec<String>, Vec<String>)>| {
-            TEST_SANDBOX_EDIT.with(|slot| *slot.borrow_mut() = edit);
-            let result = with_executable(binary.clone(), DEADLINE, || attest(file.path()));
-            TEST_SANDBOX_EDIT.with(|slot| *slot.borrow_mut() = None);
-            result
-        };
-        let Some(result) = attest_with(None) else { return };
-        result.unwrap();
+    /// A sandbox edit (tokens replaced, their replacement) and the refusal
+    /// attest must give for it.
+    type Weakened = (Vec<String>, Vec<String>, String);
+
+    /// One row per limit `execute` sets. `--clearenv` and `--cap-drop ALL`
+    /// have none: `env_clear` and bwrap's own capability drop for a user that
+    /// is not root hide their removal.
+    fn weakened_sandboxes(app: &str) -> Vec<Weakened> {
         let strings = |tokens: &[&str]| tokens.iter().map(|token| token.to_string()).collect();
         let row = |from: &[&str], to: &[&str], expected: &str| {
             (strings(from), strings(to), expected.to_owned())
         };
         let fsize = format!("--fsize={}", output_limit("attest"));
-        let app = binary.to_str().unwrap();
         let mut weakened = vec![
             row(&["--as=2147483648"], &[], "Max address space"),
             row(&["--cpu=30"], &[], "Max cpu time"),
@@ -1966,7 +1958,22 @@ mod tests {
         if userns_hardening() {
             weakened.push(row(&["--disable-userns"], &[], "userns=allowed"));
         }
-        for (from, to, expected) in weakened {
+        weakened
+    }
+
+    #[test]
+    fn attest_refuses_each_weakened_limit() {
+        let binary = built_worker();
+        let file = input();
+        let attest_with = |edit: Option<(Vec<String>, Vec<String>)>| {
+            TEST_SANDBOX_EDIT.with(|slot| *slot.borrow_mut() = edit);
+            let result = with_executable(binary.clone(), DEADLINE, || attest(file.path()));
+            TEST_SANDBOX_EDIT.with(|slot| *slot.borrow_mut() = None);
+            result
+        };
+        let Some(result) = attest_with(None) else { return };
+        result.unwrap();
+        for (from, to, expected) in weakened_sandboxes(binary.to_str().unwrap()) {
             let error = attest_with(Some((from.clone(), to))).unwrap().unwrap_err().to_string();
             assert!(error.contains(&expected), "without {from:?}: {error}");
         }

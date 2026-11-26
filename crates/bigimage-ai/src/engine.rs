@@ -663,7 +663,7 @@ mod tests {
         }
 
         #[test]
-        fn loading_is_admitted_once_and_can_be_canceled_before_it_starts() {
+        fn load_admitted_once_and_cancelable() {
             let (slot, info) = (Slot::<Fake>::new(), model("a"));
             let cancel = slot.run(&info, SMALL, &mut |_| ControlFlow::Break(()), |_, _| Ok(()));
             assert!(matches!(cancel, Err(AiError::Cancelled)));
@@ -690,7 +690,7 @@ mod tests {
         }
 
         #[test]
-        fn a_gpu_failure_retries_on_the_cpu_and_stays_there() {
+        fn gpu_failure_stays_on_cpu() {
             let (slot, a, b) = (Slot::<Fake>::new(), model("a"), model("b"));
             let fail_on_gpu = |model: &mut Fake, _: Progress<'_>| {
                 if model.gpu { Err(AiError::Gpu("lost".into())) } else { Ok(()) }

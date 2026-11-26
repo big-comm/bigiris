@@ -610,13 +610,6 @@ fn viewer_heavy_render_cancel() {
     wait(&context, "viewer state released", &|| witness.upgrade().is_none());
 }
 
-/// Proportional set size of this process, in KiB.
-fn pss_kib() -> u64 {
-    let rollup = std::fs::read_to_string("/proc/self/smaps_rollup").unwrap();
-    let line = rollup.lines().find_map(|line| line.strip_prefix("Pss:")).unwrap();
-    line.trim().trim_end_matches("kB").trim().parse().unwrap()
-}
-
 /// The panel's AI tools with the real models. Needs the BigLinux weights
 /// packages, or `BIGIRIS_{BIREFNET,REALESRGAN,SCUNET}_WEIGHTS`; a tool
 /// whose weights are missing is skipped with a message.
@@ -738,7 +731,6 @@ fn viewer_edit_panel_ai() {
             assert_eq!(state.borrow().pending_ops, before, "a canceled upscale applied");
         }
         // Closing the panel gives the models back.
-        let loaded = pss_kib();
         handle_key(&state, gdk::Key::e, gdk::ModifierType::empty());
         let unloaded = || {
             use bigimage_ai::{background, denoise, inpaint, upscale};
@@ -747,10 +739,6 @@ fn viewer_edit_panel_ai() {
                 .all(Option::is_none)
         };
         wait(&context, "models unloaded", &unloaded);
-        eprintln!(
-            "PSS with the models loaded: {loaded} KiB, after closing the panel: {} KiB",
-            pss_kib()
-        );
     }
     window.destroy();
     drop(window);

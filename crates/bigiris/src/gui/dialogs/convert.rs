@@ -97,21 +97,15 @@ fn fill_convert_dialog(
     content.append(&alpha_banner);
     content.append(&conv_group);
     content.append(&dest_group);
-    let column = form_column(&content, &[status.upcast_ref(), actions.upcast_ref()]);
-    column.set_size_request(420, -1);
-
-    let main_box =
-        gtk::Box::builder().orientation(gtk::Orientation::Horizontal).spacing(16).build();
-    main_box.append(&column);
-    if let Some(sess) = preview_session.as_ref() {
-        let (_picture, column) = build_preview_column(sess);
-        main_box.append(&column);
-        // Convert is format-level — visual preview is just the source
-        // thumbnail (pixels don't change meaningfully between PNG/JPG/WebP
-        // at default quality). No refresh wiring needed.
-    }
-
-    set_dialog_content(&window, &header, &main_box);
+    // The preview stays the source thumbnail: a format change does not
+    // change the pixels enough to redraw it.
+    set_preview_dialog_content(
+        &window,
+        &header,
+        &content,
+        &[status.upcast_ref(), actions.upcast_ref()],
+        preview_session.as_deref(),
+    );
 
     close_on_click(&window, &cancel_btn);
 
@@ -175,23 +169,7 @@ mod replace_tests {
     #[test]
     #[ignore = "requires a graphical display; run alone with GSETTINGS_BACKEND=memory"]
     fn replacing_an_original_asks_first() {
-        adw::init().expect("GTK display required");
-        let app = adw::Application::builder()
-            .application_id("com.biglinux.Iris.ReplaceProbe")
-            .flags(gio::ApplicationFlags::NON_UNIQUE)
-            .build();
-        app.register(None::<&gio::Cancellable>).unwrap();
-        let context = glib::MainContext::default();
-        let pump = |what: &str, done: &dyn Fn() -> bool| {
-            let deadline = std::time::Instant::now() + Duration::from_secs(30);
-            while !done() {
-                while context.pending() {
-                    context.iteration(false);
-                }
-                assert!(std::time::Instant::now() < deadline, "timed out: {what}");
-                std::thread::sleep(Duration::from_millis(5));
-            }
-        };
+        let app = probe_app("com.biglinux.Iris.ReplaceProbe");
         let dir = tempfile::tempdir().unwrap();
         let photo = dir.path().join("photo.jpg");
         image::RgbImage::from_pixel(64, 48, image::Rgb([200, 30, 30])).save(&photo).unwrap();
@@ -206,7 +184,7 @@ mod replace_tests {
                 button.label().as_deref() == Some(convert.as_str())
             })
         };
-        pump("convert form", &|| apply().is_some());
+        pump_until("convert form", &|| apply().is_some());
         let row = |title: &str| {
             let title = gettext(title);
             find_widget(&root, &|row: &adw::ComboRow| row.title() == title).unwrap()
@@ -217,11 +195,11 @@ mod replace_tests {
         row("If the output file exists").set_selected(u32::try_from(replace.unwrap()).unwrap());
 
         apply().unwrap().emit_clicked();
-        pump("confirmation", &|| window.visible_dialog().is_some());
+        pump_until("confirmation", &|| window.visible_dialog().is_some());
         let alert = window.visible_dialog().and_downcast::<adw::AlertDialog>().unwrap();
         assert_eq!(alert.default_response().as_deref(), Some("cancel"));
         alert.close();
-        pump("confirmation closed", &|| window.visible_dialog().is_none());
+        pump_until("confirmation closed", &|| window.visible_dialog().is_none());
         assert!(apply().unwrap().is_sensitive(), "nothing runs after Cancel");
         assert_eq!(std::fs::read(&photo).unwrap(), original);
         window.destroy();

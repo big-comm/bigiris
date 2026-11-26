@@ -48,15 +48,10 @@ pub(in crate::gui) fn build_rotate_dialog(
 
     let status = status_label();
 
-    let (cancel_btn, apply_btn, actions) = action_buttons(&gettext("Rotate"));
-
     let content = padded_box(gtk::Orientation::Vertical, 16);
     content.append(&group);
-
-    let column = form_column(&content, &[status.upcast_ref(), actions.upcast_ref()]);
-    set_dialog_content(&window, &header, &column);
-
-    close_on_click(&window, &cancel_btn);
+    let apply_btn =
+        set_form_dialog_content(&window, &header, &content, &status, &gettext("Rotate"));
 
     {
         let files = files.clone();

@@ -328,24 +328,8 @@ mod prepare_tests {
     /// with nothing readable, the window keeps its header and a Close button.
     #[test]
     #[ignore = "requires a graphical display; run alone with GSETTINGS_BACKEND=memory"]
-    fn unreadable_first_file_keeps_the_dialog_usable() {
-        adw::init().expect("GTK display required");
-        let app = adw::Application::builder()
-            .application_id("com.biglinux.Iris.PrepareProbe")
-            .flags(gio::ApplicationFlags::NON_UNIQUE)
-            .build();
-        app.register(None::<&gio::Cancellable>).unwrap();
-        let context = glib::MainContext::default();
-        let pump = |what: &str, done: &dyn Fn() -> bool| {
-            let deadline = std::time::Instant::now() + Duration::from_secs(30);
-            while !done() {
-                while context.pending() {
-                    context.iteration(false);
-                }
-                assert!(std::time::Instant::now() < deadline, "timed out: {what}");
-                std::thread::sleep(Duration::from_millis(5));
-            }
-        };
+    fn dialog_survives_unreadable_first_file() {
+        let app = dialogs::probe_app("com.biglinux.Iris.PrepareProbe");
         let dir = tempfile::tempdir().unwrap();
         let good = dir.path().join("good.png");
         image::RgbImage::new(64, 48).save(&good).unwrap();
@@ -356,7 +340,7 @@ mod prepare_tests {
         window.present();
         let root: gtk::Widget = window.clone().upcast();
         let banner = || dialogs::find_widget(&root, &|banner: &adw::Banner| banner.is_revealed());
-        pump("banner", &|| banner().is_some());
+        dialogs::pump_until("banner", &|| banner().is_some());
         let title = banner().unwrap().title();
         assert!(title.contains("broken.png"), "{title}");
         let convert = gettext("Convert");
@@ -370,7 +354,7 @@ mod prepare_tests {
         window.present();
         let root: gtk::Widget = window.clone().upcast();
         let page = || dialogs::find_widget::<adw::StatusPage>(&root, &|_| true);
-        pump("failure page", &|| page().is_some());
+        dialogs::pump_until("failure page", &|| page().is_some());
         let close = gettext("Close");
         assert!(
             dialogs::find_widget(&root, &|button: &gtk::Button| {

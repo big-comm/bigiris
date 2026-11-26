@@ -126,11 +126,9 @@ pub(super) fn format_counts(ok: usize, skip: usize, fail: usize) -> String {
         .replace("{failed}", &fail.to_string())
 }
 
-/// Render the final state of a Prisma dialog after a batch finishes:
-/// counts, time and size change, the output of a one-file run and the
-/// first failure. Apply is enabled again, and a run that wrote everything
-/// it was given closes the dialog after 2 s, so service-menu callers need
-/// not dismiss it; one that skipped or failed anything stays open.
+/// Show a finished run's summary and enable Apply again. Only a run that
+/// wrote every input closes the dialog by itself (after 2 s); a skip or a
+/// failure stays on screen to be read.
 pub(super) fn finish_dialog(
     status: &gtk::Label,
     apply_btn: &gtk::Button,
@@ -566,13 +564,8 @@ mod worker_tests {
     /// stays open; one that wrote it names the output and closes itself.
     #[test]
     #[ignore = "requires a graphical display; run alone with GSETTINGS_BACKEND=memory"]
-    fn summary_names_the_output_and_closes_only_after_writing() {
-        adw::init().expect("GTK display required");
-        let app = adw::Application::builder()
-            .application_id("com.biglinux.Iris.SummaryProbe")
-            .flags(gtk4::gio::ApplicationFlags::NON_UNIQUE)
-            .build();
-        app.register(None::<&gtk4::gio::Cancellable>).unwrap();
+    fn summary_names_output_and_auto_closes() {
+        let app = super::super::dialogs::probe_app("com.biglinux.Iris.SummaryProbe");
         let window = adw::ApplicationWindow::builder().application(&app).build();
         window.present();
         let (status, apply) = (gtk::Label::new(None), gtk::Button::new());

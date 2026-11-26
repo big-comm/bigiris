@@ -282,88 +282,24 @@ async fn follow_run(
                 return;
             }
             Some(batch_runner::AsyncBatchEvent::Done(summary)) => {
-                let batch_runner::RunSummary {
-                    ok,
-                    skip,
-                    fail,
-                    first_err,
-                    done,
-                    total,
-                    cancelled,
-                    elapsed,
-                    bytes_in,
-                    bytes_out,
-                    ..
-                } = summary;
                 running.set(false);
                 // Closed mid-run: nothing left to show or to close.
-                if cancelled && !window.is_visible() {
+                if summary.cancelled && !window.is_visible() {
                     return;
                 }
-                let timing = batch_runner::format_duration(elapsed);
-                let template = if cancelled {
-                    gettext(
-                        "Canceled after {done}/{total} in {timing}. Written: {ok}, skipped: {skip}, failed: {fail}.",
-                    )
-                } else {
-                    gettext("Finished in {timing}. Written: {ok}, skipped: {skip}, failed: {fail}.")
-                };
-                let mut msg = fill(
-                    &template,
-                    &[
-                        ("done", &done.to_string()),
-                        ("total", &total.to_string()),
-                        ("timing", &timing),
-                        ("ok", &ok.to_string()),
-                        ("skip", &(skip + earlier_outputs.len()).to_string()),
-                        ("fail", &fail.to_string()),
-                    ],
-                );
-                if !earlier_outputs.is_empty() {
-                    let names: Vec<_> = earlier_outputs
-                        .iter()
-                        .map(|(entry, _)| crate::codec::printable_path(entry))
-                        .collect();
-                    msg.push('\n');
-                    msg.push_str(&fill(
-                        &gettext("Skipped as outputs of earlier runs: {files}"),
-                        &[("files", &names.join(", "))],
-                    ));
-                }
-                if ok > 0 && bytes_in > 0 && bytes_out > 0 {
-                    let delta = batch_runner::format_size_delta(bytes_in, bytes_out);
-                    let avg_in = bytes_in / (ok as u64).max(1);
-                    let avg_out = bytes_out / (ok as u64).max(1);
-                    msg.push('\n');
-                    msg.push_str(
-                        &fill(
-                            &gettext("{before} → {after} ({delta}) · average per file {avg_before} → {avg_after}"),
-                            &[
-                                ("before", &glib::format_size(bytes_in)),
-                                ("after", &glib::format_size(bytes_out)),
-                                ("delta", &delta),
-                                ("avg_before", &glib::format_size(avg_in)),
-                                ("avg_after", &glib::format_size(avg_out)),
-                            ],
-                        ),
-                    );
-                }
-                status.set_text(&msg);
-                if let Some(err) = first_err {
-                    status.set_text(&format!("{msg}\n{err}"));
-                }
-                progress.set_text(Some(&gettext(if cancelled {
+                status.set_text(&run_summary(&summary, &earlier_outputs));
+                progress.set_text(Some(&gettext(if summary.cancelled {
                     n_("Canceled")
                 } else {
                     n_("Done")
                 })));
                 apply_btn.set_sensitive(true);
-                let cancel_label =
-                    if !cancelled && done == total { gettext("Close") } else { gettext("Cancel") };
-                cancel_btn.set_label(&cancel_label);
+                let finished = !summary.cancelled && summary.done == summary.total;
+                cancel_btn.set_label(&gettext(if finished { n_("Close") } else { n_("Cancel") }));
                 // Only a run that wrote every input closes by itself: skips
                 // and failures stay on screen to be read.
-                if !cancelled && ok > 0 && skip + earlier_outputs.len() == 0 && fail == 0 {
+                let skipped = summary.skip + earlier_outputs.len();
+                if !summary.cancelled && summary.ok > 0 && skipped == 0 && summary.fail == 0 {
                     batch_runner::arm_auto_close(&window, 3);
                 }
                 return;
@@ -376,6 +312,76 @@ async fn follow_run(
             }
         }
     }
+}
+
+/// The summary line of a finished run: counts and time, the folder entries
+/// left out as earlier outputs, the size change and the first failure.
+fn run_summary(
+    summary: &batch_runner::RunSummary,
+    earlier_outputs: &[(PathBuf, PathBuf)],
+) -> String {
+    let batch_runner::RunSummary {
+        ok,
+        skip,
+        fail,
+        ref first_err,
+        done,
+        total,
+        cancelled,
+        elapsed,
+        bytes_in,
+        bytes_out,
+        ..
+    } = *summary;
+    let timing = batch_runner::format_duration(elapsed);
+    let template = if cancelled {
+        gettext(
+            "Canceled after {done}/{total} in {timing}. Written: {ok}, skipped: {skip}, failed: {fail}.",
+        )
+    } else {
+        gettext("Finished in {timing}. Written: {ok}, skipped: {skip}, failed: {fail}.")
+    };
+    let mut msg = fill(
+        &template,
+        &[
+            ("done", &done.to_string()),
+            ("total", &total.to_string()),
+            ("timing", &timing),
+            ("ok", &ok.to_string()),
+            ("skip", &(skip + earlier_outputs.len()).to_string()),
+            ("fail", &fail.to_string()),
+        ],
+    );
+    if !earlier_outputs.is_empty() {
+        let names: Vec<_> =
+            earlier_outputs.iter().map(|(entry, _)| crate::codec::printable_path(entry)).collect();
+        msg.push('\n');
+        msg.push_str(&fill(
+            &gettext("Skipped as outputs of earlier runs: {files}"),
+            &[("files", &names.join(", "))],
+        ));
+    }
+    if ok > 0 && bytes_in > 0 && bytes_out > 0 {
+        let delta = batch_runner::format_size_delta(bytes_in, bytes_out);
+        let avg_in = bytes_in / (ok as u64).max(1);
+        let avg_out = bytes_out / (ok as u64).max(1);
+        msg.push('\n');
+        msg.push_str(&fill(
+            &gettext("{before} → {after} ({delta}) · average per file {avg_before} → {avg_after}"),
+            &[
+                ("before", &glib::format_size(bytes_in)),
+                ("after", &glib::format_size(bytes_out)),
+                ("delta", &delta),
+                ("avg_before", &glib::format_size(avg_in)),
+                ("avg_after", &glib::format_size(avg_out)),
+            ],
+        ));
+    }
+    if let Some(err) = first_err {
+        msg.push('\n');
+        msg.push_str(err);
+    }
+    msg
 }
 
 /// `inputs` are files and folders; a folder counts as its images.
@@ -519,13 +525,7 @@ mod folder_tests {
     #[test]
     #[ignore = "requires a graphical display; run alone with GSETTINGS_BACKEND=memory"]
     fn folder_batch_skips_earlier_outputs() {
-        adw::init().expect("GTK display required");
-        let app = adw::Application::builder()
-            .application_id("com.biglinux.Iris.BatchFolderProbe")
-            .flags(gio::ApplicationFlags::NON_UNIQUE)
-            .build();
-        app.register(None::<&gio::Cancellable>).unwrap();
-        let context = glib::MainContext::default();
+        let app = probe_app("com.biglinux.Iris.BatchFolderProbe");
         let dir = tempfile::tempdir().unwrap();
         image::RgbImage::new(8, 8).save(dir.path().join("a.png")).unwrap();
         std::fs::write(dir.path().join("a.webp"), b"earlier output").unwrap();
@@ -554,14 +554,9 @@ mod folder_tests {
         let cancel = apply.prev_sibling().and_downcast::<gtk::Button>().unwrap();
         let run = || {
             apply.emit_clicked();
-            let deadline = std::time::Instant::now() + Duration::from_secs(30);
-            while !apply.is_sensitive() || status.text() == gettext("Processing…") {
-                while context.pending() {
-                    context.iteration(false);
-                }
-                assert!(std::time::Instant::now() < deadline, "batch never finished");
-                std::thread::sleep(Duration::from_millis(5));
-            }
+            pump_until("batch run", &|| {
+                apply.is_sensitive() && status.text() != gettext("Processing…")
+            });
             status.text()
         };
 

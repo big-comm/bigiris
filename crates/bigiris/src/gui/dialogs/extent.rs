@@ -74,12 +74,9 @@ fn fill_extent_dialog(
         &gettext("Prisma · no cropping"),
     )));
 
-    let content_h = gtk::Box::new(gtk::Orientation::Horizontal, 16);
-
     let natural = preview_session.as_ref().map(|s| s.natural_size()).unwrap_or((1, 1));
 
     let form_col = padded_box(gtk::Orientation::Vertical, 12);
-    form_col.set_width_request(380);
 
     let intro = gtk::Label::builder()
         .label(gettext(
@@ -175,18 +172,15 @@ fn fill_extent_dialog(
     let status = status_label();
 
     let (cancel_btn, apply_btn, actions) = action_buttons(&gettext("Extend"));
-    content_h.append(&form_column(&form_col, &[status.upcast_ref(), actions.upcast_ref()]));
 
     // Live preview on the right, driven by PreviewOp::Extent.
-    let picture_opt = if let Some(sess) = preview_session.as_ref() {
-        let (picture, column) = build_preview_column(sess);
-        content_h.append(&column);
-        Some(picture)
-    } else {
-        None
-    };
-
-    set_dialog_content(&window, &header, &content_h);
+    let picture_opt = set_preview_dialog_content(
+        &window,
+        &header,
+        &form_col,
+        &[status.upcast_ref(), actions.upcast_ref()],
+        preview_session.as_deref(),
+    );
 
     // Shared closure that reads every control and produces an ExtentOptions
     // (or None if the form is in an invalid state — e.g. malformed hex).
@@ -363,7 +357,7 @@ mod background_tests {
     use super::*;
 
     #[test]
-    fn transparent_bars_are_white_only_without_alpha() {
+    fn transparent_bars_white_without_alpha() {
         let clear = [0, 0, 0, 0];
         assert_eq!(written_background(clear, Some(Format::Jpeg)), [0xFF; 4]);
         assert_eq!(written_background(clear, Some(Format::Hdr)), [0xFF; 4]);

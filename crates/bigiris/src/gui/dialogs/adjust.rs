@@ -86,29 +86,13 @@ fn fill_adjust_dialog(
     content.append(&group_tone);
     content.append(&group_color);
     content.append(&group_out);
-    let scrolled = form_column(&content, &[status.upcast_ref(), actions_box.upcast_ref()]);
-    scrolled.set_hexpand(true);
-    scrolled.set_size_request(420, -1);
-
-    // Two-column layout: scrollable form on the left, live preview column
-    // on the right (when a session is available).
-    let main_box = gtk::Box::builder()
-        .orientation(gtk::Orientation::Horizontal)
-        .spacing(16)
-        .margin_top(0)
-        .margin_bottom(0)
-        .build();
-    main_box.append(&scrolled);
-
-    let preview_picture: Option<gtk::Picture> = if let Some(sess) = preview_session.as_ref() {
-        let (picture, column) = build_preview_column(sess);
-        main_box.append(&column);
-        Some(picture)
-    } else {
-        None
-    };
-
-    set_dialog_content(&window, &header, &main_box);
+    let preview_picture = set_preview_dialog_content(
+        &window,
+        &header,
+        &content,
+        &[status.upcast_ref(), actions_box.upcast_ref()],
+        preview_session.as_deref(),
+    );
 
     // Wire live preview on every slider / gamma change.
     if let (Some(picture), Some(session)) = (preview_picture.as_ref(), preview_session.as_ref()) {

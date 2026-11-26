@@ -287,6 +287,50 @@ fn set_dialog_content(
     window.set_content(Some(&toolbar_view));
 }
 
+/// Make `form` with `status` and Cancel and `apply_label` buttons below it
+/// the whole of `window` under `header`; Cancel closes the window. Returns
+/// the apply button.
+fn set_form_dialog_content(
+    window: &adw::ApplicationWindow,
+    header: &adw::HeaderBar,
+    form: &impl IsA<gtk::Widget>,
+    status: &gtk::Label,
+    apply_label: &str,
+) -> gtk::Button {
+    let (cancel_btn, apply_btn, actions) = action_buttons(apply_label);
+    set_dialog_content(
+        window,
+        header,
+        &form_column(form, &[status.upcast_ref(), actions.upcast_ref()]),
+    );
+    close_on_click(window, &cancel_btn);
+    apply_btn
+}
+
+/// Make `form` (with `footer` below it, see [`form_column`]) and the
+/// preview of `session` side by side the whole of `window` under `header`.
+/// Returns the preview picture, for dialogs that redraw it.
+fn set_preview_dialog_content(
+    window: &adw::ApplicationWindow,
+    header: &adw::HeaderBar,
+    form: &impl IsA<gtk::Widget>,
+    footer: &[&gtk::Widget],
+    session: Option<&PreviewSession>,
+) -> Option<gtk::Picture> {
+    let column = form_column(form, footer);
+    column.set_hexpand(true);
+    column.set_size_request(420, -1);
+    let main_box = gtk::Box::new(gtk::Orientation::Horizontal, 16);
+    main_box.append(&column);
+    let picture = session.map(|session| {
+        let (picture, preview) = build_preview_column(session);
+        main_box.append(&preview);
+        picture
+    });
+    set_dialog_content(window, header, &main_box);
+    picture
+}
+
 /// Fill `window` with a warning about the selection and a Close button.
 fn show_selection_problem(
     window: &adw::ApplicationWindow,
@@ -459,6 +503,32 @@ fn pick_output_folder(
         *output_dir.borrow_mut() = Some(path);
         clear_btn.set_visible(true);
     });
+}
+
+/// An application for one GUI test, registered so its windows can open.
+#[cfg(test)]
+pub(in crate::gui) fn probe_app(id: &str) -> adw::Application {
+    adw::init().expect("GTK display required");
+    let app = adw::Application::builder()
+        .application_id(id)
+        .flags(gio::ApplicationFlags::NON_UNIQUE)
+        .build();
+    app.register(None::<&gio::Cancellable>).unwrap();
+    app
+}
+
+/// Run the main loop until `done`, failing after 30 s with `what`.
+#[cfg(test)]
+pub(in crate::gui) fn pump_until(what: &str, done: &dyn Fn() -> bool) {
+    let context = glib::MainContext::default();
+    let deadline = std::time::Instant::now() + Duration::from_secs(30);
+    while !done() {
+        while context.pending() {
+            context.iteration(false);
+        }
+        assert!(std::time::Instant::now() < deadline, "timed out: {what}");
+        std::thread::sleep(Duration::from_millis(5));
+    }
 }
 
 /// The first widget under `root` (inclusive) that `matches`.

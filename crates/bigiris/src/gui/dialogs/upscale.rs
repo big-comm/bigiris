@@ -42,12 +42,9 @@ fn fill_upscale_dialog(
     );
     header.set_title_widget(Some(&title));
 
-    let content_h = gtk::Box::new(gtk::Orientation::Horizontal, 16);
-
     let natural = preview_session.as_ref().map(|s| s.natural_size()).unwrap_or((0, 0));
 
     let form_col = padded_box(gtk::Orientation::Vertical, 12);
-    form_col.set_width_request(340);
 
     // Real-ESRGAN when its package is installed; the row says what to
     // install otherwise and Lanczos3 runs instead.
@@ -135,14 +132,17 @@ fn fill_upscale_dialog(
     let status = status_label();
 
     let (cancel_btn, apply_btn, actions) = action_buttons(&gettext("Upscale"));
-    content_h.append(&form_column(&form_col, &[status.upcast_ref(), actions.upcast_ref()]));
 
     // Preview column shows an upscaled thumbnail of the first file as a
     // sanity check — PreviewOp::Resize respects the Lanczos3 filter.
-    if let Some(sess) = preview_session.as_ref() {
-        let (picture, column) = build_preview_column(sess);
-        content_h.append(&column);
-
+    let picture = set_preview_dialog_content(
+        &window,
+        &header,
+        &form_col,
+        &[status.upcast_ref(), actions.upcast_ref()],
+        preview_session.as_deref(),
+    );
+    if let (Some(sess), Some(picture)) = (preview_session.as_ref(), picture) {
         let refresh = {
             let session = sess.clone();
             let picture = picture.clone();
@@ -162,8 +162,6 @@ fn fill_upscale_dialog(
         refresh();
         dialog_signal!(window, factor_row, connect_selected_notify, move |_| refresh());
     }
-
-    set_dialog_content(&window, &header, &content_h);
 
     close_on_click(&window, &cancel_btn);
 

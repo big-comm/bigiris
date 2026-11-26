@@ -89,11 +89,8 @@ pub(in crate::gui) fn build_animate_dialog(
     content.append(&group);
 
     let status = status_label();
-    let (cancel_btn, apply_btn, actions_box) = action_buttons(&gettext("Create GIF"));
-    let column = form_column(&content, &[status.upcast_ref(), actions_box.upcast_ref()]);
-    set_dialog_content(&window, &header, &column);
-
-    close_on_click(&window, &cancel_btn);
+    let apply_btn =
+        set_form_dialog_content(&window, &header, &content, &status, &gettext("Create GIF"));
 
     {
         let files = files.clone();
@@ -333,7 +330,7 @@ mod gif_output_tests {
     }
 
     #[test]
-    fn relative_names_land_beside_the_first_frame() {
+    fn relative_name_lands_beside_first_frame() {
         let dir = tempfile::tempdir().unwrap();
         let frames = frames(dir.path());
         assert_eq!(gif_output_path("rel-anim", &frames).unwrap(), dir.path().join("rel-anim.gif"));

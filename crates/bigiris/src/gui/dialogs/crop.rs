@@ -492,13 +492,7 @@ mod bounds_tests {
     #[test]
     #[ignore = "requires a graphical display; run alone with GSETTINGS_BACKEND=memory"]
     fn crop_rectangle_stays_inside_the_image() {
-        adw::init().expect("GTK display required");
-        let app = adw::Application::builder()
-            .application_id("com.biglinux.Iris.CropBoundsProbe")
-            .flags(gio::ApplicationFlags::NON_UNIQUE)
-            .build();
-        app.register(None::<&gio::Cancellable>).unwrap();
-        let context = glib::MainContext::default();
+        let app = probe_app("com.biglinux.Iris.CropBoundsProbe");
         let dir = tempfile::tempdir().unwrap();
         let source = dir.path().join("photo.png");
         image::RgbImage::new(640, 480).save(&source).unwrap();
@@ -510,14 +504,7 @@ mod bounds_tests {
             let title = gettext(title);
             find_widget(&root, &|row: &adw::SpinRow| row.title() == title)
         };
-        let deadline = std::time::Instant::now() + Duration::from_secs(30);
-        while spin("X (px)").is_none() {
-            while context.pending() {
-                context.iteration(false);
-            }
-            assert!(std::time::Instant::now() < deadline, "crop form never appeared");
-            std::thread::sleep(Duration::from_millis(5));
-        }
+        pump_until("crop form", &|| spin("X (px)").is_some());
         let (x, width) = (spin("X (px)").unwrap(), spin("Width (px)").unwrap());
         assert_eq!((x.value(), width.value()), (160.0, 320.0));
         x.set_value(600.0);

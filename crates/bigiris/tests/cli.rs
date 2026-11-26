@@ -437,6 +437,8 @@ fn worker_refusals_carry_no_report_decoration() {
     let output = run(dir.path(), &["flip", "--axis", "horizontal", "cut.gif"]);
     let error = String::from_utf8_lossy(&output.stderr);
     assert!(error.contains("damaged or unreadable image data"), "{error}");
+    // The user's own file name, once, and no exit code beside a reason.
+    assert!(!error.contains("/input.") && !error.contains("exit code"), "{error}");
 }
 
 /// A file name from a downloaded archive cannot retitle the terminal, set

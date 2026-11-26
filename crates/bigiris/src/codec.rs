@@ -790,10 +790,18 @@ fn execute(path: &Path, mode: &str, replaced: &mut bool) -> ImageResult<std::fs:
             .and_then(|rx| rx.recv_timeout(Duration::from_secs(2)).ok())
             .unwrap_or_default();
         let details = sanitize_text(String::from_utf8_lossy(&details).trim());
+        // The worker's reason says what went wrong; its exit code only when
+        // it wrote none.
+        if !details.is_empty() {
+            return Err(invalid(crate::fill(
+                &gettext("the isolated codec rejected the image{hint}: {details}"),
+                &[("hint", &hint), ("details", &details)],
+            )));
+        }
         let status = exit_status_text(status);
         return Err(invalid(crate::fill(
-            &gettext("the isolated codec rejected the image ({status}){hint}: {details}"),
-            &[("status", &status), ("hint", &hint), ("details", &details)],
+            &gettext("the isolated codec rejected the image ({status}){hint}"),
+            &[("status", &status), ("hint", &hint)],
         )));
     }
     let mut output = output;

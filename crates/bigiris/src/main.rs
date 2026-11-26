@@ -967,9 +967,14 @@ fn apply_user_locale() {
 
 /// A codec worker's failure as the user reads it: core and `image` errors
 /// through [`error_text`], anything else (the worker's own refusals) as is.
+/// Never the sandbox's `/input.<ext>`: the parent names the user's file.
 fn worker_error_text(error: &color_eyre::Report) -> String {
+    use bigimage_core::BigImageError::{Decode, Encode};
     if let Some(core) = error.downcast_ref::<bigimage_core::BigImageError>() {
-        return error_text::core_error_text(core);
+        return match core {
+            Decode { source, .. } | Encode { source, .. } => error_text::image_error_text(source),
+            other => error_text::core_error_text(other),
+        };
     }
     if let Some(image) = error.downcast_ref::<image::ImageError>() {
         return error_text::image_error_text(image);

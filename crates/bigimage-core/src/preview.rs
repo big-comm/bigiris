@@ -8,7 +8,7 @@
 //!
 //! The whole point is to avoid two otherwise-unavoidable costs on every
 //! slider tick: re-decoding the PNG/JPEG from disk, and operating on the
-//! full-resolution pixel data when a 600px preview is what the user sees.
+//! full-resolution pixel data when an 800px preview is what the user sees.
 //! So we decode once, down-sample to a bounded thumbnail, and chain the
 //! pure `apply_to` functions across all five transform modules.
 

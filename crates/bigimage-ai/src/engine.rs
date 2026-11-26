@@ -86,8 +86,19 @@ pub enum Availability {
         /// Path that was looked up.
         path: PathBuf,
         /// Why it could not be read.
-        error: String,
+        error: WeightsError,
     },
+}
+
+/// Why a weights path that exists cannot be loaded.
+#[derive(Debug, Clone, PartialEq, Eq, Error)]
+pub enum WeightsError {
+    /// A folder, a device or an empty file.
+    #[error("not a weights file")]
+    NotAFile,
+    /// Opening it failed: the system's message.
+    #[error("{0}")]
+    Io(String),
 }
 
 impl Availability {
@@ -100,16 +111,16 @@ impl Availability {
 fn check_weights(path: &Path) -> Availability {
     match std::fs::File::open(path).and_then(|file| file.metadata()) {
         Ok(meta) if meta.is_file() && meta.len() > 0 => Availability::Ready,
-        Ok(_) => Availability::Unreadable {
-            path: path.to_path_buf(),
-            error: "not a weights file".into(),
-        },
+        Ok(_) => {
+            Availability::Unreadable { path: path.to_path_buf(), error: WeightsError::NotAFile }
+        }
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
             Availability::Missing { path: path.to_path_buf() }
         }
-        Err(error) => {
-            Availability::Unreadable { path: path.to_path_buf(), error: error.to_string() }
-        }
+        Err(error) => Availability::Unreadable {
+            path: path.to_path_buf(),
+            error: WeightsError::Io(error.to_string()),
+        },
     }
 }
 
@@ -158,9 +169,9 @@ pub fn cancel_on(flag: &AtomicBool) -> impl FnMut(Stage) -> ControlFlow<()> + '_
     }
 }
 
-/// Errors of every model.
+/// Errors of every model. Exhaustive, so the app's translated text for each
+/// variant fails to build when one is added.
 #[derive(Debug, Error)]
-#[non_exhaustive]
 pub enum AiError {
     /// Built without the `native` feature: no engine to run.
     #[error(
@@ -188,7 +199,7 @@ pub enum AiError {
         /// Weights path.
         path: PathBuf,
         /// Reason.
-        error: String,
+        error: WeightsError,
     },
     /// The progress callback asked to stop.
     #[error("canceled")]
@@ -203,8 +214,28 @@ pub enum AiError {
     #[error("processing: {0}")]
     Processing(String),
     /// Not enough memory to start; nothing was allocated.
-    #[error("memory for AI: {0}")]
-    Memory(String),
+    #[error(
+        "{model} needs about {:.2} GiB of free RAM for this step; available now: {:.2} GiB. \
+         Close other programs or use a smaller image. Swap does not count as free RAM.",
+        gibibytes(*need),
+        gibibytes(*available)
+    )]
+    Memory {
+        /// Model name.
+        model: &'static str,
+        /// Bytes the step is estimated to need.
+        need: u64,
+        /// Bytes free for this process now.
+        available: u64,
+    },
+    /// The memory counters could not be read, so the run was refused.
+    #[error("could not check the memory budget: {0}")]
+    MemoryUnknown(String),
+}
+
+/// `bytes` in GiB, for messages.
+pub fn gibibytes(bytes: u64) -> f64 {
+    bytes as f64 / (1024.0 * 1024.0 * 1024.0)
 }
 
 #[cfg(feature = "native")]
@@ -514,7 +545,7 @@ mod tests {
         // Not empty, so its length is not 0 on any file system.
         std::fs::write(dir.join("other"), b"x").unwrap();
         let not_a_file =
-            Availability::Unreadable { path: dir.clone(), error: "not a weights file".into() };
+            Availability::Unreadable { path: dir.clone(), error: WeightsError::NotAFile };
         assert_eq!(check_weights(&dir), not_a_file);
         let empty = dir.join("empty.weights");
         std::fs::write(&empty, b"").unwrap();
@@ -667,7 +698,7 @@ mod tests {
             let (slot, info) = (Slot::<Fake>::new(), model("a"));
             let cancel = slot.run(&info, SMALL, &mut |_| ControlFlow::Break(()), |_, _| Ok(()));
             assert!(matches!(cancel, Err(AiError::Cancelled)));
-            assert!(matches!(run(&slot, &info, HUGE_LOAD), Err(AiError::Memory(_))));
+            assert!(matches!(run(&slot, &info, HUGE_LOAD), Err(AiError::Memory { .. })));
             assert_eq!((LOADS.get(), slot.device()), ((0, 0), None));
             run(&slot, &info, SMALL).unwrap();
             // Loaded: only the run's share is admitted, and no reload.
@@ -707,7 +738,7 @@ mod tests {
         fn device_is_cleared_with_the_model() {
             let (slot, a, b) = (Slot::<Fake>::new(), model("a"), model("b"));
             run(&slot, &a, SMALL).unwrap();
-            assert!(matches!(run(&slot, &b, HUGE_LOAD), Err(AiError::Memory(_))));
+            assert!(matches!(run(&slot, &b, HUGE_LOAD), Err(AiError::Memory { .. })));
             assert_eq!(slot.device(), None);
 
             run(&slot, &a, SMALL).unwrap();

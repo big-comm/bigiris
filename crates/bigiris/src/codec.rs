@@ -237,6 +237,14 @@ pub fn with_cancel<T>(cancel: Arc<AtomicBool>, work: impl FnOnce() -> T) -> T {
 fn invalid(message: impl Into<String>) -> ImageError {
     ImageError::IoError(std::io::Error::new(std::io::ErrorKind::InvalidData, message.into()))
 }
+/// The worker's answer broke the protocol: one translated sentence, the
+/// detail in English (a fault, never something the user can fix).
+fn protocol_error(detail: &str) -> ImageError {
+    invalid(crate::with_error(
+        &gettext("the isolated codec answered with invalid data: {error}"),
+        detail,
+    ))
+}
 pub(crate) fn cancelled() -> bool {
     CANCEL.with(|slot| slot.borrow().as_ref().is_some_and(|flag| flag.load(Ordering::Acquire)))
 }
@@ -739,9 +747,17 @@ fn execute(path: &Path, mode: &str, replaced: &mut bool) -> ImageResult<std::fs:
             .and_then(|rx| rx.recv_timeout(Duration::from_secs(2)).ok())
             .unwrap_or_default();
         let details = sanitize_text(String::from_utf8_lossy(&details).trim());
+        let status = match status.code() {
+            Some(code) => crate::fill(&gettext("exit code {code}"), &[("code", &code.to_string())]),
+            None => {
+                let signal = std::os::unix::process::ExitStatusExt::signal(&status);
+                let signal = signal.unwrap_or_default().to_string();
+                crate::fill(&gettext("signal {signal}"), &[("signal", &signal)])
+            }
+        };
         return Err(invalid(crate::fill(
             &gettext("the isolated codec rejected the image ({status}){hint}: {details}"),
-            &[("status", &status.to_string()), ("hint", &hint), ("details", &details)],
+            &[("status", &status), ("hint", &hint), ("details", &details)],
         )));
     }
     let mut output = output;
@@ -784,13 +800,13 @@ fn receive_with(mut output: std::fs::File, trailer: bool) -> ImageResult<(Pixels
     let mut header = [0u8; HEADER];
     output.read_exact(&mut header)?;
     if &header[..8] != MAGIC || header[10] > 1 || header[11] > 1 {
-        return Err(invalid("invalid codec protocol"));
+        return Err(protocol_error("invalid codec protocol"));
     }
     let word = |offset| u32::from_le_bytes(header[offset..offset + 4].try_into().unwrap());
     let (w, h) = (word(12), word(16));
     let natural = (word(20), word(24));
     let length = u64::from_le_bytes(header[28..36].try_into().unwrap());
-    let color = color_from_code(header[8]).ok_or_else(|| invalid("invalid pixel type"))?;
+    let color = color_from_code(header[8]).ok_or_else(|| protocol_error("invalid pixel type"))?;
     if w == 0
         || h == 0
         || natural.0 == 0
@@ -800,14 +816,14 @@ fn receive_with(mut output: std::fs::File, trailer: bool) -> ImageResult<(Pixels
         || length > MAX_BYTES
         || length != u64::from(w) * u64::from(h) * u64::from(color.bytes_per_pixel())
     {
-        return Err(invalid("invalid protocol dimensions or size"));
+        return Err(protocol_error("invalid protocol dimensions or size"));
     }
     let total = output.metadata()?.len();
     let pixels_end = HEADER as u64 + length;
     let mut extras = ResaveExtras::default();
     let (exif_length, icc_length) = if trailer {
         if total < pixels_end + RESAVE_TRAILER as u64 {
-            return Err(invalid("invalid protocol dimensions or size"));
+            return Err(protocol_error("invalid protocol dimensions or size"));
         }
         let mut lengths = [0u8; RESAVE_TRAILER];
         output.seek(SeekFrom::Start(pixels_end))?;
@@ -816,15 +832,15 @@ fn receive_with(mut output: std::fs::File, trailer: bool) -> ImageResult<(Pixels
         let exif = u64::from_le_bytes(lengths[..8].try_into().unwrap());
         let icc = u64::from_le_bytes(lengths[8..16].try_into().unwrap());
         if exif > MAX_RESAVE_BLOB || icc > MAX_RESAVE_BLOB {
-            return Err(invalid("excessive metadata"));
+            return Err(protocol_error("excessive metadata"));
         }
         extras.quality = match lengths[16] {
             0 => None,
             q @ 1..=100 => Some(q),
-            _ => return Err(invalid("invalid JPEG quality")),
+            _ => return Err(protocol_error("invalid JPEG quality")),
         };
         if lengths[17] & !(DROPPED_EXIF | DROPPED_ICC | UNREADABLE_EXIF) != 0 {
-            return Err(invalid("invalid codec protocol"));
+            return Err(protocol_error("invalid codec protocol"));
         }
         extras.exif_dropped = lengths[17] & DROPPED_EXIF != 0;
         extras.icc_dropped = lengths[17] & DROPPED_ICC != 0;
@@ -836,12 +852,16 @@ fn receive_with(mut output: std::fs::File, trailer: bool) -> ImageResult<(Pixels
     let expected =
         pixels_end + if trailer { RESAVE_TRAILER as u64 + exif_length + icc_length } else { 0 };
     if total != expected {
-        return Err(invalid("invalid protocol dimensions or size"));
+        return Err(protocol_error("invalid protocol dimensions or size"));
     }
     let format = if header[9] == 255 {
         None
     } else {
-        Some(*Format::all().get(header[9] as usize).ok_or_else(|| invalid("invalid format"))?)
+        Some(
+            *Format::all()
+                .get(header[9] as usize)
+                .ok_or_else(|| protocol_error("invalid format"))?,
+        )
     };
     let length = length as usize;
     // Decode wide samples straight into their typed buffer through a small
@@ -849,7 +869,8 @@ fn receive_with(mut output: std::fs::File, trailer: bool) -> ImageResult<(Pixels
     macro_rules! buffer {
         ($data:expr_2021, $variant:ident) => {
             DynamicImage::$variant(
-                ImageBuffer::from_raw(w, h, $data).ok_or_else(|| invalid("invalid buffer"))?,
+                ImageBuffer::from_raw(w, h, $data)
+                    .ok_or_else(|| protocol_error("invalid buffer"))?,
             )
         };
     }
@@ -881,7 +902,7 @@ fn receive_with(mut output: std::fs::File, trailer: bool) -> ImageResult<(Pixels
         ColorType::Rgba16 => buffer!(shorts!(), ImageRgba16),
         ColorType::Rgb32F => buffer!(floats!(), ImageRgb32F),
         ColorType::Rgba32F => buffer!(floats!(), ImageRgba32F),
-        _ => return Err(invalid("invalid pixel type")),
+        _ => return Err(protocol_error("invalid pixel type")),
     };
     if trailer {
         // Skip the lengths already validated above.
@@ -951,7 +972,7 @@ fn dimensions(path: &Path) -> ImageResult<(u32, u32)> {
 }
 fn read_dimensions(mut output: std::fs::File) -> ImageResult<(u32, u32)> {
     if output.metadata()?.len() != 8 {
-        return Err(invalid("invalid dimensions"));
+        return Err(protocol_error("invalid dimensions"));
     }
     let mut bytes = [0; 8];
     output.read_exact(&mut bytes)?;
@@ -960,7 +981,7 @@ fn read_dimensions(mut output: std::fs::File) -> ImageResult<(u32, u32)> {
         u32::from_le_bytes(bytes[4..].try_into().unwrap()),
     );
     if size.0 == 0 || size.1 == 0 || u64::from(size.0) * u64::from(size.1) > 256 * 1024 * 1024 {
-        return Err(invalid("invalid dimensions"));
+        return Err(protocol_error("invalid dimensions"));
     }
     Ok(size)
 }
@@ -1077,9 +1098,10 @@ fn read_information(output: std::fs::File) -> ImageResult<Information> {
 /// Bounded JSON answer of the `metadata` and `information` modes.
 fn read_json<T: serde::de::DeserializeOwned>(output: std::fs::File) -> ImageResult<T> {
     if output.metadata()?.len() > MAX_METADATA {
-        return Err(invalid("excessive metadata"));
+        return Err(protocol_error("excessive metadata"));
     }
-    serde_json::from_reader(std::io::BufReader::new(output)).map_err(|e| invalid(e.to_string()))
+    serde_json::from_reader(std::io::BufReader::new(output))
+        .map_err(|e| protocol_error(&e.to_string()))
 }
 
 fn send(

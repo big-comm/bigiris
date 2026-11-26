@@ -2,6 +2,7 @@
 # marks strings for translation. msgids are the English source text, and every
 # catalog, pt_BR included, translates from English.
 crates/bigiris/src/codec.rs
+crates/bigiris/src/error_text.rs
 crates/bigiris/src/gui.rs
 crates/bigiris/src/gui/batch_runner.rs
 crates/bigiris/src/gui/dialogs/adjust.rs

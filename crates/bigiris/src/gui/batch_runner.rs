@@ -407,9 +407,13 @@ where
             Ok(ConvertOutcome::Skipped { .. }) => tally.skip += 1,
             Err(e) => {
                 tally.fail += 1;
-                tally
-                    .first_err
-                    .get_or_insert_with(|| format!("{}: {e}", crate::codec::printable_path(path)));
+                tally.first_err.get_or_insert_with(|| {
+                    format!(
+                        "{}: {}",
+                        crate::codec::printable_path(path),
+                        crate::error_text::core_error_text(&e)
+                    )
+                });
             }
         }
         let done = queue.done.fetch_add(1, Ordering::Relaxed) + 1;

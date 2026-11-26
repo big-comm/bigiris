@@ -226,7 +226,7 @@ fn fill_extent_dialog(
                 let (nw, nh) = match opts.size.resolve(natural.0, natural.1) {
                     Ok(d) => d,
                     Err(e) => {
-                        status.set_text(&e.to_string());
+                        status.set_text(&core_error_text(&e));
                         predicted_row.set_subtitle(&gettext("—"));
                         return;
                     }

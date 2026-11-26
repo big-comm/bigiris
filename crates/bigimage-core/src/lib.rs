@@ -323,9 +323,9 @@ pub fn save_image_preserving_metadata_report(
     Ok(ResaveOutcome { outcome, dropped })
 }
 
-/// Errors returned by core pipelines.
+/// Errors returned by core pipelines. Exhaustive, so the app's translated
+/// text for each variant fails to build when one is added.
 #[derive(Debug, Error)]
-#[non_exhaustive]
 pub enum BigImageError {
     /// IO failure.
     #[error("io: {0}")]
@@ -362,6 +362,13 @@ pub enum BigImageError {
     /// Pipeline cancelled by caller.
     #[error("cancelled")]
     Cancelled,
+
+    /// `increment` found every numbered name up to `_9999` taken.
+    #[error("too many files with the same name: {}", .output.display())]
+    NoFreeName {
+        /// The name the numbering started from.
+        output: PathBuf,
+    },
 
     /// Catch-all for messages not yet promoted to variants.
     #[error("{0}")]

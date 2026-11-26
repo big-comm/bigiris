@@ -533,7 +533,7 @@ pub(crate) fn publish_temp(
             Err(e) => return Err(BigImageError::Io(e.error)),
         }
     }
-    Err(BigImageError::Other(format!("too many files with the same name: {}", output.display())))
+    Err(BigImageError::NoFreeName { output })
 }
 
 /// Metadata written by the encoder in addition to the pixels.

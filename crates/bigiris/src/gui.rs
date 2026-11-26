@@ -22,6 +22,11 @@ use gtk::{gdk, gio, glib, graphene};
 use gtk4 as gtk;
 use libadwaita as adw;
 
+use crate::error_text::{
+    ai_error_text, core_error_text, image_error_text, missing_model_message, no_ai_build_message,
+    weights_unreadable_message,
+};
+
 mod previews;
 mod transfers;
 mod viewer;
@@ -590,7 +595,6 @@ impl ViewerLoader {
                         crate::codec::with_cancel(cancel, || {
                             decode_frame_cached(&request.path, &request.ops, Some(&worker_cache))
                         })
-                        .map_err(|e| e.to_string())
                     };
                     // Noted by the decode that just ran on this thread.
                     let icc_ignored = bigimage_core::color::take_ignored_profile();
@@ -2471,11 +2475,11 @@ fn apply_op_to_image(img: image::DynamicImage, op: EditOp) -> Result<image::Dyna
         EditOp::Resize { w, h } => {
             let mode = ResizeMode::Exact { width: w.max(1), height: h.max(1) };
             bigimage_core::resize::apply_to(&img, mode, Filter::Lanczos3)
-                .map_err(|error| error.to_string())?
+                .map_err(|error| core_error_text(&error))?
         }
         EditOp::Straighten { tenths } => {
             bigimage_core::rotate::straighten(&img, f64::from(tenths) / 10.0)
-                .map_err(|error| error.to_string())?
+                .map_err(|error| core_error_text(&error))?
         }
         // Fallible and slow: see `apply_op`.
         EditOp::RemoveBackground | EditOp::Upscale { .. } | EditOp::Denoise => img,
@@ -2527,32 +2531,6 @@ fn apply_heavy(
     result.map_err(|error| ai_error_text(&error))
 }
 
-/// A model error as the GUI shows it, translated where it is ours.
-pub(in crate::gui) fn ai_error_text(error: &bigimage_ai::AiError) -> String {
-    use bigimage_ai::AiError;
-    match error {
-        AiError::Disabled => no_ai_build_message(),
-        AiError::Missing { model, package, .. } => missing_model_message(model, package),
-        AiError::Cancelled => gettext("Canceled"),
-        other => fill(&gettext("AI failed: {error}"), &[("error", &other.to_string())]),
-    }
-}
-
-/// This build has no AI engines.
-pub(in crate::gui) fn no_ai_build_message() -> String {
-    gettext(
-        "This build does not include AI. Rebuild with `cargo build --features ai` (requires glslc, from the shaderc package).",
-    )
-}
-
-/// A model's weights package is not installed.
-pub(in crate::gui) fn missing_model_message(model: &str, package: &str) -> String {
-    fill(
-        &gettext("{model} is not installed. Install it with: sudo pacman -S {package}"),
-        &[("model", model), ("package", package)],
-    )
-}
-
 /// Why `model` cannot run now, or `None` when it can.
 pub(in crate::gui) fn model_unavailable(model: &bigimage_ai::ModelInfo) -> Option<String> {
     match model.availability() {
@@ -2561,10 +2539,9 @@ pub(in crate::gui) fn model_unavailable(model: &bigimage_ai::ModelInfo) -> Optio
         bigimage_ai::Availability::Missing { .. } => {
             Some(missing_model_message(model.name, model.package))
         }
-        bigimage_ai::Availability::Unreadable { path, error } => Some(fill(
-            &gettext("Could not read {path}: {error}"),
-            &[("path", &path.display().to_string()), ("error", &error)],
-        )),
+        bigimage_ai::Availability::Unreadable { path, error } => {
+            Some(weights_unreadable_message(model.name, &path, &error))
+        }
     }
 }
 
@@ -2589,7 +2566,7 @@ fn render_cached(
     path: &Path,
     ops: &[EditOp],
     cache: Option<&Mutex<viewer::edits::EditCache>>,
-) -> Result<image::DynamicImage, Box<dyn std::error::Error>> {
+) -> Result<image::DynamicImage, String> {
     fn lock(
         cache: &Mutex<viewer::edits::EditCache>,
     ) -> std::sync::MutexGuard<'_, viewer::edits::EditCache> {
@@ -2603,7 +2580,7 @@ fn render_cached(
     let (mut img, done) = match hit {
         Some((len, img)) => ((*img).clone(), len),
         None => {
-            let img = bigimage_core::open_image(path)?;
+            let img = bigimage_core::open_image(path).map_err(|error| image_error_text(&error))?;
             if let Some(cache) = cache {
                 lock(cache).insert(path, modified, Vec::new(), Arc::new(img.clone()));
             }
@@ -2860,14 +2837,14 @@ impl SaveFailure {
             {
                 Self::PermissionDenied
             }
-            _ => Self::Other(error.to_string()),
+            _ => Self::Other(core_error_text(&error)),
         }
     }
 
     fn from_image(error: image::ImageError) -> Self {
         match error {
             image::ImageError::IoError(io) => Self::from_io(io),
-            other => Self::Other(other.to_string()),
+            other => Self::Other(image_error_text(&other)),
         }
     }
 
@@ -3861,7 +3838,7 @@ fn print_current(state: &Rc<RefCell<ViewerState>>) {
                     let size = rgba.dimensions();
                     (premultiply_for_cairo(rgba.into_raw()), size)
                 })
-                .map_err(|e| e.to_string())
+                .map_err(|error| image_error_text(&error))
         })
     });
     let weak = window.downgrade();
@@ -4404,7 +4381,7 @@ fn refresh_title(state: &Rc<RefCell<ViewerState>>) {
 type Histogram = [u32; 768];
 type RawFrame = (Vec<u8>, u32, u32, Histogram);
 
-fn decode_frame(path: &Path, ops: &[EditOp]) -> Result<RawFrame, Box<dyn std::error::Error>> {
+fn decode_frame(path: &Path, ops: &[EditOp]) -> Result<RawFrame, String> {
     decode_frame_cached(path, ops, None)
 }
 
@@ -4412,7 +4389,7 @@ fn decode_frame_cached(
     path: &Path,
     ops: &[EditOp],
     cache: Option<&Mutex<viewer::edits::EditCache>>,
-) -> Result<RawFrame, Box<dyn std::error::Error>> {
+) -> Result<RawFrame, String> {
     let edited = render_cached(path, ops, cache)?;
     // Float (EXR/HDR) pixels are linear: encode them to sRGB for display.
     let rgba = bigimage_core::into_srgb_rgba8(edited);

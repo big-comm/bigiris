@@ -1492,7 +1492,7 @@ pub(in crate::gui) fn show_original(state: &Rc<RefCell<ViewerState>>, source: So
     let Some(path) = need else { return };
     state.borrow_mut().edit.original_job = Some(path.clone());
     let job_path = path.clone();
-    let job = gio::spawn_blocking(move || decode_frame(&job_path, &[]).map_err(|e| e.to_string()));
+    let job = gio::spawn_blocking(move || decode_frame(&job_path, &[]));
     let weak = Rc::downgrade(state);
     glib::MainContext::default().spawn_local(async move {
         let result = job.await;
@@ -1596,7 +1596,7 @@ pub(in crate::gui) fn run_tool(state: &Rc<RefCell<ViewerState>>, op: EditOp) {
             };
             let result = crate::codec::with_cancel(cancel.clone(), || {
                 let modified = file_modified(&path);
-                let base = render_cached(&path, &ops, Some(&cache)).map_err(|e| e.to_string())?;
+                let base = render_cached(&path, &ops, Some(&cache))?;
                 if cancel.load(Ordering::Acquire) {
                     return Err(String::new());
                 }

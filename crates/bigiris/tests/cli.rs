@@ -196,7 +196,7 @@ fn low_memory_refuses_ai_before_loading_and_preserves_inputs() {
     assert_eq!(output.status.code(), Some(1));
     let error = String::from_utf8_lossy(&output.stderr);
     // Refused by the budget, not by the (fake) weights.
-    assert!(error.contains("memory for AI") && error.contains("GiB"), "{error}");
+    assert!(error.contains("of free RAM") && error.contains("GiB"), "{error}");
     assert!(!dir.path().join("source_nobg.png").exists());
     assert_eq!(std::fs::read(dir.path().join("source.png")).unwrap(), original);
 }

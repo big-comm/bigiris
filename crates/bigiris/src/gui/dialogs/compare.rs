@@ -133,7 +133,7 @@ fn make_compare_side(path: &Path, window: &adw::ApplicationWindow) -> gtk::Box {
                     let size = rgba.dimensions();
                     (rgba.into_raw(), size)
                 })
-                .map_err(|e| e.to_string())
+                .map_err(|error| image_error_text(&error))
         })
     });
     let weak_picture = picture.downgrade();

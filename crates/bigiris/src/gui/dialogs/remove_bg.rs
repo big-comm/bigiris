@@ -19,9 +19,9 @@ fn remove_bg_one_with_session(
     src: &Path,
     cancel: &std::sync::atomic::AtomicBool,
 ) -> Result<PathBuf, String> {
-    bigimage_core::content::ensure_static(src).map_err(|e| e.to_string())?;
+    bigimage_core::content::ensure_static(src).map_err(|error| core_error_text(&error))?;
     let img = bigimage_core::open_image(src).map_err(|e| {
-        fill(&gettext("Could not read the image: {error}"), &[("error", &e.to_string())])
+        fill(&gettext("Could not read the image: {error}"), &[("error", &image_error_text(&e))])
     })?;
     let out = session
         .process_with_progress(&img, bigimage_ai::cancel_on(cancel))
@@ -36,7 +36,7 @@ fn remove_bg_one_with_session(
         OverwritePolicy::Increment,
     )
     .map_err(|e| {
-        fill(&gettext("Could not write the result: {error}"), &[("error", &e.to_string())])
+        fill(&gettext("Could not write the result: {error}"), &[("error", &core_error_text(&e))])
     })?;
     Ok(outcome.path().to_path_buf())
 }

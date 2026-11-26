@@ -138,7 +138,7 @@ fn spawn_render_thread(
                 session
                     .apply(&request.1)
                     .map(|img| DynamicImage::ImageRgba8(bigimage_core::into_srgb_rgba8(img)))
-                    .map_err(|e| e.to_string())
+                    .map_err(|error| crate::error_text::core_error_text(&error))
             }))
             .unwrap_or_else(|_| Err("preview renderer panicked".to_string()));
             let mut pending = lock.lock().unwrap();
@@ -248,9 +248,10 @@ pub(super) fn prepare_dialog(
     let input = files.first().cloned();
     let job = gio::spawn_blocking(move || {
         crate::codec::with_cancel(cancel, || {
-            input
-                .ok_or_else(|| gettext("No image selected"))
-                .and_then(|path| PreviewSession::open(path).map_err(|e| e.to_string()))
+            input.ok_or_else(|| gettext("No image selected")).and_then(|path| {
+                PreviewSession::open(path)
+                    .map_err(|error| crate::error_text::core_error_text(&error))
+            })
         })
     });
     let weak = window.downgrade();

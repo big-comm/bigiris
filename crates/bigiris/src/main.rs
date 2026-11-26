@@ -5,6 +5,10 @@
 //! 1. Viewer: `bigiris [FILE...]`
 //! 2. Dialog: `bigiris --dialog=<name> [FILE...]` (used by file-manager service menus)
 //! 3. Headless CLI: `bigiris <subcommand> ...` (used by CI/CD and quick service-menu actions)
+//!
+//! Modules: `codec` decodes untrusted files in a sandboxed worker process,
+//! `error_text` turns library errors into translated sentences, `gui` holds
+//! the viewer and the dialogs.
 
 // `deny`, not `forbid`: two audited `unsafe` sites are allowed, the
 // `pre_exec` hook in `codec::close_inherited_descriptors` and the
@@ -20,6 +24,7 @@
 static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
 mod codec;
+mod error_text;
 #[cfg(feature = "gui")]
 mod gui;
 
@@ -793,26 +798,7 @@ fn run_command(cli: Cli) -> color_eyre::Result<()> {
             &files,
         ),
         Some(Command::Rotate { degrees, auto, to, overwrite, files }) => {
-            let target = parse_optional_target(to.as_deref())?;
-            let policy: OverwritePolicy = overwrite.into();
-            if auto {
-                tracing::info!(?target, ?policy, count = files.len(), "rotate auto (EXIF)");
-                run_per_file(&files, "rotate", Naming::image(target, policy), |f| {
-                    bigimage_core::rotate_file_auto(f, target, policy)
-                })
-            } else {
-                let rotation: Rotation = degrees
-                    .ok_or_else(|| {
-                        color_eyre::eyre::eyre!(gettext(
-                            "rotate: use --degrees 90|180|270 or --auto"
-                        ))
-                    })?
-                    .into();
-                tracing::info!(?rotation, ?target, ?policy, count = files.len(), "rotate");
-                run_per_file(&files, "rotate", Naming::image(target, policy), |f| {
-                    bigimage_core::rotate_file(f, rotation, target, policy)
-                })
-            }
+            run_rotate(degrees, auto, to.as_deref(), overwrite.into(), &files)
         }
         Some(Command::Flip { axis, to, overwrite, files }) => {
             run_flip(axis.into(), to.as_deref(), overwrite.into(), &files)
@@ -1004,7 +990,7 @@ fn note_kept_original(input: &Path, kept_original: bool) {
         // allow-noisy-log: `info` lines are part of the command's report.
         println!(
             "info {}: {}",
-            codec::printable_path(&input),
+            codec::printable_path(input),
             gettext("the original was already smaller; copied without recompression")
         );
     }
@@ -1022,6 +1008,32 @@ fn run_resize(
     tracing::info!(?mode, ?filter, ?target, ?opts, ?policy, count = files.len(), "resize");
     run_per_file(files, "resize", Naming::image(target, policy), |f| {
         bigimage_core::resize_file(f, mode, filter, target, &opts, policy)
+    })
+}
+
+/// `--auto` reads each file's EXIF Orientation; otherwise `degrees` is required.
+fn run_rotate(
+    degrees: Option<RotationArg>,
+    auto: bool,
+    to: Option<&str>,
+    policy: OverwritePolicy,
+    files: &[PathBuf],
+) -> color_eyre::Result<()> {
+    let target = parse_optional_target(to)?;
+    if auto {
+        tracing::info!(?target, ?policy, count = files.len(), "rotate auto (EXIF)");
+        return run_per_file(files, "rotate", Naming::image(target, policy), |f| {
+            bigimage_core::rotate_file_auto(f, target, policy)
+        });
+    }
+    let rotation: Rotation = degrees
+        .ok_or_else(|| {
+            color_eyre::eyre::eyre!(gettext("rotate: use --degrees 90|180|270 or --auto"))
+        })?
+        .into();
+    tracing::info!(?rotation, ?target, ?policy, count = files.len(), "rotate");
+    run_per_file(files, "rotate", Naming::image(target, policy), |f| {
+        bigimage_core::rotate_file(f, rotation, target, policy)
     })
 }
 
@@ -1266,12 +1278,12 @@ where
                 skipped += 1;
                 println!("skip {} ({})", codec::printable_path(f), exists_note(&output));
             }
-            Err(e) => {
+            Err(error) => {
                 failed += 1;
                 eprintln!(
                     "err {}: {}",
                     codec::printable_path(f),
-                    codec::sanitize_text(&e.to_string())
+                    error_text::core_error_text(&error)
                 );
             }
         }
@@ -1291,7 +1303,7 @@ where
 fn note_ignored_profile(input: &Path) {
     eprintln!(
         "info {}: {}",
-        codec::printable_path(&input),
+        codec::printable_path(input),
         gettext("the color profile is corrupted; colors were treated as sRGB")
     );
 }
@@ -1338,12 +1350,17 @@ fn run_remove_bg(
         let session = match &mut slot {
             Some(session) => session,
             None => {
-                let session = bigimage_ai::background::BgSession::new(|_| Continue(()))?;
+                let session = bigimage_ai::background::BgSession::new(|_| Continue(()))
+                    .map_err(|e| color_eyre::eyre::eyre!(error_text::ai_error_text(&e)))?;
                 report_device("remove-bg", bigimage_ai::background::device());
                 slot.insert(session)
             }
         };
-        match remove_bg_one(f, dest, policy, session) {
+        let result = remove_bg_one(f, dest, policy, session);
+        if bigimage_core::color::take_ignored_profile() {
+            note_ignored_profile(f);
+        }
+        match result {
             Ok(ConvertOutcome::Written { output }) => {
                 ok += 1;
                 println!("ok  {} -> {}", codec::printable_path(f), codec::printable_path(&output));
@@ -1352,13 +1369,9 @@ fn run_remove_bg(
                 skipped += 1;
                 println!("skip {} ({})", codec::printable_path(f), exists_note(&output));
             }
-            Err(e) => {
+            Err(error) => {
                 fail += 1;
-                eprintln!(
-                    "err {}: {}",
-                    codec::printable_path(f),
-                    codec::sanitize_text(&e.to_string())
-                );
+                eprintln!("err {}: {error}", codec::printable_path(f));
             }
         }
     }
@@ -1377,18 +1390,20 @@ fn remove_bg_output(path: &Path) -> PathBuf {
     path.parent().filter(|dir| !dir.as_os_str().is_empty()).unwrap_or(Path::new(".")).join(name)
 }
 
+/// The error is the translated sentence the report prints.
 fn remove_bg_one(
     path: &Path,
     dest: PathBuf,
     policy: OverwritePolicy,
     session: &mut bigimage_ai::background::BgSession,
-) -> color_eyre::Result<ConvertOutcome> {
-    bigimage_core::content::ensure_static(path)?;
+) -> Result<ConvertOutcome, String> {
+    let core = |error| error_text::core_error_text(&error);
+    bigimage_core::content::ensure_static(path).map_err(core)?;
     let img =
-        bigimage_core::open_image(path).map_err(|e| color_eyre::eyre::eyre!("decode: {e}"))?;
-    let out_img = session.process(&img).map_err(|e| color_eyre::eyre::eyre!("{e}"))?;
+        bigimage_core::open_image(path).map_err(|error| error_text::image_error_text(&error))?;
+    let out_img = session.process(&img).map_err(|error| error_text::ai_error_text(&error))?;
     bigimage_core::save_image(out_img, dest, Format::Png, &EncodeOptions::default(), policy)
-        .map_err(|e| color_eyre::eyre::eyre!("encode: {e}"))
+        .map_err(core)
 }
 
 /// Refuse to start when `model` cannot run: not built in, or its weights
@@ -1397,7 +1412,7 @@ fn require_model(model: &bigimage_ai::ModelInfo) -> color_eyre::Result<()> {
     match model.availability() {
         bigimage_ai::Availability::Ready => Ok(()),
         bigimage_ai::Availability::NotBuilt => {
-            Err(color_eyre::eyre::eyre!("{}", bigimage_ai::AiError::Disabled))
+            Err(color_eyre::eyre::eyre!(error_text::no_ai_build_message()))
         }
         bigimage_ai::Availability::Missing { path } => Err(color_eyre::eyre::eyre!(fill(
             &gettext(
@@ -1409,16 +1424,9 @@ fn require_model(model: &bigimage_ai::ModelInfo) -> color_eyre::Result<()> {
                 ("command", &model.install_command()),
             ],
         ))),
-        bigimage_ai::Availability::Unreadable { path, error } => {
-            Err(color_eyre::eyre::eyre!(fill(
-                &gettext("could not read the {model} weights at {path}: {error}"),
-                &[
-                    ("model", model.name),
-                    ("path", &codec::printable_path(&path)),
-                    ("error", &error.to_string()),
-                ],
-            )))
-        }
+        bigimage_ai::Availability::Unreadable { path, error } => Err(color_eyre::eyre::eyre!(
+            error_text::weights_unreadable_message(model.name, &path, &error)
+        )),
     }
 }
 
@@ -1429,8 +1437,9 @@ fn report_device(op: &str, device: Option<bigimage_ai::Device>) {
     }
 }
 
+/// A model error inside a core pipeline, already translated.
 fn ai_error(error: bigimage_ai::AiError) -> bigimage_core::BigImageError {
-    bigimage_core::BigImageError::Other(error.to_string())
+    bigimage_core::BigImageError::Other(error_text::ai_error_text(&error))
 }
 
 /// Upscale by 2, 3 or 4: Real-ESRGAN when installed (or asked for), else
@@ -1517,19 +1526,20 @@ fn run_denoise(policy: OverwritePolicy, files: &[PathBuf]) -> color_eyre::Result
 /// Fill the white area of `mask` with LaMa. Output `<stem>_inpaint.<ext>`.
 fn run_inpaint(mask: &Path, policy: OverwritePolicy, files: &[PathBuf]) -> color_eyre::Result<()> {
     require_model(&bigimage_ai::inpaint::MODEL)?;
-    let mask_error = |e: &dyn std::fmt::Display| {
+    let mask_error = |error: &str| {
         color_eyre::eyre::eyre!(fill(
             &gettext("mask {path}: {error}"),
-            &[
-                ("path", &codec::printable_path(mask)),
-                ("error", &codec::sanitize_text(&e.to_string())),
-            ],
+            &[("path", &codec::printable_path(mask)), ("error", error),],
         ))
     };
-    bigimage_core::content::ensure_static(mask).map_err(|e| mask_error(&e))?;
-    let mask_image = bigimage_core::open_image(mask).map_err(|e| mask_error(&e))?;
+    let core = |error| mask_error(&error_text::core_error_text(&error));
+    bigimage_core::content::ensure_static(mask).map_err(core)?;
+    let mask_image = bigimage_core::open_image(mask)
+        .map_err(|error| mask_error(&error_text::image_error_text(&error)))?;
     let mask_image = bigimage_ai::inpaint::mask_from_image(&mask_image);
-    if bigimage_ai::inpaint::plans(&mask_image).map_err(|e| mask_error(&e))?.is_empty() {
+    let areas = bigimage_ai::inpaint::plans(&mask_image)
+        .map_err(|error| mask_error(&error_text::ai_error_text(&error)))?;
+    if areas.is_empty() {
         return Err(mask_error(&gettext("marks no area (paint the areas to erase white)")));
     }
     tracing::info!(?mask, ?policy, count = files.len(), "inpaint");
@@ -1574,7 +1584,7 @@ fn run_animate(
         }
         // Frames were read but could not be turned into the animation.
         Err(e) => {
-            eprintln!("err animate: {}", codec::sanitize_text(&e.to_string()));
+            eprintln!("err animate: {}", error_text::core_error_text(&e));
             exit_partial();
         }
     }
@@ -1715,7 +1725,7 @@ fn run_batch(profile: &std::path::Path, inputs: &[PathBuf]) -> color_eyre::Resul
                             &opts,
                             policy,
                         )
-                        .map_err(|e| codec::sanitize_text(&e.to_string()));
+                        .map_err(|error| error_text::core_error_text(&error));
                         let ignored_profile = bigimage_core::color::take_ignored_profile();
                         if tx.send((input.clone(), result, ignored_profile)).is_err() {
                             return;

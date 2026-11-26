@@ -282,7 +282,7 @@ fn start_animate_run(
                 apply_btn.set_sensitive(true);
             }
             Some(Err(e)) => {
-                status.set_text(&format!("{}: {e}", gettext("Failed")));
+                status.set_text(&format!("{}: {}", gettext("Failed"), core_error_text(&e)));
                 apply_btn.set_sensitive(true);
             }
             None => {

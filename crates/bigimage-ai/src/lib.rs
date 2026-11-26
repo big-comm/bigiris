@@ -43,7 +43,7 @@ mod memory;
 pub mod upscale;
 
 pub use engine::{
-    cancel_on, set_threads, threads, AiError, Availability, Device, ModelInfo, Stage,
+    AiError, Availability, Device, ModelInfo, Stage, cancel_on, set_threads, threads,
 };
 
 /// Crate version.

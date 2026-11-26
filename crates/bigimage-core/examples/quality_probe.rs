@@ -6,8 +6,8 @@ use std::path::Path;
 use std::time::{Duration, Instant};
 
 use bigimage_core::{
-    convert_file_to, open_image, EncodeOptions, Filter, Format, OverwritePolicy, PreviewOp,
-    PreviewSession, ResizeMode,
+    EncodeOptions, Filter, Format, OverwritePolicy, PreviewOp, PreviewSession, ResizeMode,
+    convert_file_to, open_image,
 };
 
 fn metric(field: &str) -> u64 {
@@ -123,7 +123,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 samples[((samples.len() as f64 * 0.95).ceil() as usize - 1).min(samples.len() - 1)];
             records.push(format!("{{\"operation\":\"{name}\",\"samples\":{count},\"median_ms\":{:.3},\"p95_ms\":{p95:.3}}}", samples[samples.len()/2]));
         }
-        println!("{{\"mode\":\"benchmark\",\"width\":{width},\"height\":{height},\"warm_cache\":true,\"rss_kib\":{},\"hwm_kib\":{},\"operations\":[{}]}}", metric("VmRSS:"), metric("VmHWM:"), records.join(","));
+        println!(
+            "{{\"mode\":\"benchmark\",\"width\":{width},\"height\":{height},\"warm_cache\":true,\"rss_kib\":{},\"hwm_kib\":{},\"operations\":[{}]}}",
+            metric("VmRSS:"),
+            metric("VmHWM:"),
+            records.join(",")
+        );
     } else if mode == "stress" {
         let inputs = vec![source.clone(); count as usize];
         let workers = bigimage_core::resources::batch_worker_count(&inputs);
@@ -165,7 +170,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         if written != count as usize + 1 {
             return Err("lost or partial output".into());
         }
-        println!("{{\"mode\":\"stress\",\"jobs\":{count},\"workers\":{workers},\"seconds\":{:.3},\"hwm_kib\":{},\"passed\":true}}", start.elapsed().as_secs_f64(), metric("VmHWM:"));
+        println!(
+            "{{\"mode\":\"stress\",\"jobs\":{count},\"workers\":{workers},\"seconds\":{:.3},\"hwm_kib\":{},\"passed\":true}}",
+            start.elapsed().as_secs_f64(),
+            metric("VmHWM:")
+        );
     } else {
         let baseline = metric("VmRSS:");
         let fd_start = descriptors();
@@ -186,7 +195,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let threads_end = metric("Threads:");
         let growth = final_rss.saturating_sub(baseline);
         let passed = growth <= 64 * 1024 && fd_end == fd_start && threads_end == threads_start;
-        println!("{{\"mode\":\"soak\",\"seconds\":{:.3},\"cycles\":{cycles},\"baseline_rss_kib\":{baseline},\"final_rss_kib\":{final_rss},\"growth_kib\":{growth},\"hwm_kib\":{},\"fds_before\":{fd_start},\"fds_after\":{fd_end},\"threads_before\":{threads_start},\"threads_after\":{threads_end},\"rss_samples_kib\":{samples:?},\"passed\":{passed}}}", start.elapsed().as_secs_f64(), metric("VmHWM:"));
+        println!(
+            "{{\"mode\":\"soak\",\"seconds\":{:.3},\"cycles\":{cycles},\"baseline_rss_kib\":{baseline},\"final_rss_kib\":{final_rss},\"growth_kib\":{growth},\"hwm_kib\":{},\"fds_before\":{fd_start},\"fds_after\":{fd_end},\"threads_before\":{threads_start},\"threads_after\":{threads_end},\"rss_samples_kib\":{samples:?},\"passed\":{passed}}}",
+            start.elapsed().as_secs_f64(),
+            metric("VmHWM:")
+        );
         if !passed {
             return Err("resource growth above the probe limit; investigate with a profiler".into());
         }

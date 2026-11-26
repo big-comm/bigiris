@@ -70,11 +70,7 @@ fn parse_files(data: &[u8], mime: &str) -> Result<Vec<PathBuf>, TransferError> {
             }
         }
     }
-    if paths.is_empty() {
-        Err(TransferError::Empty)
-    } else {
-        Ok(paths)
-    }
+    if paths.is_empty() { Err(TransferError::Empty) } else { Ok(paths) }
 }
 
 fn show_error(window: &adw::ApplicationWindow, error: TransferError) {
@@ -418,8 +414,8 @@ mod tests {
                 while result.borrow().is_none() {
                     context.iteration(true);
                 }
-                let value = result.borrow_mut().take().unwrap();
-                value
+
+                result.borrow_mut().take().unwrap()
             })
             .unwrap()
     }

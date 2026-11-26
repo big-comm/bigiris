@@ -11,9 +11,9 @@
 use std::io;
 use std::path::PathBuf;
 
-use crate::action::{Action, ACTIONS, TOP_LEVEL_LABEL};
-use crate::safe_fs::{safe_write_with_mode, FileMode};
-use crate::scope::{remove_matching, ScopePaths};
+use crate::action::{ACTIONS, Action, TOP_LEVEL_LABEL};
+use crate::safe_fs::{FileMode, safe_write_with_mode};
+use crate::scope::{ScopePaths, remove_matching};
 
 /// Install one `.desktop` per MIME filter of [`ACTIONS`] into
 /// `~/.local/share/kio/servicemenus/`, replacing what earlier installs wrote.

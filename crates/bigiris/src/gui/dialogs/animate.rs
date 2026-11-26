@@ -2,9 +2,9 @@
 //! Animated GIF: build an animated GIF from the selected frames.
 
 use super::*;
-use bigimage_core::{make_gif_with_policy, ConvertOutcome};
-use std::sync::atomic::{AtomicBool, Ordering};
+use bigimage_core::{ConvertOutcome, make_gif_with_policy};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 // ---------------------------------------------------------------------------
 // Animate dialog — pick a delay, a loop mode, an output path and build an

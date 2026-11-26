@@ -32,26 +32,26 @@ pub mod resize;
 pub mod resources;
 pub mod rotate;
 
-pub use adjust::{adjust_file, adjust_file_with_options, AdjustOps};
-pub use animate::{make_gif, make_gif_with_policy, AnimateOptions, LoopMode};
+pub use adjust::{AdjustOps, adjust_file, adjust_file_with_options};
+pub use animate::{AnimateOptions, LoopMode, make_gif, make_gif_with_policy};
 pub use convert::{
-    convert_file, convert_file_report, convert_file_to, into_srgb_rgba8, ConvertOutcome,
-    ConvertReport, OverwritePolicy,
+    ConvertOutcome, ConvertReport, OverwritePolicy, convert_file, convert_file_report,
+    convert_file_to, into_srgb_rgba8,
 };
-pub use crop::{crop_file, crop_file_with_options, CropRect};
+pub use crop::{CropRect, crop_file, crop_file_with_options};
 pub use encode::{EncodeOptions, QualityTarget};
 pub use extent::{
-    extent_file, extent_file_with_options, parse_hex_color, ExtentOptions, ExtentSize, Gravity,
+    ExtentOptions, ExtentSize, Gravity, extent_file, extent_file_with_options, parse_hex_color,
 };
-pub use flip::{flip_file, flip_file_with_options, FlipAxis};
+pub use flip::{FlipAxis, flip_file, flip_file_with_options};
 pub use format::Format;
 pub use metadata::{Metadata, MetadataLoss, MetadataSupport, SourceMetadata};
 pub use pipeline::TEMP_FILE_PREFIX;
 pub use preview::{PreviewOp, PreviewSession};
-pub use resize::{resize_file, Filter, ResizeMode};
+pub use resize::{Filter, ResizeMode, resize_file};
 pub use rotate::{
-    rotate_file, rotate_file_auto, rotate_file_auto_with_options, rotate_file_with_options,
-    Rotation,
+    Rotation, rotate_file, rotate_file_auto, rotate_file_auto_with_options,
+    rotate_file_with_options,
 };
 
 /// Crate version.

@@ -8,8 +8,8 @@
 
 use image::{ImageResult, RgbaImage};
 
-use super::metric::{search, Bounds, Probe};
-use super::{decode, encode_error, Extras};
+use super::metric::{Bounds, Probe, search};
+use super::{Extras, decode, encode_error};
 use crate::encode::{EncodeOptions, QualityTarget};
 
 const LO: u8 = 30;

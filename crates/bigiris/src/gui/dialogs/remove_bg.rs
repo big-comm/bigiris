@@ -460,13 +460,8 @@ mod availability_tests {
             .join("\n")
     }
 
-    /// The Prisma remove-bg and upscale dialogs with and without their
-    /// weights: unavailable states name the package and refuse to start;
-    /// with the weights (BIGIRIS_BIREFNET_WEIGHTS and
-    /// BIGIRIS_REALESRGAN_WEIGHTS, or the packages) they are ready.
-    #[test]
-    #[ignore = "requires a graphical display; run alone with GSETTINGS_BACKEND=memory"]
-    fn ai_dialogs_show_availability_and_install_hints() {
+    /// A registered application, its main context and one source image.
+    fn setup() -> (adw::Application, glib::MainContext, tempfile::TempDir, Rc<Vec<PathBuf>>) {
         assert_eq!(std::env::var("GSETTINGS_BACKEND").as_deref(), Ok("memory"));
         adw::init().expect("GTK display required");
         let app = adw::Application::builder()
@@ -474,30 +469,41 @@ mod availability_tests {
             .flags(gio::ApplicationFlags::NON_UNIQUE)
             .build();
         app.register(None::<&gio::Cancellable>).unwrap();
-        let context = glib::MainContext::default();
         let dir = tempfile::tempdir().unwrap();
         let source = dir.path().join("photo.png");
         image::RgbImage::from_pixel(320, 240, image::Rgb([90, 140, 200])).save(&source).unwrap();
-        let files = Rc::new(vec![source]);
-        let bg = &bigimage_ai::background::MODEL;
-        let up = &bigimage_ai::upscale::MODEL;
-        let installed = (bg.availability().is_ready(), up.availability().is_ready());
-        let saved: Vec<_> = [bg.env, up.env].into_iter().map(std::env::var_os).collect();
+        (app, glib::MainContext::default(), dir, Rc::new(vec![source]))
+    }
 
-        let show =
-            |name: &str,
-             build: fn(&adw::Application, Rc<Vec<PathBuf>>) -> adw::ApplicationWindow| {
-                let window = build(&app, files.clone());
-                window.present();
-                spin(&context, 300);
-                crate::gui::lifecycle_tests::capture_window(&window, name);
-                window
-            };
-        // Missing packages.
-        let absent = dir.path().join("absent.weights");
-        std::env::set_var(bg.env, &absent);
-        std::env::set_var(up.env, &absent);
-        let window = show("prisma-ai-remove-bg-missing", build_remove_bg_dialog);
+    fn show(
+        app: &adw::Application,
+        context: &glib::MainContext,
+        files: &Rc<Vec<PathBuf>>,
+        name: &str,
+        build: fn(&adw::Application, Rc<Vec<PathBuf>>) -> adw::ApplicationWindow,
+    ) -> adw::ApplicationWindow {
+        let window = build(app, files.clone());
+        window.present();
+        spin(context, 300);
+        crate::gui::lifecycle_tests::capture_window(&window, name);
+        window
+    }
+
+    /// Without their weights the Prisma remove-bg and upscale dialogs name the
+    /// package and refuse to start the model.
+    #[test]
+    #[ignore = "requires a graphical display; run alone with GSETTINGS_BACKEND=memory"]
+    #[expect(unsafe_code, reason = "points the weight overrides at a missing file")]
+    fn ai_dialogs_name_the_missing_package() {
+        let absent = std::env::temp_dir().join("bigiris-absent.weights");
+        for var in [bigimage_ai::background::MODEL.env, bigimage_ai::upscale::MODEL.env] {
+            // SAFETY: the first statement of an ignored test run alone, before GTK
+            // starts any thread; nothing else reads the environment yet.
+            unsafe { std::env::set_var(var, &absent) };
+        }
+        let (app, context, _dir, files) = setup();
+        let window =
+            show(&app, &context, &files, "prisma-ai-remove-bg-missing", build_remove_bg_dialog);
         let hint = if bigimage_ai::engines_compiled() {
             "sudo pacman -S birefnet-native"
         } else {
@@ -507,7 +513,8 @@ mod availability_tests {
         let apply = button(&window, &gettext("Remove background"));
         assert!(!apply.is_sensitive(), "remove-bg can start without its model");
         window.destroy();
-        let window = show("prisma-ai-upscale-missing", build_upscale_dialog);
+        let window =
+            show(&app, &context, &files, "prisma-ai-upscale-missing", build_upscale_dialog);
         let row = widgets(window.upcast_ref())
             .into_iter()
             .find_map(|w| w.downcast::<adw::SwitchRow>().ok())
@@ -519,24 +526,26 @@ mod availability_tests {
         // Lanczos3 still runs.
         assert!(button(&window, &gettext("Upscale")).is_sensitive());
         window.destroy();
+        spin(&context, 100);
+    }
 
-        // Installed (or pointed at) weights.
-        for (var, value) in [bg.env, up.env].iter().zip(&saved) {
-            match value {
-                Some(value) => std::env::set_var(var, value),
-                None => std::env::remove_var(var),
-            }
-        }
-        if installed.0 {
-            let window = show("prisma-ai-remove-bg", build_remove_bg_dialog);
+    /// With the weights (the packages, or BIGIRIS_BIREFNET_WEIGHTS and
+    /// BIGIRIS_REALESRGAN_WEIGHTS) both dialogs are ready.
+    #[test]
+    #[ignore = "requires a graphical display; run alone with GSETTINGS_BACKEND=memory"]
+    fn ai_dialogs_are_ready_with_weights() {
+        let (app, context, _dir, files) = setup();
+        if bigimage_ai::background::MODEL.availability().is_ready() {
+            let window =
+                show(&app, &context, &files, "prisma-ai-remove-bg", build_remove_bg_dialog);
             assert!(button(&window, &gettext("Remove background")).is_sensitive());
             assert!(!texts(&window).contains("sudo pacman"));
             window.destroy();
         } else {
             eprintln!("skipping the ready remove-bg dialog: weights absent");
         }
-        if installed.1 {
-            let window = show("prisma-ai-upscale", build_upscale_dialog);
+        if bigimage_ai::upscale::MODEL.availability().is_ready() {
+            let window = show(&app, &context, &files, "prisma-ai-upscale", build_upscale_dialog);
             let row = widgets(window.upcast_ref())
                 .into_iter()
                 .find_map(|w| w.downcast::<adw::SwitchRow>().ok())

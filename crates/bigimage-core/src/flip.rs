@@ -4,7 +4,7 @@
 use std::path::Path;
 
 use crate::convert::{ConvertOutcome, OverwritePolicy};
-use crate::{pipeline, Format, Result};
+use crate::{Format, Result, pipeline};
 
 /// Mirror axis.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

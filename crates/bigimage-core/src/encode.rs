@@ -112,11 +112,7 @@ impl EncodeOptions {
     /// set so the user's "smaller file" choice survives even if a
     /// caller raised `avif_speed` for batch throughput.
     pub fn effective_avif_speed(&self) -> u8 {
-        if self.optimize {
-            self.avif_speed.min(4)
-        } else {
-            self.avif_speed
-        }
+        if self.optimize { self.avif_speed.min(4) } else { self.avif_speed }
     }
 }
 

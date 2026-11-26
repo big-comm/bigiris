@@ -4,7 +4,7 @@
 use std::path::Path;
 
 use crate::convert::{ConvertOutcome, OverwritePolicy};
-use crate::{pipeline, BigImageError, Format, Result};
+use crate::{BigImageError, Format, Result, pipeline};
 
 /// Crop window expressed in pixels from the top-left corner.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

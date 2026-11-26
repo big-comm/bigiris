@@ -13,8 +13,8 @@
 
 use image::{ImageResult, RgbaImage};
 
-use super::metric::{search, Bounds, Probe};
-use super::{count_colours, decode, encode_error, rgb_of, Extras};
+use super::metric::{Bounds, Probe, search};
+use super::{Extras, count_colours, decode, encode_error, rgb_of};
 use crate::encode::{EncodeOptions, QualityTarget};
 
 const LO: u8 = 30;
@@ -175,11 +175,7 @@ pub(crate) fn mux(webp: Vec<u8>, width: u32, height: u32, extras: &Extras) -> Im
 }
 
 fn lossless_level(image: &RgbaImage) -> u8 {
-    if u64::from(image.width()) * u64::from(image.height()) <= MAX_EFFORT_PIXELS {
-        9
-    } else {
-        6
-    }
+    if u64::from(image.width()) * u64::from(image.height()) <= MAX_EFFORT_PIXELS { 9 } else { 6 }
 }
 
 /// Encode an `Rgba8` image.

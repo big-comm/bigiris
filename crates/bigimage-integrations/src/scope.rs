@@ -170,11 +170,7 @@ fn config_dirs_from(value: Option<std::ffi::OsString>) -> Vec<PathBuf> {
     let dirs: Vec<PathBuf> = value
         .map(|v| std::env::split_paths(&v).filter(|p| p.is_absolute()).collect())
         .unwrap_or_default();
-    if dirs.is_empty() {
-        vec![PathBuf::from("/etc/xdg")]
-    } else {
-        dirs
-    }
+    if dirs.is_empty() { vec![PathBuf::from("/etc/xdg")] } else { dirs }
 }
 
 /// Key-file line every generator writes into the first group of the

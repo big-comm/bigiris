@@ -26,7 +26,7 @@ fn disconnect_with_window(
 }
 
 macro_rules! dialog_signal {
-    ($window:expr, $object:expr, $method:ident, $callback:expr) => {{
+    ($window:expr_2021, $object:expr_2021, $method:ident, $callback:expr_2021) => {{
         let owner = $window.clone();
         let object = $object.clone();
         let handler = object.$method($callback);

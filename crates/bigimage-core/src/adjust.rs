@@ -11,7 +11,7 @@ use std::path::Path;
 use image::DynamicImage;
 
 use crate::convert::{ConvertOutcome, OverwritePolicy};
-use crate::{pipeline, BigImageError, Format, Result};
+use crate::{BigImageError, Format, Result, pipeline};
 
 /// All four adjustments bundled. Any axis left at its neutral value is
 /// skipped entirely to avoid needless pixel churn.
@@ -53,11 +53,7 @@ impl AdjustOps {
         if (self.gamma - 1.0).abs() > 0.001 {
             parts.push(format!("g{:.2}", self.gamma));
         }
-        if parts.is_empty() {
-            "adj".to_string()
-        } else {
-            parts.join("_")
-        }
+        if parts.is_empty() { "adj".to_string() } else { parts.join("_") }
     }
 
     fn validate(&self) -> Result<()> {

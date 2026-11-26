@@ -27,12 +27,12 @@ mod transfers;
 mod viewer;
 mod zoom;
 use previews::{
-    build_preview_column, dynamic_image_to_texture, prepare_dialog, refresh_preview,
-    PreviewDebounce,
+    PreviewDebounce, build_preview_column, dynamic_image_to_texture, prepare_dialog,
+    refresh_preview,
 };
 #[cfg(test)]
 use zoom::anchor_axis;
-use zoom::{adjust_zoom, apply_zoom, set_zoom, zoom_in, zoom_out, PendingZoom};
+use zoom::{PendingZoom, adjust_zoom, apply_zoom, set_zoom, zoom_in, zoom_out};
 
 const APP_ID: &str = "com.biglinux.Iris";
 const ZOOM_STEP: f64 = 1.25;
@@ -564,48 +564,51 @@ impl ViewerLoader {
         let worker_cache = cache.clone();
         std::thread::Builder::new()
             .name("bigiris-viewer-decode".to_string())
-            .spawn(move || loop {
-                let QueuedRequest { request, cancel } = {
-                    let (lock, ready) = &*worker_pending;
-                    let mut slot = lock.lock().expect("viewer decode queue poisoned");
-                    while slot.is_none() && !worker_stopped.load(Ordering::Relaxed) {
-                        slot = ready.wait(slot).expect("viewer decode queue poisoned");
-                    }
+            .spawn(move || {
+                loop {
+                    let QueuedRequest { request, cancel } = {
+                        let (lock, ready) = &*worker_pending;
+                        let mut slot = lock.lock().expect("viewer decode queue poisoned");
+                        while slot.is_none() && !worker_stopped.load(Ordering::Relaxed) {
+                            slot = ready.wait(slot).expect("viewer decode queue poisoned");
+                        }
+                        if worker_stopped.load(Ordering::Relaxed) {
+                            break;
+                        }
+                        slot.take().expect("request checked above")
+                    };
+                    let modified = file_modified(&request.path);
+                    let edited = !request.ops.is_empty();
+                    let oversized = request.max_pixels.is_some_and(|max| {
+                        crate::codec::with_cancel(cancel.clone(), || {
+                            header_pixels(&request.path).is_some_and(|pixels| pixels > max)
+                        })
+                    });
+                    let pixels = if oversized {
+                        Err("image too large to prefetch".to_string())
+                    } else {
+                        crate::codec::with_cancel(cancel, || {
+                            decode_frame_cached(&request.path, &request.ops, Some(&worker_cache))
+                        })
+                        .map_err(|e| e.to_string())
+                    };
+                    // Noted by the decode that just ran on this thread.
+                    let icc_ignored = bigimage_core::color::take_ignored_profile();
                     if worker_stopped.load(Ordering::Relaxed) {
                         break;
                     }
-                    slot.take().expect("request checked above")
-                };
-                let modified = file_modified(&request.path);
-                let edited = !request.ops.is_empty();
-                let oversized = request.max_pixels.is_some_and(|max| {
-                    crate::codec::with_cancel(cancel.clone(), || {
-                        header_pixels(&request.path).is_some_and(|pixels| pixels > max)
-                    })
-                });
-                let pixels = if oversized {
-                    Err("image too large to prefetch".to_string())
-                } else {
-                    crate::codec::with_cancel(cancel, || {
-                        decode_frame_cached(&request.path, &request.ops, Some(&worker_cache))
-                    })
-                    .map_err(|e| e.to_string())
-                };
-                // Noted by the decode that just ran on this thread.
-                let icc_ignored = bigimage_core::color::take_ignored_profile();
-                if worker_stopped.load(Ordering::Relaxed) {
-                    break;
+                    // Replace stale results instead of retaining unbounded RGBA buffers.
+                    *worker_results.lock().expect("viewer result slot poisoned") =
+                        Some(DecodedFrame {
+                            generation: request.generation,
+                            path: request.path,
+                            modified,
+                            edited,
+                            pixels,
+                            icc_ignored,
+                        });
+                    worker_wake.notify();
                 }
-                // Replace stale results instead of retaining unbounded RGBA buffers.
-                *worker_results.lock().expect("viewer result slot poisoned") = Some(DecodedFrame {
-                    generation: request.generation,
-                    path: request.path,
-                    modified,
-                    edited,
-                    pixels,
-                    icc_ignored,
-                });
-                worker_wake.notify();
             })
             .expect("could not start viewer decoder");
         let current = RefCell::new(Arc::new(AtomicBool::new(false)));
@@ -1211,11 +1214,7 @@ fn build_window_preloaded(
     for prefetch in [false, true] {
         let wake = {
             let s = state.borrow();
-            if prefetch {
-                s.prefetcher.wake.clone()
-            } else {
-                s.loader.wake.clone()
-            }
+            if prefetch { s.prefetcher.wake.clone() } else { s.loader.wake.clone() }
         };
         let weak = Rc::downgrade(&state);
         glib::MainContext::default().spawn_local(async move {
@@ -1542,11 +1541,11 @@ fn rebuild_film_strip(state: &Rc<RefCell<ViewerState>>) {
             let s = state.borrow();
             let button = weak_buttons.get(offset).and_then(|w| w.upgrade());
             let matches = s.current_ready && s.shown_path.as_ref() == paths.get(offset);
-            if let (true, Some(texture), Some(button)) = (matches, s.texture.as_ref(), button) {
-                if let Some(picture) = thumb_picture(&button) {
-                    picture.set_paintable(Some(texture));
-                    decoded[offset] = true;
-                }
+            if let (true, Some(texture), Some(button)) = (matches, s.texture.as_ref(), button)
+                && let Some(picture) = thumb_picture(&button)
+            {
+                picture.set_paintable(Some(texture));
+                decoded[offset] = true;
             }
         }
         start_thumbnail_decoding(paths, decoded, cancel, weak_buttons);
@@ -1595,10 +1594,10 @@ fn start_thumbnail_decoding(
                 break;
             }
             let Ok(Some((raw, w, h))) = decoded else { continue };
-            if let Some(button) = weak_buttons.get(index).and_then(|w| w.upgrade()) {
-                if let Some(picture) = thumb_picture(&button) {
-                    picture.set_paintable(Some(&texture_from_rgba(raw, w, h)));
-                }
+            if let Some(button) = weak_buttons.get(index).and_then(|w| w.upgrade())
+                && let Some(picture) = thumb_picture(&button)
+            {
+                picture.set_paintable(Some(&texture_from_rgba(raw, w, h)));
             }
         }
     });
@@ -2543,7 +2542,9 @@ pub(in crate::gui) fn ai_error_text(error: &bigimage_ai::AiError) -> String {
 
 /// This build has no AI engines.
 pub(in crate::gui) fn no_ai_build_message() -> String {
-    gettext("This build does not include AI. Rebuild with `cargo build --features ai` (requires glslc, from the shaderc package).")
+    gettext(
+        "This build does not include AI. Rebuild with `cargo build --features ai` (requires glslc, from the shaderc package).",
+    )
 }
 
 /// A model's weights package is not installed.
@@ -2631,28 +2632,28 @@ fn sync_edit_actions(state: &Rc<RefCell<ViewerState>>) {
     let has_ops = !s.pending_ops.is_empty();
     // A panel tool (background removal, upscale) also holds the history.
     let idle = !s.saving && !s.edit.busy();
-    if let Some(action) = s.window().lookup_action("save-edits") {
-        if let Some(simple) = action.downcast_ref::<gio::SimpleAction>() {
-            simple.set_enabled(has_ops && idle);
-        }
+    if let Some(action) = s.window().lookup_action("save-edits")
+        && let Some(simple) = action.downcast_ref::<gio::SimpleAction>()
+    {
+        simple.set_enabled(has_ops && idle);
     }
-    if let Some(action) = s.window().lookup_action("undo") {
-        if let Some(simple) = action.downcast_ref::<gio::SimpleAction>() {
-            simple.set_enabled(has_ops && idle);
-        }
+    if let Some(action) = s.window().lookup_action("undo")
+        && let Some(simple) = action.downcast_ref::<gio::SimpleAction>()
+    {
+        simple.set_enabled(has_ops && idle);
     }
-    if let Some(action) = s.window().lookup_action("redo") {
-        if let Some(simple) = action.downcast_ref::<gio::SimpleAction>() {
-            simple.set_enabled(!s.redo_ops.is_empty() && idle);
-        }
+    if let Some(action) = s.window().lookup_action("redo")
+        && let Some(simple) = action.downcast_ref::<gio::SimpleAction>()
+    {
+        simple.set_enabled(!s.redo_ops.is_empty() && idle);
     }
     // Trashing during a save would let the save's final rename bring the
     // file back from the trash.
     for name in ["rotate-cw", "rotate-ccw", "rotate-180", "flip-h", "flip-v", "trash"] {
-        if let Some(action) = s.window().lookup_action(name) {
-            if let Some(simple) = action.downcast_ref::<gio::SimpleAction>() {
-                simple.set_enabled(idle && !s.files.is_empty());
-            }
+        if let Some(action) = s.window().lookup_action(name)
+            && let Some(simple) = action.downcast_ref::<gio::SimpleAction>()
+        {
+            simple.set_enabled(idle && !s.files.is_empty());
         }
     }
     drop(s);
@@ -2722,7 +2723,12 @@ fn save_edits(state: &Rc<RefCell<ViewerState>>) {
         .map(|s| matches!(s.to_ascii_lowercase().as_str(), "jpg" | "jpeg"))
         .unwrap_or(false);
     let mut body = if is_jpeg {
-        format!("\"{name}\"\n\n{}", gettext("The file will be overwritten. JPEG is re-encoded every time it is saved; this may reduce quality."))
+        format!(
+            "\"{name}\"\n\n{}",
+            gettext(
+                "The file will be overwritten. JPEG is re-encoded every time it is saved; this may reduce quality."
+            )
+        )
     } else {
         format!("\"{name}\"\n\n{}", gettext("The file will be overwritten."))
     };
@@ -2877,13 +2883,16 @@ impl SaveFailure {
 
     fn message(&self) -> String {
         match self {
-            Self::NotStatic => gettext("This file is animated, has multiple pages or could not be checked. Rotating or flipping and saving would discard the other frames, so it was not changed."),
-            Self::NoEncoder => gettext("BigIris cannot write this format. The changes cannot be saved to the file itself."),
-            Self::PermissionDenied => gettext("No permission to modify this file or its folder."),
-            Self::Other(detail) => fill(
-                &gettext("The file was not changed. Details: {detail}"),
-                &[("detail", detail)],
+            Self::NotStatic => gettext(
+                "This file is animated, has multiple pages or could not be checked. Rotating or flipping and saving would discard the other frames, so it was not changed.",
             ),
+            Self::NoEncoder => gettext(
+                "BigIris cannot write this format. The changes cannot be saved to the file itself.",
+            ),
+            Self::PermissionDenied => gettext("No permission to modify this file or its folder."),
+            Self::Other(detail) => {
+                fill(&gettext("The file was not changed. Details: {detail}"), &[("detail", detail)])
+            }
         }
     }
 }
@@ -3865,16 +3874,19 @@ fn print_current(state: &Rc<RefCell<ViewerState>>) {
         window.set_cursor(None);
         match result {
             Ok((pixels, (width, height))) => {
-                if let Ok(surface) = gtk::cairo::ImageSurface::create_for_data(
+                match gtk::cairo::ImageSurface::create_for_data(
                     pixels,
                     gtk::cairo::Format::ARgb32,
                     width as i32,
                     height as i32,
                     width as i32 * 4,
                 ) {
-                    present_print_dialog(&window, &path, surface);
-                } else {
-                    show_print_error(&window, &gettext("Could not prepare the page"));
+                    Ok(surface) => {
+                        present_print_dialog(&window, &path, surface);
+                    }
+                    _ => {
+                        show_print_error(&window, &gettext("Could not prepare the page"));
+                    }
                 }
             }
             Err(error) => show_print_error(&window, &error),
@@ -4436,10 +4448,10 @@ fn sampled_histogram(rgba: &[u8]) -> Histogram {
 // --------------------------------------------------------------------------
 
 use bigimage_core::{
-    adjust_file, convert_file_to, crop_file, extent_file, flip_file, metadata, resize_file,
-    rotate_file, AdjustOps, AnimateOptions, CropRect, EncodeOptions, ExtentOptions, ExtentSize,
-    Filter, FlipAxis, Format, Gravity, LoopMode, OverwritePolicy, PreviewOp, PreviewSession,
-    ResizeMode, Rotation,
+    AdjustOps, AnimateOptions, CropRect, EncodeOptions, ExtentOptions, ExtentSize, Filter,
+    FlipAxis, Format, Gravity, LoopMode, OverwritePolicy, PreviewOp, PreviewSession, ResizeMode,
+    Rotation, adjust_file, convert_file_to, crop_file, extent_file, flip_file, metadata,
+    resize_file, rotate_file,
 };
 use image::DynamicImage;
 use std::time::Duration;
@@ -4488,7 +4500,7 @@ mod anchor_tests {
 
     #[test]
     fn edit_ops_map_to_expected_transforms() {
-        use super::{apply_op_to_image, EditOp};
+        use super::{EditOp, apply_op_to_image};
         use image::{DynamicImage, Rgba, RgbaImage};
         // 2×1, red on the left and green on the right: turned clockwise it
         // is 1×2 with red on top.
@@ -4524,7 +4536,7 @@ mod anchor_tests {
 
     #[test]
     fn heavy_edits_are_computed_once_per_prefix() {
-        use super::{heavy_runs, render_cached, EditOp};
+        use super::{EditOp, heavy_runs, render_cached};
         let dir = tempfile::TempDir::new().unwrap();
         let path = dir.path().join("small.png");
         image::RgbImage::from_pixel(8, 6, image::Rgb([10, 200, 30])).save(&path).unwrap();
@@ -4553,7 +4565,7 @@ mod anchor_tests {
 
     #[test]
     fn edited_save_is_atomic_and_preserves_permissions() {
-        use super::{write_edits_to_disk, EditOp};
+        use super::{EditOp, write_edits_to_disk};
         use image::{Rgb, RgbImage};
         use std::os::unix::fs::PermissionsExt;
 
@@ -4685,7 +4697,7 @@ mod anchor_tests {
 
     #[test]
     fn decide_drag_mode_picks_resize_when_near_corner() {
-        use super::{decide_drag_mode, CropDragMode};
+        use super::{CropDragMode, decide_drag_mode};
         // Widget 400×400, image 200×200 at scale 2, centered (ox=oy=0).
         // Rect at (50,50,100,100) natural → widget corners at (100,100)..(300,300).
         let mode = decide_drag_mode(
@@ -4705,7 +4717,7 @@ mod anchor_tests {
 
     #[test]
     fn decide_drag_mode_picks_move_when_strictly_inside() {
-        use super::{decide_drag_mode, CropDragMode};
+        use super::{CropDragMode, decide_drag_mode};
         let mode = decide_drag_mode(
             (200.0, 200.0), // middle of the rect in widget space (nat 100,100)
             (50.0, 50.0, 100.0, 100.0),
@@ -4722,7 +4734,7 @@ mod anchor_tests {
 
     #[test]
     fn decide_drag_mode_picks_new_selection_when_outside() {
-        use super::{decide_drag_mode, CropDragMode};
+        use super::{CropDragMode, decide_drag_mode};
         let mode = decide_drag_mode(
             (20.0, 20.0), // far from rect at widget (100,100)-(300,300)
             (50.0, 50.0, 100.0, 100.0),
@@ -4739,7 +4751,7 @@ mod anchor_tests {
 
     #[test]
     fn apply_drag_move_preserves_size_and_clamps() {
-        use super::{apply_drag, CropDragMode};
+        use super::{CropDragMode, apply_drag};
         let mode =
             CropDragMode::Move { rect0: (50.0, 50.0, 100.0, 100.0), click_nat: (100.0, 100.0) };
         // Small move → shift preserved.
@@ -4752,7 +4764,7 @@ mod anchor_tests {
 
     #[test]
     fn apply_drag_resize_corner_anchors_opposite() {
-        use super::{apply_drag, CropDragMode};
+        use super::{CropDragMode, apply_drag};
         // Anchor is bottom-right (150,150); click started top-left (50,50).
         let mode =
             CropDragMode::ResizeCorner { anchor_nat: (150.0, 150.0), click_nat: (50.0, 50.0) };
@@ -4766,7 +4778,7 @@ mod anchor_tests {
     fn upscale_doubles_dimensions_lanczos() {
         // The Lanczos3 upscale is `resize_file` at factor × 100 %.
         use bigimage_core::{
-            resize_file, ConvertOutcome, EncodeOptions, Filter, OverwritePolicy, ResizeMode,
+            ConvertOutcome, EncodeOptions, Filter, OverwritePolicy, ResizeMode, resize_file,
         };
         use image::{Rgb, RgbImage};
         let dir = tempfile::TempDir::new().unwrap();

@@ -11,10 +11,10 @@
 
 use std::path::Path;
 
-use image::{imageops, DynamicImage, ImageBuffer, Rgba};
+use image::{DynamicImage, ImageBuffer, Rgba, imageops};
 
 use crate::convert::{ConvertOutcome, OverwritePolicy};
-use crate::{pipeline, BigImageError, EncodeOptions, Format, Result};
+use crate::{BigImageError, EncodeOptions, Format, Result, pipeline};
 
 /// Target size, either explicit or derived from an aspect ratio applied
 /// to the source dimensions.
@@ -290,7 +290,7 @@ pub fn apply_to(src: &DynamicImage, opts: &ExtentOptions) -> Result<DynamicImage
     let (dx, dy) = (i64::from(dx), i64::from(dy));
 
     macro_rules! compose {
-        ($pixel:expr, $convert:ident, $variant:ident) => {{
+        ($pixel:expr_2021, $convert:ident, $variant:ident) => {{
             let mut canvas = ImageBuffer::from_pixel(nw, nh, $pixel);
             imageops::overlay(&mut canvas, &src.$convert(), dx, dy);
             DynamicImage::$variant(canvas)
@@ -299,11 +299,7 @@ pub fn apply_to(src: &DynamicImage, opts: &ExtentOptions) -> Result<DynamicImage
     let wide = |v: u8| u16::from(v) * 257;
     let linear = |v: u8| {
         let v = f32::from(v) / 255.0;
-        if v <= 0.040_45 {
-            v / 12.92
-        } else {
-            ((v + 0.055) / 1.055).powf(2.4)
-        }
+        if v <= 0.040_45 { v / 12.92 } else { ((v + 0.055) / 1.055).powf(2.4) }
     };
     use image::{Luma, LumaA, Rgb};
     Ok(match (depth, channels) {

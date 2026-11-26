@@ -23,7 +23,7 @@
 
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering};
-use std::sync::{mpsc, Arc};
+use std::sync::{Arc, mpsc};
 use std::time::{Duration, Instant};
 
 use bigimage_core::ConvertOutcome;
@@ -54,11 +54,7 @@ pub(super) fn format_size(bytes: u64) -> String {
 pub(super) fn format_duration(d: Duration) -> String {
     let secs = d.as_secs_f64();
     if secs < 60.0 {
-        if secs < 10.0 {
-            format!("{secs:.1} s")
-        } else {
-            format!("{secs:.0} s")
-        }
+        if secs < 10.0 { format!("{secs:.1} s") } else { format!("{secs:.0} s") }
     } else if secs < 3600.0 {
         let mins = (secs / 60.0) as u64;
         let rem = (secs - (mins as f64 * 60.0)).round() as u64;

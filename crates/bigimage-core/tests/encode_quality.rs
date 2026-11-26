@@ -3,8 +3,8 @@
 //! its SSIMULACRA2 target, is much smaller than the previous encoders,
 //! keeps metadata, and same-format conversions are never larger.
 use bigimage_core::{
-    convert_file_report, save_image, save_image_preserving_metadata, EncodeOptions, Format,
-    OverwritePolicy, QualityTarget, SourceMetadata,
+    EncodeOptions, Format, OverwritePolicy, QualityTarget, SourceMetadata, convert_file_report,
+    save_image, save_image_preserving_metadata,
 };
 use fast_ssim2::{PixelDescriptor, PixelSlice, Ssimulacra2Reference};
 use image::{DynamicImage, ImageEncoder, RgbaImage};

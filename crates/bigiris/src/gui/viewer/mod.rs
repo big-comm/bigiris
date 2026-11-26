@@ -169,7 +169,7 @@ impl Wake {
     }
 
     /// Resolves to `true` after the next notification, `false` once closed.
-    pub(super) fn wait(&self) -> impl Future<Output = bool> + 'static {
+    pub(super) fn wait(&self) -> impl Future<Output = bool> + 'static + use<> {
         Waiting(self.0.clone())
     }
 }

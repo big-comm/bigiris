@@ -520,11 +520,7 @@ fn ai_commands_write_their_outputs_with_installed_weights() {
     let dir = tempfile::tempdir().unwrap();
     let photo = image::RgbImage::from_fn(64, 48, |x, y| {
         let inside = (x as i32 - 32).pow(2) + (y as i32 - 24).pow(2) < 225;
-        if inside {
-            image::Rgb([200, 30, 20])
-        } else {
-            image::Rgb([230, 230, 225])
-        }
+        if inside { image::Rgb([200, 30, 20]) } else { image::Rgb([230, 230, 225]) }
     });
     photo.save(dir.path().join("photo.png")).unwrap();
     let mut mask = image::GrayImage::new(64, 48);

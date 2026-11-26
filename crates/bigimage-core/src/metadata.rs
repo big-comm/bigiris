@@ -198,19 +198,11 @@ pub(crate) fn resave_exif(exif: &[u8], size: Option<(u32, u32)>) -> Option<Vec<u
     };
     let word = |b: &[u8]| {
         let b = [b[0], b[1]];
-        if little {
-            u16::from_le_bytes(b)
-        } else {
-            u16::from_be_bytes(b)
-        }
+        if little { u16::from_le_bytes(b) } else { u16::from_be_bytes(b) }
     };
     let long = |b: &[u8]| {
         let b = [b[0], b[1], b[2], b[3]];
-        if little {
-            u32::from_le_bytes(b)
-        } else {
-            u32::from_be_bytes(b)
-        }
+        if little { u32::from_le_bytes(b) } else { u32::from_be_bytes(b) }
     };
     let put_word = |v: u16| if little { v.to_le_bytes() } else { v.to_be_bytes() };
     let put_long = |v: u32| if little { v.to_le_bytes() } else { v.to_be_bytes() };

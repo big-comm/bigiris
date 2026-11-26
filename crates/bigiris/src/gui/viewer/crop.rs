@@ -511,15 +511,11 @@ pub(in crate::gui) fn connect(state: &Rc<RefCell<ViewerState>>, window: &adw::Ap
             if fit.scale <= 0.0 {
                 return;
             }
-            if let Some(session) = s.crop.as_mut() {
-                if let Some(drag) = session.drag {
-                    session.rect = drag_to(
-                        drag,
-                        (dx / fit.scale, dy / fit.scale),
-                        session.natural,
-                        session.ratio,
-                    );
-                }
+            if let Some(session) = s.crop.as_mut()
+                && let Some(drag) = session.drag
+            {
+                session.rect =
+                    drag_to(drag, (dx / fit.scale, dy / fit.scale), session.natural, session.ratio);
             }
             refresh(&s);
         });
@@ -541,10 +537,10 @@ pub(in crate::gui) fn connect(state: &Rc<RefCell<ViewerState>>, window: &adw::Ap
     {
         let weak = Rc::downgrade(state);
         click.connect_pressed(move |_, presses, _, _| {
-            if presses == 2 {
-                if let Some(state) = weak.upgrade() {
-                    apply(&state);
-                }
+            if presses == 2
+                && let Some(state) = weak.upgrade()
+            {
+                apply(&state);
             }
         });
     }

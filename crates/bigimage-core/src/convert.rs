@@ -9,7 +9,7 @@ use std::path::{Path, PathBuf};
 
 use image::DynamicImage;
 
-use crate::{pipeline, Format, Result};
+use crate::{Format, Result, pipeline};
 
 /// Policy to apply when the computed output path already exists on disk.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -108,12 +108,11 @@ pub fn convert_file_report(
     let input = input.as_ref();
     let output = pipeline::resolve_output_to(input, output_dir, None, target, policy)?;
 
-    if matches!(policy, OverwritePolicy::Skip) {
-        if let Some(skipped) =
+    if matches!(policy, OverwritePolicy::Skip)
+        && let Some(skipped) =
             pipeline::skip_existing(input, output.clone(), target, pipeline::any_size)?
-        {
-            return Ok(ConvertReport { outcome: skipped, kept_original: false });
-        }
+    {
+        return Ok(ConvertReport { outcome: skipped, kept_original: false });
     }
 
     tracing::debug!(?input, ?output, ?target, ?opts, "convert: decoding");
@@ -261,20 +260,12 @@ fn sanitize_floats(img: DynamicImage) -> DynamicImage {
 /// sRGB opto-electronic transfer function (linear → encoded), clamped.
 fn srgb_oetf(v: f32) -> f32 {
     let v = if v.is_nan() { 0.0 } else { v.clamp(0.0, 1.0) };
-    if v <= 0.003_130_8 {
-        v * 12.92
-    } else {
-        1.055 * v.powf(1.0 / 2.4) - 0.055
-    }
+    if v <= 0.003_130_8 { v * 12.92 } else { 1.055 * v.powf(1.0 / 2.4) - 0.055 }
 }
 
 /// sRGB electro-optical transfer function (encoded → linear).
 fn srgb_eotf(v: f32) -> f32 {
-    if v <= 0.040_45 {
-        v / 12.92
-    } else {
-        ((v + 0.055) / 1.055).powf(2.4)
-    }
+    if v <= 0.040_45 { v / 12.92 } else { ((v + 0.055) / 1.055).powf(2.4) }
 }
 
 fn map_colour(data: &mut [f32], channels: usize, f: fn(f32) -> f32) {

@@ -53,25 +53,13 @@ fn has_second_tiff_page(file: &mut (impl Read + Seek)) -> std::io::Result<bool> 
     file.read_exact(&mut header[..8])?;
     let little = &header[..2] == b"II";
     let word = |bytes: [u8; 2]| {
-        if little {
-            u16::from_le_bytes(bytes)
-        } else {
-            u16::from_be_bytes(bytes)
-        }
+        if little { u16::from_le_bytes(bytes) } else { u16::from_be_bytes(bytes) }
     };
     let long = |bytes: [u8; 4]| {
-        if little {
-            u32::from_le_bytes(bytes)
-        } else {
-            u32::from_be_bytes(bytes)
-        }
+        if little { u32::from_le_bytes(bytes) } else { u32::from_be_bytes(bytes) }
     };
     let wide = |bytes: [u8; 8]| {
-        if little {
-            u64::from_le_bytes(bytes)
-        } else {
-            u64::from_be_bytes(bytes)
-        }
+        if little { u64::from_le_bytes(bytes) } else { u64::from_be_bytes(bytes) }
     };
     let (first, big) = if word(header[2..4].try_into().unwrap()) == 43 {
         file.read_exact(&mut header[8..16])?;

@@ -65,18 +65,18 @@ fn fill_convert_dialog(
         ))
         .revealed(false)
         .build();
-    if let Some(sess) = preview_session.as_ref() {
-        if sess.has_alpha_channel() {
-            let format_row_clone = format_row.clone();
-            let banner = alpha_banner.clone();
-            let update = move || {
-                let fmt = selected_format(&format_row_clone);
-                let warn = matches!(fmt, Format::Jpeg);
-                banner.set_revealed(warn);
-            };
-            update();
-            dialog_signal!(window, format_row, connect_selected_notify, move |_| update());
-        }
+    if let Some(sess) = preview_session.as_ref()
+        && sess.has_alpha_channel()
+    {
+        let format_row_clone = format_row.clone();
+        let banner = alpha_banner.clone();
+        let update = move || {
+            let fmt = selected_format(&format_row_clone);
+            let warn = matches!(fmt, Format::Jpeg);
+            banner.set_revealed(warn);
+        };
+        update();
+        dialog_signal!(window, format_row, connect_selected_notify, move |_| update());
     }
 
     // Privacy: warn that GPS coordinates in the EXIF can reveal where the
@@ -86,10 +86,10 @@ fn fill_convert_dialog(
         .revealed(false)
         .build();
     gps_banner.add_css_class("warning");
-    if let Some(sess) = preview_session.as_ref() {
-        if sess.source_has_gps() {
-            gps_banner.set_revealed(true);
-        }
+    if let Some(sess) = preview_session.as_ref()
+        && sess.source_has_gps()
+    {
+        gps_banner.set_revealed(true);
     }
 
     let content = padded_box(gtk::Orientation::Vertical, 16);

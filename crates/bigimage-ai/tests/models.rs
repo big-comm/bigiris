@@ -18,7 +18,7 @@
 use std::ops::ControlFlow;
 use std::time::Instant;
 
-use bigimage_ai::{background, denoise, inpaint, upscale, ModelInfo, Stage};
+use bigimage_ai::{ModelInfo, Stage, background, denoise, inpaint, upscale};
 use image::{DynamicImage, GrayImage, Rgb, RgbImage, Rgba, RgbaImage};
 
 fn ready(model: &ModelInfo) -> bool {
@@ -175,11 +175,7 @@ fn realesrgan_enlarges_by_each_factor_and_keeps_alpha() {
             if matches!(stage, Stage::Running(_)) {
                 calls += 1;
             }
-            if calls >= 2 {
-                ControlFlow::Break(())
-            } else {
-                ControlFlow::Continue(())
-            }
+            if calls >= 2 { ControlFlow::Break(()) } else { ControlFlow::Continue(()) }
         },
     );
     assert!(matches!(cancelled, Err(bigimage_ai::AiError::Cancelled)), "{cancelled:?}");

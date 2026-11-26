@@ -24,8 +24,8 @@
 use std::io;
 use std::path::{Path, PathBuf};
 
-use crate::action::{Action, ACTIONS, TOP_LEVEL_LABEL};
-use crate::safe_fs::{safe_write_with_mode, FileMode};
+use crate::action::{ACTIONS, Action, TOP_LEVEL_LABEL};
+use crate::safe_fs::{FileMode, safe_write_with_mode};
 use crate::scope::{Scope, ScopePaths};
 
 const EMPTY_XML: &str = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<actions>\n</actions>\n";
@@ -286,11 +286,7 @@ fn patterns(mime_types: &[&str]) -> String {
             out.push(format!("*.{}", ext.to_ascii_uppercase()));
         }
     }
-    if out.is_empty() {
-        "*".to_string()
-    } else {
-        out.join(";")
-    }
+    if out.is_empty() { "*".to_string() } else { out.join(";") }
 }
 
 /// Map MIME patterns onto Thunar's appearance-condition elements. Thunar

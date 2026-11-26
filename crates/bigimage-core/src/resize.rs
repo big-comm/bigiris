@@ -11,7 +11,7 @@ use fast_image_resize::{FilterType, ResizeAlg, ResizeOptions, Resizer};
 use image::DynamicImage;
 
 use crate::convert::{ConvertOutcome, OverwritePolicy};
-use crate::{pipeline, BigImageError, Format, Result};
+use crate::{BigImageError, Format, Result, pipeline};
 
 /// How the target dimensions are computed.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -109,11 +109,7 @@ pub(crate) fn max_edge_dims(src_w: u32, src_h: u32, edge: u32) -> (u32, u32) {
         let value = (2 * short * u64::from(edge) + long) / (2 * long);
         (value as u32).clamp(1, edge)
     };
-    if src_w >= src_h {
-        (edge, scale(src_h, src_w))
-    } else {
-        (scale(src_w, src_h), edge)
-    }
+    if src_w >= src_h { (edge, scale(src_h, src_w)) } else { (scale(src_w, src_h), edge) }
 }
 
 /// Filter kernel used when the mode actually changes dimensions. Mode with

@@ -81,11 +81,7 @@ pub enum Method {
 impl Method {
     /// Real-ESRGAN when its weights are installed, else Lanczos3.
     pub fn auto() -> Self {
-        if availability().is_ready() {
-            Method::RealEsrgan
-        } else {
-            Method::Lanczos
-        }
+        if availability().is_ready() { Method::RealEsrgan } else { Method::Lanczos }
     }
 }
 

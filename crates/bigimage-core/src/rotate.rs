@@ -10,7 +10,7 @@
 use std::path::Path;
 
 use crate::convert::{ConvertOutcome, OverwritePolicy};
-use crate::{pipeline, Format, Result};
+use crate::{Format, Result, pipeline};
 
 /// Cardinal rotation amount.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -183,11 +183,7 @@ pub fn inscribed_size(width: u32, height: u32, degrees: f64) -> (f64, f64) {
     if short <= 2.0 * sin * cos * long || (sin - cos).abs() < 1e-12 {
         // Half-constrained: two opposite corners touch the longer sides.
         let x = 0.5 * short;
-        if wide {
-            (x / sin, x / cos)
-        } else {
-            (x / cos, x / sin)
-        }
+        if wide { (x / sin, x / cos) } else { (x / cos, x / sin) }
     } else {
         // Fully constrained: all four corners touch the rotated sides.
         let cos2 = cos * cos - sin * sin;
@@ -220,11 +216,7 @@ pub fn straighten(src: &image::DynamicImage, degrees: f64) -> image::DynamicImag
     match src {
         D::ImageRgb32F(_) | D::ImageRgba32F(_) => {
             let out = D::ImageRgba32F(rotate_buffer(&src.to_rgba32f(), degrees, size));
-            if src.color().has_alpha() {
-                out
-            } else {
-                D::ImageRgb32F(out.to_rgb32f())
-            }
+            if src.color().has_alpha() { out } else { D::ImageRgb32F(out.to_rgb32f()) }
         }
         D::ImageLuma16(_) | D::ImageLumaA16(_) | D::ImageRgb16(_) | D::ImageRgba16(_) => {
             let out = D::ImageRgba16(rotate_buffer(&src.to_rgba16(), degrees, size));

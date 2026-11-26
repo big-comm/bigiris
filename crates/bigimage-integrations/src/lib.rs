@@ -25,8 +25,8 @@ mod safe_fs;
 pub mod scope;
 pub mod thunar;
 
-pub use action::{Action, Submenu, ACTIONS};
-pub use install::{install, install_to_destdir, uninstall, FmOutcome, InstallError, Report};
+pub use action::{ACTIONS, Action, Submenu};
+pub use install::{FmOutcome, InstallError, Report, install, install_to_destdir, uninstall};
 pub use scope::{Scope, ScopeError, ScopePaths};
 
 /// Crate version.

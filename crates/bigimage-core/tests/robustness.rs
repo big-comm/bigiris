@@ -4,8 +4,8 @@ use std::path::{Path, PathBuf};
 use std::sync::{Arc, Barrier};
 
 use bigimage_core::{
-    convert_file_to, make_gif, open_image, AnimateOptions, ConvertOutcome, EncodeOptions,
-    ExtentOptions, ExtentSize, Filter, Format, Gravity, OverwritePolicy, ResizeMode,
+    AnimateOptions, ConvertOutcome, EncodeOptions, ExtentOptions, ExtentSize, Filter, Format,
+    Gravity, OverwritePolicy, ResizeMode, convert_file_to, make_gif, open_image,
 };
 use image::{DynamicImage, GenericImageView, Rgb, RgbImage};
 
@@ -190,14 +190,16 @@ fn truncated_images_fail_without_panicking_or_publishing() {
     for len in [0, 1, 8, 16, bytes.len() / 2] {
         std::fs::write(&bad, &bytes[..len]).unwrap();
         assert!(open_image(&bad).is_err());
-        assert!(convert_file_to(
-            &bad,
-            Some(&out),
-            Format::Jpeg,
-            &EncodeOptions::default(),
-            OverwritePolicy::Replace
-        )
-        .is_err());
+        assert!(
+            convert_file_to(
+                &bad,
+                Some(&out),
+                Format::Jpeg,
+                &EncodeOptions::default(),
+                OverwritePolicy::Replace
+            )
+            .is_err()
+        );
         assert!(!out.join("bad.jpg").exists());
     }
 }

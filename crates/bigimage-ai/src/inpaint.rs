@@ -747,11 +747,7 @@ mod tests {
                         state ^= state << 13;
                         state ^= state >> 7;
                         state ^= state << 17;
-                        if state % 256 < density {
-                            255
-                        } else {
-                            0
-                        }
+                        if state % 256 < density { 255 } else { 0 }
                     })
                     .collect();
                 for radius in [0, 1, 2, 5, 12] {

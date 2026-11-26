@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //! Confine untrusted codecs to a short-lived, resource-limited process.
 //! The parent accepts only a validated, bounded raw-pixel protocol.
-use bigimage_core::{backend, BigImageError, Format, Metadata, PreviewSession};
+use bigimage_core::{BigImageError, Format, Metadata, PreviewSession, backend};
 use gettextrs::gettext;
 use image::{ColorType, DynamicImage, GenericImageView, ImageBuffer, ImageError, ImageResult};
 use std::cell::RefCell;
@@ -11,8 +11,8 @@ use std::os::unix::fs::OpenOptionsExt;
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
 use std::sync::{
-    atomic::{AtomicBool, Ordering},
     Arc,
+    atomic::{AtomicBool, Ordering},
 };
 use std::time::{Duration, Instant};
 
@@ -249,11 +249,7 @@ fn prepare_descriptors(pass_as_3: Option<std::os::fd::RawFd>) -> std::io::Result
             Some(3) => libc::fcntl(3, libc::F_SETFD, 0),
             Some(fd) => libc::dup2(fd, 3),
         };
-        if placed < 0 {
-            Err(std::io::Error::last_os_error())
-        } else {
-            Ok(())
-        }
+        if placed < 0 { Err(std::io::Error::last_os_error()) } else { Ok(()) }
     }
 }
 
@@ -320,7 +316,7 @@ fn wait_child(
     deadline: Instant,
     cancellable: bool,
 ) -> ImageResult<std::process::ExitStatus> {
-    use rustix::event::{poll, PollFd, PollFlags, Timespec};
+    use rustix::event::{PollFd, PollFlags, Timespec, poll};
     let pidfd = rustix::process::pidfd_open(
         rustix::process::Pid::from_child(child),
         rustix::process::PidfdFlags::empty(),
@@ -380,11 +376,7 @@ pub(crate) fn sanitize_text(text: &str) -> String {
     text.chars()
         .map(|c| {
             let bidi = matches!(c, '\u{202A}'..='\u{202E}' | '\u{2066}'..='\u{2069}');
-            if (c.is_control() && c != '\n') || bidi {
-                '\u{FFFD}'
-            } else {
-                c
-            }
+            if (c.is_control() && c != '\n') || bidi { '\u{FFFD}' } else { c }
         })
         .collect()
 }
@@ -411,11 +403,7 @@ fn run<T>(
 ) -> ImageResult<T> {
     let mut replaced = false;
     execute(path, mode, &mut replaced).and_then(parse).map_err(|error| {
-        if replaced && !cancelled() {
-            invalid(format!("{error}{}", restart_hint()))
-        } else {
-            error
-        }
+        if replaced && !cancelled() { invalid(format!("{error}{}", restart_hint())) } else { error }
     })
 }
 
@@ -634,7 +622,7 @@ fn receive_with(mut output: std::fs::File, trailer: bool) -> ImageResult<(Pixels
     // Decode wide samples straight into their typed buffer through a small
     // scratch chunk, so peak memory stays at one copy of the pixels.
     macro_rules! buffer {
-        ($data:expr, $variant:ident) => {
+        ($data:expr_2021, $variant:ident) => {
             DynamicImage::$variant(
                 ImageBuffer::from_raw(w, h, $data).ok_or_else(|| invalid("invalid buffer"))?,
             )
@@ -1130,8 +1118,7 @@ mod tests {
     #[test]
     fn hostile_worker_diagnostics_are_bounded_and_sanitized() {
         let file = input();
-        let script =
-            "i=0; while [ $i -lt 2000 ]; do printf '\\033]0;owned\\007\\033[2J%0500d' 0 >&2; \
+        let script = "i=0; while [ $i -lt 2000 ]; do printf '\\033]0;owned\\007\\033[2J%0500d' 0 >&2; \
                       i=$((i+1)); done; exit 1";
         let Some(result) = with_worker(script, DEADLINE, || decode(file.path())) else { return };
         let message = result.unwrap_err().to_string();

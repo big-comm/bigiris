@@ -6,10 +6,10 @@
 use std::io;
 use std::path::PathBuf;
 
-use crate::action::{Action, ACTIONS};
+use crate::action::{ACTIONS, Action};
 use crate::nemo::flat_label;
 use crate::safe_fs::safe_write;
-use crate::scope::{remove_matching, ScopePaths};
+use crate::scope::{ScopePaths, remove_matching};
 
 /// Install one `.contract` per [`Action`].
 pub fn install(paths: &ScopePaths) -> io::Result<Vec<PathBuf>> {

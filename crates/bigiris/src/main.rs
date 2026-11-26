@@ -1564,7 +1564,7 @@ fn batch_files(inputs: &[PathBuf]) -> color_eyre::Result<Vec<PathBuf>> {
 
 fn run_batch(profile: &std::path::Path, inputs: &[PathBuf]) -> color_eyre::Result<()> {
     use std::sync::atomic::{AtomicUsize, Ordering};
-    use std::sync::{mpsc, Arc};
+    use std::sync::{Arc, mpsc};
 
     let text = std::fs::read_to_string(profile).map_err(|e| unreadable(profile, &e))?;
     let profile: BatchProfile = toml::from_str(&text).map_err(|e| {
@@ -1637,21 +1637,23 @@ fn run_batch(profile: &std::path::Path, inputs: &[PathBuf]) -> color_eyre::Resul
             let output_dir = output_dir.clone();
             let next = next.clone();
             let tx = tx.clone();
-            std::thread::spawn(move || loop {
-                let idx = next.fetch_add(1, Ordering::Relaxed);
-                let Some(group) = groups.get(idx) else { break };
-                for input in group {
-                    let result = bigimage_core::convert_file_to(
-                        input,
-                        output_dir.as_deref(),
-                        format,
-                        &opts,
-                        policy,
-                    )
-                    .map_err(|e| codec::sanitize_text(&e.to_string()));
-                    let ignored_profile = bigimage_core::color::take_ignored_profile();
-                    if tx.send((input.clone(), result, ignored_profile)).is_err() {
-                        return;
+            std::thread::spawn(move || {
+                loop {
+                    let idx = next.fetch_add(1, Ordering::Relaxed);
+                    let Some(group) = groups.get(idx) else { break };
+                    for input in group {
+                        let result = bigimage_core::convert_file_to(
+                            input,
+                            output_dir.as_deref(),
+                            format,
+                            &opts,
+                            policy,
+                        )
+                        .map_err(|e| codec::sanitize_text(&e.to_string()));
+                        let ignored_profile = bigimage_core::color::take_ignored_profile();
+                        if tx.send((input.clone(), result, ignored_profile)).is_err() {
+                            return;
+                        }
                     }
                 }
             })
@@ -1935,11 +1937,7 @@ fn run_uninstall() -> color_eyre::Result<()> {
 
 fn resolve_scope(user: bool, system: bool) -> bigimage_integrations::Scope {
     let _ = user; // User is the default; the flag exists for clarity.
-    if system {
-        bigimage_integrations::Scope::System
-    } else {
-        bigimage_integrations::Scope::User
-    }
+    if system { bigimage_integrations::Scope::System } else { bigimage_integrations::Scope::User }
 }
 
 /// `done` is the status of a manager whose files were written or removed;
@@ -1954,11 +1952,7 @@ fn print_install_report(report: &bigimage_integrations::Report, done: &str, summ
             // Without this it read "unchanged", as if install were a no-op.
             gettext("provided by the package")
         } else if outcome.files.is_empty() {
-            if outcome.detected {
-                gettext("unchanged")
-            } else {
-                gettext("skipped")
-            }
+            if outcome.detected { gettext("unchanged") } else { gettext("skipped") }
         } else {
             done.to_owned()
         };
@@ -1989,19 +1983,25 @@ fn dispatch_gui(dialog: Option<Dialog>, files: &[PathBuf]) -> color_eyre::Result
             eprintln!(
                 "{}",
                 fill(
-                    &gettext("warning: this build lacks the `gui` feature. Dialog '{dialog}' ignored (rebuild with --features gui)."),
+                    &gettext(
+                        "warning: this build lacks the `gui` feature. Dialog '{dialog}' ignored (rebuild with --features gui)."
+                    ),
                     &[("dialog", &format!("{d:?}"))],
                 )
             );
         } else if files.is_empty() {
             eprintln!(
                 "{}",
-                gettext("warning: this build lacks the `gui` feature. Viewer unavailable (rebuild with --features gui).")
+                gettext(
+                    "warning: this build lacks the `gui` feature. Viewer unavailable (rebuild with --features gui)."
+                )
             );
         } else {
             eprintln!(
                 "{}",
-                gettext("warning: this build lacks the `gui` feature. Viewer unavailable; files received:")
+                gettext(
+                    "warning: this build lacks the `gui` feature. Viewer unavailable; files received:"
+                )
             );
             for f in files {
                 eprintln!("  - {}", f.display());

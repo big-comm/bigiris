@@ -243,20 +243,12 @@ fn size_spin(tooltip: &str) -> gtk::SpinButton {
 }
 
 fn signed(value: i32) -> String {
-    if value > 0 {
-        format!("+{value}")
-    } else {
-        value.to_string()
-    }
+    if value > 0 { format!("+{value}") } else { value.to_string() }
 }
 
 fn degrees_label(tenths: i32) -> String {
     let degrees = f64::from(tenths) / 10.0;
-    if tenths > 0 {
-        format!("+{degrees:.1}°")
-    } else {
-        format!("{degrees:.1}°")
-    }
+    if tenths > 0 { format!("+{degrees:.1}°") } else { format!("{degrees:.1}°") }
 }
 
 /// What the AI tools need before they can all run, or `None`.
@@ -833,10 +825,10 @@ pub(in crate::gui) fn connect(state: &Rc<RefCell<ViewerState>>, window: &adw::Ap
     {
         let weak = Rc::downgrade(state);
         keys.connect_key_released(move |_, key, _, _| {
-            if key == gdk::Key::backslash {
-                if let Some(state) = weak.upgrade() {
-                    show_original(&state, Source::Key, false);
-                }
+            if key == gdk::Key::backslash
+                && let Some(state) = weak.upgrade()
+            {
+                show_original(&state, Source::Key, false);
             }
         });
     }
@@ -882,11 +874,11 @@ fn set_open(state: &Rc<RefCell<ViewerState>>, open: bool) {
 /// Toggle through the action, as the header button and `E` do.
 pub(in crate::gui) fn toggle(state: &Rc<RefCell<ViewerState>>) {
     let window = state.borrow().window();
-    if let Some(action) = window.lookup_action("edit-panel") {
-        if action.is_enabled() {
-            let open = action.state().and_then(|v| v.get::<bool>()).unwrap_or(false);
-            action.change_state(&(!open).to_variant());
-        }
+    if let Some(action) = window.lookup_action("edit-panel")
+        && action.is_enabled()
+    {
+        let open = action.state().and_then(|v| v.get::<bool>()).unwrap_or(false);
+        action.change_state(&(!open).to_variant());
     }
 }
 
@@ -1113,10 +1105,10 @@ fn settled(s: &ViewerState) -> bool {
 /// slider preview.
 pub(in crate::gui) fn display_override(s: &ViewerState) -> Option<(gdk::Texture, (u32, u32))> {
     let current = s.files.get(s.idx)?;
-    if s.edit.original_button || s.edit.original_key {
-        if let Some(original) = s.edit.original.as_ref().filter(|o| &o.path == current) {
-            return Some((original.texture.clone(), original.natural));
-        }
+    if (s.edit.original_button || s.edit.original_key)
+        && let Some(original) = s.edit.original.as_ref().filter(|o| &o.path == current)
+    {
+        return Some((original.texture.clone(), original.natural));
     }
     s.edit.preview.clone()
 }
@@ -1500,12 +1492,12 @@ pub(in crate::gui) fn show_original(state: &Rc<RefCell<ViewerState>>, source: So
         if s.edit.original_job.as_ref() == Some(&path) {
             s.edit.original_job = None;
         }
-        if let Ok(Ok((raw, w, h, _))) = result {
-            if s.files.get(s.idx) == Some(&path) {
-                let texture = texture_from_rgba(raw, w, h);
-                s.edit.original = Some(Original { path, texture, natural: (w, h) });
-                zoom::apply_zoom(&s);
-            }
+        if let Ok(Ok((raw, w, h, _))) = result
+            && s.files.get(s.idx) == Some(&path)
+        {
+            let texture = texture_from_rgba(raw, w, h);
+            s.edit.original = Some(Original { path, texture, natural: (w, h) });
+            zoom::apply_zoom(&s);
         }
     });
 }

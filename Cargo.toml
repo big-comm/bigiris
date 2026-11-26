@@ -1,5 +1,5 @@
 [workspace]
-resolver = "2"
+resolver = "3"
 members = [
     "crates/bigimage-core",
     "crates/bigimage-ai",
@@ -9,7 +9,7 @@ members = [
 
 [workspace.package]
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 rust-version = "1.95"
 license = "GPL-3.0-or-later"
 authors = ["Leonardo Athayde <leoathayde@gmail.com>"]

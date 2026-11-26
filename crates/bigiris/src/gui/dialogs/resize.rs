@@ -293,11 +293,11 @@ mod apply_tests {
     use super::*;
 
     fn find_apply(widget: &gtk::Widget, label: &str) -> Option<gtk::Button> {
-        if let Some(button) = widget.downcast_ref::<gtk::Button>() {
-            if button.has_css_class("suggested-action") && button.label().as_deref() == Some(label)
-            {
-                return Some(button.clone());
-            }
+        if let Some(button) = widget.downcast_ref::<gtk::Button>()
+            && button.has_css_class("suggested-action")
+            && button.label().as_deref() == Some(label)
+        {
+            return Some(button.clone());
         }
         let mut child = widget.first_child();
         while let Some(current) = child {

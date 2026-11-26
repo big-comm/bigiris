@@ -119,31 +119,33 @@ fn spawn_render_thread(
     queue: Arc<(Mutex<PreviewRenderQueue>, Condvar)>,
     rendered: viewer::Wake,
 ) {
-    std::thread::spawn(move || loop {
-        let (lock, wake) = &*queue;
-        let request = {
+    std::thread::spawn(move || {
+        loop {
+            let (lock, wake) = &*queue;
+            let request = {
+                let mut pending = lock.lock().unwrap();
+                while !pending.stopped && pending.next.is_none() {
+                    pending = wake.wait(pending).unwrap();
+                }
+                if pending.stopped {
+                    break;
+                }
+                pending.next.take().unwrap()
+            };
+            // A panicking transform must not kill the renderer and freeze
+            // the preview; report it like any other failed render.
+            let image = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                session
+                    .apply(&request.1)
+                    .map(|img| DynamicImage::ImageRgba8(bigimage_core::into_srgb_rgba8(img)))
+                    .map_err(|e| e.to_string())
+            }))
+            .unwrap_or_else(|_| Err("preview renderer panicked".to_string()));
             let mut pending = lock.lock().unwrap();
-            while !pending.stopped && pending.next.is_none() {
-                pending = wake.wait(pending).unwrap();
+            if !pending.stopped {
+                pending.result = Some((request.0, image));
+                rendered.notify();
             }
-            if pending.stopped {
-                break;
-            }
-            pending.next.take().unwrap()
-        };
-        // A panicking transform must not kill the renderer and freeze
-        // the preview; report it like any other failed render.
-        let image = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-            session
-                .apply(&request.1)
-                .map(|img| DynamicImage::ImageRgba8(bigimage_core::into_srgb_rgba8(img)))
-                .map_err(|e| e.to_string())
-        }))
-        .unwrap_or_else(|_| Err("preview renderer panicked".to_string()));
-        let mut pending = lock.lock().unwrap();
-        if !pending.stopped {
-            pending.result = Some((request.0, image));
-            rendered.notify();
         }
     });
 }
@@ -168,14 +170,14 @@ fn start_renderer(session: &PreviewSession, picture: &gtk::Picture) -> Rc<Previe
                 return;
             };
             let result = renderer.queue.0.lock().unwrap().result.take();
-            if let Some((revision, result)) = result {
-                if revision == renderer.revision.get() {
-                    match result {
-                        Ok(image) => {
-                            picture.set_paintable(Some(&dynamic_image_to_texture(image)));
-                        }
-                        Err(error) => tracing::warn!(%error, "preview: apply failed"),
+            if let Some((revision, result)) = result
+                && revision == renderer.revision.get()
+            {
+                match result {
+                    Ok(image) => {
+                        picture.set_paintable(Some(&dynamic_image_to_texture(image)));
                     }
+                    Err(error) => tracing::warn!(%error, "preview: apply failed"),
                 }
             }
         }

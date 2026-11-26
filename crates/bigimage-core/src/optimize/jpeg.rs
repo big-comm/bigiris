@@ -10,8 +10,8 @@
 
 use image::{ImageResult, RgbImage};
 
-use super::metric::{search, Bounds, Probe};
-use super::{decode, encode_error, rgb_of, Extras};
+use super::metric::{Bounds, Probe, search};
+use super::{Extras, decode, encode_error, rgb_of};
 use crate::encode::{EncodeOptions, QualityTarget};
 
 /// Search bounds (mozjpeg quality scale).

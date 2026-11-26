@@ -58,10 +58,10 @@ pub(crate) fn bounded_reader(
         return Err(limit_error());
     }
     let mut reader = ImageReader::new(BufReader::new(file)).with_guessed_format()?;
-    if reader.format().is_none() {
-        if let Some(format) = input.extension().and_then(image::ImageFormat::from_extension) {
-            reader.set_format(format);
-        }
+    if reader.format().is_none()
+        && let Some(format) = input.extension().and_then(image::ImageFormat::from_extension)
+    {
+        reader.set_format(format);
     }
     if reader.format() == Some(image::ImageFormat::Avif) {
         use std::io::{Seek, SeekFrom};
@@ -420,12 +420,11 @@ pub(crate) fn publish_temp(
     if let Some(meta) = replaced_file(&output, policy) {
         let wanted = meta.permissions().mode() & 0o777;
         let current = temp.as_file().metadata().map(|m| m.permissions().mode() & 0o777).ok();
-        if current != Some(wanted) {
-            if let Err(error) =
+        if current != Some(wanted)
+            && let Err(error) =
                 temp.as_file().set_permissions(std::fs::Permissions::from_mode(wanted))
-            {
-                tracing::warn!(?output, %error, "permissions of the replaced file not copied");
-            }
+        {
+            tracing::warn!(?output, %error, "permissions of the replaced file not copied");
         }
     }
     temp.as_file().sync_all().map_err(BigImageError::Io)?;

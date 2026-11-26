@@ -413,8 +413,7 @@ pub const ACTIONS: &[Action] = &[
         id: "web-optimize-png",
         submenu: Some(SUB_WEB),
         label: n_("Optimize PNG (maximum compression)"),
-        command:
-            "bigiris --notify convert --to png --target maximum --optimize --overwrite replace %F",
+        command: "bigiris --notify convert --to png --target maximum --optimize --overwrite replace %F",
         icon: "applications-internet-symbolic",
         mime_types: IMAGE_MIME,
     },
@@ -534,11 +533,11 @@ pub fn submenus() -> Vec<Submenu> {
     let mut seen: Vec<&'static str> = Vec::new();
     let mut out: Vec<Submenu> = Vec::new();
     for action in ACTIONS {
-        if let Some(sub) = action.submenu {
-            if !seen.contains(&sub.id) {
-                seen.push(sub.id);
-                out.push(sub);
-            }
+        if let Some(sub) = action.submenu
+            && !seen.contains(&sub.id)
+        {
+            seen.push(sub.id);
+            out.push(sub);
         }
     }
     out

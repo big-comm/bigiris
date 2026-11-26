@@ -7,8 +7,8 @@
 use std::io;
 use std::path::PathBuf;
 
-use crate::scope::{is_on_path, Scope, ScopeError, ScopePaths};
-use crate::{dolphin, nautilus, nemo, pantheon, pcmanfm_qt, thunar, FileManager};
+use crate::scope::{Scope, ScopeError, ScopePaths, is_on_path};
+use crate::{FileManager, dolphin, nautilus, nemo, pantheon, pcmanfm_qt, thunar};
 
 /// Outcome of installing/uninstalling one file manager.
 #[derive(Debug, Clone)]

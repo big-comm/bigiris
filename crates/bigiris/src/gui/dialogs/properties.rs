@@ -82,24 +82,24 @@ fn fill_properties_window(
     page.add(&build_properties_file_group(path, info, fsmeta));
     page.add(&build_properties_image_group(info));
 
-    if let Some(meta) = info.and_then(|i| i.metadata.as_ref()) {
-        if !meta.is_empty() {
-            if meta.has_gps || meta.has_camera_info {
-                let warning = adw::PreferencesGroup::builder().title(gettext("Privacy")).build();
-                let row = adw::ActionRow::builder()
-                    .use_markup(false)
-                    .title(if meta.has_gps {
-                        gettext("GPS coordinates present")
-                    } else {
-                        gettext("Camera/software identification present")
-                    })
-                    .subtitle(gettext("Remove it before publishing if it is sensitive."))
-                    .build();
-                warning.add(&row);
-                page.add(&warning);
-            }
-            page.add(&build_properties_exif_group(meta));
+    if let Some(meta) = info.and_then(|i| i.metadata.as_ref())
+        && !meta.is_empty()
+    {
+        if meta.has_gps || meta.has_camera_info {
+            let warning = adw::PreferencesGroup::builder().title(gettext("Privacy")).build();
+            let row = adw::ActionRow::builder()
+                .use_markup(false)
+                .title(if meta.has_gps {
+                    gettext("GPS coordinates present")
+                } else {
+                    gettext("Camera/software identification present")
+                })
+                .subtitle(gettext("Remove it before publishing if it is sensitive."))
+                .build();
+            warning.add(&row);
+            page.add(&warning);
         }
+        page.add(&build_properties_exif_group(meta));
     }
 
     set_dialog_content(&window, &header, &page);
@@ -213,18 +213,17 @@ fn build_properties_image_group(info: Option<&crate::codec::Information>) -> adw
     }
 
     // Shown only for an EXIF orientation other than 1 (upright).
-    if let Some(meta) = info.and_then(|i| i.metadata.as_ref()) {
-        if let Some(o) = meta.orientation {
-            if o != 1 {
-                group.add(&info_row(
-                    &gettext("EXIF orientation"),
-                    &fill(
-                        &gettext("{orientation} · use Rotate ▸ Automatic to fix it"),
-                        &[("orientation", &o.to_string())],
-                    ),
-                ));
-            }
-        }
+    if let Some(meta) = info.and_then(|i| i.metadata.as_ref())
+        && let Some(o) = meta.orientation
+        && o != 1
+    {
+        group.add(&info_row(
+            &gettext("EXIF orientation"),
+            &fill(
+                &gettext("{orientation} · use Rotate ▸ Automatic to fix it"),
+                &[("orientation", &o.to_string())],
+            ),
+        ));
     }
     group
 }
@@ -258,11 +257,7 @@ fn color_type_bits(c: image::ColorType) -> &'static str {
 /// dialog so 1920×1080 shows as 16:9 instead of opaque pixel counts.
 fn simplify_ratio(w: u32, h: u32) -> (u32, u32) {
     fn gcd(a: u32, b: u32) -> u32 {
-        if b == 0 {
-            a
-        } else {
-            gcd(b, a % b)
-        }
+        if b == 0 { a } else { gcd(b, a % b) }
     }
     let d = gcd(w, h);
     (w / d, h / d)
@@ -297,11 +292,7 @@ fn format_bytes(n: u64) -> String {
         v /= 1024.0;
         u += 1;
     }
-    if u == 0 {
-        format!("{n} B")
-    } else {
-        format!("{v:.1} {} ({n} bytes)", UNITS[u])
-    }
+    if u == 0 { format!("{n} B") } else { format!("{v:.1} {} ({n} bytes)", UNITS[u]) }
 }
 
 /// Local `YYYY-MM-DD HH:MM`; glib handles the time zone and calendar.

@@ -12,9 +12,9 @@
 use image::{DynamicImage, ImageResult};
 use oxipng::{BitDepth, ColorType, Options, RawImage, StripChunks};
 
-use super::metric::{Metric, FULL_RES_PIXELS};
+use super::metric::{FULL_RES_PIXELS, Metric};
 use super::palette::{self, Paletted};
-use super::{encode_error, Extras};
+use super::{Extras, encode_error};
 use crate::encode::{EncodeOptions, QualityTarget};
 
 fn png_error(error: oxipng::PngError) -> image::ImageError {

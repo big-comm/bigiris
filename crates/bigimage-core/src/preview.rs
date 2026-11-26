@@ -18,8 +18,8 @@ use fast_image_resize::{ResizeAlg, ResizeOptions, Resizer};
 use image::DynamicImage;
 
 use crate::{
-    adjust, crop, extent, flip, pipeline, resize, rotate, AdjustOps, CropRect, ExtentOptions,
-    ExtentSize, Filter, FlipAxis, Format, ResizeMode, Result, Rotation,
+    AdjustOps, CropRect, ExtentOptions, ExtentSize, Filter, FlipAxis, Format, ResizeMode, Result,
+    Rotation, adjust, crop, extent, flip, pipeline, resize, rotate,
 };
 
 /// Max edge for the cached thumbnail. 800px keeps the whole preview image

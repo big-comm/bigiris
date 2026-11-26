@@ -28,10 +28,10 @@ fn main() {
         {
             println!("cargo:rerun-if-changed={path}");
         }
-        if let Some(reference) = git(&["symbolic-ref", "-q", "HEAD"]) {
-            if let Some(path) = git(&["rev-parse", "--git-path", &reference]) {
-                println!("cargo:rerun-if-changed={path}");
-            }
+        if let Some(reference) = git(&["symbolic-ref", "-q", "HEAD"])
+            && let Some(path) = git(&["rev-parse", "--git-path", &reference])
+        {
+            println!("cargo:rerun-if-changed={path}");
         }
     }
     let epoch = std::env::var("SOURCE_DATE_EPOCH").ok().filter(|epoch| !epoch.is_empty());

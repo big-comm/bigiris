@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-use bigimage_core::{convert_file_to, open_image, EncodeOptions, Format, OverwritePolicy};
+use bigimage_core::{EncodeOptions, Format, OverwritePolicy, convert_file_to, open_image};
 use image::{DynamicImage, ImageEncoder};
 
 #[test]
@@ -104,14 +104,16 @@ fn static_edits_refuse_animated_gif_and_preserve_destination() {
     drop(encoder);
     assert!(open_image(&input).is_ok(), "viewer can still inspect the first frame");
     std::fs::write(&output, b"previous file").unwrap();
-    assert!(convert_file_to(
-        &input,
-        Some(&output),
-        Format::Png,
-        &EncodeOptions::default(),
-        OverwritePolicy::Replace
-    )
-    .is_err());
+    assert!(
+        convert_file_to(
+            &input,
+            Some(&output),
+            Format::Png,
+            &EncodeOptions::default(),
+            OverwritePolicy::Replace
+        )
+        .is_err()
+    );
     assert_eq!(std::fs::read(output).unwrap(), b"previous file");
 }
 
@@ -287,7 +289,7 @@ fn in_place_save_keeps_exif_and_wide_gamut_profile() {
 
 #[test]
 fn preserving_save_matches_profile_to_pixels_or_falls_back_to_srgb() {
-    use bigimage_core::{metadata, save_image_preserving_metadata, SourceMetadata};
+    use bigimage_core::{SourceMetadata, metadata, save_image_preserving_metadata};
     let dir = tempfile::tempdir().unwrap();
     let p3 = moxcms::ColorProfile::new_display_p3().encode().unwrap();
     let gray = moxcms::ColorProfile::new_gray_with_gamma(1.8).encode().unwrap();
@@ -343,7 +345,7 @@ fn preserving_save_matches_profile_to_pixels_or_falls_back_to_srgb() {
 
 #[test]
 fn preserving_save_reports_what_it_dropped() {
-    use bigimage_core::{save_image_preserving_metadata_report, MetadataLoss, SourceMetadata};
+    use bigimage_core::{MetadataLoss, SourceMetadata, save_image_preserving_metadata_report};
     let dir = tempfile::tempdir().unwrap();
     let p3 = moxcms::ColorProfile::new_display_p3().encode().unwrap();
     let gray = moxcms::ColorProfile::new_gray_with_gamma(1.8).encode().unwrap();

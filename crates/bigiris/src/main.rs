@@ -2034,6 +2034,13 @@ fn print_install_report(report: &bigimage_integrations::Report, done: &str, summ
             fill(&gettext("kept, not written by BigIris: {path}"), &[("path", &path)])
         );
     }
+    for path in &report.app_files_removed {
+        let path = codec::printable_path(path);
+        println!(
+            "  {}",
+            fill(&gettext("removed, the package provides it: {path}"), &[("path", &path)])
+        );
+    }
     for error in &report.app_errors {
         eprintln!("  {}", codec::sanitize_text(&with_error(&gettext("FAILED: {error}"), error)));
     }

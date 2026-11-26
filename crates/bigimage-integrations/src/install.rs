@@ -43,6 +43,9 @@ pub struct Report {
     /// App-level files left as they were because BigIris did not write them
     /// (a menu editor's copy of the launcher, the user's own icon).
     pub app_files_kept: Vec<PathBuf>,
+    /// App-level files an earlier install wrote, removed because the
+    /// package provides them.
+    pub app_files_removed: Vec<PathBuf>,
     /// App-level files that could not be written, each with its cause.
     pub app_errors: Vec<String>,
 }
@@ -282,6 +285,21 @@ enum AssetKind {
 /// in the user's own home under our application id.
 const LEGACY_ICONS: &[(u64, usize)] = &[(0x93fc_7d95_f6c0_5abf, 4560)];
 
+/// FNV-1a 64 and length of every launcher BigIris released that differs
+/// from the current one. A copy counts as ours only when it is one of them
+/// byte for byte (with or without our marker line): a menu editor's copy
+/// differs, if only in one key, and stays.
+const LEGACY_LAUNCHERS: &[(u64, usize)] = &[
+    (0x800c_5909_45d9_48df, 925),
+    (0xecfb_fd00_19ea_6f43, 4309),
+    (0x5554_f27a_52bf_d050, 4392),
+    (0xd705_0fee_debe_66f1, 4420),
+    (0xbe05_85c0_bf92_52b9, 936),
+    (0xd973_1d3b_fa08_9db1, 4295),
+    (0xb0cd_e9cb_b429_7f7d, 4309),
+    (0x7d6e_6361_02ca_60c6, 872),
+];
+
 fn fnv1a64(bytes: &[u8]) -> u64 {
     bytes
         .iter()
@@ -319,9 +337,8 @@ fn with_marker(content: &[u8], kind: AssetKind) -> Vec<u8> {
 /// before the marker existed (by `install.sh` or an older release), which
 /// is recognized per format because those assets change every release:
 ///
-/// - launcher: `Exec=bigiris …` plus `Icon=com.biglinux.Iris`, unless it
-///   hides or disables the entry (`NoDisplay=`/`Hidden=`), which only a
-///   user's menu-editor override does;
+/// - launcher: a byte copy of the current or a previously released
+///   launcher, with or without our marker line;
 /// - metainfo: the AppStream component id `com.biglinux.Iris`;
 /// - icon: a byte copy of the current or a previously released icon.
 ///
@@ -333,12 +350,10 @@ fn is_our_app_file(body: &[u8], original: &[u8], kind: AssetKind) -> bool {
     let text = String::from_utf8_lossy(body);
     match kind {
         AssetKind::Desktop => {
-            let lines: Vec<&str> = text.lines().map(str::trim).collect();
-            let has = |pred: fn(&str) -> bool| lines.iter().any(|l| pred(l));
-            has(|l| l == crate::scope::GENERATED_MARKER)
-                || (has(|l| l == "Exec=bigiris" || l.starts_with("Exec=bigiris "))
-                    && has(|l| l == "Icon=com.biglinux.Iris")
-                    && !has(|l| l.starts_with("NoDisplay=") || l.starts_with("Hidden=")))
+            let unmarked =
+                text.replacen(&format!("\n{}\n", crate::scope::GENERATED_MARKER), "\n", 1);
+            let unmarked = unmarked.as_bytes();
+            unmarked == original || LEGACY_LAUNCHERS.contains(&(fnv1a64(unmarked), unmarked.len()))
         }
         AssetKind::Metainfo => {
             text.contains(XML_MARKER) || text.contains("<id>com.biglinux.Iris</id>")
@@ -375,7 +390,9 @@ fn install_app_files_with_system(
 ) {
     if paths.scope == Scope::User && system_desktop.exists() {
         for (target, content, kind) in app_assets(paths) {
-            remove_if_ours(&target, content, kind);
+            if remove_if_ours(&target, content, kind) {
+                report.app_files_removed.push(target);
+            }
         }
         return;
     }
@@ -516,12 +533,8 @@ mod tests {
         for p in [&desktop, &icon, &metainfo] {
             std::fs::create_dir_all(p.parent().unwrap()).unwrap();
         }
-        // As the first release's install.sh wrote them (no marker).
-        std::fs::write(
-            &desktop,
-            "[Desktop Entry]\nName=BigIris\nExec=bigiris %U\nIcon=com.biglinux.Iris\n",
-        )
-        .unwrap();
+        // The launcher an earlier release shipped, as install.sh copied it.
+        std::fs::write(&desktop, RELEASED_LAUNCHER).unwrap();
         std::fs::write(
             &metainfo,
             "<?xml version=\"1.0\"?>\n<component>\n  <id>com.biglinux.Iris</id>\n</component>\n",
@@ -530,9 +543,37 @@ mod tests {
         // An unknown SVG under our name is not provably ours.
         std::fs::write(&icon, "<svg>someone else's com.biglinux.Iris</svg>").unwrap();
 
-        install_app_files_at(&paths, &system);
+        let report = install_app_files_at(&paths, &system);
         assert!(!desktop.exists() && !metainfo.exists(), "legacy copies kept");
         assert!(icon.exists(), "unknown icon removed");
+        assert_eq!(report.app_files_removed, [desktop, metainfo]);
+    }
+
+    /// `data/com.biglinux.Iris.desktop` as commit 1d69d23 released it.
+    const RELEASED_LAUNCHER: &[u8] = include_bytes!("../testdata/launcher-1d69d23.desktop");
+
+    #[test]
+    fn menu_editor_launcher_copy_survives() {
+        let tmp = TempDir::new().unwrap();
+        let system = tmp.path().join("system.desktop");
+        std::fs::write(&system, "[Desktop Entry]\n").unwrap();
+        let paths = ScopePaths::rooted_at(tmp.path().join("home"));
+        let desktop = paths.applications_dir().join(APP_DESKTOP_NAME);
+        std::fs::create_dir_all(desktop.parent().unwrap()).unwrap();
+        // What Alacarte or kmenuedit write: a released launcher, one key edited.
+        let text = String::from_utf8_lossy(RELEASED_LAUNCHER);
+        let edited = text.replacen("Name=BigIris", "Name=My Images", 1);
+        for body in [edited, format!("{}X-Extra=1\n", String::from_utf8_lossy(APP_DESKTOP))] {
+            std::fs::write(&desktop, &body).unwrap();
+            assert!(install_app_files_at(&paths, &system).app_files_removed.is_empty());
+            assert!(uninstall_app_files(&paths).is_empty());
+            assert_eq!(std::fs::read_to_string(&desktop).unwrap(), body);
+        }
+        // Every released launcher is ours, with or without our marker.
+        let marked = with_marker(RELEASED_LAUNCHER, AssetKind::Desktop);
+        for body in [RELEASED_LAUNCHER, &marked, APP_DESKTOP] {
+            assert!(is_our_app_file(body, APP_DESKTOP, AssetKind::Desktop));
+        }
     }
 
     #[test]

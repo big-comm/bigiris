@@ -69,8 +69,10 @@ For context on what is already defense in depth:
   plus header. `bigiris --self-test` has a worker check from inside the hidden
   host directories and network; that every mount but `/proc`, `/tmp`,
   `/dev/pts` and six `/dev` device nodes is read-only; the `/tmp` size, the
-  `prlimit` values, empty capability sets, its own session, the parent-death
-  signal and the environment; and that its cgroup, IPC, mount, network, PID
+  `prlimit` values, empty capability sets, its own session and the environment
+  (not the parent-death signal, which an LSM domain transition such as
+  Ubuntu's `unpriv_bwrap` clears on exec; the worker still dies with bwrap's
+  PID-namespace init); and that its cgroup, IPC, mount, network, PID
   and UTS namespaces differ from the caller's, as does its user namespace
   unless bwrap is installed setuid root (the one way it runs without one).
   The deadline is the caller's and is tested there. This is not a total

@@ -161,7 +161,9 @@ fn attest_limits() -> color_eyre::Result<()> {
     Ok(())
 }
 
-/// Capabilities, session, parent-death signal and environment.
+/// Capabilities, session and environment. The parent-death signal is not
+/// checked: an LSM domain transition on exec (Ubuntu's `unpriv_bwrap`) clears
+/// it, and the worker dies with bwrap's PID-namespace init either way.
 fn attest_process() -> color_eyre::Result<()> {
     use color_eyre::eyre::bail;
     let status = std::fs::read_to_string("/proc/self/status")?;
@@ -177,10 +179,6 @@ fn attest_process() -> color_eyre::Result<()> {
     let session = stat.rsplit_once(')').and_then(|(_, fields)| fields.split_whitespace().nth(3));
     if session.is_none_or(|session| session == "0") {
         bail!("the worker shares the caller's session: {session:?}");
-    }
-    let death = rustix::process::parent_process_death_signal()?;
-    if death != Some(rustix::process::Signal::KILL) {
-        bail!("no parent death signal: {death:?}");
     }
     let mut environment: Vec<_> = std::env::vars_os().map(|(name, _)| name).collect();
     environment.sort();
@@ -2049,7 +2047,6 @@ mod tests {
             row(&["--core=0"], &[], "Max core file size"),
             row(&[&fsize], &[], "Max file size"),
             row(&["--new-session"], &[], "session"),
-            row(&["--die-with-parent"], &[], "parent death signal"),
             row(&["--remount-ro", "/dev"], &[], "/dev is writable"),
             row(&["--remount-ro", "/"], &[], "/ is writable"),
             row(&["--ro-bind", "/usr"], &["--bind", "/usr"], "/usr is writable"),

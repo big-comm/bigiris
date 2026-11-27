@@ -121,8 +121,8 @@ as its only writable place. `prlimit` limits virtual address space to 2 GiB,
 CPU to 30 s, descriptors to 64, core dumps to zero and each output file to
 512 MiB plus header; the worker's `attest` mode, run by `--self-test`, checks
 from inside that every mount but `/proc`, `/tmp`, `/dev/pts` and the device
-nodes is read-only, the `prlimit` values, capabilities, session, parent-death
-signal, environment and namespaces (the user namespace unless bwrap is
+nodes is read-only, the `prlimit` values, capabilities, session, environment
+and namespaces (the user namespace unless bwrap is
 setuid). The supervisor ends the
 child after 60 s or on cancellation. The pixel protocol is validated before
 allocation in the parent. If the sandbox fails, the image is refused. There is

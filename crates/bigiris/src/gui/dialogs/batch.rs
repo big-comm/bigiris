@@ -141,7 +141,6 @@ pub(in crate::gui) fn build_batch_dialog(
     }
     {
         let files = files.clone();
-        let summary_row = summary_row.clone();
         let window = window.clone();
         dialog_signal!(window, add_folder_btn, connect_clicked, move |_| {
             add_folder_to_batch(&window, &files, &summary_row);
@@ -162,19 +161,9 @@ pub(in crate::gui) fn build_batch_dialog(
     }
 
     {
-        let files = files.clone();
-        let format_row = format_row.clone();
-        let overwrite_row = overwrite_row.clone();
         let encode = Rc::new(encode);
-        let progress = progress.clone();
-        let status = status.clone();
-        let apply_btn = apply_btn.clone();
-        let cancel_btn = cancel_btn.clone();
         let window = window.clone();
-        let cancelled = cancelled.clone();
-        let running = running.clone();
-        let output_dir = output_dir.clone();
-        dialog_signal!(window, apply_btn.clone(), connect_clicked, move |_| {
+        dialog_signal!(window, apply_btn, connect_clicked, move |_| {
             let fmt = selected_format(&format_row);
             let policy = selected_overwrite(&overwrite_row);
             let opts = encode.options();

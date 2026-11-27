@@ -93,15 +93,8 @@ pub(in crate::gui) fn build_animate_dialog(
         set_form_dialog_content(&window, &header, &content, &status, &gettext("Create GIF"));
 
     {
-        let files = files.clone();
-        let delay_spin = delay_spin.clone();
-        let loop_row = loop_row.clone();
-        let speed_spin = speed_spin.clone();
-        let output_row = output_row.clone();
-        let status = status.clone();
-        let apply_btn = apply_btn.clone();
         let window = window.clone();
-        dialog_signal!(window, apply_btn.clone(), connect_clicked, move |_| {
+        dialog_signal!(window, apply_btn, connect_clicked, move |_| {
             let loop_mode = match loop_row.selected() {
                 0 => LoopMode::Infinite,
                 1 => LoopMode::Once,
@@ -313,7 +306,7 @@ mod gif_output_tests {
         // Same file through a different spelling still counts as a frame.
         let dotted = dir.path().join(".").join("a.png.gif");
         std::fs::write(&dotted, b"x").unwrap();
-        let mut with_gif = frames.clone();
+        let mut with_gif = frames;
         with_gif.push(dotted.clone());
         assert!(gif_output_path(&dotted.to_string_lossy(), &with_gif).is_err());
         assert!(

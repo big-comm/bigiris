@@ -72,7 +72,6 @@ pub(in crate::gui) fn build_compare_dialog(
 
     // Position the divider at 50% once the window has real dimensions.
     {
-        let paned = paned.clone();
         let window = window.clone();
         glib::idle_add_local_once(move || {
             let w = window.default_width();

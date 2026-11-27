@@ -662,7 +662,7 @@ pub(in crate::gui) fn enter(state: &Rc<RefCell<ViewerState>>) {
     // (which needs the state) runs now and finds nothing to update.
     let aspect = state.borrow().crop_ui.aspect.clone();
     aspect.set_selected(0);
-    let window = state.borrow().window().clone();
+    let window = state.borrow().window();
     let suspended = SUSPENDED_ACTIONS
         .iter()
         .filter_map(|name| window.lookup_action(name)?.downcast::<gio::SimpleAction>().ok())

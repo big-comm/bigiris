@@ -154,8 +154,6 @@ fn fill_resize_dialog(
     // Live preview: any change in mode / filter / dimensions re-renders.
     if let (Some(picture), Some(session)) = (preview_picture.as_ref(), preview_session.as_ref()) {
         let debounce = PreviewDebounce::new();
-        let mode_row_clone = mode_row.clone();
-        let filter_row_clone = filter_row.clone();
         let max_edge_clone = max_edge_spin.clone();
         let percent_clone = percent_spin.clone();
         let exact_w_clone = exact_w.clone();
@@ -163,11 +161,10 @@ fn fill_resize_dialog(
         let fit_w_clone = fit_w.clone();
         let fit_h_clone = fit_h.clone();
         let schedule = {
-            let debounce = debounce.clone();
             let session = session.clone();
             let picture = picture.clone();
-            let mode_row = mode_row_clone.clone();
-            let filter_row = filter_row_clone.clone();
+            let mode_row = mode_row.clone();
+            let filter_row = filter_row.clone();
             let max_edge_spin = max_edge_clone.clone();
             let percent_spin = percent_clone.clone();
             let exact_w = exact_w_clone.clone();
@@ -199,11 +196,11 @@ fn fill_resize_dialog(
         // Mode / filter combo changes
         {
             let s = schedule.clone();
-            dialog_signal!(window, mode_row_clone, connect_selected_notify, move |_| s());
+            dialog_signal!(window, mode_row, connect_selected_notify, move |_| s());
         }
         {
             let s = schedule.clone();
-            dialog_signal!(window, filter_row_clone, connect_selected_notify, move |_| s());
+            dialog_signal!(window, filter_row, connect_selected_notify, move |_| s());
         }
         // Spin changes in each mode page
         for row in
@@ -217,21 +214,8 @@ fn fill_resize_dialog(
     close_on_click(&window, &cancel_btn);
 
     {
-        let files = files.clone();
-        let mode_row = mode_row.clone();
-        let filter_row = filter_row.clone();
-        let target_row = target_row.clone();
-        let overwrite_row = overwrite_row.clone();
-        let max_edge_spin = max_edge_spin.clone();
-        let percent_spin = percent_spin.clone();
-        let exact_w = exact_w.clone();
-        let exact_h = exact_h.clone();
-        let fit_w = fit_w.clone();
-        let fit_h = fit_h.clone();
-        let status = status.clone();
-        let apply_btn = apply_btn.clone();
         let window = window.clone();
-        dialog_signal!(window, apply_btn.clone(), connect_clicked, move |_| {
+        dialog_signal!(window, apply_btn, connect_clicked, move |_| {
             let mode = match mode_row.selected() {
                 0 => ResizeMode::MaxEdge(max_edge_spin.value() as u32),
                 1 => ResizeMode::Percent(percent_spin.value() as f32),

@@ -154,15 +154,11 @@ pub(in crate::gui) fn build_remove_bg_dialog(
     let results: Rc<RefCell<Vec<Option<PathBuf>>>> = Rc::new(RefCell::new(vec![None; files.len()]));
 
     {
-        let files_rc = files.clone();
+        let files_rc = files;
         let status = status.clone();
         let progress_bar = progress_bar.clone();
-        let apply_btn = apply_btn.clone();
-        let cancel_btn = cancel_btn.clone();
         let window = window.clone();
-        let cancelled = cancelled.clone();
-        let model_row = model_row.clone();
-        dialog_signal!(window, apply_btn.clone(), connect_clicked, move |_| {
+        dialog_signal!(window, apply_btn, connect_clicked, move |_| {
             if let Some(message) = model_unavailable(&bigimage_ai::background::MODEL) {
                 status.set_text(&message);
                 return;

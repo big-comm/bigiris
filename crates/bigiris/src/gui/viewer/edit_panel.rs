@@ -790,7 +790,6 @@ pub(in crate::gui) fn connect(state: &Rc<RefCell<ViewerState>>, window: &adw::Ap
     }
     {
         let weak = Rc::downgrade(state);
-        let syncing = syncing.clone();
         let percent = state.borrow().edit_ui.percent.clone();
         percent.connect_value_changed(move |percent| {
             if syncing.get() {

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //! Bounded, cancellable preview preparation and rendering.
 use super::*;
+use std::sync::PoisonError;
 
 /// Turn a `DynamicImage` into a `gdk::Texture` suitable for `gtk::Picture`.
 /// Consumes the image (the RGBA buffer is handed to a `glib::Bytes` that
@@ -106,7 +107,7 @@ struct PreviewRenderer {
 impl Drop for PreviewRenderer {
     fn drop(&mut self) {
         let (lock, wake) = &*self.queue;
-        let mut pending = lock.lock().unwrap();
+        let mut pending = lock.lock().unwrap_or_else(PoisonError::into_inner);
         pending.stopped = true;
         pending.next = None;
         pending.result = None;
@@ -127,14 +128,16 @@ fn spawn_render_thread(
         loop {
             let (lock, wake) = &*queue;
             let request = {
-                let mut pending = lock.lock().unwrap();
-                while !pending.stopped && pending.next.is_none() {
-                    pending = wake.wait(pending).unwrap();
+                let mut pending = lock.lock().unwrap_or_else(PoisonError::into_inner);
+                loop {
+                    if pending.stopped {
+                        return;
+                    }
+                    if let Some(request) = pending.next.take() {
+                        break request;
+                    }
+                    pending = wake.wait(pending).unwrap_or_else(PoisonError::into_inner);
                 }
-                if pending.stopped {
-                    break;
-                }
-                pending.next.take().unwrap()
             };
             // A panicking transform must not kill the renderer and freeze
             // the preview; report it like any other failed render.
@@ -145,7 +148,7 @@ fn spawn_render_thread(
                     .map_err(|error| crate::error_text::core_error_text(&error))
             }))
             .unwrap_or_else(|_| Err("preview renderer panicked".to_string()));
-            let mut pending = lock.lock().unwrap();
+            let mut pending = lock.lock().unwrap_or_else(PoisonError::into_inner);
             if !pending.stopped {
                 pending.result = Some((request.0, image));
                 rendered.notify();
@@ -173,7 +176,8 @@ fn start_renderer(session: &PreviewSession, picture: &gtk::Picture) -> Rc<Previe
             let (Some(picture), Some(renderer)) = (weak.upgrade(), weak_renderer.upgrade()) else {
                 return;
             };
-            let result = renderer.queue.0.lock().unwrap().result.take();
+            let result =
+                renderer.queue.0.lock().unwrap_or_else(PoisonError::into_inner).result.take();
             if let Some((revision, result)) = result
                 && revision == renderer.revision.get()
             {
@@ -215,7 +219,7 @@ pub(super) fn refresh_preview(session: &PreviewSession, picture: &gtk::Picture, 
     let revision = renderer.revision.get().wrapping_add(1);
     renderer.revision.set(revision);
     let (lock, wake) = &*renderer.queue;
-    lock.lock().unwrap().next = Some((revision, *op));
+    lock.lock().unwrap_or_else(PoisonError::into_inner).next = Some((revision, *op));
     wake.notify_one();
 }
 

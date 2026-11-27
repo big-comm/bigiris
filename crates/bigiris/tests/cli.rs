@@ -11,10 +11,12 @@ fn bigiris() -> Command {
     command
 }
 fn run(dir: &Path, args: &[&str]) -> Output {
-    bigiris().current_dir(dir).args(args).output().unwrap()
+    bigiris().current_dir(dir).args(args).output().expect("run bigiris")
 }
 fn fixture(dir: &Path, name: &str) {
-    image::RgbImage::from_pixel(32, 24, image::Rgb([30, 70, 120])).save(dir.join(name)).unwrap();
+    image::RgbImage::from_pixel(32, 24, image::Rgb([30, 70, 120]))
+        .save(dir.join(name))
+        .expect("save the fixture");
 }
 fn success(output: Output) {
     assert!(
@@ -194,7 +196,7 @@ fn notify_reports_failures_only_when_asked() {
 #[cfg(feature = "ai")]
 fn fake_weights(dir: &Path) -> std::path::PathBuf {
     let path = dir.join("fake.weights");
-    std::fs::write(&path, b"not a weights file").unwrap();
+    std::fs::write(&path, b"not a weights file").expect("write the fake weights");
     path
 }
 
@@ -345,14 +347,14 @@ fn batch_keeps_every_image_without_increment() {
 fn sized_fixture(dir: &Path, name: &str, width: u32, height: u32) {
     image::RgbImage::from_pixel(width, height, image::Rgb([200, 40, 10]))
         .save(dir.join(name))
-        .unwrap();
+        .expect("save the fixture");
 }
 
 /// Packaging containers may forbid the namespaces the codec sandbox needs;
 /// `scripts/package-check.sh` filters sandbox tests there. Mirror that rule
 /// for newer tests: skip only inside such a container, fail everywhere else.
 fn sandbox_available() -> bool {
-    let dir = tempfile::tempdir().unwrap();
+    let dir = tempfile::tempdir().expect("temporary folder");
     if run(dir.path(), &["--self-test"]).status.success() {
         return true;
     }
@@ -365,8 +367,8 @@ fn sandbox_available() -> bool {
 
 fn leftovers(dir: &Path) -> Vec<String> {
     std::fs::read_dir(dir)
-        .unwrap()
-        .map(|entry| entry.unwrap().file_name().to_string_lossy().into_owned())
+        .expect("list the output folder")
+        .map(|entry| entry.expect("folder entry").file_name().to_string_lossy().into_owned())
         .filter(|name| name.starts_with(".bigiris-"))
         .collect()
 }
@@ -880,15 +882,16 @@ fn to_pdf(dir: &Path, bin: &Path, mode: &str, args: &[&str]) -> Output {
         .env("FAKE_SOFFICE", mode)
         .current_dir(dir)
         .output()
-        .unwrap()
+        .expect("run bigiris to-pdf")
 }
 
 fn fake_soffice() -> tempfile::TempDir {
     use std::os::unix::fs::PermissionsExt;
-    let bin = tempfile::tempdir().unwrap();
+    let bin = tempfile::tempdir().expect("temporary folder");
     let path = bin.path().join("soffice");
-    std::fs::write(&path, FAKE_SOFFICE).unwrap();
-    std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o755)).unwrap();
+    std::fs::write(&path, FAKE_SOFFICE).expect("write the fake soffice");
+    std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o755))
+        .expect("make the fake soffice executable");
     bin
 }
 
@@ -1010,7 +1013,7 @@ fn to_pdf_failures_are_plain_sentences() {
 }
 
 fn process_running(marker: &str) -> bool {
-    std::fs::read_dir("/proc").unwrap().flatten().any(|entry| {
+    std::fs::read_dir("/proc").expect("list /proc").flatten().any(|entry| {
         std::fs::read(entry.path().join("cmdline"))
             .is_ok_and(|cmdline| String::from_utf8_lossy(&cmdline).contains(marker))
     })

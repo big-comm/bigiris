@@ -55,7 +55,6 @@ fn fill_upscale_dialog(
         .sensitive(ai_unavailable.is_none())
         .build();
     {
-        let title = title.clone();
         dialog_signal!(window, engine_row, connect_active_notify, move |row| {
             title.set_subtitle(if row.is_active() {
                 "Prisma · Real-ESRGAN"
@@ -104,8 +103,8 @@ fn fill_upscale_dialog(
             let sub = if natural == (0, 0) {
                 fill(&gettext("× {factor} (size unavailable)"), &[("factor", &f.to_string())])
             } else {
-                let w = (natural.0 as u64) * (f as u64);
-                let h = (natural.1 as u64) * (f as u64);
+                let w = u64::from(natural.0) * u64::from(f);
+                let h = u64::from(natural.1) * u64::from(f);
                 format!("≈ {w} × {h} px")
             };
             predicted_row_c.set_subtitle(&sub);
@@ -145,7 +144,6 @@ fn fill_upscale_dialog(
     if let (Some(sess), Some(picture)) = (preview_session.as_ref(), picture) {
         let refresh = {
             let session = sess.clone();
-            let picture = picture.clone();
             let factor_row = factor_row.clone();
             move || {
                 let f = UPSCALE_FACTORS[factor_row.selected() as usize].1;
@@ -166,15 +164,8 @@ fn fill_upscale_dialog(
     close_on_click(&window, &cancel_btn);
 
     {
-        let files = files.clone();
-        let factor_row = factor_row.clone();
-        let engine_row = engine_row.clone();
-        let target_row = target_row.clone();
-        let overwrite_row = overwrite_row.clone();
-        let status = status.clone();
-        let apply_btn = apply_btn.clone();
         let window = window.clone();
-        dialog_signal!(window, apply_btn.clone(), connect_clicked, move |_| {
+        dialog_signal!(window, apply_btn, connect_clicked, move |_| {
             let factor = UPSCALE_FACTORS[factor_row.selected() as usize].1;
             let target = selected_target_format(&target_row);
             let policy = selected_overwrite(&overwrite_row);

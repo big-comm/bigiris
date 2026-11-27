@@ -221,13 +221,10 @@ fn fill_extent_dialog(
     // Refresh the predicted-size row and the preview painting on every
     // control change. Errors (bad hex) surface in the status label.
     let refresh = {
-        let session_opt = preview_session.clone();
-        let picture_opt = picture_opt.clone();
-        let predicted_row = predicted_row.clone();
+        let session_opt = preview_session;
         let status = status.clone();
         let build_opts = build_opts.clone();
         let target_row = target_row.clone();
-        let alpha_banner = alpha_banner.clone();
         move || match build_opts() {
             Ok(mut opts) => {
                 let format = selected_target_format(&target_row)
@@ -308,14 +305,8 @@ fn fill_extent_dialog(
     close_on_click(&window, &cancel_btn);
 
     {
-        let files = files.clone();
-        let build_opts = build_opts.clone();
-        let target_row = target_row.clone();
-        let overwrite_row = overwrite_row.clone();
-        let status = status.clone();
-        let apply_btn = apply_btn.clone();
         let window = window.clone();
-        dialog_signal!(window, apply_btn.clone(), connect_clicked, move |_| {
+        dialog_signal!(window, apply_btn, connect_clicked, move |_| {
             let opts = match build_opts() {
                 Ok(opts) => opts,
                 Err(e) => {

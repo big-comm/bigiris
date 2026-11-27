@@ -49,8 +49,8 @@ pub(in crate::gui) fn decide_drag_mode(
     let (sx, sy) = click_widget;
     let (rx, ry, rw, rh) = rect;
     let (scale, ox, oy) = fit;
-    let nat_w = natural.0 as f64;
-    let nat_h = natural.1 as f64;
+    let nat_w = f64::from(natural.0);
+    let nat_h = f64::from(natural.1);
     let click_nat = (((sx - ox) / scale).clamp(0.0, nat_w), ((sy - oy) / scale).clamp(0.0, nat_h));
 
     // Widget-space corners of the current rect.
@@ -92,8 +92,8 @@ pub(in crate::gui) fn apply_drag(
     delta_nat: (f64, f64),
     natural: (u32, u32),
 ) -> (f64, f64, f64, f64) {
-    let nat_w = natural.0 as f64;
-    let nat_h = natural.1 as f64;
+    let nat_w = f64::from(natural.0);
+    let nat_h = f64::from(natural.1);
     let (dx, dy) = delta_nat;
     match mode {
         CropDragMode::NewSelection { anchor_nat: (ax, ay) } => {
@@ -171,9 +171,9 @@ fn build_crop_preview_column(
         let w_spin = w_spin.clone();
         let h_spin = h_spin.clone();
         selection_area.set_draw_func(move |_area, cr, ww, wh| {
-            let ww = ww as f64;
-            let wh = wh as f64;
-            let (scale, ox, oy) = contain_fit(ww, wh, natural.0 as f64, natural.1 as f64);
+            let ww = f64::from(ww);
+            let wh = f64::from(wh);
+            let (scale, ox, oy) = contain_fit(ww, wh, f64::from(natural.0), f64::from(natural.1));
             let rx = ox + x_spin.value() * scale;
             let ry = oy + y_spin.value() * scale;
             let rw = w_spin.value() * scale;
@@ -227,10 +227,10 @@ fn build_crop_preview_column(
         let h_spin = h_spin.clone();
         drag.connect_drag_begin(move |_, sx, sy| {
             let (scale, ox, oy) = contain_fit(
-                area.width() as f64,
-                area.height() as f64,
-                natural.0 as f64,
-                natural.1 as f64,
+                f64::from(area.width()),
+                f64::from(area.height()),
+                f64::from(natural.0),
+                f64::from(natural.1),
             );
             if scale <= 0.0 {
                 return;
@@ -250,17 +250,17 @@ fn build_crop_preview_column(
     }
     {
         let area = selection_area.clone();
-        let mode = drag_mode.clone();
+        let mode = drag_mode;
         let x_spin = x_spin.clone();
         let y_spin = y_spin.clone();
         let w_spin = w_spin.clone();
         let h_spin = h_spin.clone();
         drag.connect_drag_update(move |_, dx, dy| {
             let (scale, _ox, _oy) = contain_fit(
-                area.width() as f64,
-                area.height() as f64,
-                natural.0 as f64,
-                natural.1 as f64,
+                f64::from(area.width()),
+                f64::from(area.height()),
+                f64::from(natural.0),
+                f64::from(natural.1),
             );
             if scale <= 0.0 {
                 return;
@@ -375,21 +375,21 @@ fn fill_crop_dialog(
 
     // Ranges clamp to the first file's natural dims. For multi-file sets
     // with different sizes, per-file validation handles the rest.
-    let x_spin = adw::SpinRow::with_range(0.0, (natural.0.saturating_sub(1)) as f64, 1.0);
+    let x_spin = adw::SpinRow::with_range(0.0, f64::from(natural.0.saturating_sub(1)), 1.0);
     x_spin.set_title(&gettext("X (px)"));
-    x_spin.set_value(initial.x as f64);
+    x_spin.set_value(f64::from(initial.x));
 
-    let y_spin = adw::SpinRow::with_range(0.0, (natural.1.saturating_sub(1)) as f64, 1.0);
+    let y_spin = adw::SpinRow::with_range(0.0, f64::from(natural.1.saturating_sub(1)), 1.0);
     y_spin.set_title(&gettext("Y (px)"));
-    y_spin.set_value(initial.y as f64);
+    y_spin.set_value(f64::from(initial.y));
 
-    let w_spin = adw::SpinRow::with_range(1.0, natural.0 as f64, 1.0);
+    let w_spin = adw::SpinRow::with_range(1.0, f64::from(natural.0), 1.0);
     w_spin.set_title(&gettext("Width (px)"));
-    w_spin.set_value(initial.width as f64);
+    w_spin.set_value(f64::from(initial.width));
 
-    let h_spin = adw::SpinRow::with_range(1.0, natural.1 as f64, 1.0);
+    let h_spin = adw::SpinRow::with_range(1.0, f64::from(natural.1), 1.0);
     h_spin.set_title(&gettext("Height (px)"));
-    h_spin.set_value(initial.height as f64);
+    h_spin.set_value(f64::from(initial.height));
 
     keep_crop_inside(&window, &x_spin, &w_spin, natural.0);
     keep_crop_inside(&window, &y_spin, &h_spin, natural.1);
@@ -434,27 +434,18 @@ fn fill_crop_dialog(
         let h_spin = h_spin.clone();
         dialog_signal!(window, reset_btn, connect_clicked, move |_| {
             let d = default_crop(natural.0, natural.1);
-            w_spin.set_value(d.width as f64);
-            h_spin.set_value(d.height as f64);
-            x_spin.set_value(d.x as f64);
-            y_spin.set_value(d.y as f64);
+            w_spin.set_value(f64::from(d.width));
+            h_spin.set_value(f64::from(d.height));
+            x_spin.set_value(f64::from(d.x));
+            y_spin.set_value(f64::from(d.y));
         });
     }
 
     close_on_click(&window, &cancel_btn);
 
     {
-        let files = files.clone();
-        let x_spin = x_spin.clone();
-        let y_spin = y_spin.clone();
-        let w_spin = w_spin.clone();
-        let h_spin = h_spin.clone();
-        let target_row = target_row.clone();
-        let overwrite_row = overwrite_row.clone();
-        let status = status.clone();
-        let apply_btn = apply_btn.clone();
         let window = window.clone();
-        dialog_signal!(window, apply_btn.clone(), connect_clicked, move |_| {
+        dialog_signal!(window, apply_btn, connect_clicked, move |_| {
             let rect = CropRect::new(
                 x_spin.value() as u32,
                 y_spin.value() as u32,

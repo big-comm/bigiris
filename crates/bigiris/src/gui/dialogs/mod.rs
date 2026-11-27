@@ -478,7 +478,7 @@ fn output_folder_row(
         let folder_row = folder_row.clone();
         let clear_btn = clear_folder_btn.clone();
         let window = window.clone();
-        dialog_signal!(window, folder_row.clone(), connect_activated, move |_| {
+        dialog_signal!(window, folder_row, connect_activated, move |_| {
             pick_output_folder(&window, &output_dir, &folder_row, &clear_btn);
         });
     }

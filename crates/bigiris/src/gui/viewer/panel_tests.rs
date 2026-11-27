@@ -419,7 +419,7 @@ fn viewer_edit_panel_tools() {
     let photo = dir.path().join("a.png");
     landscape(&photo);
     let (window, state, witness) =
-        open_viewer("com.biglinux.Iris.EditToolsProbe", vec![photo.clone()], (1000, 700));
+        open_viewer("com.biglinux.Iris.EditToolsProbe", vec![photo], (1000, 700));
     handle_key(&state, gdk::Key::e, gdk::ModifierType::empty());
     settle(&context, 300);
     assert!(state.borrow().edit.is_shown());
@@ -634,7 +634,7 @@ fn viewer_edit_panel_ai() {
     let photo = dir.path().join("a.png");
     landscape(&photo);
     let (window, state, witness) =
-        open_viewer("com.biglinux.Iris.EditAiProbe", vec![photo.clone()], (1000, 700));
+        open_viewer("com.biglinux.Iris.EditAiProbe", vec![photo], (1000, 700));
     handle_key(&state, gdk::Key::e, gdk::ModifierType::empty());
     settle(&context, 300);
     let (remove_bg, upscale, factor, tool_box, status) = state.borrow().edit_ui.tool_controls();

@@ -110,15 +110,9 @@ fn fill_convert_dialog(
     close_on_click(&window, &cancel_btn);
 
     {
-        let files = files.clone();
-        let format_row = format_row.clone();
-        let overwrite_row = overwrite_row.clone();
         let encode = Rc::new(encode);
-        let status = status.clone();
-        let apply_btn = apply_btn.clone();
         let window = window.clone();
-        let output_dir = output_dir.clone();
-        dialog_signal!(window, apply_btn.clone(), connect_clicked, move |_| {
+        dialog_signal!(window, apply_btn, connect_clicked, move |_| {
             let fmt = selected_format(&format_row);
             let policy = selected_overwrite(&overwrite_row);
             let opts = encode.options();

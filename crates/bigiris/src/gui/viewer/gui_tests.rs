@@ -79,7 +79,7 @@ fn viewer_review_fixes() {
     // A 1 × 65535 image first, then 42 ordinary ones: 43 files.
     let tall = dir.path().join("tall.png");
     image::GrayImage::from_pixel(1, 65_535, image::Luma([200])).save(&tall).unwrap();
-    let mut files = vec![tall.clone()];
+    let mut files = vec![tall];
     for i in 0..42 {
         let path = dir.path().join(format!("img-{i:02}.png"));
         image::RgbImage::from_pixel(60, 40, image::Rgb([i as u8 * 5, 80, 120]))
@@ -401,7 +401,7 @@ fn viewer_second_review_fixes() {
             .unwrap();
     }
     let pair = vec![png.clone(), gif.clone()];
-    let (window, witness) = build_window_tracked(&app, Rc::new(pair.clone()), 0);
+    let (window, witness) = build_window_tracked(&app, Rc::new(pair), 0);
     window.present();
     let state = witness.upgrade().unwrap();
     wait(&context, "png frame", &|| state.borrow().current_ready);

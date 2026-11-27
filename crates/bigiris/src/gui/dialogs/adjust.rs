@@ -126,17 +126,8 @@ fn fill_adjust_dialog(
     close_on_click(&window, &cancel_btn);
 
     {
-        let files = files.clone();
-        let brightness = brightness.clone();
-        let contrast = contrast.clone();
-        let saturation = saturation.clone();
-        let gamma = gamma.clone();
-        let target_row = target_row.clone();
-        let overwrite_row = overwrite_row.clone();
-        let status = status.clone();
-        let apply_btn = apply_btn.clone();
         let window = window.clone();
-        dialog_signal!(window, apply_btn.clone(), connect_clicked, move |_| {
+        dialog_signal!(window, apply_btn, connect_clicked, move |_| {
             let ops = AdjustOps {
                 brightness: brightness.value() as i32,
                 contrast: contrast.value() as f32,

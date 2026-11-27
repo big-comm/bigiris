@@ -9,7 +9,7 @@ use std::io::{Read, Seek, SeekFrom, Write};
 use std::os::fd::AsRawFd;
 use std::os::unix::fs::OpenOptionsExt;
 use std::path::{Path, PathBuf};
-use std::process::{Child, Command, Stdio};
+use std::process::{Child, Command, ExitCode, Stdio};
 use std::sync::{
     Arc,
     atomic::{AtomicBool, Ordering},
@@ -269,7 +269,7 @@ impl Drop for ChildGuard {
 
 /// Exit status a worker uses when the parent expects another build. Old
 /// processes keep running after a package upgrade replaces the executable.
-const VERSION_MISMATCH: i32 = 86;
+const VERSION_MISMATCH: u8 = 86;
 /// Bytes of worker diagnostics kept; the rest is drained and discarded.
 const MAX_DIAGNOSTIC: usize = 4096;
 /// Hard wall-clock budget for one isolated codec run.
@@ -787,7 +787,7 @@ fn execute(path: &Path, mode: &str, replaced: &mut bool) -> ImageResult<std::fs:
     if !status.success() {
         // Both messages below already carry the restart advice.
         let hint = if std::mem::take(replaced) { restart_hint() } else { String::new() };
-        if status.code() == Some(VERSION_MISMATCH) {
+        if status.code() == Some(i32::from(VERSION_MISMATCH)) {
             return Err(invalid(gettext("BigIris was updated while it was open; restart it")));
         }
         let details = diagnostics
@@ -842,6 +842,13 @@ impl ResaveExtras {
 fn receive(output: std::fs::File) -> ImageResult<Pixels> {
     receive_with(output, false).map(|(pixels, _)| pixels)
 }
+/// The `N` bytes at `offset` of a fixed-layout protocol record.
+fn field<const N: usize>(record: &[u8], offset: usize) -> [u8; N] {
+    let mut bytes = [0; N];
+    bytes.copy_from_slice(&record[offset..offset + N]);
+    bytes
+}
+
 /// Read the raw pixel protocol. With `trailer`, the EXIF and ICC blobs of a
 /// re-save decode follow the pixels and are bounded like everything else.
 fn receive_with(mut output: std::fs::File, trailer: bool) -> ImageResult<(Pixels, ResaveExtras)> {
@@ -850,10 +857,10 @@ fn receive_with(mut output: std::fs::File, trailer: bool) -> ImageResult<(Pixels
     if &header[..8] != MAGIC || header[10] > 1 || header[11] > 1 {
         return Err(protocol_error("invalid codec protocol"));
     }
-    let word = |offset| u32::from_le_bytes(header[offset..offset + 4].try_into().unwrap());
+    let word = |offset| u32::from_le_bytes(field(&header, offset));
     let (w, h) = (word(12), word(16));
     let natural = (word(20), word(24));
-    let length = u64::from_le_bytes(header[28..36].try_into().unwrap());
+    let length = u64::from_le_bytes(field(&header, 28));
     let color = color_from_code(header[8]).ok_or_else(|| protocol_error("invalid pixel type"))?;
     if w == 0
         || h == 0
@@ -877,8 +884,8 @@ fn receive_with(mut output: std::fs::File, trailer: bool) -> ImageResult<(Pixels
         output.seek(SeekFrom::Start(pixels_end))?;
         output.read_exact(&mut lengths)?;
         output.seek(SeekFrom::Start(HEADER as u64))?;
-        let exif = u64::from_le_bytes(lengths[..8].try_into().unwrap());
-        let icc = u64::from_le_bytes(lengths[8..16].try_into().unwrap());
+        let exif = u64::from_le_bytes(field(&lengths, 0));
+        let icc = u64::from_le_bytes(field(&lengths, 8));
         if exif > MAX_RESAVE_BLOB || icc > MAX_RESAVE_BLOB {
             return Err(protocol_error("excessive metadata"));
         }
@@ -1024,10 +1031,7 @@ fn read_dimensions(mut output: std::fs::File) -> ImageResult<(u32, u32)> {
     }
     let mut bytes = [0; 8];
     output.read_exact(&mut bytes)?;
-    let size = (
-        u32::from_le_bytes(bytes[..4].try_into().unwrap()),
-        u32::from_le_bytes(bytes[4..].try_into().unwrap()),
-    );
+    let size = (u32::from_le_bytes(field(&bytes, 0)), u32::from_le_bytes(field(&bytes, 4)));
     if size.0 == 0 || size.1 == 0 || u64::from(size.0) * u64::from(size.1) > 256 * 1024 * 1024 {
         return Err(protocol_error("invalid dimensions"));
     }
@@ -1175,7 +1179,11 @@ fn send_to(
     header.extend(MAGIC);
     header.extend([
         color,
-        format.map_or(255, |f| Format::all().iter().position(|x| *x == f).unwrap() as u8),
+        format.map_or(255, |f| {
+            let index = Format::all().iter().position(|x| *x == f);
+            u8::try_from(index.expect("Format::all lists every format"))
+                .expect("fewer than 255 formats")
+        }),
         u8::from(gps),
         // The decode that produced `image` on this thread showed a malformed
         // ICC profile as sRGB; the parent relays the note to its caller.
@@ -1272,14 +1280,14 @@ fn inherited_descriptors() -> std::io::Result<Vec<u32>> {
         .collect())
 }
 
-pub fn worker() -> color_eyre::Result<()> {
+pub fn worker() -> color_eyre::Result<ExitCode> {
     let args: Vec<_> = std::env::args_os().collect();
     if args.len() != 5 {
         return Err(color_eyre::eyre::eyre!("invalid worker arguments"));
     }
     if args[2] != WORKER_ID {
         eprintln!("bigiris worker version mismatch");
-        std::process::exit(VERSION_MISMATCH);
+        return Ok(ExitCode::from(VERSION_MISMATCH));
     }
     // Fail closed before touching untrusted input.
     let leaked = inherited_descriptors()?;
@@ -1332,7 +1340,7 @@ pub fn worker() -> color_eyre::Result<()> {
         }
         _ => return Err(color_eyre::eyre::eyre!("invalid worker mode")),
     }
-    Ok(())
+    Ok(ExitCode::SUCCESS)
 }
 
 #[cfg(test)]
@@ -1994,7 +2002,7 @@ mod tests {
         let file = input();
         let path = file.path().as_os_str();
         let other = run_worker(&["BIGIRIS2+other".as_ref(), "pixels".as_ref(), path]);
-        assert_eq!(other.status.code(), Some(VERSION_MISMATCH));
+        assert_eq!(other.status.code(), Some(i32::from(VERSION_MISMATCH)));
         let short = run_worker(&[WORKER_ID.as_ref(), "pixels".as_ref()]);
         assert!(String::from_utf8_lossy(&short.stderr).contains("invalid worker arguments"));
         let long = run_worker(&[WORKER_ID.as_ref(), "pixels".as_ref(), path, path]);

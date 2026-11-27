@@ -952,7 +952,7 @@ fn build_window_preloaded(
     let state = Rc::new(RefCell::new(ViewerState {
         files: files.clone(),
         idx: start_idx.min(files.len().saturating_sub(1)),
-        picture: picture.clone(),
+        picture,
         scroller: scroller.clone(),
         title: title.clone(),
         window_weak: gtk::glib::object::ObjectExt::downgrade(&window),
@@ -962,16 +962,16 @@ fn build_window_preloaded(
         pending_zoom: None,
         zoom_source: None,
         natural: (0, 0),
-        toolbar_view: toolbar_view.clone(),
-        osd_revealer: osd_revealer.clone(),
-        osd_label: osd_label.clone(),
-        strip_revealer: strip_revealer.clone(),
-        film_strip_scroll: film_strip_scroll.clone(),
-        film_strip_buttons: film_strip_buttons.clone(),
+        toolbar_view,
+        osd_revealer,
+        osd_label,
+        strip_revealer,
+        film_strip_scroll,
+        film_strip_buttons,
         film_strip_paths: Vec::new(),
         film_strip_start: 0,
         film_strip_active: None,
-        film_strip_box: film_strip_box.clone(),
+        film_strip_box,
         thumbnail_cancel: Arc::new(AtomicBool::new(false)),
         ui_pinned: false,
         autohide_ui,
@@ -1007,11 +1007,11 @@ fn build_window_preloaded(
         awaiting_prefetch: false,
         first_frame_shown: false,
         deferred_thumbnails: None,
-        loading_spinner: loading_spinner.clone(),
+        loading_spinner,
         props_dialog: None,
         pending_ops: Vec::new(),
         redo_ops: Vec::new(),
-        heavy_render: heavy_render.clone(),
+        heavy_render,
         heavy_restore: None,
         saving: false,
         crop_ui,
@@ -1029,7 +1029,6 @@ fn build_window_preloaded(
     }
 
     if let Some(settings) = settings.filter(|_| has_images) {
-        let window = window.clone();
         window.connect_close_request(move |window| {
             let maximized = window.is_maximized();
             let _ = settings.set_boolean("window-maximized", maximized);
@@ -1344,7 +1343,7 @@ fn build_window_preloaded(
                 return;
             };
             if n_press == 2 {
-                let win = state.borrow().window().clone();
+                let win = state.borrow().window();
                 win.set_fullscreened(!win.is_fullscreen());
             }
         });
@@ -1374,7 +1373,7 @@ fn build_window_preloaded(
     }
     {
         let scr = scroller.downgrade();
-        let anchor = drag_anchor.clone();
+        let anchor = drag_anchor;
         drag.connect_drag_update(move |_, dx, dy| {
             let Some(scr) = scr.upgrade() else {
                 return;
@@ -1657,7 +1656,7 @@ fn center_film_strip(state: &Rc<RefCell<ViewerState>>) -> bool {
         };
         (btn.clone(), s.film_strip_scroll.clone())
     };
-    let viewport_w = strip.width() as f64;
+    let viewport_w = f64::from(strip.width());
     // compute_bounds returns coords in the parent (the HBox inside the
     // scroll's viewport); that's what hadjustment speaks.
     let Some(rect) = btn.parent().and_then(|parent| btn.compute_bounds(&parent)) else {
@@ -1666,7 +1665,7 @@ fn center_film_strip(state: &Rc<RefCell<ViewerState>>) -> bool {
     if rect.width() <= 0.0 || viewport_w <= 0.0 {
         return false;
     }
-    let target = rect.x() as f64 - (viewport_w - rect.width() as f64) / 2.0;
+    let target = f64::from(rect.x()) - (viewport_w - f64::from(rect.width())) / 2.0;
     strip.hadjustment().set_value(target.max(0.0));
     true
 }
@@ -1748,7 +1747,7 @@ fn toggle_theater(state: &Rc<RefCell<ViewerState>>) {
     let (window, enable) = {
         let mut s = state.borrow_mut();
         s.theater_enabled = !s.theater_enabled;
-        (s.window().clone(), s.theater_enabled)
+        (s.window(), s.theater_enabled)
     };
     if enable {
         window.add_css_class("theater");
@@ -1811,7 +1810,7 @@ fn on_pointer_motion(state: &Rc<RefCell<ViewerState>>, y: f64) {
 
     let (window_h, pinned) = {
         let s = state.borrow();
-        (s.window().height() as f64, s.ui_pinned)
+        (f64::from(s.window().height()), s.ui_pinned)
     };
     if pinned {
         reveal_top(state);
@@ -1989,11 +1988,12 @@ fn arm_cursor_hide(state: &Rc<RefCell<ViewerState>>, delay: std::time::Duration)
         let mut s = state.borrow_mut();
         s.cursor_hide_source = None;
         // The pointer moved since this timer was armed: wait the rest.
-        let idle = s.last_motion.elapsed();
         let full = std::time::Duration::from_millis(CURSOR_HIDE_MS);
-        if idle < full {
+        if let Some(rest) = full.checked_sub(s.last_motion.elapsed())
+            && !rest.is_zero()
+        {
             drop(s);
-            arm_cursor_hide(&state, full - idle);
+            arm_cursor_hide(&state, rest);
             return;
         }
         // A dialog may have opened since the timer was armed.
@@ -2037,7 +2037,7 @@ fn toggle_ui_pin(state: &Rc<RefCell<ViewerState>>) {
             s.toolbar_view.clone(),
             s.strip_revealer.clone(),
             s.osd_revealer.clone(),
-            s.window().clone(),
+            s.window(),
             s.files.len() >= 2,
             !s.osd_label.label().is_empty(),
             s.autohide_ui,
@@ -2080,7 +2080,7 @@ fn handle_key(
                 glib::Propagation::Stop
             }
             Key::F11 => {
-                let win = state.borrow().window().clone();
+                let win = state.borrow().window();
                 win.set_fullscreened(!win.is_fullscreen());
                 glib::Propagation::Stop
             }
@@ -2156,7 +2156,7 @@ fn handle_key(
             return glib::Propagation::Stop;
         }
         Key::F11 => {
-            let win = state.borrow().window().clone();
+            let win = state.borrow().window();
             win.set_fullscreened(!win.is_fullscreen());
             return glib::Propagation::Stop;
         }
@@ -2350,8 +2350,8 @@ fn draw_histogram(state: &Rc<RefCell<ViewerState>>, cr: &gtk::cairo::Context, w:
     // so they never touch the corners.
     const INSET: f64 = 8.0;
     cr.translate(INSET, INSET);
-    let w = (w as f64 - 2.0 * INSET).max(1.0);
-    let h = (h as f64 - 2.0 * INSET).max(1.0);
+    let w = (f64::from(w) - 2.0 * INSET).max(1.0);
+    let h = (f64::from(h) - 2.0 * INSET).max(1.0);
 
     let cols = (w as usize).max(1);
     let mut bars = vec![[0u32; 3]; cols];
@@ -2373,7 +2373,7 @@ fn draw_histogram(state: &Rc<RefCell<ViewerState>>, cr: &gtk::cairo::Context, w:
     for (idx, (r, g, b)) in channels {
         cr.set_source_rgba(r, g, b, 0.75);
         for (i, bucket) in bars.iter().enumerate() {
-            let v = bucket[idx] as f64 / max_per_channel[idx] as f64;
+            let v = f64::from(bucket[idx]) / f64::from(max_per_channel[idx]);
             let bar_h = v * inner_h;
             cr.rectangle(i as f64, h - bar_h, 1.0, bar_h);
         }
@@ -2705,7 +2705,7 @@ fn save_edits_then(state: &Rc<RefCell<ViewerState>>, after_save: impl FnOnce() +
         if s.pending_ops.is_empty() || s.files.is_empty() || s.saving {
             return;
         }
-        (s.window().clone(), s.files[s.idx].clone())
+        (s.window(), s.files[s.idx].clone())
     };
     // Known before asking for confirmation: no point in a dialog that can
     // only end in a failure.
@@ -3066,8 +3066,8 @@ fn effective_scale(zoom: ZoomState, natural: (u32, u32), viewport: (i32, i32)) -
             if natural.0 == 0 || natural.1 == 0 || viewport.0 <= 0 || viewport.1 <= 0 {
                 return 1.0;
             }
-            let sx = viewport.0 as f64 / natural.0 as f64;
-            let sy = viewport.1 as f64 / natural.1 as f64;
+            let sx = f64::from(viewport.0) / f64::from(natural.0);
+            let sy = f64::from(viewport.1) / f64::from(natural.1);
             sx.min(sy).min(1.0)
         }
     }
@@ -3718,7 +3718,7 @@ fn install_viewer_actions(
             };
             let Some(path) = path_for_external_tool(&state) else { return };
             let flag = std::ffi::OsString::from(format!("--dialog={dialog}"));
-            let window = state.borrow().window().clone();
+            let window = state.borrow().window();
             transfers::launch(&window, vec![flag, "--".into(), path.into_os_string()]);
         });
         window.add_action(&action);
@@ -3837,7 +3837,7 @@ fn copy_current_to_clipboard(state: &Rc<RefCell<ViewerState>>) {
         if s.files.is_empty() {
             return;
         }
-        (s.window().clone(), s.texture.clone())
+        (s.window(), s.texture.clone())
     };
     if refuse_while_loading(state) {
         return;
@@ -3868,7 +3868,7 @@ fn print_current(state: &Rc<RefCell<ViewerState>>) {
         // With unsaved rotate/flip the page must match the screen, not the
         // file on disk: print the edited texture already in memory.
         let edited = s.texture.clone().filter(|_| !s.pending_ops.is_empty());
-        (s.window().clone(), s.files[s.idx].clone(), edited)
+        (s.window(), s.files[s.idx].clone(), edited)
     };
     if edited.is_some() && refuse_while_loading(state) {
         return;
@@ -3999,7 +3999,7 @@ fn show_metadata_for_current(state: &Rc<RefCell<ViewerState>>) {
         if s.files.is_empty() {
             return;
         }
-        (s.window().clone(), s.files[s.idx].clone())
+        (s.window(), s.files[s.idx].clone())
     };
     // A window already open for this image is raised; one for another
     // image is replaced. An in-place save keeps the path but changes the file, so the
@@ -4045,7 +4045,7 @@ fn trash_current(state: &Rc<RefCell<ViewerState>>) {
         if s.files.is_empty() || s.saving {
             return;
         }
-        (s.window().clone(), s.files[s.idx].clone())
+        (s.window(), s.files[s.idx].clone())
     };
     let name = crate::codec::printable_name(&path);
     let alert = adw::AlertDialog::builder()
@@ -4961,7 +4961,7 @@ mod folder_nav_tests {
         }
         let clicked = dir.path().join("2.png");
 
-        let (files, idx) = expand_to_folder(vec![clicked.clone()]);
+        let (files, idx) = expand_to_folder(vec![clicked]);
 
         let names: Vec<String> =
             files.iter().map(|p| p.file_name().unwrap().to_string_lossy().into_owned()).collect();
@@ -5046,7 +5046,7 @@ mod lifecycle_tests {
         }
         let paintable = gtk::WidgetPaintable::new(Some(window));
         let snapshot = gtk::Snapshot::new();
-        paintable.snapshot(&snapshot, window.width() as f64, window.height() as f64);
+        paintable.snapshot(&snapshot, f64::from(window.width()), f64::from(window.height()));
         let node = snapshot.to_node().expect("window must have rendered content");
         let texture = window
             .native()
@@ -5652,7 +5652,7 @@ mod lifecycle_tests {
         }
         assert!(witness.upgrade().is_none(), "large collection retained viewer state");
 
-        let files = Rc::new(vec![source.clone(), source.clone()]);
+        let files = Rc::new(vec![source.clone(), source]);
         type DialogBuilder = fn(&adw::Application, Rc<Vec<PathBuf>>) -> adw::ApplicationWindow;
         fn batch(app: &adw::Application, files: Rc<Vec<PathBuf>>) -> adw::ApplicationWindow {
             build_batch_dialog(app, Rc::new(RefCell::new(files.as_ref().clone())))

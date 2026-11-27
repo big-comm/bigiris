@@ -447,6 +447,9 @@ fn worker_refusals_carry_no_report_decoration() {
 /// its clipboard (OSC 52) or fake report lines.
 #[test]
 fn hostile_file_names_print_inert() {
+    if !sandbox_available() {
+        return;
+    }
     let dir = tempfile::tempdir().unwrap();
     let stem = "b\x1b]0;pwned\x07\nok  fake";
     fixture(dir.path(), &format!("{stem}.png"));
@@ -537,6 +540,7 @@ fn case_folding_collisions_are_refused() {
     std::fs::create_dir(dir.path().join("mnt")).unwrap();
     let script = r#"
 mount -t tmpfs -o casefold tmpfs "$1/mnt" && mkdir "$1/mnt/f" && chattr +F "$1/mnt/f" || exit 77
+echo mounted
 cp "$1"/*.png "$1"/*.PNG "$1"/*.jpg "$1/mnt/f/" && cd "$1/mnt/f" || exit 1
 "$2" convert --to webp --overwrite replace IMG.png img.jpg; echo "webp $?"
 "$2" convert --to png --overwrite replace a.jpg a.PNG; echo "png $?"
@@ -548,7 +552,9 @@ ls
         .arg(env!("CARGO_BIN_EXE_bigiris"))
         .env("LC_ALL", "C")
         .output();
-    let Some(output) = output.ok().filter(|output| output.status.code() != Some(77)) else {
+    // unshare itself fails where user namespaces are restricted (Ubuntu's AppArmor).
+    let mounted = |output: &Output| String::from_utf8_lossy(&output.stdout).starts_with("mounted");
+    let Some(output) = output.ok().filter(mounted) else {
         eprintln!("skipping: no casefolded tmpfs in a user namespace here");
         return;
     };

@@ -233,6 +233,9 @@ fn closest_ijg_quality(table: &[u16]) -> u8 {
 /// - [`BigImageError::Io`]: `path` cannot be opened.
 /// - [`BigImageError::InvalidInput`]: it is not a regular file or is over 1 GiB.
 /// - [`BigImageError::Other`]: its EXIF cannot be read.
+///
+/// With a configured backend every failure arrives as [`BigImageError::Decode`]
+/// carrying the worker's text.
 pub fn read(path: impl AsRef<Path>) -> Result<Metadata> {
     let path = path.as_ref();
     if let Some(backend) = crate::backend::configured() {

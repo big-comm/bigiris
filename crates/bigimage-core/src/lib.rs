@@ -101,7 +101,8 @@ pub fn open_image(path: impl AsRef<std::path::Path>) -> image::ImageResult<image
 /// # Errors
 ///
 /// - [`BigImageError::NotStatic`] or [`BigImageError::SeveralEntries`]: the
-///   output would drop frames, pages or entries of `input`.
+///   output would drop frames, pages or entries of `input` (as
+///   [`BigImageError::Decode`] with the worker's text when a backend is configured).
 /// - [`BigImageError::Decode`]: `input` cannot be read or decoded.
 /// - [`BigImageError::UnsupportedFormat`]: no format is recognized in `input`.
 /// - [`BigImageError::InvalidInput`]: `input` has no file name, or the result

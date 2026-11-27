@@ -11,6 +11,9 @@ use std::path::Path;
 /// - [`BigImageError::Decode`]: `path` cannot be read, exceeds the decoding
 ///   limits or its container is malformed.
 /// - [`BigImageError::NotStatic`]: it is an animation or holds several pages.
+///
+/// With a configured backend every refusal, `NotStatic` included, arrives as
+/// [`BigImageError::Decode`] carrying the worker's text.
 pub fn ensure_static(path: &Path) -> Result<()> {
     if let Some(backend) = crate::backend::configured() {
         return (backend.ensure_static)(path);

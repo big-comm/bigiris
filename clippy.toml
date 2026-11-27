@@ -1,0 +1,4 @@
+allow-unwrap-in-tests = true
+allow-expect-in-tests = true
+# Unpublished workspace: let Clippy judge public items too.
+avoid-breaking-exported-api = false

@@ -1,13 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-//! EXIF / metadata inspection. Reads tags from image files via
-//! `kamadak-exif`, exposes a friendly [`Metadata`] record the GUI can
-//! render in sidebars, and surfaces the two signals we care about most
-//! for smart-prompts: "has GPS coordinates" and "has camera info".
+//! EXIF and metadata policy. [`read`] turns a file's EXIF into a
+//! [`Metadata`] record the GUI shows, with the GPS and camera signals the
+//! privacy prompts use.
 //!
-//! Does **not** write metadata yet — today our encode pipeline strips all
-//! ancillary chunks anyway (it decodes to `DynamicImage` which has no
-//! metadata carrier). A future iteration will add `preserve_exif` that
-//! reads bytes pre-decode and re-injects them post-encode.
+//! Metadata reaches an output by two paths only: an in-place save writes
+//! the source's EXIF and ICC profile back (see
+//! [`crate::save_image_preserving_metadata`] and [`preserved_by`]), and a
+//! same-format conversion may publish the original bytes unchanged when
+//! they are smaller and carry nothing a stripping encode would remove.
+//! Every other encode writes no source metadata.
 
 use std::path::Path;
 
@@ -17,7 +18,9 @@ use crate::{BigImageError, Result};
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Metadata {
-    /// Human-readable `(name, value)` pairs, ready to show in a sidebar.
+    /// `(tag, value)` pairs in file order: the EXIF tag name (`Make`,
+    /// `DateTimeOriginal`) for the caller to translate, and the value as
+    /// text, unquoted.
     pub tags: Vec<(String, String)>,
     /// Whether the file encodes a GPS coordinate (either `GPSLatitude` or
     /// `GPSLongitude` is present in the primary IFD).
@@ -35,6 +38,10 @@ impl Metadata {
     }
 }
 
+/// Largest EXIF block (outside JPEG) or ICC profile, in bytes, that
+/// [`crate::save_image_preserving_metadata`] writes back.
+pub const MAX_RESAVE_BLOB: usize = 4 * 1024 * 1024;
+
 /// Raw metadata blobs of a source image, kept so an in-place save can write
 /// them back (see [`crate::save_image_preserving_metadata`]).
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
@@ -44,6 +51,9 @@ pub struct SourceMetadata {
     pub exif: Option<Vec<u8>>,
     /// Embedded ICC profile describing the source pixels.
     pub icc: Option<Vec<u8>>,
+    /// The source has an EXIF block that could not be read, so a save
+    /// reports [`MetadataLoss::ExifInvalid`].
+    pub exif_unreadable: bool,
 }
 
 /// Which metadata a target format can carry through
@@ -77,17 +87,19 @@ pub enum MetadataLoss {
     ExifTooLarge,
     /// The EXIF block is not TIFF-structured and could not be rewritten.
     ExifInvalid,
+    /// Some EXIF fields could not be read or written (an unknown value
+    /// type); the others were kept.
+    ExifFieldsDropped,
     /// The target cannot embed the source colour profile; pixels were
     /// converted to sRGB (wide-gamut colours may be clipped).
     IccUnsupported,
-    /// The profile exceeds 4 MiB; pixels were converted to sRGB.
-    IccTooLarge,
     /// The profile's colour model does not match the written pixels (e.g. a
     /// GRAY profile on pixels an edit made RGB); pixels were converted to
     /// sRGB.
     IccMismatched,
-    /// The profile is malformed or of a kind that cannot be applied (CMYK,
-    /// Lab…): it was dropped and the pixels written unchanged.
+    /// The profile is malformed, 4 MiB or larger, or of a kind that cannot
+    /// be applied (CMYK, Lab…): it was dropped and the pixels written
+    /// unchanged.
     IccDiscarded,
 }
 
@@ -102,180 +114,11 @@ pub fn preserved_by(format: crate::Format) -> MetadataSupport {
     }
 }
 
-/// Whether an encoded file carries metadata a stripping re-encode would
-/// remove (EXIF, XMP, IPTC, text comments). Conservative: formats we do not
-/// parse structurally answer `true` when in doubt, so a "keep the original
-/// bytes" shortcut never leaks what a conversion would have dropped.
-pub(crate) fn carries_metadata(bytes: &[u8], format: crate::Format) -> bool {
-    use crate::Format;
-    let contains = |needle: &[u8]| bytes.windows(needle.len()).any(|w| w == needle);
-    match format {
-        Format::Jpeg => jpeg_carries_metadata(bytes),
-        Format::Png => png_carries_metadata(bytes),
-        Format::WebP => webp_carries_metadata(bytes),
-        Format::Avif => contains(b"Exif") || contains(b"mime") || contains(b"xml "),
-        Format::Gif => contains(b"XMP DataXMP") || contains(&[0x21, 0xfe]),
-        // TIFF metadata lives in IFD tags of the image itself.
-        Format::Tiff => true,
-        _ => false,
-    }
-}
-
-fn jpeg_carries_metadata(bytes: &[u8]) -> bool {
-    let mut at = 2;
-    while at + 4 <= bytes.len() {
-        if bytes[at] != 0xff {
-            return true;
-        }
-        let marker = bytes[at + 1];
-        if marker == 0xff {
-            at += 1;
-            continue;
-        }
-        // Start of scan: no more header segments.
-        if marker == 0xda {
-            return false;
-        }
-        let len = usize::from(u16::from_be_bytes([bytes[at + 2], bytes[at + 3]]));
-        let payload = bytes.get(at + 4..at + 2 + len).unwrap_or(&[]);
-        match marker {
-            // APP2 holds ICC profiles (kept: they describe the pixels).
-            0xe2 if payload.starts_with(b"ICC_PROFILE\0") => {}
-            // JFIF/JFXX (APP0) and Adobe (APP14) are structural.
-            0xe0 | 0xee => {}
-            // Any other APPn (EXIF/XMP in APP1, IPTC in APP13…) or COM.
-            0xe1..=0xef | 0xfe => return true,
-            _ => {}
-        }
-        at += 2 + len;
-    }
-    true
-}
-
-fn png_carries_metadata(bytes: &[u8]) -> bool {
-    let mut at = 8;
-    while at + 8 <= bytes.len() {
-        let len =
-            u32::from_be_bytes([bytes[at], bytes[at + 1], bytes[at + 2], bytes[at + 3]]) as usize;
-        match &bytes[at + 4..at + 8] {
-            b"eXIf" | b"tEXt" | b"zTXt" | b"iTXt" => return true,
-            b"IEND" => return false,
-            _ => {}
-        }
-        at = at.saturating_add(12).saturating_add(len);
-    }
-    true
-}
-
-fn webp_carries_metadata(bytes: &[u8]) -> bool {
-    let mut at = 12;
-    while at + 8 <= bytes.len() {
-        let len = u32::from_le_bytes([bytes[at + 4], bytes[at + 5], bytes[at + 6], bytes[at + 7]])
-            as usize;
-        if matches!(&bytes[at..at + 4], b"EXIF" | b"XMP ") {
-            return true;
-        }
-        at = at.saturating_add(8).saturating_add(len + (len & 1));
-    }
-    false
-}
-
-/// Normalise an EXIF blob for re-attachment: drop an `Exif\0\0` prefix and
-/// reset IFD0 `Orientation` to 1, because the pixels being saved are already
-/// upright. Returns `None` for blobs that are not TIFF-structured.
-///
-/// With `size` (the saved pixels, after rotate/crop/extent),
-/// `PixelXDimension`/`PixelYDimension` in the Exif IFD are set to it and
-/// the IFD1 thumbnail is unlinked (IFD0's next-IFD offset set to 0): it
-/// shows the image before the edit, and file managers display it instead
-/// of the real pixels. With `size = None` only the orientation changes.
-pub(crate) fn resave_exif(exif: &[u8], size: Option<(u32, u32)>) -> Option<Vec<u8>> {
-    let mut tiff = exif.strip_prefix(b"Exif\0\0").unwrap_or(exif).to_vec();
-    let little = match tiff.get(..4)? {
-        [b'I', b'I', 42, 0] => true,
-        [b'M', b'M', 0, 42] => false,
-        _ => return None,
-    };
-    let word = |b: &[u8]| {
-        let b = [b[0], b[1]];
-        if little {
-            u16::from_le_bytes(b)
-        } else {
-            u16::from_be_bytes(b)
-        }
-    };
-    let long = |b: &[u8]| {
-        let b = [b[0], b[1], b[2], b[3]];
-        if little {
-            u32::from_le_bytes(b)
-        } else {
-            u32::from_be_bytes(b)
-        }
-    };
-    let put_word = |v: u16| if little { v.to_le_bytes() } else { v.to_be_bytes() };
-    let put_long = |v: u32| if little { v.to_le_bytes() } else { v.to_be_bytes() };
-    let ifd = usize::try_from(long(tiff.get(4..8)?)).ok()?;
-    let count = usize::from(word(tiff.get(ifd..ifd + 2)?));
-    let mut exif_ifd = None;
-    for entry in 0..count {
-        let at = ifd + 2 + entry * 12;
-        let field: [u8; 12] = tiff.get(at..at + 12)?.try_into().ok()?;
-        let (tag, kind, n) = (word(&field[..2]), word(&field[2..4]), long(&field[4..8]));
-        // Orientation, SHORT, count 1: value is inline in the first 2 bytes.
-        if tag == 0x0112 && kind == 3 && n == 1 {
-            tiff[at + 8..at + 10].copy_from_slice(&put_word(1));
-        }
-        // Exif IFD pointer (LONG or IFD type).
-        if tag == 0x8769 && (kind == 4 || kind == 13) && n == 1 {
-            exif_ifd = usize::try_from(long(&field[8..12])).ok();
-        }
-    }
-    let Some((width, height)) = size else {
-        return Some(tiff);
-    };
-    let next = ifd + 2 + count * 12;
-    tiff.get(next..next + 4)?;
-    tiff[next..next + 4].copy_from_slice(&put_long(0));
-    let Some(sub) = exif_ifd else {
-        return Some(tiff);
-    };
-    let Some(sub_count) = tiff.get(sub..sub + 2).map(|b| usize::from(word(b))) else {
-        return Some(tiff);
-    };
-    for entry in 0..sub_count {
-        let at = sub + 2 + entry * 12;
-        let Some(field) = tiff.get(at..at + 12).and_then(|f| <[u8; 12]>::try_from(f).ok()) else {
-            break;
-        };
-        let (tag, kind, n) = (word(&field[..2]), word(&field[2..4]), long(&field[4..8]));
-        let value = match tag {
-            0xa002 => width,
-            0xa003 => height,
-            _ => continue,
-        };
-        if n != 1 || !(kind == 3 || kind == 4) {
-            continue;
-        }
-        // SHORT or LONG, inline. A SHORT too small for the new size
-        // becomes a LONG (both fit the 4-byte value field).
-        match u16::try_from(value) {
-            Ok(short) if kind == 3 => {
-                tiff[at + 8..at + 10].copy_from_slice(&put_word(short));
-                tiff[at + 10..at + 12].fill(0);
-            }
-            _ => {
-                tiff[at + 2..at + 4].copy_from_slice(&put_word(4));
-                tiff[at + 8..at + 12].copy_from_slice(&put_long(value));
-            }
-        }
-    }
-    Some(tiff)
-}
-
 /// Estimated IJG quality (`1..=100`) of the JPEG at `path`, from its
 /// luminance quantization table: the quality to pass in
 /// [`crate::EncodeOptions::quality`] so an in-place resave of a JPEG keeps
-/// roughly its original size and fidelity instead of falling back to 75.
+/// roughly its original size and fidelity instead of being re-compressed
+/// to the perceptual target.
 ///
 /// The table is compared with the standard IJG luminance table scaled for
 /// every quality (`q < 50`: `5000/q` %, otherwise `200 - 2q` %) and the
@@ -299,7 +142,7 @@ pub fn estimate_jpeg_quality(path: impl AsRef<Path>) -> Option<u8> {
 
 /// [`estimate_jpeg_quality`] over any seekable reader positioned at the
 /// start of a JPEG stream.
-pub fn estimate_jpeg_quality_from_reader(
+fn estimate_jpeg_quality_from_reader(
     reader: &mut (impl std::io::Read + std::io::Seek),
 ) -> Option<u8> {
     use std::io::SeekFrom;
@@ -384,6 +227,15 @@ fn closest_ijg_quality(table: &[u16]) -> u8 {
 /// Read EXIF from `path`. Returns an empty [`Metadata`] when the file
 /// has no EXIF segment (very common for PNG/WebP/GIF outputs from
 /// non-camera sources) — the caller decides whether that's notable.
+///
+/// # Errors
+///
+/// - [`BigImageError::Io`]: `path` cannot be opened.
+/// - [`BigImageError::InvalidInput`]: it is not a regular file or is over 1 GiB.
+/// - [`BigImageError::Other`]: its EXIF cannot be read.
+///
+/// With a configured backend every failure arrives as [`BigImageError::Decode`]
+/// carrying the worker's text.
 pub fn read(path: impl AsRef<Path>) -> Result<Metadata> {
     let path = path.as_ref();
     if let Some(backend) = crate::backend::configured() {
@@ -415,10 +267,17 @@ pub fn read(path: impl AsRef<Path>) -> Result<Metadata> {
 
     let mut out = Metadata::default();
     for field in exif.fields() {
-        let name = field.tag.description().unwrap_or("").to_string();
-        let name = if name.is_empty() { format!("{}", field.tag) } else { name };
-        let value = field.display_value().with_unit(&exif).to_string();
-        out.tags.push((name, value));
+        let shown = field.display_value().with_unit(&exif).to_string();
+        let value = match &field.value {
+            // The library quotes and escapes plain text; show it as written.
+            exif::Value::Ascii(texts) if shown.starts_with('"') => texts
+                .iter()
+                .map(|text| String::from_utf8_lossy(text).into_owned())
+                .collect::<Vec<_>>()
+                .join(", "),
+            _ => shown,
+        };
+        out.tags.push((field.tag.to_string(), value));
 
         // Surface signals we feed back to smart-prompts.
         if field.ifd_num == exif::In::PRIMARY {
@@ -442,9 +301,8 @@ pub fn read(path: impl AsRef<Path>) -> Result<Metadata> {
     Ok(out)
 }
 
-/// Quick-path: just check if the file has GPS data. Used by the smart
-/// prompts in the convert/resize dialogs to display a privacy banner
-/// without scanning the full EXIF table into strings.
+/// Whether the file's EXIF holds a GPS coordinate, for the privacy banner
+/// of the convert and resize dialogs; `false` when it cannot be read.
 pub fn has_gps(path: impl AsRef<Path>) -> bool {
     read(path).map(|m| m.has_gps).unwrap_or(false)
 }
@@ -453,40 +311,6 @@ pub fn has_gps(path: impl AsRef<Path>) -> bool {
 mod tests {
     use super::*;
 
-    #[test]
-    fn metadata_detection_finds_exif_and_text_but_not_icc() {
-        use crate::Format;
-        let rgb = image::RgbImage::from_pixel(4, 4, image::Rgb([1, 2, 3]));
-        let encode_png = |exif: bool, icc: bool| {
-            use image::ImageEncoder;
-            let mut out = Vec::new();
-            let mut encoder = image::codecs::png::PngEncoder::new(&mut out);
-            if exif {
-                encoder.set_exif_metadata(b"II*\0\x08\0\0\0\0\0\0\0\0\0".to_vec()).unwrap();
-            }
-            if icc {
-                encoder.set_icc_profile(crate::color::srgb_profile().unwrap()).unwrap();
-            }
-            encoder.write_image(rgb.as_raw(), 4, 4, image::ExtendedColorType::Rgb8).unwrap();
-            out
-        };
-        assert!(!carries_metadata(&encode_png(false, true), Format::Png));
-        assert!(carries_metadata(&encode_png(true, false), Format::Png));
-        let encode_jpeg = |exif: bool| {
-            use image::ImageEncoder;
-            let mut out = Vec::new();
-            let mut encoder = image::codecs::jpeg::JpegEncoder::new(&mut out);
-            encoder.set_icc_profile(crate::color::srgb_profile().unwrap()).unwrap();
-            if exif {
-                encoder.set_exif_metadata(b"II*\0\x08\0\0\0\0\0\0\0\0\0".to_vec()).unwrap();
-            }
-            encoder.write_image(rgb.as_raw(), 4, 4, image::ExtendedColorType::Rgb8).unwrap();
-            out
-        };
-        assert!(!carries_metadata(&encode_jpeg(false), Format::Jpeg));
-        assert!(carries_metadata(&encode_jpeg(true), Format::Jpeg));
-        assert!(carries_metadata(&[0u8; 16], Format::Tiff));
-    }
     use image::{Rgb, RgbImage};
     use tempfile::TempDir;
 
@@ -516,72 +340,6 @@ mod tests {
     }
 
     #[test]
-    fn upright_exif_resets_orientation_in_both_byte_orders() {
-        let le: &[u8] = &[
-            b'E', b'x', b'i', b'f', 0, 0, b'I', b'I', 42, 0, 8, 0, 0, 0, 2,
-            0, // header, 2 entries
-            0x0f, 0x01, 2, 0, 4, 0, 0, 0, b'A', b'B', b'C', 0, // Make "ABC"
-            0x12, 0x01, 3, 0, 1, 0, 0, 0, 6, 0, 0, 0, // Orientation = 6
-            0, 0, 0, 0,
-        ];
-        let fixed = resave_exif(le, None).unwrap();
-        assert_eq!(&fixed[..2], b"II", "Exif prefix dropped");
-        assert_eq!(&fixed[30..32], &[1, 0]);
-        assert_eq!(&fixed[18..22], &[b'A', b'B', b'C', 0], "other tags untouched");
-        let be: &[u8] = &[
-            b'M', b'M', 0, 42, 0, 0, 0, 8, 0, 1, // header, 1 entry
-            0x01, 0x12, 0, 3, 0, 0, 0, 1, 0, 8, 0, 0, // Orientation = 8
-            0, 0, 0, 0,
-        ];
-        assert_eq!(&resave_exif(be, None).unwrap()[18..20], &[0, 1]);
-        assert_eq!(resave_exif(b"not exif", None), None);
-        // Truncated IFD: rejected instead of panicking.
-        assert_eq!(resave_exif(&le[..20], None), None);
-    }
-
-    /// IFD0: Orientation 6 + Exif IFD pointer, next IFD → IFD1 (thumbnail).
-    /// Exif IFD: PixelXDimension SHORT 4000, PixelYDimension LONG 3000.
-    fn exif_with_dimensions_and_thumbnail() -> Vec<u8> {
-        let mut t = vec![b'I', b'I', 42, 0, 8, 0, 0, 0, 2, 0];
-        t.extend_from_slice(&[0x12, 0x01, 3, 0, 1, 0, 0, 0, 6, 0, 0, 0]);
-        t.extend_from_slice(&[0x69, 0x87, 4, 0, 1, 0, 0, 0, 38, 0, 0, 0]);
-        t.extend_from_slice(&[68, 0, 0, 0]); // next IFD (IFD1) at 68
-        assert_eq!(t.len(), 38);
-        t.extend_from_slice(&[2, 0]);
-        t.extend_from_slice(&[0x02, 0xa0, 3, 0, 1, 0, 0, 0, 0xa0, 0x0f, 0, 0]);
-        t.extend_from_slice(&[0x03, 0xa0, 4, 0, 1, 0, 0, 0, 0xb8, 0x0b, 0, 0]);
-        t.extend_from_slice(&[0, 0, 0, 0]);
-        assert_eq!(t.len(), 68);
-        // IFD1: JPEGInterchangeFormatLength = 0, no next IFD.
-        t.extend_from_slice(&[1, 0, 0x02, 0x02, 4, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
-        t
-    }
-
-    #[test]
-    fn resave_exif_refreshes_dimensions_and_drops_the_stale_thumbnail() {
-        let source = exif_with_dimensions_and_thumbnail();
-        let parse = |tiff: Vec<u8>| exif::Reader::new().read_raw(tiff).unwrap();
-        let before = parse(source.clone());
-        assert!(before.fields().any(|f| f.ifd_num == exif::In::THUMBNAIL));
-
-        let fixed = resave_exif(&source, Some((70_000, 20))).unwrap();
-        let after = parse(fixed);
-        let value = |tag| after.get_field(tag, exif::In::PRIMARY).unwrap().value.get_uint(0);
-        assert_eq!(value(exif::Tag::Orientation), Some(1));
-        assert_eq!(value(exif::Tag::PixelXDimension), Some(70_000), "SHORT widened to LONG");
-        assert_eq!(value(exif::Tag::PixelYDimension), Some(20));
-        assert!(after.fields().all(|f| f.ifd_num != exif::In::THUMBNAIL));
-
-        let small = parse(resave_exif(&source, Some((300, 200))).unwrap());
-        let field = small.get_field(exif::Tag::PixelXDimension, exif::In::PRIMARY).unwrap();
-        assert!(matches!(field.value, exif::Value::Short(_)), "fitting SHORT stays SHORT");
-        assert_eq!(field.value.get_uint(0), Some(300));
-        // Without a size, only the orientation changes.
-        let kept = parse(resave_exif(&source, None).unwrap());
-        assert!(kept.fields().any(|f| f.ifd_num == exif::In::THUMBNAIL));
-    }
-
-    #[test]
     fn jpeg_quality_is_estimated_from_the_luminance_table() {
         let noise = image::RgbImage::from_fn(32, 32, |x, y| {
             image::Rgb([(x * 7 + y) as u8, (x ^ y) as u8 * 5, (y * 9) as u8])
@@ -602,9 +360,47 @@ mod tests {
         assert_eq!(estimate_jpeg_quality(dir.path()), None);
     }
 
+    /// Tags come by name; text shows as written, a date keeps the
+    /// library's rendering.
+    #[test]
+    fn tags_are_named_and_unquoted() {
+        use exif::{Field, In, Tag, Value};
+        let ascii = |text: &str| Value::Ascii(vec![text.as_bytes().to_vec()]);
+        let fields = [
+            Field { tag: Tag::Make, ifd_num: In::PRIMARY, value: ascii("Câmera \"X\"") },
+            Field { tag: Tag::DateTime, ifd_num: In::PRIMARY, value: ascii("2024:05:06 07:08:09") },
+        ];
+        let mut writer = exif::experimental::Writer::new();
+        for field in &fields {
+            writer.push_field(field);
+        }
+        let mut blob = std::io::Cursor::new(Vec::new());
+        writer.write(&mut blob, true).unwrap();
+        let dir = TempDir::new().unwrap();
+        let path = dir.path().join("camera.jpg");
+        let mut encoder =
+            image::codecs::jpeg::JpegEncoder::new(std::fs::File::create(&path).unwrap());
+        image::ImageEncoder::set_exif_metadata(&mut encoder, blob.into_inner()).unwrap();
+        image::ImageEncoder::write_image(encoder, &[0; 12], 2, 2, image::ExtendedColorType::Rgb8)
+            .unwrap();
+        let tags = read(&path).unwrap().tags;
+        assert!(tags.contains(&("Make".into(), "Câmera \"X\"".into())), "{tags:?}");
+        assert!(tags.contains(&("DateTime".into(), "2024-05-06 07:08:09".into())), "{tags:?}");
+    }
+
     #[test]
     fn nonexistent_path_returns_io_error() {
         let err = read("/does/not/exist/fx.jpg").unwrap_err();
         assert!(matches!(err, BigImageError::Io(_)));
+    }
+
+    #[test]
+    fn read_refuses_directories_and_oversized_files() {
+        let dir = TempDir::new().unwrap();
+        let sparse = dir.path().join("huge.jpg");
+        std::fs::File::create(&sparse).unwrap().set_len(1024 * 1024 * 1024 + 1).unwrap();
+        for path in [dir.path(), sparse.as_path()] {
+            assert!(matches!(read(path), Err(BigImageError::InvalidInput(_))), "{path:?}");
+        }
     }
 }

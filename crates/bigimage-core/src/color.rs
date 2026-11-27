@@ -26,6 +26,11 @@ fn error(message: impl std::fmt::Display) -> ImageError {
 /// pixels as sRGB and records it with [`note_ignored_profile`], so the
 /// viewer and the CLI can say the colours may be off instead of refusing the
 /// photo or relabeling it silently.
+///
+/// # Errors
+///
+/// An [`ImageError`] when `icc` is not a parsable profile, or the colour
+/// transform it describes cannot be built.
 pub fn normalize_srgb(image: &mut DynamicImage, icc: &[u8]) -> ImageResult<()> {
     normalize_srgb_applied(image, icc).map(drop)
 }
@@ -97,8 +102,12 @@ fn is_gray(image: &DynamicImage) -> bool {
 
 fn normalize_rgb(image: &mut DynamicImage, icc: &[u8], profile: &ColorProfile) -> ImageResult<()> {
     let target = ColorProfile::new_srgb();
-    // Our canonical profile needs no transform: preserve exact lossless samples.
-    if same_canonical_profile(icc, &target.encode().map_err(error)?) {
+    // Our canonical profile needs no transform: preserve exact lossless
+    // samples. Files written before it was made well-formed carry moxcms's
+    // plain encoding.
+    if same_canonical_profile(icc, &srgb_profile()?)
+        || same_canonical_profile(icc, &target.encode().map_err(error)?)
+    {
         image.set_color_space(image::metadata::Cicp::SRGB)?;
         return Ok(());
     }
@@ -215,22 +224,57 @@ pub fn take_ignored_profile() -> bool {
 /// as six big-endian u16 (ICC dateTimeNumber).
 const PROFILE_DATE: [u8; 12] = [0x07, 0xEA, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0];
 
+/// PCS illuminant every ICC header must carry (ICC.1 7.2.16): D50 as
+/// `XYZNumber` 0x0000F6D6, 0x00010000, 0x0000D32D.
+const PCS_D50: moxcms::Xyzd = moxcms::Xyzd { x: 0.9642, y: 1.0, z: 0.8249 };
+
 /// A generated sRGB profile contains no source camera, GPS or author fields.
 /// moxcms stamps the current time and an MD5 profile ID over it, which made
 /// two saves of the same pixels differ byte for byte; the date is fixed and
-/// the ID left zero ("not computed", ICC.1 7.2.18).
+/// the ID left zero ("not computed", ICC.1 7.2.18). Its header illuminant is
+/// set to the PCS D50 and its tags realigned, since libpng and other strict
+/// readers drop a profile that breaks either rule.
 pub(crate) fn srgb_profile() -> ImageResult<Vec<u8>> {
     static PROFILE: std::sync::OnceLock<Vec<u8>> = std::sync::OnceLock::new();
     if let Some(profile) = PROFILE.get() {
         return Ok(profile.clone());
     }
-    let mut icc = ColorProfile::new_srgb().encode().map_err(error)?;
-    if icc.len() < 128 {
-        return Err(error("generated sRGB profile has no header"));
-    }
+    let mut srgb = ColorProfile::new_srgb();
+    srgb.white_point = PCS_D50;
+    // ICC.1 9.2.36: a v4 display profile's media white point is the PCS
+    // D50, and `chad` adapts the D65 display white to it (moxcms stores
+    // the bare Bradford cone matrix there).
+    srgb.media_white_point = Some(PCS_D50);
+    let pcs = moxcms::Xyz { x: 0.9642, y: 1.0, z: 0.8249 };
+    srgb.chromatic_adaptation =
+        Some(moxcms::adaption_matrix_d(moxcms::WHITE_POINT_D65.to_xyz(), pcs));
+    let encoded = srgb.encode().map_err(error)?;
+    let mut icc = align_tags(&encoded).ok_or_else(|| error("generated sRGB tag table"))?;
     icc[24..36].copy_from_slice(&PROFILE_DATE);
     icc[84..100].fill(0);
     Ok(PROFILE.get_or_init(|| icc).clone())
+}
+
+/// `icc` with each tag's data moved to a 4-byte boundary and the size padded
+/// to one (ICC.1 7.1.2, 7.3.1); `None` when the tag table does not fit.
+fn align_tags(icc: &[u8]) -> Option<Vec<u8>> {
+    let be = |at: usize| Some(u32::from_be_bytes(icc.get(at..at + 4)?.try_into().ok()?));
+    let count = usize::try_from(be(128)?).ok()?;
+    let table_end = count.checked_mul(12)?.checked_add(132)?;
+    let mut out = icc.get(..table_end)?.to_vec();
+    for entry in (132..table_end).step_by(12) {
+        let offset = usize::try_from(be(entry + 4)?).ok()?;
+        let size = usize::try_from(be(entry + 8)?).ok()?;
+        let tag_data = icc.get(offset..offset.checked_add(size)?)?;
+        out.resize(out.len().next_multiple_of(4), 0);
+        let start = u32::try_from(out.len()).ok()?;
+        out[entry + 4..entry + 8].copy_from_slice(&start.to_be_bytes());
+        out.extend_from_slice(tag_data);
+    }
+    out.resize(out.len().next_multiple_of(4), 0);
+    let size = u32::try_from(out.len()).ok()?;
+    out[..4].copy_from_slice(&size.to_be_bytes());
+    Some(out)
 }
 
 #[cfg(test)]
@@ -251,6 +295,48 @@ mod tests {
     }
     /// Saves embed this profile: a clock-dependent stamp made identical
     /// saves differ, so it must not depend on when it was generated.
+    /// Guards: interoperability: ICC.1 7.2.16 and 7.3.1, which libpng
+    /// enforces by dropping the profile.
+    #[test]
+    fn srgb_profile_is_well_formed() {
+        let icc = srgb_profile().unwrap();
+        let be = |at: usize| u32::from_be_bytes(icc[at..at + 4].try_into().unwrap());
+        assert_eq!(be(0) as usize, icc.len());
+        assert_eq!(icc.len() % 4, 0);
+        assert_eq!([be(68), be(72), be(76)], [0xf6d6, 0x1_0000, 0xd32d], "PCS illuminant D50");
+        let count = be(128) as usize;
+        assert!(count > 0);
+        for entry in (132..132 + 12 * count).step_by(12) {
+            let (offset, size) = (be(entry + 4) as usize, be(entry + 8) as usize);
+            assert_eq!(offset % 4, 0, "tag {:?}", &icc[entry..entry + 4]);
+            assert!(offset + size <= icc.len());
+        }
+        let tag = |signature: &[u8; 4]| {
+            let entry = (132..132 + 12 * count).step_by(12).find(|&e| &icc[e..e + 4] == signature);
+            be(entry.unwrap_or_else(|| panic!("no {signature:?} tag")) + 4) as usize
+        };
+        // ICC.1 9.2.36: the media white point of a display profile is D50.
+        let wtpt = tag(b"wtpt") + 8;
+        assert_eq!([be(wtpt), be(wtpt + 4), be(wtpt + 8)], [0xf6d6, 0x1_0000, 0xd32d]);
+        // Bradford D65 to D50 (Lindbloom), as s15Fixed16 numbers.
+        let bradford = [
+            1.047_811_2,
+            0.022_886_6,
+            -0.050_127_0,
+            0.029_542_4,
+            0.990_484_4,
+            -0.017_049_1,
+            -0.009_234_5,
+            0.015_043_6,
+            0.752_131_6,
+        ];
+        let chad = tag(b"chad") + 8;
+        for (i, expected) in bradford.into_iter().enumerate() {
+            let value = f64::from(be(chad + 4 * i).cast_signed()) / 65536.0;
+            assert!((value - expected).abs() < 2e-3, "chad[{i}] = {value}, want {expected}");
+        }
+    }
+
     #[test]
     fn srgb_profile_is_stable() {
         let icc = srgb_profile().unwrap();

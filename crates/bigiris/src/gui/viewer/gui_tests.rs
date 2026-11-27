@@ -28,17 +28,16 @@ pub(super) fn wait(context: &glib::MainContext, what: &str, condition: &dyn Fn()
     }
 }
 
-fn window_scroll_controller(window: &adw::ApplicationWindow) -> gtk::EventControllerScroll {
-    let controllers = window.observe_controllers();
-    (0..controllers.n_items())
+/// `true` when the canvas wheel controller swallowed a wheel step. It sits
+/// on the picture's scroller, so a wheel over the edit panel or the film
+/// strip, overlays beside it, never reaches it.
+fn wheel_is_consumed(state: &Rc<RefCell<ViewerState>>) -> bool {
+    let controllers = state.borrow().scroller.observe_controllers();
+    let wheel = (0..controllers.n_items())
         .filter_map(|i| controllers.item(i).and_downcast::<gtk::EventControllerScroll>())
         .next()
-        .expect("window wheel controller")
-}
-
-/// `true` when the wheel controller swallowed the event.
-fn wheel_is_consumed(window: &adw::ApplicationWindow) -> bool {
-    window_scroll_controller(window).emit_by_name::<bool>("scroll", &[&0.0f64, &1.0f64])
+        .expect("canvas wheel controller");
+    wheel.emit_by_name::<bool>("scroll", &[&0.0f64, &1.0f64])
 }
 
 fn thumb_size(state: &Rc<RefCell<ViewerState>>, offset: usize) -> Option<(i32, i32)> {
@@ -67,17 +66,20 @@ fn viewer_review_fixes() {
 
     // Start page: the wheel scrolls the page instead of zooming nothing.
     {
-        let (window, _state) = build_window_tracked(&app, Rc::new(Vec::new()), 0);
+        let (window, start_page) = build_window_tracked(&app, Rc::new(Vec::new()), 0);
         window.present();
         settle(&context, 100);
-        assert!(!wheel_is_consumed(&window), "start page wheel was swallowed");
+        assert!(
+            !wheel_is_consumed(&start_page.upgrade().unwrap()),
+            "start page wheel was swallowed"
+        );
         window.destroy();
     }
 
     // A 1 × 65535 image first, then 42 ordinary ones: 43 files.
     let tall = dir.path().join("tall.png");
     image::GrayImage::from_pixel(1, 65_535, image::Luma([200])).save(&tall).unwrap();
-    let mut files = vec![tall.clone()];
+    let mut files = vec![tall];
     for i in 0..42 {
         let path = dir.path().join(format!("img-{i:02}.png"));
         image::RgbImage::from_pixel(60, 40, image::Rgb([i as u8 * 5, 80, 120]))
@@ -98,12 +100,31 @@ fn viewer_review_fixes() {
     wait(&context, "ordinary thumbnail", &|| thumb_size(&state, 2).is_some());
     assert_eq!(thumb_size(&state, 2), Some((60, 40)), "small image was upscaled");
 
+    // The OSD line shows the zoom of the frame on screen, not the last one:
+    // with nothing cached, the frame arrives after the pulse.
+    state.borrow_mut().frame_cache.clear();
+    navigate_relative(&state, -1);
+    wait(&context, "tall frame", &|| {
+        let s = state.borrow();
+        s.current_ready && s.idx == 0
+    });
+    {
+        let s = state.borrow();
+        let (osd, zoom) = (s.osd_label.label(), s.zoom_level.label());
+        assert!(osd.ends_with(zoom.as_str()), "OSD {osd:?}, header {zoom:?}");
+    }
+    navigate_relative(&state, 1);
+    wait(&context, "back to the first", &|| {
+        let s = state.borrow();
+        s.current_ready && s.idx == 1
+    });
+
     // Finding 3: with an image the wheel zooms; with a dialog it does not.
-    assert!(wheel_is_consumed(&window), "wheel no longer zooms the image");
+    assert!(wheel_is_consumed(&state), "wheel no longer zooms the image");
     present_shortcuts_dialog(&window);
     settle(&context, 100);
     assert!(window.visible_dialog().is_some());
-    assert!(!wheel_is_consumed(&window), "wheel zoomed behind the shortcuts dialog");
+    assert!(!wheel_is_consumed(&state), "wheel zoomed behind the shortcuts dialog");
     window.visible_dialog().unwrap().close();
     settle(&context, 300);
     set_zoom(&state, ZoomState::Fit);
@@ -380,7 +401,7 @@ fn viewer_second_review_fixes() {
             .unwrap();
     }
     let pair = vec![png.clone(), gif.clone()];
-    let (window, witness) = build_window_tracked(&app, Rc::new(pair.clone()), 0);
+    let (window, witness) = build_window_tracked(&app, Rc::new(pair), 0);
     window.present();
     let state = witness.upgrade().unwrap();
     wait(&context, "png frame", &|| state.borrow().current_ready);
@@ -480,6 +501,18 @@ fn viewer_second_review_fixes() {
         metadata_loss_notice(&[bigimage_core::MetadataLoss::ExifUnsupported]).unwrap()
     );
     assert!(state.borrow().osd_revealer.reveals_child(), "notice not shown");
+
+    // Closing with unsaved edits offers Save: after the save confirmation
+    // the file holds the edit and the window closes.
+    apply_edit(&state, EditOp::RotateCw);
+    wait(&context, "edit before closing", &|| state.borrow().current_ready);
+    window.close();
+    settle(&context, 100);
+    answer(&window, "save");
+    settle(&context, 100);
+    answer(&window, "save");
+    wait(&context, "saved and closed", &|| !window.is_visible());
+    assert_eq!(image::image_dimensions(&bmp).unwrap(), (24, 16), "the second turn was saved");
     drop(state);
     window.destroy();
     drop(window);
@@ -597,12 +630,18 @@ fn viewer_inline_crop() {
     for name in ["next", "rotate-cw", "save-edits", "trash", "crop"] {
         assert!(!action_enabled(&window, name), "{name} stays enabled while cropping");
     }
+    // Return and the arrows act on the selection, wherever the focus was.
+    let area: gtk::Widget = state.borrow().crop_ui.area.clone().upcast();
+    assert_eq!(gtk::prelude::GtkWindowExt::focus(&window), Some(area));
 
     // Arrow keys and the wheel do not navigate or zoom under the selection.
     handle_key(&state, gdk::Key::Right, gdk::ModifierType::empty());
     assert_eq!(state.borrow().idx, 0, "navigated while cropping");
-    assert!(wheel_is_consumed(&window));
-    assert!(matches!(state.borrow().zoom, ZoomState::Fit), "zoomed while cropping");
+    assert!(wheel_is_consumed(&state));
+    settle(&context, 300);
+    let s = state.borrow();
+    assert!(matches!(s.zoom, ZoomState::Fit) && s.pending_zoom.is_none(), "zoomed while cropping");
+    drop(s);
 
     // Keyboard selection: Shift+arrows move the bottom-right corner and
     // arrows move the selection, one step being 1 % of 400 px.
@@ -630,16 +669,65 @@ fn viewer_inline_crop() {
     assert!(window.is_visible(), "Esc closed the window instead of leaving crop");
     assert!(action_enabled(&window, "next"), "actions not restored after cancel");
 
+    // A frame still loading refuses the crop with a word, not silently.
+    state.borrow_mut().current_ready = false;
+    super::crop::enter(&state);
+    assert!(state.borrow().crop.is_none());
+    assert_eq!(state.borrow().osd_label.label(), gettext("Wait for the image to finish loading"));
+    state.borrow_mut().current_ready = true;
+
+    // Entering with View original on draws the selection over the edited
+    // image, and the picture shows it again.
+    apply_edit(&state, EditOp::FlipH);
+    wait(&context, "flipped", &|| state.borrow().current_ready);
+    let edited = state.borrow().texture.clone().unwrap();
+    let original = state.borrow().edit_ui.original_button();
+    original.set_active(true);
+    let picture = state.borrow().picture.clone();
+    wait(&context, "original shown", &|| {
+        picture.paintable().and_downcast::<gdk::Texture>().is_some_and(|t| t != edited)
+    });
+    gtk::prelude::WidgetExt::activate_action(&window, "win.crop", None).unwrap();
+    settle(&context, 100);
+    assert!(!original.is_active(), "View original stayed on in crop mode");
+    assert_eq!(picture.paintable().and_downcast::<gdk::Texture>(), Some(edited));
+    super::crop::cancel(&state);
+    undo_edit(&state);
+    wait(&context, "unflipped", &|| {
+        let s = state.borrow();
+        s.current_ready && s.pending_ops.is_empty()
+    });
+
     // Drag the bottom-right handle to the center: keep the red quadrant.
+    // A double-click outside the selection, where a new one starts, does
+    // not crop; inside it does.
     gtk::prelude::WidgetExt::activate_action(&window, "win.crop", None).unwrap();
     settle(&context, 100);
     drag_selection(&state, (400.0, 300.0), (-200.0, -150.0));
+    let double_click = |natural_point: (f64, f64)| {
+        let (area, fit) = {
+            let s = state.borrow();
+            let natural = s.crop.as_ref().map(|c| c.natural()).unwrap();
+            (s.crop_ui.area.clone(), super::crop::current_fit(&s, natural))
+        };
+        let controllers = area.observe_controllers();
+        let click = (0..controllers.n_items())
+            .filter_map(|i| controllers.item(i).and_downcast::<gtk::GestureClick>())
+            .next()
+            .expect("crop double-click gesture");
+        let x = fit.ox + natural_point.0 * fit.scale;
+        let y = fit.oy + natural_point.1 * fit.scale;
+        click.emit_by_name::<()>("pressed", &[&2i32, &x, &y]);
+    };
+    double_click((300.0, 250.0));
+    settle(&context, 50);
+    assert!(state.borrow().crop.is_some(), "a double-click outside the selection cropped");
     crate::gui::lifecycle_tests::capture_window(&window, "crop-2-selection");
     assert_eq!(
         super::crop::to_pixels(state.borrow().crop.as_ref().map(|c| c.rect()).unwrap(), (400, 300)),
         (0, 0, 200, 150)
     );
-    gtk::prelude::WidgetExt::activate_action(&window, "win.crop-apply", None).unwrap();
+    double_click((100.0, 75.0));
     wait(&context, "cropped frame", &|| {
         let s = state.borrow();
         s.current_ready && s.natural == (200, 150)

@@ -169,7 +169,8 @@ impl Default for EditCache {
 }
 
 impl EditCache {
-    /// Pixel bytes held beyond the two entries that are always kept.
+    /// Pixel bytes of every entry together; only the newest entry and the
+    /// latest heavy result may hold more, since they are never evicted.
     const MAX_BYTES: usize = 1 << 30;
 
     pub(in crate::gui) fn with_budget(budget: usize) -> Self {

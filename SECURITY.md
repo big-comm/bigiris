@@ -61,19 +61,35 @@ For context on what is already defense in depth:
 - Regular inputs limited to 1 GiB, 256 MP and 512 MiB per decoded buffer, in
   the viewer and in conversions alike. The codecs' scratch limits are best
   effort. The executable confines decoding to Bubblewrap processes without
-  network and without access to home/run/etc: `/usr` and the executable are
-  read-only, and only the descriptor of the given image is mounted. `/dev` is
-  remounted read-only and the `/tmp` tmpfs is limited to 64 MiB. `prlimit`
-  enforces 2 GiB of virtual address space, 30 s of CPU, a 60 s supervision
-  deadline, 64 descriptors and a per-output-file limit of 512 MiB plus header.
-  This is not a total RSS/cgroup quota nor a seccomp filter.
-- Service menus written with `O_NOFOLLOW` to prevent following symlinks during
-  `sudo install-integrations --system`.
+  network and without access to home/run/etc: the sandbox root, `/usr`, `/dev`
+  and the executable are read-only, and only the descriptor of the given image
+  is mounted. The `/tmp` tmpfs, the only writable place, is limited to 64 MiB.
+  `prlimit` enforces 2 GiB of virtual address space, 30 s of CPU, a 60 s
+  supervision deadline, 64 descriptors and a per-output-file limit of 512 MiB
+  plus header. `bigiris --self-test` has a worker check from inside the hidden
+  host directories and network; that every mount but `/proc`, `/tmp`,
+  `/dev/pts` and six `/dev` device nodes is read-only; the `/tmp` size, the
+  `prlimit` values, empty capability sets, its own session and the environment
+  (not the parent-death signal, which an LSM domain transition such as
+  Ubuntu's `unpriv_bwrap` clears on exec; the worker still dies with bwrap's
+  PID-namespace init); and that its cgroup, IPC, mount, network, PID
+  and UTS namespaces differ from the caller's, as does its user namespace
+  unless bwrap is installed setuid root (the one way it runs without one).
+  The deadline is the caller's and is tested there. This is not a total
+  RSS/cgroup quota nor a seccomp filter.
+- Service menus replace their target by renaming a sibling temporary file,
+  which never writes through a symlink. When a package stages them
+  (`install-integrations --system --destdir`, the only system-scope form), a
+  symlink at a target name is refused; a user install writes through a link
+  only to a regular file the same user owns.
 - Nothing is downloaded: the application has no network client. The AI weights
-  come only from the optional `birefnet-native`, `realesrgan-native`,
+  come from the optional `birefnet-native`, `realesrgan-native`,
   `scunet-native` and `lama-native` packages, read from
   `/usr/share/<package>/`, and all four have FOSS licenses (MIT, BSD-3-Clause,
-  Apache-2.0).
+  Apache-2.0). For development, the `BIGIRIS_*_WEIGHTS` variables point a
+  model at another file in every build; they are read from the user's own
+  environment, which already runs code as that user, so they cross no trust
+  boundary.
 - Thunar UCA commands wrapped in `sh -c '… "$@"' …` so that file names are not
   reinterpreted by the shell.
 
@@ -100,8 +116,8 @@ Each model estimates the memory it needs (weights and fixed buffers at load;
 network and image buffers at each run, with a margin over the measured peaks)
 and checks it before loading and before each run; it considers MemAvailable,
 the limits of the cgroup v2 ancestors and RLIMIT_AS. Swap does not count. The
-weights come only from the system packages (`/usr/share/<package>`), never from
-the network. The policy is not an RSS quota, does not cover cgroup v1 or GPU
+weights come from the system packages (`/usr/share/<package>`) or a
+`BIGIRIS_*_WEIGHTS` file, never from the network. The policy is not an RSS quota, does not cover cgroup v1 or GPU
 memory, and does not remove competition for memory after the check. Inference
 stays in the main process. A smaller model needs its own measurements before it
 is offered for 4 GB machines.

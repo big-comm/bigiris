@@ -32,6 +32,17 @@ const EXTENT_BG_PRESETS: &[(&str, [u8; 4])] = &[
 const EXTENT_GRAVITIES: &[(&str, Gravity)] =
     &[(n_("Center"), Gravity::Center), (n_("Top"), Gravity::North), (n_("Bottom"), Gravity::South)];
 
+/// The bars an output in `format` gets: transparent ones come out white
+/// where the format keeps no alpha, as the JPEG and PNM encoders flatten
+/// them, so every such format and the preview agree.
+fn written_background(background: [u8; 4], format: Option<Format>) -> [u8; 4] {
+    if background[3] == 0 && format.is_some_and(|format| !format.stores_alpha()) {
+        [0xFF; 4]
+    } else {
+        background
+    }
+}
+
 /// Run the "Letterbox" modal. Returns GTK's exit code.
 pub fn run_extent_dialog(files: Vec<PathBuf>) -> i32 {
     let files = Rc::new(files);
@@ -63,15 +74,9 @@ fn fill_extent_dialog(
         &gettext("Prisma · no cropping"),
     )));
 
-    let content_h = padded_box(gtk::Orientation::Horizontal, 16);
-
     let natural = preview_session.as_ref().map(|s| s.natural_size()).unwrap_or((1, 1));
 
-    let form_col = gtk::Box::builder()
-        .orientation(gtk::Orientation::Vertical)
-        .spacing(12)
-        .width_request(380)
-        .build();
+    let form_col = padded_box(gtk::Orientation::Vertical, 12);
 
     let intro = gtk::Label::builder()
         .label(gettext(
@@ -155,27 +160,27 @@ fn fill_extent_dialog(
     group.add(&target_row);
     group.add(&overwrite_row);
 
+    let alpha_banner = adw::Banner::builder()
+        .title(gettext("This format cannot store transparency: the bars will be white."))
+        .use_markup(false)
+        .revealed(false)
+        .build();
+    form_col.append(&alpha_banner);
     form_col.append(&intro);
     form_col.append(&group);
 
     let status = status_label();
-    form_col.append(&status);
 
     let (cancel_btn, apply_btn, actions) = action_buttons(&gettext("Extend"));
-    form_col.append(&actions);
-
-    content_h.append(&form_col);
 
     // Live preview on the right, driven by PreviewOp::Extent.
-    let picture_opt = if let Some(sess) = preview_session.as_ref() {
-        let (picture, column) = build_preview_column(sess);
-        content_h.append(&column);
-        Some(picture)
-    } else {
-        None
-    };
-
-    set_dialog_content(&window, &header, &content_h);
+    let picture_opt = set_preview_dialog_content(
+        &window,
+        &header,
+        &form_col,
+        &[status.upcast_ref(), actions.upcast_ref()],
+        preview_session.as_deref(),
+    );
 
     // Shared closure that reads every control and produces an ExtentOptions
     // (or None if the form is in an invalid state — e.g. malformed hex).
@@ -216,17 +221,21 @@ fn fill_extent_dialog(
     // Refresh the predicted-size row and the preview painting on every
     // control change. Errors (bad hex) surface in the status label.
     let refresh = {
-        let session_opt = preview_session.clone();
-        let picture_opt = picture_opt.clone();
-        let predicted_row = predicted_row.clone();
+        let session_opt = preview_session;
         let status = status.clone();
         let build_opts = build_opts.clone();
+        let target_row = target_row.clone();
         move || match build_opts() {
-            Ok(opts) => {
+            Ok(mut opts) => {
+                let format = selected_target_format(&target_row)
+                    .or_else(|| session_opt.as_ref().map(|session| session.source_format()));
+                let written = written_background(opts.background, format);
+                alpha_banner.set_revealed(written != opts.background);
+                opts.background = written;
                 let (nw, nh) = match opts.size.resolve(natural.0, natural.1) {
                     Ok(d) => d,
                     Err(e) => {
-                        status.set_text(&e.to_string());
+                        status.set_text(&core_error_text(&e));
                         predicted_row.set_subtitle(&gettext("—"));
                         return;
                     }
@@ -285,6 +294,10 @@ fn fill_extent_dialog(
         let refresh = refresh.clone();
         dialog_signal!(window, gravity_row, connect_selected_notify, move |_| refresh());
     }
+    {
+        let refresh = refresh.clone();
+        dialog_signal!(window, target_row, connect_selected_notify, move |_| refresh());
+    }
 
     // Initial paint.
     refresh();
@@ -292,14 +305,8 @@ fn fill_extent_dialog(
     close_on_click(&window, &cancel_btn);
 
     {
-        let files = files.clone();
-        let build_opts = build_opts.clone();
-        let target_row = target_row.clone();
-        let overwrite_row = overwrite_row.clone();
-        let status = status.clone();
-        let apply_btn = apply_btn.clone();
         let window = window.clone();
-        dialog_signal!(window, apply_btn.clone(), connect_clicked, move |_| {
+        dialog_signal!(window, apply_btn, connect_clicked, move |_| {
             let opts = match build_opts() {
                 Ok(opts) => opts,
                 Err(e) => {
@@ -316,7 +323,21 @@ fn fill_extent_dialog(
             let work_files: Vec<PathBuf> = (*files).clone();
             run_batch_async(
                 work_files,
-                move |f| extent_file(f, opts, target, policy),
+                crate::output_plan::Naming::image(
+                    target,
+                    policy,
+                    match opts.size.filename_suffix() {
+                        Some(suffix) => crate::output_plan::OutputSuffix::Fixed(suffix),
+                        None => crate::output_plan::OutputSuffix::PerImage(
+                            bigimage_core::extent::EXTENT_SUFFIX,
+                        ),
+                    },
+                ),
+                move |f| {
+                    let format = target.or_else(|| bigimage_core::sniff_format(f));
+                    let background = written_background(opts.background, format);
+                    extent_file(f, ExtentOptions { background, ..opts }, target, policy)
+                },
                 gettext("Extending"),
                 status.clone(),
                 apply_btn.clone(),
@@ -326,4 +347,20 @@ fn fill_extent_dialog(
     }
 
     window
+}
+
+#[cfg(test)]
+mod background_tests {
+    use super::*;
+
+    #[test]
+    fn transparent_bars_white_without_alpha() {
+        let clear = [0, 0, 0, 0];
+        assert_eq!(written_background(clear, Some(Format::Jpeg)), [0xFF; 4]);
+        assert_eq!(written_background(clear, Some(Format::Hdr)), [0xFF; 4]);
+        assert_eq!(written_background(clear, Some(Format::Png)), clear);
+        assert_eq!(written_background(clear, None), clear);
+        let black = [0, 0, 0, 0xFF];
+        assert_eq!(written_background(black, Some(Format::Jpeg)), black);
+    }
 }

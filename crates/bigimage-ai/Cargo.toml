@@ -29,3 +29,6 @@ lama-native = { workspace = true, optional = true }
 default = []
 # Native inference (remove background, upscale, denoise, inpaint).
 native = ["dep:birefnet-native", "dep:realesrgan-native", "dep:scunet-native", "dep:lama-native"]
+
+[lints]
+workspace = true

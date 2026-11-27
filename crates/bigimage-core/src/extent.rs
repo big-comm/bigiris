@@ -11,10 +11,10 @@
 
 use std::path::Path;
 
-use image::{imageops, DynamicImage, ImageBuffer, Rgba};
+use image::{DynamicImage, ImageBuffer, Rgba, imageops};
 
 use crate::convert::{ConvertOutcome, OverwritePolicy};
-use crate::{pipeline, BigImageError, EncodeOptions, Format, Result};
+use crate::{BigImageError, EncodeOptions, Format, Result, pipeline};
 
 /// Target size, either explicit or derived from an aspect ratio applied
 /// to the source dimensions.
@@ -39,10 +39,26 @@ pub enum ExtentSize {
 }
 
 impl ExtentSize {
+    /// What [`extent_file`] appends to the input's stem, when every image
+    /// gets the same canvas; an aspect target names each output after its
+    /// own canvas (see [`EXTENT_SUFFIX`]).
+    pub fn filename_suffix(&self) -> Option<String> {
+        match *self {
+            ExtentSize::Exact { width, height } => Some(filename_suffix(width, height)),
+            ExtentSize::Aspect { .. } => None,
+        }
+    }
+
     /// Resolve to concrete `(width, height)` against a `(src_w, src_h)`.
     /// Validates that the resolved canvas can contain the source — extent
     /// is an extend-only operation; smaller targets are rejected so users
     /// don't silently lose pixels.
+    ///
+    /// # Errors
+    ///
+    /// [`BigImageError::InvalidInput`] when the source, the target size or the
+    /// ratio has a zero term, the target is smaller than the source, or the
+    /// canvas does not fit in `u32`.
     pub fn resolve(self, src_w: u32, src_h: u32) -> Result<(u32, u32)> {
         if src_w == 0 || src_h == 0 {
             return Err(BigImageError::InvalidInput(format!(
@@ -185,29 +201,36 @@ impl ExtentOptions {
 /// Parse a hex colour string (`#RRGGBB` or `#RRGGBBAA`, with or without
 /// leading `#`) into RGBA bytes. Returns a user-friendly error string for
 /// CLI/GUI surfacing.
+///
+/// # Errors
+///
+/// A message for the user when `s` does not hold 6 or 8 hex digits.
+#[expect(
+    clippy::missing_panics_doc,
+    reason = "the expects only see digit pairs already checked to be ASCII hex"
+)]
 pub fn parse_hex_color(s: &str) -> std::result::Result<[u8; 4], String> {
-    let stripped = s.strip_prefix('#').unwrap_or(s);
-    let bytes: Vec<u8> = match stripped.len() {
-        6 | 8 => stripped
-            .as_bytes()
-            .chunks(2)
-            .map(|c| {
-                let pair = std::str::from_utf8(c).map_err(|_| ())?;
-                u8::from_str_radix(pair, 16).map_err(|_| ())
-            })
-            .collect::<std::result::Result<Vec<u8>, ()>>()
-            .map_err(|_| format!("invalid hex color: {s:?}; use digits 0-9 a-f"))?,
-        _ => {
-            return Err(format!(
-                "invalid hex color: {s:?}; use #RRGGBB or #RRGGBBAA (6 or 8 digits)"
-            ));
-        }
+    let digits = s.strip_prefix('#').unwrap_or(s).as_bytes();
+    if !matches!(digits.len(), 6 | 8) {
+        return Err(format!("invalid hex color: {s:?}; use #RRGGBB or #RRGGBBAA (6 or 8 digits)"));
+    }
+    // `from_str_radix` alone would accept a sign: "+f" parses as 15.
+    if !digits.iter().all(u8::is_ascii_hexdigit) {
+        return Err(format!("invalid hex color: {s:?}; use digits 0-9 a-f"));
+    }
+    let value = |pair: &[u8]| {
+        let text = std::str::from_utf8(pair).expect("ASCII hex digits");
+        u8::from_str_radix(text, 16).expect("two hex digits")
     };
-    let alpha = if bytes.len() == 4 { bytes[3] } else { 0xFF };
-    Ok([bytes[0], bytes[1], bytes[2], alpha])
+    let alpha = if digits.len() == 8 { value(&digits[6..8]) } else { 0xFF };
+    Ok([value(&digits[0..2]), value(&digits[2..4]), value(&digits[4..6]), alpha])
 }
 
 /// Extend the canvas of a file and write it next to the source.
+///
+/// # Errors
+///
+/// As [`extent_file_with_options`].
 pub fn extent_file(
     input: impl AsRef<Path>,
     opts: ExtentOptions,
@@ -218,6 +241,11 @@ pub fn extent_file(
 }
 
 /// Like [`extent_file`], with caller-supplied encoder options.
+///
+/// # Errors
+///
+/// [`BigImageError::InvalidInput`] when [`ExtentSize::resolve`] refuses the
+/// size; otherwise as [`crate::transform_file`].
 pub fn extent_file_with_options(
     input: impl AsRef<Path>,
     opts: ExtentOptions,
@@ -239,12 +267,15 @@ pub fn extent_file_with_options(
         }
     }
 
-    let (src, src_format) = pipeline::decode_with_source_format(input)?;
-    let target = target.unwrap_or(src_format);
+    let keeps_format = pipeline::keeps_format(input, target);
+    let (src, target) = pipeline::decode_for_target(input, target)?;
 
     let (nw, nh) = opts.size.resolve(src.width(), src.height())?;
     let suffix = filename_suffix(nw, nh);
-    let output = pipeline::resolve_output(input, Some(&suffix), target, policy)?;
+    let output = pipeline::resolve_output(input, Some(&suffix), target)?;
+    if keeps_format && (nw, nh) == (src.width(), src.height()) {
+        return Ok(ConvertOutcome::Unchanged { output });
+    }
 
     if pipeline::existing_output(&output, target, policy) {
         tracing::debug!(?output, "extent: skipping existing output");
@@ -263,6 +294,11 @@ pub fn extent_file_with_options(
 /// channel is only added when the source has one or the background is not
 /// fully opaque. Float canvases receive the background in linear light,
 /// matching the linear convention used for float images.
+///
+/// # Errors
+///
+/// [`BigImageError::InvalidInput`] when [`ExtentSize::resolve`] refuses the
+/// size for `src`.
 pub fn apply_to(src: &DynamicImage, opts: &ExtentOptions) -> Result<DynamicImage> {
     use image::ColorType;
     let (sw, sh) = (src.width(), src.height());
@@ -290,7 +326,7 @@ pub fn apply_to(src: &DynamicImage, opts: &ExtentOptions) -> Result<DynamicImage
     let (dx, dy) = (i64::from(dx), i64::from(dy));
 
     macro_rules! compose {
-        ($pixel:expr, $convert:ident, $variant:ident) => {{
+        ($pixel:expr_2021, $convert:ident, $variant:ident) => {{
             let mut canvas = ImageBuffer::from_pixel(nw, nh, $pixel);
             imageops::overlay(&mut canvas, &src.$convert(), dx, dy);
             DynamicImage::$variant(canvas)
@@ -299,11 +335,7 @@ pub fn apply_to(src: &DynamicImage, opts: &ExtentOptions) -> Result<DynamicImage
     let wide = |v: u8| u16::from(v) * 257;
     let linear = |v: u8| {
         let v = f32::from(v) / 255.0;
-        if v <= 0.040_45 {
-            v / 12.92
-        } else {
-            ((v + 0.055) / 1.055).powf(2.4)
-        }
+        if v <= 0.040_45 { v / 12.92 } else { ((v + 0.055) / 1.055).powf(2.4) }
     };
     use image::{Luma, LumaA, Rgb};
     Ok(match (depth, channels) {
@@ -324,8 +356,12 @@ pub fn apply_to(src: &DynamicImage, opts: &ExtentOptions) -> Result<DynamicImage
     })
 }
 
+/// Start of what [`extent_file`] appends to the input's stem:
+/// `_extent-<width>x<height>`, the canvas it wrote.
+pub const EXTENT_SUFFIX: &str = "_extent-";
+
 fn filename_suffix(width: u32, height: u32) -> String {
-    format!("_extent-{width}x{height}")
+    format!("{EXTENT_SUFFIX}{width}x{height}")
 }
 
 #[cfg(test)]
@@ -351,9 +387,11 @@ mod tests {
 
     #[test]
     fn parse_hex_rejects_bad_input() {
-        assert!(parse_hex_color("#zzz").is_err());
-        assert!(parse_hex_color("#12345").is_err());
-        assert!(parse_hex_color("notacolor").is_err());
+        for input in
+            ["#zzz", "#12345", "notacolor", "+f+f+f", "#+1+2+3+4", "#1234", "#1234567890", "ééé"]
+        {
+            assert!(parse_hex_color(input).is_err(), "{input:?}");
+        }
     }
 
     #[test]
@@ -464,6 +502,21 @@ mod tests {
         assert_eq!(out, dir.path().join("in_extent-10x10.png"));
         let img = image::open(&out).unwrap();
         assert_eq!((img.width(), img.height()), (10, 10));
+    }
+
+    /// A canvas the image already has, in its own format, changes nothing.
+    #[test]
+    fn extent_to_own_ratio_writes_nothing() {
+        let dir = TempDir::new().unwrap();
+        let src = write_fixture(dir.path(), "sq.png", 6, 6, [9, 9, 9]);
+        for size in [ExtentSize::Aspect { w: 1, h: 1 }, ExtentSize::Exact { width: 6, height: 6 }] {
+            let opts =
+                ExtentOptions { size, background: [0, 0, 0, 0xFF], gravity: Gravity::Center };
+            let outcome = extent_file(&src, opts, None, OverwritePolicy::Replace).unwrap();
+            let output = dir.path().join("sq_extent-6x6.png");
+            assert_eq!(outcome, ConvertOutcome::Unchanged { output });
+        }
+        assert_eq!(std::fs::read_dir(dir.path()).unwrap().count(), 1, "something was written");
     }
 
     #[test]

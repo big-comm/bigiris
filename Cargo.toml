@@ -1,5 +1,5 @@
 [workspace]
-resolver = "2"
+resolver = "3"
 members = [
     "crates/bigimage-core",
     "crates/bigimage-ai",
@@ -9,7 +9,7 @@ members = [
 
 [workspace.package]
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 rust-version = "1.95"
 license = "GPL-3.0-or-later"
 authors = ["Leonardo Athayde <leoathayde@gmail.com>"]
@@ -83,3 +83,41 @@ opt-level = 3
 # AvifDecoder::new spin forever. Drop this once image > 0.25.10 ships the fix.
 [patch.crates-io]
 image = { path = "third_party/image" }
+
+[workspace.lints.rust]
+deprecated = "deny"
+unsafe_op_in_unsafe_fn = "deny"
+
+[workspace.lints.cargo]
+unused_dependencies = "deny"
+
+[workspace.lints.clippy]
+dbg_macro = "deny"
+todo = "deny"
+unimplemented = "deny"
+exit = "deny"
+undocumented_unsafe_blocks = "deny"
+unnecessary_safety_comment = "deny"
+unwrap_used = "deny"
+allow_attributes_without_reason = "deny"
+unused_result_ok = "warn"
+significant_drop_in_scrutinee = "warn"
+unchecked_time_subtraction = "warn"
+read_zero_byte_vec = "warn"
+path_buf_push_overwrite = "warn"
+debug_assert_with_mut_call = "warn"
+unused_peekable = "warn"
+redundant_clone = "warn"
+implicit_clone = "warn"
+cloned_instead_of_copied = "warn"
+inefficient_to_string = "warn"
+unnecessary_join = "warn"
+manual_instant_elapsed = "warn"
+large_futures = "warn"
+cast_lossless = "warn"
+non_std_lazy_statics = "warn"
+missing_errors_doc = "warn"
+missing_panics_doc = "warn"
+ignore_without_reason = "warn"
+should_panic_without_expect = "warn"
+redundant_test_prefix = "warn"

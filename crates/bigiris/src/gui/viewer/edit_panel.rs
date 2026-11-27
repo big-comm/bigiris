@@ -50,8 +50,7 @@ const SAVE_QUALITIES: [(SaveQuality, &str); 3] = [
 
 /// Encoder options for "Save as…": the smallest file that keeps the
 /// chosen visual quality (SSIMULACRA2 target), like the Prisma converter.
-pub(in crate::gui) fn save_as_options(format: Format, quality: SaveQuality) -> EncodeOptions {
-    let _ = format;
+pub(in crate::gui) fn save_as_options(quality: SaveQuality) -> EncodeOptions {
     let target = match quality {
         SaveQuality::Max => bigimage_core::QualityTarget::Maximum,
         SaveQuality::Balanced => bigimage_core::QualityTarget::Balanced,
@@ -243,20 +242,12 @@ fn size_spin(tooltip: &str) -> gtk::SpinButton {
 }
 
 fn signed(value: i32) -> String {
-    if value > 0 {
-        format!("+{value}")
-    } else {
-        value.to_string()
-    }
+    if value > 0 { format!("+{value}") } else { value.to_string() }
 }
 
 fn degrees_label(tenths: i32) -> String {
     let degrees = f64::from(tenths) / 10.0;
-    if tenths > 0 {
-        format!("+{degrees:.1}°")
-    } else {
-        format!("{degrees:.1}°")
-    }
+    if tenths > 0 { format!("+{degrees:.1}°") } else { format!("{degrees:.1}°") }
 }
 
 /// What the AI tools need before they can all run, or `None`.
@@ -341,6 +332,16 @@ pub(in crate::gui) fn build() -> EditPanelUi {
     transform.append(&crop);
 
     let adjust = section(&gettext("Adjustments"));
+    // The sliders edit the last adjustment only: after another edit they
+    // read 0 again while the earlier adjustment stays applied.
+    let adjust_note = gtk::Label::builder()
+        .label(gettext("Applies on top of earlier edits"))
+        .wrap(true)
+        .xalign(0.0)
+        .build();
+    adjust_note.add_css_class("dim-label");
+    adjust_note.add_css_class("caption");
+    adjust.append(&adjust_note);
     let (brightness_row, brightness) = slider(&gettext("Brightness"), -100.0, 100.0, 1.0, 0.0);
     let (contrast_row, contrast) = slider(&gettext("Contrast"), -100.0, 100.0, 1.0, 0.0);
     let (saturation_row, saturation) = slider(&gettext("Saturation"), -100.0, 100.0, 1.0, 0.0);
@@ -449,6 +450,7 @@ pub(in crate::gui) fn build() -> EditPanelUi {
         .propagate_natural_height(true)
         .child(&content)
         .build();
+    crate::gui::scroll_on_wheel(&scroll, gtk::Orientation::Vertical);
     let frame = gtk::Box::new(gtk::Orientation::Vertical, 0);
     frame.add_css_class("osd");
     frame.add_css_class("edit-panel");
@@ -528,6 +530,20 @@ impl EditPanelUi {
         g.reset.set_sensitive(values.gamma_pct != neutral.gamma_pct);
         self.straighten.value.set_text(&degrees_label(tenths));
         self.straighten.reset.set_sensitive(tenths != 0);
+        self.sync_reset_all();
+    }
+
+    /// Reset adjustments works only on sliders away from neutral that the
+    /// panel lets the user move.
+    fn sync_reset_all(&self) {
+        let usable = self.sliders[0].scale.is_sensitive();
+        self.reset_all.set_sensitive(usable && self.values() != AdjustValues::NEUTRAL);
+    }
+
+    /// Apply resizes only to a size other than the image's own.
+    fn sync_resize_apply(&self, natural: (u32, u32)) {
+        let size = (self.width.value() as u32, self.height.value() as u32);
+        self.resize_apply.set_sensitive(self.width.is_sensitive() && size != natural);
     }
 
     /// Move the sliders without treating it as user input.
@@ -568,7 +584,11 @@ struct Handles {
     scales: [gtk::Scale; 5],
     width: gtk::SpinButton,
     height: gtk::SpinButton,
+    lock: gtk::ToggleButton,
+    percent: gtk::SpinButton,
     save_as: gtk::Button,
+    quality: gtk::DropDown,
+    factor: gtk::DropDown,
     resize_apply: gtk::Button,
     remove_bg: gtk::Button,
     denoise: gtk::Button,
@@ -596,7 +616,11 @@ fn handles(s: &ViewerState) -> Handles {
         ],
         width: ui.width.clone(),
         height: ui.height.clone(),
+        lock: ui.lock.clone(),
+        percent: ui.percent.clone(),
         save_as: ui.save_as.clone(),
+        quality: ui.quality.clone(),
+        factor: ui.factor.clone(),
         resize_apply: ui.resize_apply.clone(),
         remove_bg: ui.remove_bg.clone(),
         denoise: ui.denoise.clone(),
@@ -732,6 +756,15 @@ pub(in crate::gui) fn connect(state: &Rc<RefCell<ViewerState>>, window: &adw::Ap
         });
     }
 
+    // Size fields: Apply follows whether the size differs from the image.
+    for spin in [ui.width.clone(), ui.height.clone()] {
+        let weak = Rc::downgrade(state);
+        spin.connect_value_changed(move |_| {
+            if let Some(Ok(s)) = weak.upgrade().as_ref().map(|state| state.try_borrow()) {
+                s.edit_ui.sync_resize_apply(s.natural);
+            }
+        });
+    }
     // Size fields: the lock keeps the proportion of the current image.
     for width_changed in [true, false] {
         let spin = if width_changed { ui.width.clone() } else { ui.height.clone() };
@@ -757,7 +790,6 @@ pub(in crate::gui) fn connect(state: &Rc<RefCell<ViewerState>>, window: &adw::Ap
     }
     {
         let weak = Rc::downgrade(state);
-        let syncing = syncing.clone();
         let percent = state.borrow().edit_ui.percent.clone();
         percent.connect_value_changed(move |percent| {
             if syncing.get() {
@@ -833,10 +865,10 @@ pub(in crate::gui) fn connect(state: &Rc<RefCell<ViewerState>>, window: &adw::Ap
     {
         let weak = Rc::downgrade(state);
         keys.connect_key_released(move |_, key, _, _| {
-            if key == gdk::Key::backslash {
-                if let Some(state) = weak.upgrade() {
-                    show_original(&state, Source::Key, false);
-                }
+            if key == gdk::Key::backslash
+                && let Some(state) = weak.upgrade()
+            {
+                show_original(&state, Source::Key, false);
             }
         });
     }
@@ -870,9 +902,10 @@ fn set_open(state: &Rc<RefCell<ViewerState>>, open: bool) {
     }
     if !open {
         flush_commit(state);
-        let original = state.borrow().edit_ui.original.clone();
-        original.set_active(false);
-        show_original(state, Source::Key, false);
+        hide_original(state);
+        // Give the AI models' memory (and GPU) back; unloading waits for a
+        // run in progress, so it stays off the main loop.
+        std::thread::spawn(bigimage_ai::unload_all);
     }
     refresh(state);
     sync_sensitivity(state);
@@ -882,11 +915,11 @@ fn set_open(state: &Rc<RefCell<ViewerState>>, open: bool) {
 /// Toggle through the action, as the header button and `E` do.
 pub(in crate::gui) fn toggle(state: &Rc<RefCell<ViewerState>>) {
     let window = state.borrow().window();
-    if let Some(action) = window.lookup_action("edit-panel") {
-        if action.is_enabled() {
-            let open = action.state().and_then(|v| v.get::<bool>()).unwrap_or(false);
-            action.change_state(&(!open).to_variant());
-        }
+    if let Some(action) = window.lookup_action("edit-panel")
+        && action.is_enabled()
+    {
+        let open = action.state().and_then(|v| v.get::<bool>()).unwrap_or(false);
+        action.change_state(&(!open).to_variant());
     }
 }
 
@@ -991,14 +1024,25 @@ pub(in crate::gui) fn sync_sensitivity(state: &Rc<RefCell<ViewerState>>) {
     for scale in &ui.scales {
         scale.set_sensitive(usable);
     }
-    ui.width.set_sensitive(usable);
-    ui.height.set_sensitive(usable);
-    ui.resize_apply.set_sensitive(usable);
-    ui.save_as.set_sensitive(usable);
-    ui.original.set_sensitive(usable);
-    ui.upscale.set_sensitive(usable);
+    for widget in [
+        ui.width.upcast_ref::<gtk::Widget>(),
+        ui.height.upcast_ref(),
+        ui.lock.upcast_ref(),
+        ui.percent.upcast_ref(),
+        ui.save_as.upcast_ref(),
+        ui.quality.upcast_ref(),
+        ui.original.upcast_ref(),
+        ui.upscale.upcast_ref(),
+        ui.factor.upcast_ref(),
+    ] {
+        widget.set_sensitive(usable);
+    }
     sync_ai_tools(&ui, usable, ai);
     ui.content.set_sensitive(!saving);
+    if let Ok(s) = state.try_borrow() {
+        s.edit_ui.sync_reset_all();
+        s.edit_ui.sync_resize_apply(s.natural);
+    }
 }
 
 /// Availability of the AI tools' weights.
@@ -1113,10 +1157,10 @@ fn settled(s: &ViewerState) -> bool {
 /// slider preview.
 pub(in crate::gui) fn display_override(s: &ViewerState) -> Option<(gdk::Texture, (u32, u32))> {
     let current = s.files.get(s.idx)?;
-    if s.edit.original_button || s.edit.original_key {
-        if let Some(original) = s.edit.original.as_ref().filter(|o| &o.path == current) {
-            return Some((original.texture.clone(), original.natural));
-        }
+    if (s.edit.original_button || s.edit.original_key)
+        && let Some(original) = s.edit.original.as_ref().filter(|o| &o.path == current)
+    {
+        return Some((original.texture.clone(), original.natural));
     }
     s.edit.preview.clone()
 }
@@ -1306,7 +1350,13 @@ fn render_preview(state: &Rc<RefCell<ViewerState>>) {
                 let degrees = f64::from(s.edit.straighten) / 10.0;
                 let (w, h) = base.natural;
                 let natural = bigimage_core::rotate::straightened_size(w, h, degrees);
-                (bigimage_core::rotate::straighten(&source, degrees), natural)
+                match bigimage_core::rotate::straighten(&source, degrees) {
+                    Ok(straightened) => (straightened, natural),
+                    Err(error) => {
+                        tracing::warn!(%error, "straighten preview refused");
+                        return None;
+                    }
+                }
             }
         })
     });
@@ -1458,6 +1508,14 @@ pub(in crate::gui) enum Source {
     Key,
 }
 
+/// Show the edited image again, the toggle off and a held backslash
+/// forgotten.
+pub(in crate::gui) fn hide_original(state: &Rc<RefCell<ViewerState>>) {
+    let original = state.borrow().edit_ui.original.clone();
+    original.set_active(false);
+    show_original(state, Source::Key, false);
+}
+
 /// Show (or stop showing) the unedited image.
 pub(in crate::gui) fn show_original(state: &Rc<RefCell<ViewerState>>, source: Source, on: bool) {
     let need = {
@@ -1491,7 +1549,7 @@ pub(in crate::gui) fn show_original(state: &Rc<RefCell<ViewerState>>, source: So
     let Some(path) = need else { return };
     state.borrow_mut().edit.original_job = Some(path.clone());
     let job_path = path.clone();
-    let job = gio::spawn_blocking(move || decode_frame(&job_path, &[]).map_err(|e| e.to_string()));
+    let job = gio::spawn_blocking(move || decode_frame(&job_path, &[]));
     let weak = Rc::downgrade(state);
     glib::MainContext::default().spawn_local(async move {
         let result = job.await;
@@ -1500,12 +1558,12 @@ pub(in crate::gui) fn show_original(state: &Rc<RefCell<ViewerState>>, source: So
         if s.edit.original_job.as_ref() == Some(&path) {
             s.edit.original_job = None;
         }
-        if let Ok(Ok((raw, w, h, _))) = result {
-            if s.files.get(s.idx) == Some(&path) {
-                let texture = texture_from_rgba(raw, w, h);
-                s.edit.original = Some(Original { path, texture, natural: (w, h) });
-                zoom::apply_zoom(&s);
-            }
+        if let Ok(Ok((raw, w, h, _))) = result
+            && s.files.get(s.idx) == Some(&path)
+        {
+            let texture = texture_from_rgba(raw, w, h);
+            s.edit.original = Some(Original { path, texture, natural: (w, h) });
+            zoom::apply_zoom(&s);
         }
     });
 }
@@ -1595,7 +1653,7 @@ pub(in crate::gui) fn run_tool(state: &Rc<RefCell<ViewerState>>, op: EditOp) {
             };
             let result = crate::codec::with_cancel(cancel.clone(), || {
                 let modified = file_modified(&path);
-                let base = render_cached(&path, &ops, Some(&cache)).map_err(|e| e.to_string())?;
+                let base = render_cached(&path, &ops, Some(&cache))?;
                 if cancel.load(Ordering::Acquire) {
                     return Err(String::new());
                 }
@@ -1760,7 +1818,7 @@ pub(in crate::gui) fn save_copy(state: &Rc<RefCell<ViewerState>>, target: PathBu
         present_copy_failure(state, &SaveFailure::NoEncoder);
         return;
     };
-    let options = save_as_options(format, quality);
+    let options = save_as_options(quality);
     let spinner = {
         let mut s = state.borrow_mut();
         s.saving = true;
@@ -1786,10 +1844,7 @@ pub(in crate::gui) fn save_copy(state: &Rc<RefCell<ViewerState>>, target: PathBu
         match result {
             Ok(dropped) => {
                 adopt_copy(&state, &target);
-                let name = target.file_name().map_or_else(
-                    || target.display().to_string(),
-                    |n| n.to_string_lossy().into_owned(),
-                );
+                let name = crate::codec::printable_name(&target);
                 let notice = metadata_loss_notice(&dropped)
                     .unwrap_or_else(|| fill(&gettext("Copy saved: {name}"), &[("name", &name)]));
                 state.borrow().osd_label.set_text(&notice);
@@ -1812,8 +1867,7 @@ pub(in crate::gui) fn write_copy(
     format: Format,
     options: &EncodeOptions,
 ) -> Result<Vec<bigimage_core::MetadataLoss>, SaveFailure> {
-    let (img, metadata, _) =
-        crate::codec::open_for_resave(source).map_err(SaveFailure::from_image)?;
+    let (img, extras) = crate::codec::open_for_resave(source).map_err(SaveFailure::from_image)?;
     let edited = render_edits(img, ops).map_err(SaveFailure::Other)?;
     let report = bigimage_core::save_image_preserving_metadata_report(
         edited,
@@ -1821,10 +1875,10 @@ pub(in crate::gui) fn write_copy(
         format,
         options,
         OverwritePolicy::Replace,
-        &metadata,
+        &extras.source,
     )
     .map_err(SaveFailure::from_core)?;
-    Ok(report.dropped)
+    Ok([extras.losses(), report.dropped].concat())
 }
 
 fn present_copy_failure(state: &Rc<RefCell<ViewerState>>, failure: &SaveFailure) {
@@ -1977,7 +2031,7 @@ mod tests {
             (SaveQuality::Balanced, QualityTarget::Balanced),
             (SaveQuality::Smallest, QualityTarget::Smallest),
         ] {
-            let opts = save_as_options(Format::WebP, choice);
+            let opts = save_as_options(choice);
             assert_eq!(opts.target, target);
             // A target, not a fixed quality: the encoder searches.
             assert_eq!(opts.quality, None);

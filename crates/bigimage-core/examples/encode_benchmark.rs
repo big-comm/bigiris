@@ -47,8 +47,9 @@ fn score(reference: &RgbaImage, distorted: &RgbaImage) -> Result<f64, Error> {
 
 fn flatten_white(image: &RgbaImage) -> RgbaImage {
     let rgb = composite(image, 255);
-    DynamicImage::ImageRgb8(image::RgbImage::from_raw(image.width(), image.height(), rgb).unwrap())
-        .into_rgba8()
+    let rgb = image::RgbImage::from_raw(image.width(), image.height(), rgb)
+        .expect("composite returns three bytes per pixel");
+    DynamicImage::ImageRgb8(rgb).into_rgba8()
 }
 
 fn synthetic() -> Vec<(String, DynamicImage)> {
@@ -120,11 +121,7 @@ fn old_encoder(image: &DynamicImage, format: Format) -> Result<Option<Vec<u8>>, 
 
 fn reference_for(image: &DynamicImage, format: Format) -> RgbaImage {
     let rgba = image.to_rgba8();
-    if format == Format::Jpeg {
-        flatten_white(&rgba)
-    } else {
-        rgba
-    }
+    if format == Format::Jpeg { flatten_white(&rgba) } else { rgba }
 }
 
 fn bench(name: &str, image: &DynamicImage, dir: &Path) -> Result<(), Error> {

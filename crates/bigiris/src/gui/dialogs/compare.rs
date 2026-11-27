@@ -21,7 +21,7 @@ pub(in crate::gui) fn build_compare_dialog(
     let window = adw::ApplicationWindow::builder()
         .application(app)
         .default_width(1200)
-        .default_height(720)
+        .default_height(640)
         .title(gettext("Compare images — Íris"))
         .build();
 
@@ -29,10 +29,8 @@ pub(in crate::gui) fn build_compare_dialog(
     let right_path = &files[1];
 
     let header = adw::HeaderBar::new();
-    let left_name =
-        left_path.file_name().map(|s| s.to_string_lossy().into_owned()).unwrap_or_default();
-    let right_name =
-        right_path.file_name().map(|s| s.to_string_lossy().into_owned()).unwrap_or_default();
+    let left_name = crate::codec::printable_name(left_path);
+    let right_name = crate::codec::printable_name(right_path);
     let title = adw::WindowTitle::new(
         &gettext("Compare images"),
         &fill(
@@ -74,7 +72,6 @@ pub(in crate::gui) fn build_compare_dialog(
 
     // Position the divider at 50% once the window has real dimensions.
     {
-        let paned = paned.clone();
         let window = window.clone();
         glib::idle_add_local_once(move || {
             let w = window.default_width();
@@ -83,24 +80,6 @@ pub(in crate::gui) fn build_compare_dialog(
             }
         });
     }
-
-    // Keyboard: Esc closes.
-    let key = gtk::EventControllerKey::new();
-    {
-        let window = window.downgrade();
-        key.connect_key_pressed(move |_, k, _, _| {
-            let Some(window) = window.upgrade() else {
-                return glib::Propagation::Proceed;
-            };
-            if matches!(k, gdk::Key::Escape) {
-                window.close();
-                glib::Propagation::Stop
-            } else {
-                glib::Propagation::Proceed
-            }
-        });
-    }
-    window.add_controller(key);
 
     window
 }
@@ -133,7 +112,7 @@ fn make_compare_side(path: &Path, window: &adw::ApplicationWindow) -> gtk::Box {
                     let size = rgba.dimensions();
                     (rgba.into_raw(), size)
                 })
-                .map_err(|e| e.to_string())
+                .map_err(|error| image_error_text(&error))
         })
     });
     let weak_picture = picture.downgrade();

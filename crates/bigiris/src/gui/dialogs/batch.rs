@@ -3,25 +3,18 @@
 
 use super::*;
 
-/// Prisma Batch: converts the files given on the command line, with folders
-/// expanded one level, on the shared parallel pool.
+/// Prisma Batch: converts the files and folders given on the command line
+/// on the shared parallel pool. Folders stay folders until Apply, which
+/// lists their images as the CLI does ([`crate::output_plan::batch_files`]).
 pub fn run_batch_dialog(files: Vec<PathBuf>) -> i32 {
-    let files = Rc::new(RefCell::new(expand_batch_inputs(files)));
-    run_dialog_app(move |app| build_batch_dialog(app, files.clone()).present())
-}
-
-fn expand_batch_inputs(inputs: Vec<PathBuf>) -> Vec<PathBuf> {
-    let mut files = Vec::new();
-    for input in inputs {
-        if input.is_dir() {
-            files.extend(collect_images_in_dir(&input));
-        } else if input.is_file() && is_viewable(&input) {
-            files.push(input);
-        }
-    }
-    files.sort_by(|a, b| a.as_os_str().cmp(b.as_os_str()));
-    files.dedup();
-    files
+    let mut inputs: Vec<PathBuf> = files
+        .into_iter()
+        .filter(|input| input.is_dir() || (input.is_file() && is_viewable(input)))
+        .collect();
+    inputs.sort_by(|a, b| a.as_os_str().cmp(b.as_os_str()));
+    inputs.dedup();
+    let inputs = Rc::new(RefCell::new(inputs));
+    run_dialog_app(move |app| build_batch_dialog(app, inputs.clone()).present())
 }
 
 pub(in crate::gui) fn build_batch_dialog(
@@ -81,16 +74,12 @@ pub(in crate::gui) fn build_batch_dialog(
     progress.set_margin_end(18);
     progress.set_margin_top(8);
 
-    let status = gtk::Label::builder()
-        .label(gettext("Ready. Click Process to start."))
-        .wrap(true)
-        .max_width_chars(64)
-        .css_classes(["dim-label"])
-        .margin_start(18)
-        .margin_end(18)
-        .margin_top(4)
-        .margin_bottom(4)
-        .build();
+    let status = status_label();
+    status.set_label(&gettext("Ready. Click Process to start."));
+    status.set_margin_start(18);
+    status.set_margin_end(18);
+    status.set_margin_top(4);
+    status.set_margin_bottom(4);
 
     let apply_btn = gtk::Button::builder()
         .label(gettext("Process"))
@@ -152,7 +141,6 @@ pub(in crate::gui) fn build_batch_dialog(
     }
     {
         let files = files.clone();
-        let summary_row = summary_row.clone();
         let window = window.clone();
         dialog_signal!(window, add_folder_btn, connect_clicked, move |_| {
             add_folder_to_batch(&window, &files, &summary_row);
@@ -173,154 +161,225 @@ pub(in crate::gui) fn build_batch_dialog(
     }
 
     {
-        let files = files.clone();
-        let format_row = format_row.clone();
-        let overwrite_row = overwrite_row.clone();
         let encode = Rc::new(encode);
-        let progress = progress.clone();
-        let status = status.clone();
-        let apply_btn = apply_btn.clone();
-        let cancel_btn = cancel_btn.clone();
         let window = window.clone();
-        let cancelled = cancelled.clone();
-        let running = running.clone();
-        let output_dir = output_dir.clone();
-        dialog_signal!(window, apply_btn.clone(), connect_clicked, move |_| {
+        dialog_signal!(window, apply_btn, connect_clicked, move |_| {
             let fmt = selected_format(&format_row);
             let policy = selected_overwrite(&overwrite_row);
             let opts = encode.options();
             let out_dir_snapshot = output_dir.borrow().clone();
-            let files_owned: Vec<PathBuf> = files.borrow().clone();
-            if files_owned.is_empty() {
+            let scanned = crate::output_plan::batch_files(
+                &files.borrow(),
+                fmt,
+                out_dir_snapshot.as_deref(),
+                policy,
+            );
+            let crate::output_plan::BatchFiles { inputs, earlier_outputs } = match scanned {
+                Ok(scanned) => scanned,
+                Err(message) => {
+                    status.set_text(&message);
+                    return;
+                }
+            };
+            if inputs.is_empty() && earlier_outputs.is_empty() {
                 status.set_text(&gettext("Add at least one image to process."));
                 return;
             }
 
-            // Reset cancel for a re-run, mark a worker as live. A pending
-            // auto-close from the previous run must not end this one.
-            batch_runner::disarm_auto_close(&window);
-            cancelled.store(false, std::sync::atomic::Ordering::Relaxed);
-            running.set(true);
-            apply_btn.set_sensitive(false);
-            cancel_btn.set_label(&gettext("Cancel"));
-            progress.set_fraction(0.0);
-            progress.set_text(Some(&gettext("Starting…")));
-            status.set_text(&gettext("Processing…"));
-
-            let events = batch_runner::spawn_batch_workers(
-                files_owned,
-                move |path| convert_file_to(path, out_dir_snapshot.as_deref(), fmt, &opts, policy),
-                cancelled.clone(),
-            );
-
-            let progress = progress.clone();
-            let status = status.clone();
-            let apply_btn = apply_btn.clone();
-            let cancel_btn = cancel_btn.clone();
-            let window = window.clone();
-            let running = running.clone();
-            // Released with this task, i.e. only after the pool reported
-            // back: closing the last window never kills a worker mid-write
-            // and strands `.part` files.
-            let hold = window.application().map(|app| app.hold());
-            glib::MainContext::default().spawn_local(async move {
-                let _hold = hold;
-                loop {
-                match events.next().await {
-                    Some(batch_runner::AsyncBatchEvent::Progress { done, total, file }) => {
-                        progress.set_fraction(done as f64 / total.max(1) as f64);
-                        progress.set_text(Some(&format!("{done}/{total} · {file}")));
-                    }
-                    Some(batch_runner::AsyncBatchEvent::Done {
-                        ok,
-                        skip,
-                        fail,
-                        first_err,
-                        done,
-                        total,
+            let naming = crate::output_plan::Naming {
+                output_dir: out_dir_snapshot.clone(),
+                extension: Some(fmt.extension()),
+                policy,
+                suffix: crate::output_plan::OutputSuffix::None,
+            };
+            let controls = RunControls {
+                window: window.clone(),
+                progress: progress.clone(),
+                status: status.clone(),
+                apply_btn: apply_btn.clone(),
+                cancel_btn: cancel_btn.clone(),
+                running: running.clone(),
+            };
+            let start = {
+                let (cancelled, inputs, naming) =
+                    (cancelled.clone(), inputs.clone(), naming.clone());
+                move || {
+                    // Reset cancel for a re-run, mark a worker as live. A pending
+                    // auto-close from the previous run must not end this one.
+                    batch_runner::disarm_auto_close(&controls.window);
+                    cancelled.store(false, std::sync::atomic::Ordering::Relaxed);
+                    controls.running.set(true);
+                    controls.apply_btn.set_sensitive(false);
+                    controls.cancel_btn.set_label(&gettext("Cancel"));
+                    controls.progress.set_fraction(0.0);
+                    controls.progress.set_text(Some(&gettext("Starting…")));
+                    controls.status.set_text(&gettext("Processing…"));
+                    let events = batch_runner::spawn_batch_workers(
+                        inputs,
+                        naming,
+                        move |path| {
+                            convert_file_to(path, out_dir_snapshot.as_deref(), fmt, &opts, policy)
+                        },
                         cancelled,
-                        elapsed,
-                        bytes_in,
-                        bytes_out,
-                    }) => {
-                        running.set(false);
-                        // Closed mid-run: nothing left to show or to close.
-                        if cancelled && !window.is_visible() {
-                            return;
-                        }
-                        let timing = batch_runner::format_duration(elapsed);
-                        let template = if cancelled {
-                            gettext("Canceled after {done}/{total} in {timing}. Written: {ok}, skipped: {skip}, failed: {fail}.")
-                        } else {
-                            gettext("Finished in {timing}. Written: {ok}, skipped: {skip}, failed: {fail}.")
-                        };
-                        let mut msg = fill(
-                            &template,
-                            &[
-                                ("done", &done.to_string()),
-                                ("total", &total.to_string()),
-                                ("timing", &timing),
-                                ("ok", &ok.to_string()),
-                                ("skip", &skip.to_string()),
-                                ("fail", &fail.to_string()),
-                            ],
-                        );
-                        if ok > 0 && bytes_in > 0 && bytes_out > 0 {
-                            let delta = batch_runner::format_size_delta(bytes_in, bytes_out);
-                            let avg_in = bytes_in / (ok as u64).max(1);
-                            let avg_out = bytes_out / (ok as u64).max(1);
-                            msg.push('\n');
-                            msg.push_str(
-                                &fill(
-                                    &gettext("{before} → {after} ({delta}) · average per file {avg_before} → {avg_after}"),
-                                    &[
-                                        ("before", &batch_runner::format_size(bytes_in)),
-                                        ("after", &batch_runner::format_size(bytes_out)),
-                                        ("delta", &delta),
-                                        ("avg_before", &batch_runner::format_size(avg_in)),
-                                        ("avg_after", &batch_runner::format_size(avg_out)),
-                                    ],
-                                ),
-                            );
-                        }
-                        status.set_text(&msg);
-                        if let Some(err) = first_err {
-                            status.set_text(&format!("{msg}\n{err}"));
-                        }
-                        progress.set_text(Some(&gettext(if cancelled {
-                            n_("Canceled")
-                        } else {
-                            n_("Done")
-                        })));
-                        apply_btn.set_sensitive(true);
-                        let cancel_label = if !cancelled && done == total {
-                            gettext("Close")
-                        } else {
-                            gettext("Cancel")
-                        };
-                        cancel_btn.set_label(&cancel_label);
-                        if !cancelled && fail == 0 {
-                            batch_runner::arm_auto_close(&window, 3);
-                        }
-                        return;
-                    }
-                    None => {
-                        running.set(false);
-                        return;
-                    }
+                    );
+                    // Released with this task, i.e. only after the pool reported
+                    // back: closing the last window never kills a worker mid-write
+                    // and strands `.part` files.
+                    let hold = controls.window.application().map(|app| app.hold());
+                    glib::MainContext::default().spawn_local(async move {
+                        let _hold = hold;
+                        follow_run(events, earlier_outputs, controls).await;
+                    });
                 }
-                }
-            });
+            };
+            confirm_replacing_originals(&window, &apply_btn, &inputs, &naming, start);
         });
     }
 
     window
 }
 
-fn refresh_files_row(row: &adw::ActionRow, files: &[PathBuf]) {
+/// The controls of the batch window one run updates.
+struct RunControls {
+    window: adw::ApplicationWindow,
+    progress: gtk::ProgressBar,
+    status: gtk::Label,
+    apply_btn: gtk::Button,
+    cancel_btn: gtk::Button,
+    /// True while a run is in flight: Cancel then stops it instead of
+    /// closing the window.
+    running: Rc<Cell<bool>>,
+}
+
+/// Show the progress and the summary of one run; `earlier_outputs` are the
+/// folder entries left out of it.
+async fn follow_run(
+    events: batch_runner::BatchEvents,
+    earlier_outputs: Vec<(PathBuf, PathBuf)>,
+    controls: RunControls,
+) {
+    let RunControls { window, progress, status, apply_btn, cancel_btn, running } = controls;
+    loop {
+        match events.next().await {
+            Some(batch_runner::AsyncBatchEvent::Progress { done, total, file }) => {
+                progress.set_fraction(done as f64 / total.max(1) as f64);
+                progress.set_text(Some(&format!("{done}/{total} · {file}")));
+            }
+            Some(batch_runner::AsyncBatchEvent::Refused(message)) => {
+                running.set(false);
+                progress.set_text(None);
+                status.set_text(&message);
+                apply_btn.set_sensitive(true);
+                // Nothing runs, so the button closes the window.
+                cancel_btn.set_label(&gettext("Close"));
+                return;
+            }
+            Some(batch_runner::AsyncBatchEvent::Done(summary)) => {
+                running.set(false);
+                // Closed mid-run: nothing left to show or to close.
+                if summary.cancelled && !window.is_visible() {
+                    return;
+                }
+                status.set_text(&run_summary(&summary, &earlier_outputs));
+                progress.set_text(Some(&gettext(if summary.cancelled {
+                    n_("Canceled")
+                } else {
+                    n_("Done")
+                })));
+                apply_btn.set_sensitive(true);
+                let finished = !summary.cancelled && summary.done == summary.total;
+                cancel_btn.set_label(&gettext(if finished { n_("Close") } else { n_("Cancel") }));
+                // Only a run that wrote every input closes by itself: skips
+                // and failures stay on screen to be read.
+                let skipped = summary.skip + earlier_outputs.len();
+                if !summary.cancelled && summary.ok > 0 && skipped == 0 && summary.fail == 0 {
+                    batch_runner::arm_auto_close(&window, 3);
+                }
+                return;
+            }
+            None => {
+                running.set(false);
+                progress.set_text(None);
+                batch_runner::abort_dialog(&status, &apply_btn);
+                return;
+            }
+        }
+    }
+}
+
+/// The summary line of a finished run: counts and time, the folder entries
+/// left out as earlier outputs, the size change and the first failure.
+fn run_summary(
+    summary: &batch_runner::RunSummary,
+    earlier_outputs: &[(PathBuf, PathBuf)],
+) -> String {
+    let batch_runner::RunSummary {
+        ok,
+        skip,
+        fail,
+        ref first_err,
+        done,
+        total,
+        cancelled,
+        elapsed,
+        bytes_in,
+        bytes_out,
+        ..
+    } = *summary;
+    let timing = batch_runner::format_duration(elapsed);
+    let template = if cancelled {
+        gettext(
+            "Canceled after {done}/{total} in {timing}. Written: {ok}, skipped: {skip}, failed: {fail}.",
+        )
+    } else {
+        gettext("Finished in {timing}. Written: {ok}, skipped: {skip}, failed: {fail}.")
+    };
+    let mut msg = fill(
+        &template,
+        &[
+            ("done", &done.to_string()),
+            ("total", &total.to_string()),
+            ("timing", &timing),
+            ("ok", &ok.to_string()),
+            ("skip", &(skip + earlier_outputs.len()).to_string()),
+            ("fail", &fail.to_string()),
+        ],
+    );
+    if !earlier_outputs.is_empty() {
+        let names: Vec<_> =
+            earlier_outputs.iter().map(|(entry, _)| crate::codec::printable_path(entry)).collect();
+        msg.push('\n');
+        msg.push_str(&fill(
+            &gettext("Skipped as outputs of earlier runs: {files}"),
+            &[("files", &names.join(", "))],
+        ));
+    }
+    if let Some(sizes) = batch_runner::size_change_text(ok, bytes_in, bytes_out) {
+        msg.push('\n');
+        msg.push_str(&sizes);
+    }
+    if let Some(err) = first_err {
+        msg.push('\n');
+        msg.push_str(err);
+    }
+    msg
+}
+
+/// `inputs` are files and folders; a folder counts as its images.
+fn refresh_files_row(row: &adw::ActionRow, inputs: &[PathBuf]) {
+    let files: Vec<PathBuf> = inputs
+        .iter()
+        .flat_map(|input| {
+            if input.is_dir() {
+                crate::output_plan::folder_images(input).unwrap_or_default()
+            } else {
+                vec![input.clone()]
+            }
+        })
+        .collect();
     let total: u64 = files.iter().filter_map(|p| std::fs::metadata(p).ok().map(|m| m.len())).sum();
     row.set_title(&format!("{}: {}", gettext("Selected files"), files.len()));
-    row.set_subtitle(&format_size(total));
+    row.set_subtitle(&glib::format_size(total));
 }
 
 fn add_files_to_batch(
@@ -344,8 +403,8 @@ fn add_files_to_batch(
     });
 }
 
-/// Adds the images directly inside the chosen folder; subfolders are not
-/// searched.
+/// Adds the chosen folder: its images directly inside, listed at Apply;
+/// subfolders are not searched.
 fn add_folder_to_batch(
     window: &adw::ApplicationWindow,
     files: &Rc<RefCell<Vec<PathBuf>>>,
@@ -358,11 +417,10 @@ fn add_folder_to_batch(
     dialog.select_folder(Some(&parent), None::<&gio::Cancellable>, move |result| {
         let Ok(folder) = result else { return };
         let Some(dir) = folder.path() else { return };
-        let found = collect_images_in_dir(&dir);
-        if found.is_empty() {
+        if crate::output_plan::folder_images(&dir).is_ok_and(|images| images.is_empty()) {
             return;
         }
-        append_unique(&files, found);
+        append_unique(&files, vec![dir]);
         refresh_files_row(&row, &files.borrow());
     });
 }
@@ -375,30 +433,6 @@ fn append_unique(files: &Rc<RefCell<Vec<PathBuf>>>, new_paths: Vec<PathBuf>) {
             list.push(p);
         }
     }
-}
-
-/// Lowercase extensions a folder scan accepts, compared case-insensitively.
-const IMAGE_EXTENSIONS: &[&str] = &[
-    "jpg", "jpeg", "png", "webp", "avif", "gif", "tif", "tiff", "bmp", "ico", "pnm", "ppm", "pgm",
-    "pbm", "pam", "tga", "qoi", "hdr", "exr",
-];
-
-fn collect_images_in_dir(dir: &Path) -> Vec<PathBuf> {
-    let Ok(entries) = std::fs::read_dir(dir) else { return Vec::new() };
-    let mut out = Vec::new();
-    for entry in entries.flatten() {
-        let path = entry.path();
-        if !path.is_file() {
-            continue;
-        }
-        let Some(ext) = path.extension() else { continue };
-        let ext_lower = ext.to_string_lossy().to_ascii_lowercase();
-        if IMAGE_EXTENSIONS.iter().any(|e| *e == ext_lower) {
-            out.push(path);
-        }
-    }
-    out.sort();
-    out
 }
 
 #[cfg(test)]
@@ -458,5 +492,103 @@ mod auto_close_tests {
         other.close();
         spin(&context, Duration::from_millis(200));
         assert!(!auto_close_armed(&other), "closing kept the auto-close armed");
+    }
+}
+
+#[cfg(test)]
+mod folder_tests {
+    use super::*;
+
+    /// A batch window on some inputs, set to WebP, driven like a person.
+    struct Probe {
+        window: adw::ApplicationWindow,
+        status: gtk::Label,
+        apply: gtk::Button,
+        overwrite: adw::ComboRow,
+    }
+
+    impl Probe {
+        fn new(app_id: &str, inputs: Vec<PathBuf>) -> Probe {
+            let app = probe_app(app_id);
+            let inputs = Rc::new(RefCell::new(inputs));
+            let window = build_batch_dialog(&app, inputs);
+            window.present();
+            let root: &gtk::Widget = window.upcast_ref();
+            let row = |title: String| {
+                find_widget(root, &|row: &adw::ComboRow| row.title() == title).unwrap()
+            };
+            let webp = CONVERT_FORMATS.iter().position(|(_, format)| *format == Format::WebP);
+            let format: adw::ComboRow = row(gettext("Target format"));
+            format.set_selected(u32::try_from(webp.unwrap()).unwrap());
+            let ready = gettext("Ready. Click Process to start.");
+            let process = gettext("Process");
+            Probe {
+                status: find_widget(root, &|label: &gtk::Label| label.text() == ready).unwrap(),
+                apply: find_widget(root, &|button: &gtk::Button| {
+                    button.label().as_deref() == Some(&process)
+                })
+                .unwrap(),
+                overwrite: row(gettext("If the output file exists")),
+                window,
+            }
+        }
+
+        fn choose(&self, policy: OverwritePolicy) {
+            let index = OVERWRITE_CHOICES.iter().position(|(_, choice)| *choice == policy);
+            self.overwrite.set_selected(u32::try_from(index.unwrap()).unwrap());
+        }
+
+        /// Process, wait for the run to end, and return the status text.
+        fn run(&self) -> glib::GString {
+            self.apply.emit_clicked();
+            pump_until("batch run", &|| {
+                self.apply.is_sensitive() && self.status.text() != gettext("Processing…")
+            });
+            self.status.text()
+        }
+    }
+
+    /// Colliding files are refused with nothing run, which leaves Close on
+    /// the button.
+    #[test]
+    #[ignore = "requires a graphical display; run alone with GSETTINGS_BACKEND=memory"]
+    fn refused_batch_offers_close() {
+        let dir = tempfile::tempdir().unwrap();
+        let colliding = ["b.png", "b.jpg"].map(|name| dir.path().join(name));
+        for file in &colliding {
+            image::RgbImage::new(8, 8).save(file).unwrap();
+        }
+        let probe = Probe::new("com.biglinux.Iris.BatchRefusalProbe", colliding.to_vec());
+        let text = probe.run();
+        assert!(text.contains("several inputs would write the same output file"), "{text}");
+        let cancel = probe.apply.prev_sibling().and_downcast::<gtk::Button>().unwrap();
+        assert_eq!(cancel.label().as_deref(), Some(gettext("Close").as_str()));
+        probe.window.destroy();
+    }
+
+    /// Under increment a folder converted beside itself leaves its earlier
+    /// output out and lists it; under skip every image is an input.
+    #[test]
+    #[ignore = "requires a graphical display; run alone with GSETTINGS_BACKEND=memory"]
+    fn folder_batch_skips_earlier_outputs() {
+        let dir = tempfile::tempdir().unwrap();
+        image::RgbImage::new(8, 8).save(dir.path().join("a.png")).unwrap();
+        image::RgbImage::new(4, 4).save(dir.path().join("a.webp")).unwrap();
+        let earlier = std::fs::read(dir.path().join("a.webp")).unwrap();
+        let probe =
+            Probe::new("com.biglinux.Iris.BatchFolderProbe", vec![dir.path().to_path_buf()]);
+
+        probe.choose(OverwritePolicy::Increment);
+        let text = probe.run();
+        assert!(text.contains("Written: 1, skipped: 1"), "{text}");
+        assert!(text.contains("Skipped as outputs of earlier runs: "), "{text}");
+        assert_eq!(std::fs::read(dir.path().join("a.webp")).unwrap(), earlier);
+        assert!(dir.path().join("a_1.webp").exists());
+
+        probe.choose(OverwritePolicy::Skip);
+        let text = probe.run();
+        assert!(text.contains("Written: 0, skipped: 3"), "{text}");
+        assert!(!text.contains("Skipped as outputs of earlier runs"), "{text}");
+        probe.window.destroy();
     }
 }

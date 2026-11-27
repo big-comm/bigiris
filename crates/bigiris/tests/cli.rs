@@ -11,10 +11,12 @@ fn bigiris() -> Command {
     command
 }
 fn run(dir: &Path, args: &[&str]) -> Output {
-    bigiris().current_dir(dir).args(args).output().unwrap()
+    bigiris().current_dir(dir).args(args).output().expect("run bigiris")
 }
 fn fixture(dir: &Path, name: &str) {
-    image::RgbImage::from_pixel(32, 24, image::Rgb([30, 70, 120])).save(dir.join(name)).unwrap();
+    image::RgbImage::from_pixel(32, 24, image::Rgb([30, 70, 120]))
+        .save(dir.join(name))
+        .expect("save the fixture");
 }
 fn success(output: Output) {
     assert!(
@@ -97,7 +99,11 @@ fn conversion_transform_and_animation_commands_produce_readable_outputs() {
         vec!["adjust", "--brightness", "10", file],
         vec!["animate", "-o", "animation.gif", file, file],
     ] {
-        success(run(dir.path(), &args));
+        let output = run(dir.path(), &args);
+        // The report alone: no diagnostics at the default log level.
+        let report = [&output.stdout[..], &output.stderr[..]].concat();
+        assert!(!String::from_utf8_lossy(&report).contains("INFO"), "{args:?}");
+        success(output);
     }
     for entry in std::fs::read_dir(dir.path()).unwrap() {
         let path = entry.unwrap().path();
@@ -121,17 +127,37 @@ fn corrupt_input_returns_failure_and_preserves_existing_output() {
     assert!(!output.status.success());
     assert_eq!(std::fs::read(dir.path().join("bad.jpg")).unwrap(), b"existing photo");
 }
+/// Values outside the documented ranges are usage errors (exit 1) before
+/// any file is read, never a 1-pixel output or a per-file failure.
 #[test]
 fn invalid_arguments_return_failure() {
     let dir = tempfile::tempdir().unwrap();
+    fixture(dir.path(), "a.png");
     for args in [
-        vec!["convert", "--to", "bogus", "missing.png"],
-        vec!["resize", "--percent", "NaN", "missing.png"],
-        vec!["crop", "--rect", "nonsense", "missing.png"],
-        vec!["adjust", "--gamma", "0", "missing.png"],
+        vec!["convert", "--to", "bogus", "a.png"],
+        vec!["resize", "--percent", "NaN", "a.png"],
+        vec!["resize", "--percent", "0", "a.png"],
+        vec!["resize", "--percent", "1000.5", "a.png"],
+        vec!["resize", "--max-edge", "0", "a.png"],
+        vec!["resize", "--exact", "0x5", "a.png"],
+        vec!["extent", "--size", "0x0", "a.png"],
+        vec!["crop", "--rect", "nonsense", "a.png"],
+        vec!["crop", "--rect", "0x0+0+0", "a.png"],
+        vec!["adjust", "--gamma", "0", "a.png"],
+        vec!["adjust", "--brightness", "500", "a.png"],
+        vec!["adjust", "--contrast=-101", "a.png"],
+        vec!["adjust", "--saturation", "inf", "a.png"],
+        vec!["animate", "--speed", "99", "-o", "a.gif", "a.png"],
+        vec!["extent", "--size", "8x8", "--bg", "nope", "a.png"],
     ] {
-        assert!(!run(dir.path(), &args).status.success(), "{args:?}");
+        assert_eq!(run(dir.path(), &args).status.code(), Some(1), "{args:?}");
     }
+    // A refused colour says which forms are accepted.
+    let output = run(dir.path(), &["extent", "--size", "8x8", "--bg", "nope", "a.png"]);
+    assert!(String::from_utf8_lossy(&output.stderr).contains("#RRGGBB"));
+    let names: Vec<_> =
+        std::fs::read_dir(dir.path()).unwrap().map(|e| e.unwrap().file_name()).collect();
+    assert_eq!(names, ["a.png"]);
 }
 
 /// File-manager menus pass `--notify`: a failure reaches the desktop through
@@ -170,7 +196,7 @@ fn notify_reports_failures_only_when_asked() {
 #[cfg(feature = "ai")]
 fn fake_weights(dir: &Path) -> std::path::PathBuf {
     let path = dir.join("fake.weights");
-    std::fs::write(&path, b"not a weights file").unwrap();
+    std::fs::write(&path, b"not a weights file").expect("write the fake weights");
     path
 }
 
@@ -192,7 +218,7 @@ fn low_memory_refuses_ai_before_loading_and_preserves_inputs() {
     assert_eq!(output.status.code(), Some(1));
     let error = String::from_utf8_lossy(&output.stderr);
     // Refused by the budget, not by the (fake) weights.
-    assert!(error.contains("memory for AI") && error.contains("GiB"), "{error}");
+    assert!(error.contains("of free RAM") && error.contains("GiB"), "{error}");
     assert!(!dir.path().join("source_nobg.png").exists());
     assert_eq!(std::fs::read(dir.path().join("source.png")).unwrap(), original);
 }
@@ -213,24 +239,122 @@ fn batch_profile_converts_folder_and_skip_is_idempotent() {
         std::fs::read_dir(dir.path().join("output")).unwrap().map(|e| e.unwrap().path()).collect();
     assert_eq!(paths.len(), 40);
     let before: Vec<_> = paths.iter().map(|p| std::fs::read(p).unwrap()).collect();
-    success(run(dir.path(), &["batch", "--profile", "profile.toml", "input"]));
+    let output = run(dir.path(), &["batch", "--profile", "profile.toml", "input"]);
+    success(output.clone());
+    // Reported like every command: skip lines name the input, the tally is on stderr.
+    let report = String::from_utf8_lossy(&output.stdout);
+    assert!(report.contains("skip input/image0.png (already exists: "), "{report}");
+    let tally = String::from_utf8_lossy(&output.stderr);
+    assert!(tally.contains("batch: 0 written, 40 skipped, 0 failed"), "{tally}");
     for (path, bytes) in paths.iter().zip(before) {
         assert_eq!(std::fs::read(path).unwrap(), bytes);
         assert_eq!(bigimage_core::open_image(path).unwrap().width(), 32);
     }
 }
 
+/// Outputs written beside their sources are not inputs of the next run:
+/// a rerun skips, and `increment` adds one file per run, never doubling,
+/// also when the sources already are in the target format (same-format
+/// outputs keep the input's name) or the target is PNM (`.pgm` or `.ppm`).
+#[test]
+fn batch_reruns_beside_sources_stay_stable() {
+    if !sandbox_available() {
+        return;
+    }
+    let dir = tempfile::tempdir().unwrap();
+    let profile = |name: &str, body: &str| std::fs::write(dir.path().join(name), body).unwrap();
+    profile("webp.toml", "format = 'webp'\n");
+    profile("webp-inc.toml", "format = 'webp'\noverwrite = 'increment'\n");
+    profile("png-inc.toml", "format = 'png'\noverwrite = 'increment'\n");
+    profile("pnm.toml", "format = 'pnm'\n");
+    profile("jpg-inc.toml", "format = 'jpg'\noverwrite = 'increment'\n");
+    let folder = |name: &str| {
+        let folder = dir.path().join(name);
+        std::fs::create_dir(&folder).unwrap();
+        folder
+    };
+    let count = |folder: &Path| std::fs::read_dir(folder).unwrap().count();
+    let batch = |profile: &str, folder: &str| {
+        let output = run(dir.path(), &["batch", "--profile", profile, folder]);
+        success(output.clone());
+        String::from_utf8_lossy(&output.stdout).into_owned()
+    };
+
+    let webp = folder("webp");
+    fixture(&webp, "x.png");
+    batch("webp.toml", "webp");
+    assert!(batch("webp.toml", "webp").contains("skip webp/x.webp"));
+    assert_eq!(count(&webp), 2);
+    for expected in [3, 4] {
+        batch("webp-inc.toml", "webp");
+        assert_eq!(count(&webp), expected);
+    }
+    assert!(webp.join("x_2.webp").exists());
+
+    let png = folder("png");
+    fixture(&png, "x.png");
+    for expected in [2, 3, 4] {
+        batch("png-inc.toml", "png");
+        assert_eq!(count(&png), expected);
+    }
+    assert!(png.join("x_3.png").exists() && !png.join("x_1_1.png").exists());
+
+    // A same-format output keeps the input's spelling: `.jpeg` stays `.jpeg`.
+    let jpeg = folder("jpeg");
+    image::RgbImage::new(8, 8).save(jpeg.join("a.jpeg")).unwrap();
+    for expected in [2, 3, 4] {
+        batch("jpg-inc.toml", "jpeg");
+        assert_eq!(count(&jpeg), expected);
+    }
+    assert!(jpeg.join("a_3.jpeg").exists() && !jpeg.join("a_1_1.jpeg").exists());
+
+    let pnm = folder("pnm");
+    image::GrayImage::new(8, 8).save(pnm.join("g.png")).unwrap();
+    batch("pnm.toml", "pnm");
+    assert!(pnm.join("g.pgm").exists());
+    assert!(batch("pnm.toml", "pnm").contains("skip pnm/g.pgm"));
+    assert_eq!(count(&pnm), 2);
+}
+
+/// Under skip and replace no folder image is taken for an earlier output:
+/// a real `trip_2.png` beside `trip.png` is processed, and two PNM images
+/// sharing a stem both stay inputs.
+#[test]
+fn batch_keeps_every_image_without_increment() {
+    if !sandbox_available() {
+        return;
+    }
+    let dir = tempfile::tempdir().unwrap();
+    std::fs::create_dir(dir.path().join("trip")).unwrap();
+    fixture(&dir.path().join("trip"), "trip.png");
+    fixture(&dir.path().join("trip"), "trip_2.png");
+    std::fs::write(dir.path().join("png.toml"), "format = 'png'\noverwrite = 'replace'\n").unwrap();
+    let output = run(dir.path(), &["batch", "--profile", "png.toml", "trip"]);
+    success(output.clone());
+    let report = String::from_utf8_lossy(&output.stdout);
+    assert!(!report.contains("the output of"), "{report}");
+    assert!(String::from_utf8_lossy(&output.stderr).contains("batch: 2 written"));
+
+    std::fs::create_dir(dir.path().join("pnm")).unwrap();
+    image::GrayImage::new(4, 4).save(dir.path().join("pnm/a.pgm")).unwrap();
+    image::RgbImage::new(4, 4).save(dir.path().join("pnm/a.ppm")).unwrap();
+    std::fs::write(dir.path().join("pnm.toml"), "format = 'pnm'\n").unwrap();
+    let output = run(dir.path(), &["batch", "--profile", "pnm.toml", "pnm"]);
+    success(output.clone());
+    assert!(String::from_utf8_lossy(&output.stderr).contains("batch: 0 written, 2 skipped"));
+}
+
 fn sized_fixture(dir: &Path, name: &str, width: u32, height: u32) {
     image::RgbImage::from_pixel(width, height, image::Rgb([200, 40, 10]))
         .save(dir.join(name))
-        .unwrap();
+        .expect("save the fixture");
 }
 
 /// Packaging containers may forbid the namespaces the codec sandbox needs;
 /// `scripts/package-check.sh` filters sandbox tests there. Mirror that rule
 /// for newer tests: skip only inside such a container, fail everywhere else.
 fn sandbox_available() -> bool {
-    let dir = tempfile::tempdir().unwrap();
+    let dir = tempfile::tempdir().expect("temporary folder");
     if run(dir.path(), &["--self-test"]).status.success() {
         return true;
     }
@@ -243,8 +367,8 @@ fn sandbox_available() -> bool {
 
 fn leftovers(dir: &Path) -> Vec<String> {
     std::fs::read_dir(dir)
-        .unwrap()
-        .map(|entry| entry.unwrap().file_name().to_string_lossy().into_owned())
+        .expect("list the output folder")
+        .map(|entry| entry.expect("folder entry").file_name().to_string_lossy().into_owned())
         .filter(|name| name.starts_with(".bigiris-"))
         .collect()
 }
@@ -279,6 +403,66 @@ fn exit_codes_follow_one_convention() {
 }
 
 #[test]
+fn fatal_errors_are_one_plain_line() {
+    let dir = tempfile::tempdir().unwrap();
+    let output = run(dir.path(), &["convert", "--to", "bogus", "x.png"]);
+    assert_eq!(output.status.code(), Some(1));
+    let error = String::from_utf8_lossy(&output.stderr);
+    // The value is quoted; core's English reason stays out of the sentence.
+    assert_eq!(error, "bigiris: invalid target format: \"bogus\"\n");
+    assert!(!error.contains('\x1b') && !error.contains("Location"), "{error}");
+}
+
+/// The worker's refusal reaches the parent's sentence without the report
+/// decoration of a Rust `main` (location, source path, backtrace hint).
+#[test]
+fn worker_refusals_carry_no_report_decoration() {
+    if !sandbox_available() {
+        return;
+    }
+    use image::codecs::gif::GifEncoder;
+    let dir = tempfile::tempdir().unwrap();
+    let file = std::fs::File::create(dir.path().join("a.gif")).unwrap();
+    let frame =
+        || image::Frame::new(image::RgbaImage::from_pixel(4, 4, image::Rgba([9, 9, 9, 255])));
+    GifEncoder::new(file).encode_frames([frame(), frame()]).unwrap();
+    let output = run(dir.path(), &["flip", "--axis", "horizontal", "a.gif"]);
+    assert_eq!(output.status.code(), Some(2));
+    let error = String::from_utf8_lossy(&output.stderr);
+    assert!(error.contains("animated"), "{error}");
+    assert!(!error.contains("Location") && !error.contains(".rs:"), "{error}");
+    assert!(!error.contains("RUST_BACKTRACE") && !error.contains('\x1b'), "{error}");
+    // The worker words its failure through the app's sentences: the
+    // refusal has its own, a damaged file reads as damaged data.
+    assert!(!error.contains("invalid input"), "{error}");
+    std::fs::write(dir.path().join("cut.gif"), b"GIF89a").unwrap();
+    let output = run(dir.path(), &["flip", "--axis", "horizontal", "cut.gif"]);
+    let error = String::from_utf8_lossy(&output.stderr);
+    assert!(error.contains("damaged or unreadable image data"), "{error}");
+    // The user's own file name, once, and no exit code beside a reason.
+    assert!(!error.contains("/input.") && !error.contains("exit code"), "{error}");
+}
+
+/// A file name from a downloaded archive cannot retitle the terminal, set
+/// its clipboard (OSC 52) or fake report lines.
+#[test]
+fn hostile_file_names_print_inert() {
+    if !sandbox_available() {
+        return;
+    }
+    let dir = tempfile::tempdir().unwrap();
+    let stem = "b\x1b]0;pwned\x07\nok  fake";
+    fixture(dir.path(), &format!("{stem}.png"));
+    std::fs::write(dir.path().join(format!("{stem}.jpg")), b"existing").unwrap();
+    let output = run(dir.path(), &["convert", "--to", "jpeg", &format!("{stem}.png")]);
+    success(output.clone());
+    let report = String::from_utf8_lossy(&output.stdout);
+    assert!(report.starts_with("skip "), "{report}");
+    assert_eq!(report.lines().count(), 1, "{report}");
+    assert!(!report.contains(['\x1b', '\x07']), "{report:?}");
+}
+
+#[test]
 fn colliding_outputs_are_refused_before_any_work() {
     let dir = tempfile::tempdir().unwrap();
     sized_fixture(dir.path(), "a.png", 32, 24);
@@ -300,7 +484,83 @@ fn colliding_outputs_are_refused_before_any_work() {
     let output = run(dir.path(), &["batch", "--profile", "p.toml", "one", "two"]);
     assert_eq!(output.status.code(), Some(1));
     assert_eq!(std::fs::read(dir.path().join("a.webp")).unwrap(), b"existing");
-    assert!(!dir.path().join("out/photo.webp").exists());
+    // A refused run creates no output folder either.
+    assert!(!dir.path().join("out").exists());
+}
+
+/// `a.png` rotated beside `a_rot90.png` would replace that input while it
+/// is being read: refused under replace, nothing written; skip leaves it.
+#[test]
+fn replace_refuses_writing_an_input() {
+    let dir = tempfile::tempdir().unwrap();
+    sized_fixture(dir.path(), "a.png", 32, 24);
+    std::fs::write(dir.path().join("a_rot90.png"), b"another input").unwrap();
+    let rotate = |policy| {
+        run(
+            dir.path(),
+            &["rotate", "--degrees", "90", "--overwrite", policy, "a.png", "a_rot90.png"],
+        )
+    };
+    let output = rotate("replace");
+    assert_eq!(output.status.code(), Some(1));
+    let error = String::from_utf8_lossy(&output.stderr);
+    assert!(error.contains("a.png → ") && error.contains("a_rot90.png"), "{error}");
+    assert_eq!(std::fs::read(dir.path().join("a_rot90.png")).unwrap(), b"another input");
+    assert!(!dir.path().join("a_rot90_rot90.png").exists(), "work ran after the refusal");
+    rotate("skip");
+    assert_eq!(std::fs::read(dir.path().join("a_rot90.png")).unwrap(), b"another input");
+}
+
+/// A link to an input from another folder writes its own output there,
+/// while two spellings of one path still run once.
+#[test]
+fn linked_input_in_another_folder_runs() {
+    if !sandbox_available() {
+        return;
+    }
+    let dir = tempfile::tempdir().unwrap();
+    fixture(dir.path(), "a.png");
+    std::fs::create_dir(dir.path().join("sub")).unwrap();
+    std::os::unix::fs::symlink("../a.png", dir.path().join("sub/link.png")).unwrap();
+    let output = run(dir.path(), &["convert", "--to", "webp", "a.png", "./a.png", "sub/link.png"]);
+    success(output.clone());
+    assert!(dir.path().join("a.webp").exists() && dir.path().join("sub/link.webp").exists());
+    assert_eq!(String::from_utf8_lossy(&output.stdout).lines().count(), 2);
+}
+
+/// On a casefolded tmpfs (in a user namespace; skipped where none mounts),
+/// `IMG.webp` and `img.webp`, or `a.jpg`'s `a.png` and the input `a.PNG`,
+/// are one file, refused before any work.
+#[test]
+fn case_folding_collisions_are_refused() {
+    let dir = tempfile::tempdir().unwrap();
+    for name in ["IMG.png", "img.jpg", "a.jpg", "a.PNG"] {
+        fixture(dir.path(), name);
+    }
+    std::fs::create_dir(dir.path().join("mnt")).unwrap();
+    let script = r#"
+mount -t tmpfs -o casefold tmpfs "$1/mnt" && mkdir "$1/mnt/f" && chattr +F "$1/mnt/f" || exit 77
+echo mounted
+cp "$1"/*.png "$1"/*.PNG "$1"/*.jpg "$1/mnt/f/" && cd "$1/mnt/f" || exit 1
+"$2" convert --to webp --overwrite replace IMG.png img.jpg; echo "webp $?"
+"$2" convert --to png --overwrite replace a.jpg a.PNG; echo "png $?"
+ls
+"#;
+    let output = Command::new("unshare")
+        .args(["--user", "--map-root-user", "--mount", "/bin/sh", "-c", script, "sh"])
+        .arg(dir.path())
+        .arg(env!("CARGO_BIN_EXE_bigiris"))
+        .env("LC_ALL", "C")
+        .output();
+    // unshare itself fails where user namespaces are restricted (Ubuntu's AppArmor).
+    let mounted = |output: &Output| String::from_utf8_lossy(&output.stdout).starts_with("mounted");
+    let Some(output) = output.ok().filter(mounted) else {
+        eprintln!("skipping: no casefolded tmpfs in a user namespace here");
+        return;
+    };
+    let report = String::from_utf8_lossy(&output.stdout);
+    assert!(report.contains("webp 1") && report.contains("png 1"), "{report}");
+    assert!(!report.contains(".webp"), "{report}");
 }
 
 #[test]
@@ -520,11 +780,7 @@ fn ai_commands_write_their_outputs_with_installed_weights() {
     let dir = tempfile::tempdir().unwrap();
     let photo = image::RgbImage::from_fn(64, 48, |x, y| {
         let inside = (x as i32 - 32).pow(2) + (y as i32 - 24).pow(2) < 225;
-        if inside {
-            image::Rgb([200, 30, 20])
-        } else {
-            image::Rgb([230, 230, 225])
-        }
+        if inside { image::Rgb([200, 30, 20]) } else { image::Rgb([230, 230, 225]) }
     });
     photo.save(dir.path().join("photo.png")).unwrap();
     let mut mask = image::GrayImage::new(64, 48);
@@ -612,9 +868,12 @@ while [ $# -gt 0 ]; do
 done
 case "$file" in /*) ;; *) echo "relative input: $file" >&2; exit 3 ;; esac
 [ -n "$profile" ] || exit 4
+# A descriptor of bigiris' caller must not reach LibreOffice.
+[ -e /proc/$$/fd/3 ] && exit 5
 name=${file##*/}
 case "$FAKE_SOFFICE" in
   write) printf '%%PDF-1.4 fake' > "$outdir/${name%.*}.pdf" ;;
+  empty) : > "$outdir/${name%.*}.pdf" ;;
   silent) ;;
   hang) /usr/bin/sleep 30.4242; exit 0 ;;
 esac
@@ -629,15 +888,16 @@ fn to_pdf(dir: &Path, bin: &Path, mode: &str, args: &[&str]) -> Output {
         .env("FAKE_SOFFICE", mode)
         .current_dir(dir)
         .output()
-        .unwrap()
+        .expect("run bigiris to-pdf")
 }
 
 fn fake_soffice() -> tempfile::TempDir {
     use std::os::unix::fs::PermissionsExt;
-    let bin = tempfile::tempdir().unwrap();
+    let bin = tempfile::tempdir().expect("temporary folder");
     let path = bin.path().join("soffice");
-    std::fs::write(&path, FAKE_SOFFICE).unwrap();
-    std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o755)).unwrap();
+    std::fs::write(&path, FAKE_SOFFICE).expect("write the fake soffice");
+    std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o755))
+        .expect("make the fake soffice executable");
     bin
 }
 
@@ -685,9 +945,13 @@ fn to_pdf_verifies_output_and_honours_overwrite_policy() {
     assert_eq!(std::fs::read(&pdf).unwrap(), b"mine");
     assert!(dir.path().join("-doc_1.pdf").exists());
 
+    // Replace keeps the replaced file's permission bits, as every core output does.
+    use std::os::unix::fs::PermissionsExt;
+    std::fs::set_permissions(&pdf, std::fs::Permissions::from_mode(0o640)).unwrap();
     let replace = ["--overwrite", "replace", "--", "-doc.txt"];
     success(to_pdf(dir.path(), bin.path(), "write", &replace));
     assert!(std::fs::read(&pdf).unwrap().starts_with(b"%PDF"));
+    assert_eq!(std::fs::metadata(&pdf).unwrap().permissions().mode() & 0o777, 0o640);
 
     // soffice "succeeds" without producing anything (load failure or a
     // profile owned by another instance): that is a failure, not ok.
@@ -698,8 +962,64 @@ fn to_pdf_verifies_output_and_honours_overwrite_policy() {
     assert!(leftovers(dir.path()).is_empty());
 }
 
+/// The refusals that keep a bad conversion from being published: an empty
+/// PDF never replaces a good one, a folder never reaches soffice, and the
+/// caller's descriptors never leak into it.
+#[test]
+fn to_pdf_refuses_unpublishable_input() {
+    let dir = tempfile::tempdir().unwrap();
+    let bin = fake_soffice();
+    std::fs::write(dir.path().join("doc.txt"), b"hello").unwrap();
+    std::fs::write(dir.path().join("doc.pdf"), b"good").unwrap();
+    let replace = ["--overwrite", "replace", "doc.txt"];
+    assert_eq!(to_pdf(dir.path(), bin.path(), "empty", &replace).status.code(), Some(2));
+    assert_eq!(std::fs::read(dir.path().join("doc.pdf")).unwrap(), b"good");
+
+    std::fs::create_dir(dir.path().join("folder.txt")).unwrap();
+    assert_eq!(to_pdf(dir.path(), bin.path(), "write", &["folder.txt"]).status.code(), Some(2));
+    assert!(!dir.path().join("folder.pdf").exists());
+
+    std::fs::write(dir.path().join("other.txt"), b"x").unwrap();
+    let inherited = Command::new("/bin/sh")
+        .args(["-c", "exec 3</dev/null; exec \"$0\" to-pdf other.txt"])
+        .arg(env!("CARGO_BIN_EXE_bigiris"))
+        .env("LC_ALL", "C")
+        .env("PATH", bin.path())
+        .env("FAKE_SOFFICE", "write")
+        .current_dir(dir.path())
+        .output()
+        .unwrap();
+    success(inherited);
+    assert!(dir.path().join("other.pdf").exists());
+    assert!(leftovers(dir.path()).is_empty());
+}
+
+/// Failures read as sentences: no English "at path" from tempfile, no
+/// std "exit status" text.
+#[test]
+fn to_pdf_failures_are_plain_sentences() {
+    use std::os::unix::fs::PermissionsExt;
+    let dir = tempfile::tempdir().unwrap();
+    let bin = fake_soffice();
+    let locked = dir.path().join("locked");
+    std::fs::create_dir(&locked).unwrap();
+    std::fs::write(locked.join("doc.txt"), b"x").unwrap();
+    std::fs::set_permissions(&locked, std::fs::Permissions::from_mode(0o555)).unwrap();
+    let output = to_pdf(dir.path(), bin.path(), "write", &["locked/doc.txt"]);
+    std::fs::set_permissions(&locked, std::fs::Permissions::from_mode(0o755)).unwrap();
+    assert_eq!(output.status.code(), Some(2));
+    let error = String::from_utf8_lossy(&output.stderr);
+    assert!(error.contains("could not write in the document's folder: "), "{error}");
+    assert!(!error.contains("at path"), "{error}");
+
+    std::fs::write(dir.path().join("other.txt"), b"x").unwrap();
+    let output = to_pdf(dir.path(), bin.path(), "silent", &["other.txt"]);
+    let error = String::from_utf8_lossy(&output.stderr);
+    assert!(error.contains("did not produce the PDF (exit code 0)"), "{error}");
+}
+
 fn process_running(marker: &str) -> bool {
-    std::fs::read_dir("/proc").unwrap().flatten().any(|entry| {
+    std::fs::read_dir("/proc").expect("list /proc").flatten().any(|entry| {
         std::fs::read(entry.path().join("cmdline"))
             .is_ok_and(|cmdline| String::from_utf8_lossy(&cmdline).contains(marker))
     })
@@ -785,13 +1105,38 @@ fn extent_aspect_names_outputs_per_image() {
     assert!(String::from_utf8_lossy(&output.stderr).contains("b.jpg"));
 }
 
+/// A resize or letterbox that changes nothing writes nothing: a skip line
+/// says why, and that is no failure.
+#[test]
+fn noop_resize_and_extent_write_nothing() {
+    if !sandbox_available() {
+        return;
+    }
+    let dir = tempfile::tempdir().unwrap();
+    sized_fixture(dir.path(), "small.png", 300, 200);
+    sized_fixture(dir.path(), "square.png", 300, 300);
+    for args in
+        [["resize", "--max-edge", "1920", "small.png"], ["extent", "--aspect", "1:1", "square.png"]]
+    {
+        let output = run(dir.path(), &args);
+        success(output.clone());
+        let report = String::from_utf8_lossy(&output.stdout);
+        assert!(
+            report.starts_with(&format!("skip {} (nothing would change)", args[3])),
+            "{report}"
+        );
+    }
+    assert_eq!(std::fs::read_dir(dir.path()).unwrap().count(), 2, "something was written");
+}
+
 #[test]
 fn collisions_are_planned_by_content_not_extension() {
     let dir = tempfile::tempdir().unwrap();
     sized_fixture(dir.path(), "a.png", 32, 24);
     // A PNG named .jpg: rotate keeps PNG, so both would write a_rot90.png.
-    sized_fixture(dir.path(), "b.png", 16, 12);
-    std::fs::rename(dir.path().join("b.png"), dir.path().join("a.jpg")).unwrap();
+    image::RgbImage::new(16, 12)
+        .save_with_format(dir.path().join("a.jpg"), image::ImageFormat::Png)
+        .unwrap();
     let args = ["rotate", "--degrees", "90", "--overwrite", "replace", "a.png", "a.jpg"];
     let output = run(dir.path(), &args);
     assert_eq!(output.status.code(), Some(1), "{}", String::from_utf8_lossy(&output.stderr));
@@ -860,4 +1205,90 @@ fn broken_profile_converts_with_note() {
     pixels.save(&plain).unwrap();
     let output = run(dir.path(), &["convert", "--to", "jpg", "plain.png"]);
     assert!(!String::from_utf8_lossy(&output.stderr).contains("color profile"));
+}
+
+/// Only a package may write the system-wide menus, which it then owns.
+#[test]
+fn system_install_needs_destdir() {
+    let dir = tempfile::tempdir().unwrap();
+    let output = run(dir.path(), &["install-integrations", "--system"]);
+    assert_eq!(output.status.code(), Some(1));
+    assert!(String::from_utf8_lossy(&output.stderr).contains("--destdir"));
+
+    let package = dir.path().join("pkg");
+    let destdir = format!("--destdir={}", package.display());
+    success(run(dir.path(), &["install-integrations", "--system", &destdir]));
+    assert!(package.join("usr/share/kio/servicemenus/bigiris-view.desktop").is_file());
+}
+
+/// The menu's "Remove all metadata" runs this: a numbered copy in the same
+/// format and extension, without the source's EXIF, next to the original.
+#[test]
+fn strip_metadata_writes_clean_copy() {
+    if !sandbox_available() {
+        return;
+    }
+    let dir = tempfile::tempdir().unwrap();
+    let mut jpeg = Vec::new();
+    let pixels = image::RgbImage::from_pixel(32, 24, image::Rgb([200, 40, 40]));
+    pixels.write_to(&mut std::io::Cursor::new(&mut jpeg), image::ImageFormat::Jpeg).unwrap();
+    // APP1 Exif after SOI: little-endian TIFF header and one empty IFD.
+    let tiff = b"Exif\0\0II*\0\x08\0\0\0\0\0\0\0\0\0";
+    let length = u16::try_from(tiff.len() + 2).unwrap().to_be_bytes();
+    let mut tagged = jpeg[..2].to_vec();
+    tagged.extend_from_slice(&[0xFF, 0xE1, length[0], length[1]]);
+    tagged.extend_from_slice(tiff);
+    tagged.extend_from_slice(&jpeg[2..]);
+    std::fs::write(dir.path().join("photo.JPG"), &tagged).unwrap();
+
+    success(run(dir.path(), &["strip-metadata", "--overwrite", "increment", "photo.JPG"]));
+    assert_eq!(std::fs::read(dir.path().join("photo.JPG")).unwrap(), tagged);
+    let clean = std::fs::read(dir.path().join("photo_1.JPG")).unwrap();
+    assert!(clean.starts_with(&[0xFF, 0xD8]));
+    assert!(!clean.windows(6).any(|w| w == b"Exif\0\0"), "EXIF kept");
+}
+
+/// Optimize PNG runs `convert --to png --in-place`: it rewrites the PNG it
+/// was given and never the differently named file its output would be.
+#[test]
+fn in_place_convert_never_replaces_siblings() {
+    if !sandbox_available() {
+        return;
+    }
+    let dir = tempfile::tempdir().unwrap();
+    fixture(dir.path(), "photo.PNG");
+    std::fs::copy(dir.path().join("photo.PNG"), dir.path().join("noext")).unwrap();
+    fixture(dir.path(), "shot.jpg");
+    for sibling in ["photo.png", "noext.png", "shot.png"] {
+        std::fs::write(dir.path().join(sibling), sibling).unwrap();
+    }
+    let output = run(dir.path(), &["convert", "--to", "png", "--in-place", "photo.PNG"]);
+    success(output);
+    image::open(dir.path().join("photo.PNG")).unwrap();
+    for input in ["noext", "shot.jpg"] {
+        let output = run(dir.path(), &["convert", "--to", "png", "--in-place", input]);
+        assert_eq!(output.status.code(), Some(2), "{input}");
+        assert!(String::from_utf8_lossy(&output.stderr).contains("not converted in place"));
+    }
+    for sibling in ["photo.png", "noext.png", "shot.png"] {
+        assert_eq!(std::fs::read(dir.path().join(sibling)).unwrap(), sibling.as_bytes());
+    }
+    // Refusals are sentences of their own, not "invalid input".
+    let output = run(dir.path(), &["convert", "--to", "png", "--in-place", "shot.jpg"]);
+    assert!(!String::from_utf8_lossy(&output.stderr).contains("invalid input"));
+    // A PNM is written as .pgm or .ppm by its content: a gray .pgm stays itself.
+    let pgm = [&b"P5\n4 4\n255\n"[..], &[0x80; 16]].concat();
+    std::fs::write(dir.path().join("g.pgm"), pgm).unwrap();
+    success(run(dir.path(), &["convert", "--to", "pnm", "--in-place", "g.pgm"]));
+    assert!(!dir.path().join("g.ppm").exists());
+    // A link would be replaced by a copy and its target left as it was.
+    std::os::unix::fs::symlink("photo.PNG", dir.path().join("link.png")).unwrap();
+    let before = std::fs::read(dir.path().join("photo.PNG")).unwrap();
+    let output = run(dir.path(), &["convert", "--to", "png", "--in-place", "link.png"]);
+    assert_eq!(output.status.code(), Some(2));
+    assert!(String::from_utf8_lossy(&output.stderr).contains("is a symbolic link"));
+    assert!(std::fs::symlink_metadata(dir.path().join("link.png")).unwrap().is_symlink());
+    assert_eq!(std::fs::read(dir.path().join("photo.PNG")).unwrap(), before);
+    let both = ["convert", "--to", "png", "--in-place", "--overwrite", "skip", "photo.PNG"];
+    assert_eq!(run(dir.path(), &both).status.code(), Some(1));
 }

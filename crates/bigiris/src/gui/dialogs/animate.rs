@@ -2,9 +2,9 @@
 //! Animated GIF: build an animated GIF from the selected frames.
 
 use super::*;
-use bigimage_core::{make_gif_with_policy, ConvertOutcome};
-use std::sync::atomic::{AtomicBool, Ordering};
+use bigimage_core::{ConvertOutcome, make_gif_with_policy};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 // ---------------------------------------------------------------------------
 // Animate dialog — pick a delay, a loop mode, an output path and build an
@@ -25,7 +25,6 @@ pub(in crate::gui) fn build_animate_dialog(
     let window = adw::ApplicationWindow::builder()
         .application(app)
         .default_width(520)
-        .default_height(520)
         .title(gettext("Create animated GIF — Prisma"))
         .build();
 
@@ -90,25 +89,12 @@ pub(in crate::gui) fn build_animate_dialog(
     content.append(&group);
 
     let status = status_label();
-    content.append(&status);
-
-    let (cancel_btn, apply_btn, actions_box) = action_buttons(&gettext("Create GIF"));
-    content.append(&actions_box);
-
-    set_dialog_content(&window, &header, &content);
-
-    close_on_click(&window, &cancel_btn);
+    let apply_btn =
+        set_form_dialog_content(&window, &header, &content, &status, &gettext("Create GIF"));
 
     {
-        let files = files.clone();
-        let delay_spin = delay_spin.clone();
-        let loop_row = loop_row.clone();
-        let speed_spin = speed_spin.clone();
-        let output_row = output_row.clone();
-        let status = status.clone();
-        let apply_btn = apply_btn.clone();
         let window = window.clone();
-        dialog_signal!(window, apply_btn.clone(), connect_clicked, move |_| {
+        dialog_signal!(window, apply_btn, connect_clicked, move |_| {
             let loop_mode = match loop_row.selected() {
                 0 => LoopMode::Infinite,
                 1 => LoopMode::Once,
@@ -132,7 +118,7 @@ pub(in crate::gui) fn build_animate_dialog(
             // have been appended).
             output_row.set_text(&output.to_string_lossy());
             let exists = output.exists();
-            let shown = output.display().to_string();
+            let shown = crate::codec::printable_path(&output);
 
             let start = {
                 let files = files.clone();
@@ -178,12 +164,15 @@ pub(in crate::gui) fn build_animate_dialog(
 /// Validate the free-text GIF destination. The result always ends in
 /// `.gif` and never names one of the frames: make_gif replaces its output,
 /// so typing a frame's path would otherwise turn that photo into a GIF.
+/// A relative name lands beside the first frame, as the default does, not
+/// in the folder the dialog process happened to start in.
 fn gif_output_path(text: &str, frames: &[PathBuf]) -> Result<PathBuf, String> {
     let text = text.trim();
     if text.is_empty() {
         return Err(gettext("Specify the output file."));
     }
-    let mut output = PathBuf::from(text);
+    let folder = frames.first().and_then(|frame| frame.parent()).unwrap_or(Path::new(""));
+    let mut output = folder.join(text);
     if !output.extension().is_some_and(|ext| ext.eq_ignore_ascii_case("gif")) {
         let mut name = output.into_os_string();
         name.push(".gif");
@@ -270,19 +259,21 @@ fn start_animate_run(
             Some(Ok(ConvertOutcome::Written { output })) => {
                 status.set_text(&fill(
                     &gettext("Done: {file}"),
-                    &[("file", &output.display().to_string())],
+                    &[("file", &crate::codec::printable_path(&output))],
                 ));
                 batch_runner::arm_auto_close(&window, 2);
             }
-            Some(Ok(ConvertOutcome::Skipped { output })) => {
+            Some(Ok(
+                ConvertOutcome::Skipped { output } | ConvertOutcome::Unchanged { output },
+            )) => {
                 status.set_text(&fill(
                     &gettext("The file {file} appeared in the meantime and was kept; nothing was written."),
-                    &[("file", &output.display().to_string())],
+                    &[("file", &crate::codec::printable_path(&output))],
                 ));
                 apply_btn.set_sensitive(true);
             }
             Some(Err(e)) => {
-                status.set_text(&format!("{}: {e}", gettext("Failed")));
+                status.set_text(&format!("{}: {}", gettext("Failed"), core_error_text(&e)));
                 apply_btn.set_sensitive(true);
             }
             None => {
@@ -315,7 +306,7 @@ mod gif_output_tests {
         // Same file through a different spelling still counts as a frame.
         let dotted = dir.path().join(".").join("a.png.gif");
         std::fs::write(&dotted, b"x").unwrap();
-        let mut with_gif = frames.clone();
+        let mut with_gif = frames;
         with_gif.push(dotted.clone());
         assert!(gif_output_path(&dotted.to_string_lossy(), &with_gif).is_err());
         assert!(
@@ -331,6 +322,15 @@ mod gif_output_tests {
         assert_eq!(out, dir.path().join("a.png.gif"));
         let out = gif_output_path(&dir.path().join("anim.GIF").to_string_lossy(), &frames).unwrap();
         assert_eq!(out, dir.path().join("anim.GIF"));
+    }
+
+    #[test]
+    fn relative_name_lands_beside_first_frame() {
+        let dir = tempfile::tempdir().unwrap();
+        let frames = frames(dir.path());
+        assert_eq!(gif_output_path("rel-anim", &frames).unwrap(), dir.path().join("rel-anim.gif"));
+        let absolute = dir.path().join("sub").join("x.gif");
+        assert_eq!(gif_output_path(&absolute.to_string_lossy(), &frames).unwrap(), absolute);
     }
 
     #[test]

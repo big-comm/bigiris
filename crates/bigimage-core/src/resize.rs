@@ -11,7 +11,7 @@ use fast_image_resize::{FilterType, ResizeAlg, ResizeOptions, Resizer};
 use image::DynamicImage;
 
 use crate::convert::{ConvertOutcome, OverwritePolicy};
-use crate::{pipeline, BigImageError, Format, Result};
+use crate::{BigImageError, Format, Result, pipeline};
 
 /// How the target dimensions are computed.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -39,7 +39,8 @@ pub enum ResizeMode {
 }
 
 impl ResizeMode {
-    fn filename_suffix(&self) -> String {
+    /// What [`resize_file`] appends to the input's stem (`_1920`, `_50pct`).
+    pub fn filename_suffix(&self) -> String {
         match self {
             ResizeMode::MaxEdge(e) => format!("_{e}"),
             ResizeMode::Percent(p) => format!("_{p}pct"),
@@ -64,8 +65,8 @@ impl ResizeMode {
                     )));
                 }
                 let f = f64::from(p) / 100.0;
-                let w = ((src_w as f64) * f).round() as u32;
-                let h = ((src_h as f64) * f).round() as u32;
+                let w = (f64::from(src_w) * f).round() as u32;
+                let h = (f64::from(src_h) * f).round() as u32;
                 Ok((w.max(1), h.max(1)))
             }
             ResizeMode::Exact { width, height } => {
@@ -86,8 +87,8 @@ impl ResizeMode {
                     f64::from(width) / f64::from(src_w),
                     f64::from(height) / f64::from(src_h),
                 );
-                let w = ((src_w as f64) * scale).round() as u32;
-                let h = ((src_h as f64) * scale).round() as u32;
+                let w = (f64::from(src_w) * scale).round() as u32;
+                let h = (f64::from(src_h) * scale).round() as u32;
                 Ok((w.max(1), h.max(1)))
             }
         }
@@ -109,11 +110,7 @@ pub(crate) fn max_edge_dims(src_w: u32, src_h: u32, edge: u32) -> (u32, u32) {
         let value = (2 * short * u64::from(edge) + long) / (2 * long);
         (value as u32).clamp(1, edge)
     };
-    if src_w >= src_h {
-        (edge, scale(src_h, src_w))
-    } else {
-        (scale(src_w, src_h), edge)
-    }
+    if src_w >= src_h { (edge, scale(src_h, src_w)) } else { (scale(src_w, src_h), edge) }
 }
 
 /// Filter kernel used when the mode actually changes dimensions. Mode with
@@ -150,6 +147,11 @@ impl Filter {
 /// `target = None` preserves the source encoding; the output file always
 /// carries a suffix describing the resize (e.g. `photo_1080.jpg`) so we never
 /// overwrite the original unless policy explicitly asks for it.
+///
+/// # Errors
+///
+/// [`BigImageError::InvalidInput`] when `mode` is invalid for the image;
+/// otherwise as [`crate::transform_file`].
 pub fn resize_file(
     input: impl AsRef<Path>,
     mode: ResizeMode,
@@ -160,16 +162,20 @@ pub fn resize_file(
 ) -> Result<ConvertOutcome> {
     let input = input.as_ref();
     let suffix = mode.filename_suffix();
-    if let Some(skipped) =
-        pipeline::skip_before_decode(input, &suffix, target, policy, pipeline::any_size)?
-    {
+    if let Some(skipped) = pipeline::skip_before_decode(input, &suffix, target, policy, |w, h| {
+        mode.target_dims(w, h).map(drop)
+    })? {
         return Ok(skipped);
     }
 
-    let (src, src_format) = pipeline::decode_with_source_format(input)?;
-    let target = target.unwrap_or(src_format);
+    let keeps_format = pipeline::keeps_format(input, target);
+    let (src, target) = pipeline::decode_for_target(input, target)?;
 
-    let output = pipeline::resolve_output(input, Some(&suffix), target, policy)?;
+    let output = pipeline::resolve_output(input, Some(&suffix), target)?;
+    let size = mode.target_dims(src.width(), src.height())?;
+    if keeps_format && size == (src.width(), src.height()) {
+        return Ok(ConvertOutcome::Unchanged { output });
+    }
 
     if pipeline::existing_output(&output, target, policy) {
         tracing::debug!(?output, "resize: skipping existing output");
@@ -184,6 +190,12 @@ pub fn resize_file(
 /// Pure in-memory variant — resizes an already-decoded image and returns
 /// the result. Shared by [`resize_file`] and by the preview pipeline in
 /// `crate::preview`.
+///
+/// # Errors
+///
+/// - [`BigImageError::InvalidInput`]: `mode` is invalid for `src`, or the
+///   result exceeds the processing limits.
+/// - [`BigImageError::Other`]: the resizer fails.
 pub fn apply_to(src: &DynamicImage, mode: ResizeMode, filter: Filter) -> Result<DynamicImage> {
     let (new_w, new_h) = mode.target_dims(src.width(), src.height())?;
     pipeline::check_dimensions(new_w, new_h, src.color().bytes_per_pixel())?;
@@ -255,44 +267,35 @@ mod tests {
         assert_eq!(dims(1, 100_000, 10), (1, 10));
     }
 
+    /// A resize to the size the image already has, in its own format,
+    /// changes nothing: nothing is written and the run says so. Another
+    /// format still converts.
     #[test]
-    fn max_edge_passes_through_small_images() {
+    fn unchanged_size_writes_nothing() {
         let dir = TempDir::new().unwrap();
         let src = write_fixture_png(dir.path(), "s.png", 32, 16);
-        let out = match resize_file(
-            &src,
-            ResizeMode::MaxEdge(1080),
-            Filter::Lanczos3,
-            None,
-            &crate::EncodeOptions::default(),
-            OverwritePolicy::Replace,
-        )
-        .unwrap()
-        {
-            ConvertOutcome::Written { output } => output,
-            _ => panic!("expected write"),
+        let resize = |mode, target| {
+            let opts = crate::EncodeOptions::default();
+            resize_file(&src, mode, Filter::Lanczos3, target, &opts, OverwritePolicy::Replace)
+                .unwrap()
         };
-        assert_eq!(dims_of(&out), (32, 16));
-    }
-
-    #[test]
-    fn percent_100_is_identity() {
-        let dir = TempDir::new().unwrap();
-        let src = write_fixture_png(dir.path(), "p.png", 40, 25);
-        let out = match resize_file(
-            &src,
-            ResizeMode::Percent(100.0),
-            Filter::Lanczos3,
-            None,
-            &crate::EncodeOptions::default(),
-            OverwritePolicy::Replace,
-        )
-        .unwrap()
-        {
-            ConvertOutcome::Written { output } => output,
-            _ => panic!("expected write"),
+        for (mode, name) in [
+            (ResizeMode::MaxEdge(1080), "s_1080.png"),
+            (ResizeMode::Percent(100.0), "s_100pct.png"),
+            (ResizeMode::Fit { width: 64, height: 16 }, "s_fit-64x16.png"),
+            (ResizeMode::Exact { width: 32, height: 16 }, "s_32x16.png"),
+        ] {
+            let output = dir.path().join(name);
+            assert_eq!(resize(mode, None), ConvertOutcome::Unchanged { output: output.clone() });
+            assert_eq!(resize(mode, Some(Format::Png)), ConvertOutcome::Unchanged { output });
+        }
+        assert_eq!(std::fs::read_dir(dir.path()).unwrap().count(), 1, "something was written");
+        let ConvertOutcome::Written { output } =
+            resize(ResizeMode::MaxEdge(1080), Some(Format::Jpeg))
+        else {
+            panic!("a format change converts");
         };
-        assert_eq!(dims_of(&out), (40, 25));
+        assert_eq!(dims_of(&output), (32, 16));
     }
 
     #[test]
@@ -398,7 +401,19 @@ mod tests {
     }
 
     #[test]
-    fn invalid_percent_is_rejected() {
+    fn invalid_requests_are_rejected() {
+        for mode in [
+            ResizeMode::Percent(0.0),
+            ResizeMode::Percent(1000.5),
+            ResizeMode::Percent(f32::NAN),
+            ResizeMode::Exact { width: 0, height: 5 },
+            ResizeMode::Exact { width: 5, height: 0 },
+            ResizeMode::Fit { width: 0, height: 5 },
+            ResizeMode::Fit { width: 5, height: 0 },
+        ] {
+            let result = mode.target_dims(10, 10);
+            assert!(matches!(result, Err(BigImageError::InvalidInput(_))), "{mode:?}");
+        }
         let dir = TempDir::new().unwrap();
         let src = write_fixture_png(dir.path(), "x.png", 10, 10);
         let err = resize_file(

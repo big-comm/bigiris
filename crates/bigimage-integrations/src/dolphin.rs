@@ -11,33 +11,44 @@
 use std::io;
 use std::path::PathBuf;
 
-use crate::action::{Action, ACTIONS, TOP_LEVEL_LABEL};
-use crate::safe_fs::{safe_write_with_mode, FileMode};
-use crate::scope::{remove_matching, ScopePaths};
+use crate::action::{ACTIONS, Action, TOP_LEVEL_LABEL};
+use crate::safe_fs::FileMode;
+use crate::scope::{Installed, ScopePaths, remove_generated, replace_generated};
+
+const SUFFIX: &str = ".desktop";
 
 /// Install one `.desktop` per MIME filter of [`ACTIONS`] into
 /// `~/.local/share/kio/servicemenus/`, replacing what earlier installs wrote.
-pub fn install(paths: &ScopePaths) -> io::Result<Vec<PathBuf>> {
-    let dir = paths.kio_servicemenus();
-    std::fs::create_dir_all(&dir)?;
-    // Older releases wrote one file per action; left behind, they would
+///
+/// # Errors
+///
+/// An I/O error when the service-menu folder cannot be listed or created, or
+/// a menu file cannot be written or a stale one removed.
+pub fn install(paths: &ScopePaths) -> io::Result<Installed> {
+    let files = menus()
+        .into_iter()
+        .map(|menu| (format!("bigiris-{}{SUFFIX}", menu[0].1.id), render(&menu)));
+    // Dolphin treats executable permission as the trust marker for
+    // user-owned ServiceMenus and silently rejects a regular `0644` desktop
+    // file. Older releases wrote one file per action; left behind, they would
     // add every action again under their own submenu titles.
-    remove_matching(&dir, "bigiris-", ".desktop")?;
-    let mut written = Vec::new();
-    for menu in menus() {
-        let file = dir.join(format!("bigiris-{}.desktop", menu[0].1.id));
-        // Dolphin treats executable permission as the trust marker for
-        // user-owned ServiceMenus and silently rejects a regular `0644`
-        // desktop file.
-        safe_write_with_mode(&file, render(&menu), paths.scope, FileMode::Exact(0o755))?;
-        written.push(file);
-    }
-    Ok(written)
+    replace_generated(
+        &paths.kio_servicemenus(),
+        SUFFIX,
+        files.collect(),
+        paths.scope,
+        FileMode::Exact(0o755),
+    )
 }
 
 /// Remove every file we own in `~/.local/share/kio/servicemenus/`.
+///
+/// # Errors
+///
+/// An I/O error when the service-menu folder cannot be listed or a file we
+/// own cannot be removed.
 pub fn uninstall(paths: &ScopePaths) -> io::Result<Vec<PathBuf>> {
-    remove_matching(&paths.kio_servicemenus(), "bigiris-", ".desktop")
+    remove_generated(&paths.kio_servicemenus(), SUFFIX, &[])
 }
 
 /// [`ACTIONS`] with their index, grouped by MIME filter in declaration order:
@@ -137,13 +148,22 @@ mod tests {
 
         let tmp = TempDir::new().unwrap();
         let paths = ScopePaths::rooted_at(tmp.path());
-        let written = install(&paths).unwrap();
+        let written = install(&paths).unwrap().files;
         let names: Vec<_> =
             written.iter().map(|p| p.file_name().unwrap().to_string_lossy().into_owned()).collect();
         assert_eq!(
             names,
-            ["bigiris-view.desktop", "bigiris-batch-folder.desktop", "bigiris-pdf-convert.desktop"]
+            [
+                "bigiris-view.desktop",
+                "bigiris-batch-folder.desktop",
+                "bigiris-web-optimize-png.desktop",
+                "bigiris-pdf-convert.desktop"
+            ]
         );
+        let png = std::fs::read_to_string(&written[2]).unwrap();
+        assert!(png.contains("MimeType=image/png;\n"), "{png}");
+        assert_eq!(actions_line(&png).len(), 1, "{png}");
+        assert!(!menu_with("convert-png").contains("OptimizePng"));
         for path in &written {
             #[cfg(target_os = "linux")]
             assert_eq!(
@@ -230,7 +250,7 @@ mod tests {
     fn install_then_uninstall_leaves_clean_dir() {
         let tmp = TempDir::new().unwrap();
         let paths = ScopePaths::rooted_at(tmp.path());
-        let written = install(&paths).unwrap();
+        let written = install(&paths).unwrap().files;
         let removed = uninstall(&paths).unwrap();
         assert_eq!(removed.len(), written.len());
         let remaining: Vec<_> = std::fs::read_dir(paths.kio_servicemenus()).unwrap().collect();

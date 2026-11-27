@@ -7,6 +7,13 @@ fn invalid() -> std::io::Error {
         "invalid AVIF: box outside its container or too complex",
     )
 }
+/// Size field and four-character type of the box header at the reader's position.
+pub(crate) fn read_box_header(reader: &mut impl Read) -> std::io::Result<(u32, [u8; 4])> {
+    let mut header = [[0; 4]; 2];
+    reader.read_exact(header.as_flattened_mut())?;
+    let [size, kind] = header;
+    Ok((u32::from_be_bytes(size), kind))
+}
 pub(crate) fn inspect(reader: &mut (impl Read + Seek)) -> std::io::Result<()> {
     let end = reader.seek(SeekFrom::End(0))?;
     let mut count = 0;
@@ -28,9 +35,7 @@ fn boxes(
             return Err(invalid());
         }
         reader.seek(SeekFrom::Start(position))?;
-        let mut header = [0; 8];
-        reader.read_exact(&mut header)?;
-        let short = u32::from_be_bytes(header[..4].try_into().unwrap());
+        let (short, kind) = read_box_header(reader)?;
         let (size, header_size) = match short {
             0 => (end - position, 8u64),
             1 => {
@@ -48,7 +53,7 @@ fn boxes(
             return Err(invalid());
         }
         let content = position + header_size;
-        match &header[4..8] {
+        match &kind {
             b"meta" | b"iref" => {
                 if size < header_size + 4 {
                     return Err(invalid());
@@ -65,7 +70,7 @@ fn boxes(
                 }
                 let mut full = [0; 4];
                 reader.read_exact(&mut full)?;
-                let entries = if &header[4..8] == b"iinf" && full[0] != 0 { 4 } else { 2 };
+                let entries = if &kind == b"iinf" && full[0] != 0 { 4 } else { 2 };
                 if size < header_size + 4 + entries {
                     return Err(invalid());
                 }
@@ -107,20 +112,32 @@ impl ItemTransform {
     }
 }
 
+/// Largest top-level `meta` box loaded to read item properties or EXIF.
+pub(crate) const MAX_META: u64 = 1024 * 1024;
+
 /// Read the primary item's transform. Only the top-level `meta` box is
-/// loaded (bounded to 1 MiB); malformed or absent properties mean "no
+/// loaded (bounded to [`MAX_META`]); malformed or absent properties mean "no
 /// transform" rather than an error, since pixels can still be shown.
 pub(crate) fn primary_item_transform(
     reader: &mut (impl Read + Seek),
 ) -> std::io::Result<ItemTransform> {
-    const MAX_META: u64 = 1024 * 1024;
+    let Some(size) = top_level_meta(reader)?.filter(|size| *size <= MAX_META) else {
+        return Ok(ItemTransform::default());
+    };
+    let mut meta = vec![0; usize::try_from(size).map_err(|_| invalid())?];
+    reader.read_exact(&mut meta)?;
+    Ok(parse_meta(&meta).unwrap_or_default())
+}
+
+/// Content size of the first top-level `meta` box, with `reader` left at
+/// its content; `None` when the top-level walk finds none.
+pub(crate) fn top_level_meta(reader: &mut (impl Read + Seek)) -> std::io::Result<Option<u64>> {
     let end = reader.seek(SeekFrom::End(0))?;
     let mut position = 0;
     while end - position >= 8 {
         reader.seek(SeekFrom::Start(position))?;
-        let mut header = [0; 8];
-        reader.read_exact(&mut header)?;
-        let (size, header_size) = match u32::from_be_bytes(header[..4].try_into().unwrap()) {
+        let (short, kind) = read_box_header(reader)?;
+        let (size, header_size) = match short {
             0 => (end - position, 8),
             1 => {
                 let mut size = [0; 8];
@@ -132,21 +149,61 @@ pub(crate) fn primary_item_transform(
         if size < header_size || size > end - position {
             break;
         }
-        if &header[4..8] == b"meta" {
-            if size - header_size > MAX_META {
-                break;
-            }
-            let mut meta = vec![0; (size - header_size) as usize];
-            reader.read_exact(&mut meta)?;
-            return Ok(parse_meta(&meta).unwrap_or_default());
+        if &kind == b"meta" {
+            return Ok(Some(size - header_size));
         }
         position += size;
     }
-    Ok(ItemTransform::default())
+    Ok(None)
+}
+
+/// Whether the `meta` box whose `size`-byte content `reader` is at
+/// declares an `Exif` item, reading only its child headers and its `iinf`
+/// (bounded to [`MAX_META`]).
+///
+/// # Errors
+///
+/// An I/O error, a malformed or over-long child walk, or an `iinf` over
+/// [`MAX_META`]: whether an Exif item is declared is then unknown.
+pub(crate) fn meta_declares_exif(
+    reader: &mut (impl Read + Seek),
+    size: u64,
+) -> std::io::Result<bool> {
+    let start = reader.stream_position()?;
+    let end = start.checked_add(size).ok_or_else(invalid)?;
+    // FullBox version and flags.
+    let mut position = start + 4;
+    for _ in 0..10_000 {
+        if end.saturating_sub(position) < 8 {
+            return Ok(false);
+        }
+        reader.seek(SeekFrom::Start(position))?;
+        let (child, kind) = read_box_header(reader)?;
+        let child = u64::from(child);
+        if child < 8 || child > end - position {
+            return Err(invalid());
+        }
+        if &kind == b"iinf" {
+            if child - 8 > MAX_META {
+                return Err(invalid());
+            }
+            let mut iinf = vec![0; usize::try_from(child - 8).map_err(|_| invalid())?];
+            reader.read_exact(&mut iinf)?;
+            let entries = if iinf.first() == Some(&0) { 6 } else { 8 };
+            let infes = iinf.get(entries..).and_then(children).ok_or_else(invalid)?;
+            return Ok(infes.iter().any(|(_, infe)| {
+                // Item type after FullBox, item ID (2 or 4 bytes), protection.
+                let at = if infe.first() == Some(&3) { 10 } else { 8 };
+                infe.get(at..at + 4) == Some(b"Exif")
+            }));
+        }
+        position += child;
+    }
+    Err(invalid())
 }
 
 /// Child boxes of `data` as `(type, content)` pairs; `None` if malformed.
-fn children(data: &[u8]) -> Option<Vec<([u8; 4], &[u8])>> {
+pub(crate) fn children(data: &[u8]) -> Option<Vec<([u8; 4], &[u8])>> {
     let mut out = Vec::new();
     let mut rest = data;
     while !rest.is_empty() {
@@ -270,6 +327,36 @@ mod tests {
         let mut bytes = file(&[2], &[]);
         bytes.truncate(40);
         assert_eq!(parse(bytes), ItemTransform::default());
+    }
+
+    /// Guards: outside input: each structural refusal before a codec
+    /// allocates from declared box sizes.
+    #[test]
+    fn inspect_refuses_each_malformed_structure() {
+        let check = |bytes: &[u8]| inspect(&mut std::io::Cursor::new(bytes)).is_ok();
+        let nested = |depth: usize| (0..depth).fold(Vec::new(), |inner, _| bx(b"iprp", &inner));
+        let mut child_past_parent = bx(b"iprp", &bx(b"ipco", &[0; 4]));
+        child_past_parent[11] = 200;
+        let mut long_size_short_file = bx(b"free", &[]);
+        long_size_short_file[3] = 1;
+        let cases: [(&str, Vec<u8>, bool); 9] = [
+            ("well formed", file(&[1, 0x82], &[]), true),
+            ("nesting at the limit", nested(16), true),
+            ("nesting past the limit", nested(17), false),
+            (
+                "box past the file",
+                [bx(b"ftyp", b"avif"), vec![0, 0, 1, 0, b'f', b'r', b'e', b'e']].concat(),
+                false,
+            ),
+            ("child past its parent", child_past_parent, false),
+            ("size below its header", vec![0, 0, 0, 4, b'f', b'r', b'e', b'e'], false),
+            ("trailing bytes", [bx(b"ftyp", b"avif"), vec![0; 4]].concat(), false),
+            ("64-bit size cut short", long_size_short_file, false),
+            ("too many boxes", bx(b"free", &[]).repeat(100_001), false),
+        ];
+        for (name, bytes, accepted) in cases {
+            assert_eq!(check(&bytes), accepted, "{name}");
+        }
     }
 
     #[test]

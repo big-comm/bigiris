@@ -58,10 +58,10 @@ pub(crate) fn bounded_reader(
         return Err(limit_error());
     }
     let mut reader = ImageReader::new(BufReader::new(file)).with_guessed_format()?;
-    if reader.format().is_none() {
-        if let Some(format) = input.extension().and_then(image::ImageFormat::from_extension) {
-            reader.set_format(format);
-        }
+    if reader.format().is_none()
+        && let Some(format) = input.extension().and_then(image::ImageFormat::from_extension)
+    {
+        reader.set_format(format);
     }
     if reader.format() == Some(image::ImageFormat::Avif) {
         use std::io::{Seek, SeekFrom};
@@ -156,10 +156,23 @@ pub(crate) fn decode_local_with(
         reader.limits(limits.clone());
     }
     let mut avif_transform = crate::container_bounds::ItemTransform::default();
+    let mut avif_exif = None;
+    let mut exif_unreadable = false;
     if format == Some(Format::Avif) {
         use std::io::{Seek, SeekFrom};
         let mut data = reader.into_inner();
         avif_transform = crate::container_bounds::primary_item_transform(&mut data)?;
+        if !normalize {
+            // The AVIF decoder does not expose EXIF; the container reader does.
+            data.seek(SeekFrom::Start(0))?;
+            match avif_exif_block(&mut data) {
+                Ok(exif) => avif_exif = exif,
+                Err(reason) => {
+                    tracing::warn!(%reason, "AVIF EXIF item unreadable; not preserved");
+                    exif_unreadable = true;
+                }
+            }
+        }
         data.seek(SeekFrom::Start(0))?;
         reader = ImageReader::with_format(data, image::ImageFormat::Avif);
         reader.limits(limits.clone());
@@ -171,7 +184,11 @@ pub(crate) fn decode_local_with(
     }
     limits.reserve(decoder.total_bytes())?;
     decoder.set_limits(limits)?;
-    let exif = if normalize { None } else { decoder.exif_metadata().ok().flatten() };
+    let exif = match avif_exif {
+        Some(exif) => Some(exif),
+        None if normalize => None,
+        None => decoder.exif_metadata().ok().flatten(),
+    };
     let orientation = decoder.orientation().unwrap_or(image::metadata::Orientation::NoTransforms);
     let icc = decoder.icc_profile()?.filter(|profile| !profile.is_empty());
     let mut image = DynamicImage::from_decoder(decoder)?;
@@ -189,7 +206,38 @@ pub(crate) fn decode_local_with(
         return Ok((image, format, crate::metadata::SourceMetadata::default()));
     }
     let exif = exif.filter(|exif| !exif.is_empty());
-    Ok((image, format, crate::metadata::SourceMetadata { exif, icc }))
+    Ok((image, format, crate::metadata::SourceMetadata { exif, icc, exif_unreadable }))
+}
+
+/// Raw TIFF block of an AVIF's `Exif` item, `None` when it has none, or
+/// why an item that may be there cannot be read (a `meta` box over
+/// [`crate::container_bounds::MAX_META`], an item the reader refuses).
+fn avif_exif_block(
+    data: &mut (impl std::io::BufRead + std::io::Seek),
+) -> std::result::Result<Option<Vec<u8>>, String> {
+    use std::io::SeekFrom;
+    let meta = crate::container_bounds::top_level_meta(data).map_err(|error| error.to_string())?;
+    match meta {
+        None => return Ok(None),
+        // Too large to hand to the EXIF reader: a loss only if it declares
+        // an Exif item (large grid images and profiles do not).
+        Some(size) if size > crate::container_bounds::MAX_META => {
+            return match crate::container_bounds::meta_declares_exif(data, size) {
+                Ok(false) => Ok(None),
+                _ => Err(format!("meta box of {size} bytes")),
+            };
+        }
+        Some(_) => {}
+    }
+    data.seek(SeekFrom::Start(0)).map_err(|error| error.to_string())?;
+    let exif = match exif::Reader::new().continue_on_error(true).read_from_container(data) {
+        Ok(exif) => exif,
+        // Unparsable tags still leave the block; the re-save reports it invalid.
+        Err(exif::Error::PartialResult(partial)) => partial.into_inner().0,
+        Err(exif::Error::NotFound(_)) => return Ok(None),
+        Err(error) => return Err(error.to_string()),
+    };
+    Ok(Some(exif.buf().to_vec()))
 }
 
 /// Open and decode an upright image with shared resource bounds.
@@ -206,9 +254,36 @@ pub(crate) fn decode_with_source_format(input: &Path) -> Result<(DynamicImage, F
     Ok((img, format))
 }
 
-/// Source format from magic bytes (extension as fallback) without running
-/// any decoder — the same answer `decode_with_source_format` reports.
-pub(crate) fn sniff_format(input: &Path) -> Option<Format> {
+/// [`decode_with_source_format`] for an output in `target` (the source's
+/// own format when `None`), refusing a container whose other entries that
+/// output would drop (see [`crate::content::ensure_single_entry`]). Returns
+/// the pixels and the resolved target.
+pub(crate) fn decode_for_target(
+    input: &Path,
+    target: Option<Format>,
+) -> Result<(DynamicImage, Format)> {
+    crate::content::ensure_single_entry(input, target)?;
+    let (image, source) = decode_with_source_format(input)?;
+    Ok((image, target.unwrap_or(source)))
+}
+
+/// Whether an output in `target` (`None`: the source's own) keeps the
+/// format of `input`, so a run that keeps its size changes nothing.
+pub(crate) fn keeps_format(input: &Path, target: Option<Format>) -> bool {
+    target.is_none_or(|format| sniff_format(input) == Some(format))
+}
+
+/// Whether `a` and `b` name one existing file (same device and inode).
+pub(crate) fn same_file(a: &Path, b: &Path) -> bool {
+    use std::os::unix::fs::MetadataExt;
+    match (std::fs::metadata(a), std::fs::metadata(b)) {
+        (Ok(a), Ok(b)) => a.dev() == b.dev() && a.ino() == b.ino(),
+        _ => false,
+    }
+}
+
+/// First 64 bytes of a regular file, read without running any decoder.
+pub(crate) fn read_head(input: &Path) -> Option<Vec<u8>> {
     use std::io::Read;
     use std::os::unix::fs::OpenOptionsExt;
     let file = std::fs::OpenOptions::new()
@@ -221,6 +296,13 @@ pub(crate) fn sniff_format(input: &Path) -> Option<Format> {
     }
     let mut head = Vec::with_capacity(64);
     file.take(64).read_to_end(&mut head).ok()?;
+    Some(head)
+}
+
+/// Source format from magic bytes (extension as fallback) without running
+/// any decoder; [`decode_with_source_format`] reports the same.
+pub(crate) fn sniff_format(input: &Path) -> Option<Format> {
+    let head = read_head(input)?;
     image::guess_format(&head)
         .ok()
         .or_else(|| input.extension().and_then(image::ImageFormat::from_extension))
@@ -246,7 +328,7 @@ pub(crate) fn skip_before_decode(
     let Some(target) = target.or_else(|| sniff_format(input)) else {
         return Ok(None);
     };
-    let Ok(output) = resolve_output(input, Some(suffix), target, policy) else {
+    let Ok(output) = resolve_output(input, Some(suffix), target) else {
         return Ok(None);
     };
     skip_existing(input, output, target, validate)
@@ -273,6 +355,7 @@ pub(crate) fn skip_existing(
         return Ok(None);
     }
     crate::content::ensure_static(input)?;
+    crate::content::ensure_single_entry(input, Some(target))?;
     let (w, h) = crate::image_dimensions(input)
         .map_err(|source| BigImageError::Decode { path: input.to_path_buf(), source })?;
     validate(w, h).or_else(|error| validate(h, w).map_err(|_| error))?;
@@ -326,25 +409,25 @@ pub(crate) fn resolve_output(
     input: &Path,
     suffix: Option<&str>,
     target: Format,
-    policy: OverwritePolicy,
 ) -> Result<PathBuf> {
-    resolve_output_to(input, None, suffix, target, policy)
+    resolve_output_to(input, None, suffix, target)
 }
 
 /// Like [`resolve_output`] but takes an explicit `output_dir`: `None` writes
-/// next to the source file, a directory keeps the source's stem.
+/// next to the source file, a directory keeps the source's stem. The
+/// extension is [`Format::output_extension`], which the binary's output
+/// planner mirrors.
 pub(crate) fn resolve_output_to(
     input: &Path,
     output_dir: Option<&Path>,
     suffix: Option<&str>,
     target: Format,
-    policy: OverwritePolicy,
 ) -> Result<PathBuf> {
     let stem = input
         .file_stem()
         .ok_or_else(|| BigImageError::InvalidInput(format!("no file stem in {input:?}")))?;
     let parent = output_dir.or_else(|| input.parent()).unwrap_or_else(|| Path::new("."));
-    let ext = target.extension();
+    let ext = target.output_extension(input);
     let suffix = suffix.unwrap_or("");
 
     let naive = {
@@ -355,7 +438,6 @@ pub(crate) fn resolve_output_to(
         parent.join(name)
     };
 
-    let _ = policy;
     Ok(naive)
 }
 
@@ -367,6 +449,10 @@ fn replaced_file(output: &Path, policy: OverwritePolicy) -> Option<std::fs::Meta
         .filter(std::fs::Metadata::is_file)
 }
 
+/// Name prefix of the hidden file an output is written to before it is
+/// published; one left behind means a crash mid-write.
+pub const TEMP_FILE_PREFIX: &str = ".bigiris-";
+
 /// A unique sibling temporary file, cleaned up on every error path.
 ///
 /// The file is created with the mode a plain `open(2)` would use (`0o666`,
@@ -374,10 +460,6 @@ fn replaced_file(output: &Path, policy: OverwritePolicy) -> Option<std::fs::Meta
 /// kernel applies the umask and any default ACL at creation. No `chmod` is
 /// needed for new outputs, which keeps writes working on FUSE/gvfs/SMB
 /// mounts that refuse `chmod`.
-/// Name prefix of the hidden file an output is written to before it is
-/// published; one left behind means a crash mid-write.
-pub const TEMP_FILE_PREFIX: &str = ".bigiris-";
-
 pub(crate) fn output_temp(
     output: &Path,
     policy: OverwritePolicy,
@@ -420,12 +502,11 @@ pub(crate) fn publish_temp(
     if let Some(meta) = replaced_file(&output, policy) {
         let wanted = meta.permissions().mode() & 0o777;
         let current = temp.as_file().metadata().map(|m| m.permissions().mode() & 0o777).ok();
-        if current != Some(wanted) {
-            if let Err(error) =
+        if current != Some(wanted)
+            && let Err(error) =
                 temp.as_file().set_permissions(std::fs::Permissions::from_mode(wanted))
-            {
-                tracing::warn!(?output, %error, "permissions of the replaced file not copied");
-            }
+        {
+            tracing::warn!(?output, %error, "permissions of the replaced file not copied");
         }
     }
     temp.as_file().sync_all().map_err(BigImageError::Io)?;
@@ -460,7 +541,7 @@ pub(crate) fn publish_temp(
             Err(e) => return Err(BigImageError::Io(e.error)),
         }
     }
-    Err(BigImageError::Other(format!("too many files with the same name: {}", output.display())))
+    Err(BigImageError::NoFreeName { output })
 }
 
 /// Metadata written by the encoder in addition to the pixels.
@@ -524,7 +605,7 @@ pub(crate) fn encode_keeping_smaller(
     let mut kept = false;
     if let Some(original) = original {
         let written = temp.as_file().metadata().map_err(BigImageError::Io)?.len();
-        if let Some(bytes) = smaller_original(original, written, target, opts) {
+        if let Some(bytes) = smaller_original(original, &output, written, target, opts) {
             let file = temp.as_file_mut();
             file.set_len(0).map_err(BigImageError::Io)?;
             file.rewind().map_err(BigImageError::Io)?;
@@ -542,10 +623,12 @@ pub(crate) fn encode_keeping_smaller(
 }
 
 /// The bytes of `original` when they are smaller than `written` and can be
-/// published as-is: the file is a regular file still in `target` format,
-/// and either metadata stripping is off or it carries none.
+/// published as-is at `output`: the file is a regular file still in
+/// `target` format, of the kind the output's name promises, and either
+/// metadata stripping is off or it carries none.
 fn smaller_original(
     original: &Path,
+    output: &Path,
     written: u64,
     target: Format,
     opts: &EncodeOptions,
@@ -557,9 +640,21 @@ fn smaller_original(
     let bytes = std::fs::read(original).ok()?;
     let format = image::guess_format(&bytes).ok().and_then(Format::from_image_format)?;
     if format != target
-        || (opts.strip_metadata && crate::metadata::carries_metadata(&bytes, format))
+        || (opts.strip_metadata && crate::metadata_scan::carries_metadata(&bytes, format))
     {
         return None;
+    }
+    // A PNM output is named after the written pixels (`.pgm` or `.ppm`), so
+    // a PBM or PAM original cannot stand in for it.
+    if target == Format::Pnm {
+        let kind = match bytes.get(..2)? {
+            b"P2" | b"P5" => "pgm",
+            b"P3" | b"P6" => "ppm",
+            _ => return None,
+        };
+        if output.extension() != Some(std::ffi::OsStr::new(kind)) {
+            return None;
+        }
     }
     Some(bytes)
 }
@@ -648,4 +743,29 @@ fn write_be16(samples: &[u16], writer: &mut impl std::io::Write) -> std::io::Res
         writer.write_all(&chunk)?;
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn bx(kind: &[u8; 4], content: &[u8]) -> Vec<u8> {
+        [&((content.len() + 8) as u32).to_be_bytes()[..], kind, content].concat()
+    }
+
+    /// An AVIF `meta` over the 1 MiB read cap: an EXIF loss only when it
+    /// declares an Exif item.
+    #[test]
+    fn oversized_meta_exif_loss_when_declared() {
+        let file = |item_type: &[u8; 4]| {
+            let infe = bx(b"infe", &[&[2, 0, 0, 0, 0, 1, 0, 0][..], item_type, b"\0"].concat());
+            let iinf = bx(b"iinf", &[&[0, 0, 0, 0, 0, 1][..], &infe].concat());
+            let padding = bx(b"free", &vec![0; 1_100_000]);
+            let meta = bx(b"meta", &[&[0, 0, 0, 0][..], &iinf, &padding].concat());
+            [bx(b"ftyp", b"avif\0\0\0\0mif1"), meta].concat()
+        };
+        let read = |bytes: Vec<u8>| avif_exif_block(&mut std::io::Cursor::new(bytes));
+        assert_eq!(read(file(b"av01")), Ok(None));
+        assert!(read(file(b"Exif")).is_err());
+    }
 }

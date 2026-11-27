@@ -1,0 +1,14 @@
+allow-unwrap-in-tests = true
+allow-expect-in-tests = true
+# Unpublished workspace: let Clippy judge public items too.
+avoid-breaking-exported-api = false
+
+# Outputs are published by bigimage-core: synced with their folder, a
+# replaced file's permission bits kept, skip and increment never overwriting.
+disallowed-methods = [
+    { path = "std::fs::rename", reason = "publish through bigimage_core::publish_finished_file or a core pipeline" },
+    { path = "tempfile::NamedTempFile::persist", reason = "publish through bigimage_core::publish_finished_file or a core pipeline" },
+    { path = "tempfile::NamedTempFile::persist_noclobber", reason = "publish through bigimage_core::publish_finished_file or a core pipeline" },
+    { path = "tempfile::TempPath::persist", reason = "publish through bigimage_core::publish_finished_file or a core pipeline" },
+    { path = "tempfile::TempPath::persist_noclobber", reason = "publish through bigimage_core::publish_finished_file or a core pipeline" },
+]

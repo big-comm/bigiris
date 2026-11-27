@@ -322,7 +322,7 @@ mod tests {
         });
         let metric = Metric::new(&image).unwrap();
         assert!(metric.score(&image).unwrap() > 99.0);
-        let mut noisy = image.clone();
+        let mut noisy = image;
         for (i, px) in noisy.pixels_mut().enumerate() {
             px[0] = px[0].wrapping_add(((i * 7919) % 41) as u8);
         }
@@ -364,11 +364,7 @@ mod tests {
     #[test]
     fn colour_under_transparent_pixels_is_ignored_but_alpha_errors_count() {
         let image = RgbaImage::from_fn(32, 32, |x, _| {
-            if x < 16 {
-                image::Rgba([200, 30, 30, 255])
-            } else {
-                image::Rgba([0, 0, 0, 0])
-            }
+            if x < 16 { image::Rgba([200, 30, 30, 255]) } else { image::Rgba([0, 0, 0, 0]) }
         });
         let metric = Metric::new(&image).unwrap();
         let mut hidden = image.clone();
@@ -376,7 +372,7 @@ mod tests {
             *px = image::Rgba([12, 250, 77, 0]);
         }
         assert!(metric.score(&hidden).unwrap() > 99.0, "invisible colour must not count");
-        let mut visible = image.clone();
+        let mut visible = image;
         for px in visible.pixels_mut().filter(|px| px[3] == 0) {
             px[3] = 128;
         }

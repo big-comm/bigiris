@@ -32,8 +32,13 @@
 
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
-// Without engines, the pre/post-processing helpers only serve the tests.
-#![cfg_attr(not(feature = "native"), allow(dead_code))]
+#![cfg_attr(
+    not(feature = "native"),
+    allow(
+        dead_code,
+        reason = "without engines, the pre/post-processing helpers only serve the tests"
+    )
+)]
 
 pub mod background;
 pub mod denoise;
@@ -43,7 +48,8 @@ mod memory;
 pub mod upscale;
 
 pub use engine::{
-    cancel_on, set_threads, threads, AiError, Availability, Device, ModelInfo, Stage,
+    AiError, Availability, Device, ModelInfo, Stage, WeightsError, cancel_on, gibibytes,
+    set_threads, threads,
 };
 
 /// Crate version.

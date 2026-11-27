@@ -39,3 +39,6 @@ gif = "0.14"
 [features]
 default = []
 serde = ["dep:serde"]
+
+[lints]
+workspace = true

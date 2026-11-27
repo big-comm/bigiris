@@ -354,7 +354,7 @@ mod tests {
     fn animation_is_monotonic_in_both_directions_and_stops_at_target() {
         for (from, to) in [(0.5, 1.0), (1.0, 0.5)] {
             let values: Vec<_> =
-                (0..=20).map(|n| animated_scale(from, to, n as f64 / 20.0)).collect();
+                (0..=20).map(|n| animated_scale(from, to, f64::from(n) / 20.0)).collect();
             assert!((values[0] - from).abs() < 1e-10);
             assert!((values[20] - to).abs() < 1e-10);
             assert!(values.windows(2).all(|pair| if to > from {

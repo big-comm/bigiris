@@ -9,7 +9,7 @@ use std::path::{Path, PathBuf};
 
 use image::DynamicImage;
 
-use crate::{pipeline, Format, Result};
+use crate::{Format, Result, pipeline};
 
 /// Policy to apply when the computed output path already exists on disk.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -37,25 +37,40 @@ pub enum ConvertOutcome {
         /// Path that was left untouched.
         output: PathBuf,
     },
+    /// Nothing would change: a resize or extent to the size the image
+    /// already has, in its own format. Nothing was written.
+    Unchanged {
+        /// The name the output would have had.
+        output: PathBuf,
+    },
 }
 
 impl ConvertOutcome {
-    /// Final path (written or skipped).
+    /// Final path (written or skipped), or the one an unchanged run would
+    /// have written.
     pub fn path(&self) -> &Path {
         match self {
-            ConvertOutcome::Written { output } | ConvertOutcome::Skipped { output } => output,
+            ConvertOutcome::Written { output }
+            | ConvertOutcome::Skipped { output }
+            | ConvertOutcome::Unchanged { output } => output,
         }
     }
 }
 
-/// Convert a single file to `target` and write it next to the input using the
-/// target's canonical extension.
+/// Convert a single file to `target` and write it next to the input, with
+/// the extension [`Format::output_extension`] gives.
 ///
 /// The input is decoded with format auto-detection (by header when possible,
-/// extension as fallback) and re-encoded into the target format. Colour space
-/// and metadata preservation will land in a later iteration — today the
-/// pipeline decodes into the image crate's internal 8-bit representation and
-/// encodes straight back out.
+/// extension as fallback), its pixels converted to sRGB when it carries a
+/// colour profile, and re-encoded into the target format at the depth the
+/// [`crate::save_image`] table gives (16-bit and float sources keep their
+/// depth where the target can store it). The encode carries no source
+/// metadata; [`convert_file_report`] says when the original bytes are
+/// published instead.
+///
+/// # Errors
+///
+/// As [`convert_file_report`].
 pub fn convert_file(
     input: impl AsRef<Path>,
     target: Format,
@@ -69,6 +84,10 @@ pub fn convert_file(
 /// the converted file into that directory keeping the source stem and
 /// honouring the overwrite policy (Skip/Replace/Increment). Passing
 /// `None` is equivalent to [`convert_file`] (writes next to the source).
+///
+/// # Errors
+///
+/// As [`convert_file_report`].
 pub fn convert_file_to(
     input: impl AsRef<Path>,
     output_dir: Option<&Path>,
@@ -95,9 +114,14 @@ pub struct ConvertReport {
 /// Never larger: when the target format is the source's own format and the
 /// re-encoded file would be larger than the input, the input bytes are
 /// published instead — unless `opts.strip_metadata` is set and the input
-/// carries EXIF/XMP/IPTC/text metadata the re-encode would have removed
-/// (privacy wins over size). Across formats the sizes are not comparable
+/// holds anything the encoders would not write (EXIF, XMP, text, C2PA,
+/// private chunks, bytes after the image): privacy wins over size. Across formats the sizes are not comparable
 /// and the encode is always written.
+///
+/// # Errors
+///
+/// As [`crate::transform_file`]; converting a file over itself also refuses a
+/// container with several entries ([`crate::BigImageError::SeveralEntries`]).
 pub fn convert_file_report(
     input: impl AsRef<Path>,
     output_dir: Option<&Path>,
@@ -106,17 +130,20 @@ pub fn convert_file_report(
     policy: OverwritePolicy,
 ) -> Result<ConvertReport> {
     let input = input.as_ref();
-    let output = pipeline::resolve_output_to(input, output_dir, None, target, policy)?;
+    let output = pipeline::resolve_output_to(input, output_dir, None, target)?;
 
-    if matches!(policy, OverwritePolicy::Skip) {
-        if let Some(skipped) =
+    if matches!(policy, OverwritePolicy::Skip)
+        && let Some(skipped) =
             pipeline::skip_existing(input, output.clone(), target, pipeline::any_size)?
-        {
-            return Ok(ConvertReport { outcome: skipped, kept_original: false });
-        }
+    {
+        return Ok(ConvertReport { outcome: skipped, kept_original: false });
     }
 
     tracing::debug!(?input, ?output, ?target, ?opts, "convert: decoding");
+    // Written over itself, a container loses its other entries whatever
+    // the target format.
+    let in_place = pipeline::same_file(input, &output);
+    crate::content::ensure_single_entry(input, (!in_place).then_some(target))?;
     let (img, src_format) = pipeline::decode_with_source_format(input)?;
     let output = pipeline::content_output(output, target, &img);
     let original = (src_format == target).then_some(input);
@@ -132,16 +159,6 @@ pub fn convert_file_report(
     Ok(ConvertReport { outcome, kept_original })
 }
 
-/// Coerce a `DynamicImage` into a colour/bit-depth that the target encoder is
-/// willing to accept, avoiding encoder-side `UnsupportedError` from formats
-/// that reject common inputs (OpenEXR won't take 8-bit integer; HDR wants
-/// RGB floats). The resulting per-format policy is documented on
-/// [`crate::save_image`].
-///
-/// Float images (OpenEXR/HDR) hold scene-linear light while every integer
-/// format stores sRGB-encoded values, so crossing that boundary applies the
-/// sRGB transfer function (and its inverse) instead of a bare rescale, which
-/// would make linear images look far too dark and vice versa.
 /// Bytes per pixel of the buffer [`prepare_for_target`] makes from a `color`
 /// source, so a too-large result is refused before it is allocated.
 pub(crate) fn prepared_bytes_per_pixel(color: image::ColorType, target: Format) -> u8 {
@@ -149,7 +166,13 @@ pub(crate) fn prepared_bytes_per_pixel(color: image::ColorType, target: Format) 
     match target {
         Format::OpenExr => 16,
         Format::Hdr => 12,
-        Format::Ico | Format::WebP | Format::Gif | Format::Bmp | Format::Tga | Format::Qoi => 4,
+        Format::Ico
+        | Format::WebP
+        | Format::Avif
+        | Format::Gif
+        | Format::Bmp
+        | Format::Tga
+        | Format::Qoi => 4,
         Format::Jpeg => 3,
         Format::Png => match color {
             C::Rgb32F => 6,
@@ -168,10 +191,19 @@ pub(crate) fn prepared_bytes_per_pixel(color: image::ColorType, target: Format) 
             C::Rgb8 | C::Rgba8 => 3,
             _ => 6,
         },
-        Format::Avif => color.bytes_per_pixel(),
     }
 }
 
+/// Coerce a `DynamicImage` into a colour/bit-depth that the target encoder is
+/// willing to accept, avoiding encoder-side `UnsupportedError` from formats
+/// that reject common inputs (OpenEXR won't take 8-bit integer; HDR wants
+/// RGB floats). The resulting per-format policy is documented on
+/// [`crate::save_image`].
+///
+/// Float images (OpenEXR/HDR) hold scene-linear light while every integer
+/// format stores sRGB-encoded values, so crossing that boundary applies the
+/// sRGB transfer function (and its inverse) instead of a bare rescale, which
+/// would make linear images look far too dark and vice versa.
 pub(crate) fn prepare_for_target(img: DynamicImage, target: Format) -> DynamicImage {
     let img = match target {
         Format::OpenExr | Format::Hdr => sanitize_floats(linear_from_srgb(img)),
@@ -185,7 +217,7 @@ pub(crate) fn prepare_for_target(img: DynamicImage, target: Format) -> DynamicIm
                 if img.width() > 256 || img.height() > 256 { img.thumbnail(256, 256) } else { img };
             DynamicImage::ImageRgba8(img.into_rgba8())
         }
-        Format::WebP | Format::Gif | Format::Bmp | Format::Tga | Format::Qoi => {
+        Format::WebP | Format::Avif | Format::Gif | Format::Bmp | Format::Tga | Format::Qoi => {
             DynamicImage::ImageRgba8(img.into_rgba8())
         }
         Format::Png => match img {
@@ -214,7 +246,6 @@ pub(crate) fn prepare_for_target(img: DynamicImage, target: Format) -> DynamicIm
         // PGM/PPM carry 8 or 16-bit gray or RGB, but no alpha: flatten only
         // the alpha channel and keep depth and gray-ness.
         Format::Pnm => flatten_alpha_keep_depth(img),
-        _ => img,
     }
 }
 
@@ -261,20 +292,12 @@ fn sanitize_floats(img: DynamicImage) -> DynamicImage {
 /// sRGB opto-electronic transfer function (linear → encoded), clamped.
 fn srgb_oetf(v: f32) -> f32 {
     let v = if v.is_nan() { 0.0 } else { v.clamp(0.0, 1.0) };
-    if v <= 0.003_130_8 {
-        v * 12.92
-    } else {
-        1.055 * v.powf(1.0 / 2.4) - 0.055
-    }
+    if v <= 0.003_130_8 { v * 12.92 } else { 1.055 * v.powf(1.0 / 2.4) - 0.055 }
 }
 
 /// sRGB electro-optical transfer function (encoded → linear).
 fn srgb_eotf(v: f32) -> f32 {
-    if v <= 0.040_45 {
-        v / 12.92
-    } else {
-        ((v + 0.055) / 1.055).powf(2.4)
-    }
+    if v <= 0.040_45 { v / 12.92 } else { ((v + 0.055) / 1.055).powf(2.4) }
 }
 
 fn map_colour(data: &mut [f32], channels: usize, f: fn(f32) -> f32) {
@@ -474,7 +497,7 @@ mod tests {
         .unwrap();
         let out = match outcome {
             ConvertOutcome::Written { output } => output,
-            ConvertOutcome::Skipped { .. } => panic!("unexpected skip"),
+            other => panic!("unexpected {other:?}"),
         };
 
         assert_eq!(out, dir.path().join("fx.jpg"));
@@ -623,13 +646,57 @@ mod tests {
         assert!(matches!(back, ConvertOutcome::Written { .. }));
     }
 
+    /// A same-format output keeps the input's name, so `photo.PNG` never
+    /// writes over a different `photo.png`; an extensionless input, whose
+    /// format only its content names, takes the standard extension.
     #[test]
-    fn replace_in_place_failure_keeps_source() {
-        // Regression: Replace with output == input must never destroy the
-        // original on an encode failure. We force a failure by feeding an
-        // EXR target a path whose parent we make unwritable is brittle, so
-        // instead assert the happy in-place replace leaves a valid image
-        // (the atomic temp+rename path) — the destructive bug deleted it.
+    fn same_format_output_keeps_input_name() {
+        let dir = TempDir::new().unwrap();
+        let upper = write_fixture_png(dir.path(), "photo.PNG");
+        let sibling = dir.path().join("photo.png");
+        std::fs::write(&sibling, b"someone else's photo").unwrap();
+        let opts = crate::EncodeOptions::default();
+        let written = |input: &Path, target, policy| match convert_file(
+            input, target, &opts, policy,
+        )
+        .unwrap()
+        {
+            ConvertOutcome::Written { output } => output,
+            other => panic!("{other:?}"),
+        };
+
+        assert_eq!(written(&upper, Format::Png, OverwritePolicy::Replace), upper);
+        assert_eq!(
+            written(&upper, Format::Png, OverwritePolicy::Increment),
+            dir.path().join("photo_1.PNG")
+        );
+        assert_eq!(std::fs::read(&sibling).unwrap(), b"someone else's photo");
+
+        let jpeg = dir.path().join("shot.jpeg");
+        image::open(&upper).unwrap().save(&jpeg).unwrap();
+        assert_eq!(
+            written(&jpeg, Format::Jpeg, OverwritePolicy::Increment),
+            dir.path().join("shot_1.jpeg")
+        );
+        assert_eq!(written(&jpeg, Format::Png, OverwritePolicy::Skip), dir.path().join("shot.png"));
+
+        let noext = dir.path().join("noext");
+        std::fs::copy(&upper, &noext).unwrap();
+        let taken = dir.path().join("noext.png");
+        std::fs::write(&taken, b"keep").unwrap();
+        let outcome = convert_file(&noext, Format::Png, &opts, OverwritePolicy::Skip).unwrap();
+        assert_eq!(outcome, ConvertOutcome::Skipped { output: taken.clone() });
+        assert_eq!(
+            written(&noext, Format::Png, OverwritePolicy::Increment),
+            dir.path().join("noext_1.png")
+        );
+        assert_eq!(std::fs::read(&taken).unwrap(), b"keep");
+    }
+
+    /// Regression: an in-place Replace once deleted the source; it must
+    /// publish a complete file through the temporary sibling.
+    #[test]
+    fn in_place_replace_publishes_whole_file() {
         let dir = TempDir::new().unwrap();
         let src = write_fixture_png(dir.path(), "inplace.png");
         let before = std::fs::read(&src).unwrap();
@@ -656,6 +723,16 @@ mod tests {
             })
             .collect();
         assert!(leftovers.is_empty(), "temp file leaked: {leftovers:?}");
+    }
+
+    /// [`Format::stores_alpha`] says what the encoders are handed.
+    #[test]
+    fn stores_alpha_matches_the_prepared_pixels() {
+        let rgba = DynamicImage::ImageRgba8(image::RgbaImage::new(2, 2));
+        for &format in Format::all() {
+            let prepared = prepare_for_target(rgba.clone(), format);
+            assert_eq!(prepared.color().has_alpha(), format.stores_alpha(), "{format:?}");
+        }
     }
 
     #[test]

@@ -70,11 +70,7 @@ fn parse_files(data: &[u8], mime: &str) -> Result<Vec<PathBuf>, TransferError> {
             }
         }
     }
-    if paths.is_empty() {
-        Err(TransferError::Empty)
-    } else {
-        Ok(paths)
-    }
+    if paths.is_empty() { Err(TransferError::Empty) } else { Ok(paths) }
 }
 
 fn show_error(window: &adw::ApplicationWindow, error: TransferError) {
@@ -298,9 +294,6 @@ pub(super) fn install(
         );
     });
     window.add_action(&paste);
-    if let Some(app) = window.application() {
-        app.set_accels_for_action("win.paste", &["<Ctrl>v"]);
-    }
     let target = gtk4::DropTargetAsync::new(
         Some(gdk::ContentFormats::new(MIME_TYPES)),
         gdk::DragAction::COPY,
@@ -418,16 +411,16 @@ mod tests {
                 while result.borrow().is_none() {
                     context.iteration(true);
                 }
-                let value = result.borrow_mut().take().unwrap();
-                value
+
+                result.borrow_mut().take().unwrap()
             })
             .unwrap()
     }
 
     #[test]
     fn stream_reads_across_chunks_and_accepts_exact_limit() {
-        let data = vec![b'a'; MAX_BYTES];
-        assert_eq!(read_memory(data.clone(), false), Ok(data));
+        let payload = vec![b'a'; MAX_BYTES];
+        assert_eq!(read_memory(payload.clone(), false), Ok(payload));
     }
 
     #[test]

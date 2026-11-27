@@ -8,7 +8,7 @@
 //!
 //! The whole point is to avoid two otherwise-unavoidable costs on every
 //! slider tick: re-decoding the PNG/JPEG from disk, and operating on the
-//! full-resolution pixel data when a 600px preview is what the user sees.
+//! full-resolution pixel data when an 800px preview is what the user sees.
 //! So we decode once, down-sample to a bounded thumbnail, and chain the
 //! pure `apply_to` functions across all five transform modules.
 
@@ -18,8 +18,8 @@ use fast_image_resize::{ResizeAlg, ResizeOptions, Resizer};
 use image::DynamicImage;
 
 use crate::{
-    adjust, crop, extent, flip, pipeline, resize, rotate, AdjustOps, CropRect, ExtentOptions,
-    ExtentSize, Filter, FlipAxis, Format, ResizeMode, Result, Rotation,
+    AdjustOps, CropRect, ExtentOptions, ExtentSize, Filter, FlipAxis, Format, ResizeMode, Result,
+    Rotation, adjust, crop, extent, flip, pipeline, resize, rotate,
 };
 
 /// Max edge for the cached thumbnail. 800px keeps the whole preview image
@@ -62,8 +62,6 @@ pub enum PreviewOp {
 /// Cached decoded image + downsampled thumbnail, built once per dialog.
 #[derive(Debug, Clone)]
 pub struct PreviewSession {
-    /// Path of the source file — kept for error messages only.
-    source_path: std::path::PathBuf,
     /// Natural pixel dimensions of the source (used to scale crop/resize
     /// parameters into the thumbnail space).
     natural_size: (u32, u32),
@@ -83,6 +81,11 @@ pub struct PreviewSession {
 impl PreviewSession {
     /// Open a file, decode it, downsample to a preview thumbnail, and
     /// cache everything in memory.
+    ///
+    /// # Errors
+    ///
+    /// As [`crate::transform_file`] for the decode, plus
+    /// [`crate::BigImageError::Other`] when the thumbnail cannot be resized.
     pub fn open(input: impl AsRef<Path>) -> Result<Self> {
         let input = input.as_ref();
         if let Some(backend) = crate::backend::configured() {
@@ -92,10 +95,9 @@ impl PreviewSession {
         let natural_size = (src.width(), src.height());
 
         let thumbnail = downscale(&src, PREVIEW_MAX_EDGE)?;
-        let thumbnail_scale = thumbnail.width() as f64 / natural_size.0.max(1) as f64;
+        let thumbnail_scale = f64::from(thumbnail.width()) / f64::from(natural_size.0.max(1));
 
         Ok(Self {
-            source_path: input.to_path_buf(),
             natural_size,
             source_format,
             thumbnail,
@@ -105,8 +107,12 @@ impl PreviewSession {
     }
 
     /// Reconstruct a validated preview returned by an isolated decoder.
+    ///
+    /// # Errors
+    ///
+    /// [`crate::BigImageError::InvalidInput`] when a size is zero or the thumbnail
+    /// is over the preview edge.
     pub fn from_cached(
-        input: std::path::PathBuf,
         natural_size: (u32, u32),
         source_format: Format,
         thumbnail: DynamicImage,
@@ -122,10 +128,9 @@ impl PreviewSession {
             return Err(crate::BigImageError::InvalidInput("invalid preview".into()));
         }
         Ok(Self {
-            source_path: input,
             natural_size,
             source_format,
-            thumbnail_scale: thumbnail.width() as f64 / natural_size.0 as f64,
+            thumbnail_scale: f64::from(thumbnail.width()) / f64::from(natural_size.0),
             thumbnail,
             has_gps,
         })
@@ -142,14 +147,15 @@ impl PreviewSession {
         self.source_format
     }
 
-    /// Path of the source file.
-    pub fn source_path(&self) -> &Path {
-        &self.source_path
-    }
-
     /// Apply `op` to the cached thumbnail and return the result. The
     /// thumbnail itself is never mutated, so callers can keep calling
     /// with different ops freely.
+    ///
+    /// # Errors
+    ///
+    /// [`crate::BigImageError::InvalidInput`] when `op` is invalid for the source
+    /// image (a resize, crop or extent the file operation would refuse), and
+    /// [`crate::BigImageError::Other`] when the thumbnail cannot be resized.
     pub fn apply(&self, op: &PreviewOp) -> Result<DynamicImage> {
         match op {
             PreviewOp::Identity => Ok(self.thumbnail.clone()),
@@ -193,10 +199,12 @@ impl PreviewSession {
                 let preview_opts = match opts.size {
                     ExtentSize::Aspect { .. } => *opts,
                     ExtentSize::Exact { width, height } => {
-                        let pw = ((width as f64) * self.thumbnail_scale).round().max(f64::from(tw))
-                            as u32;
-                        let ph = ((height as f64) * self.thumbnail_scale).round().max(f64::from(th))
-                            as u32;
+                        let pw = (f64::from(width) * self.thumbnail_scale)
+                            .round()
+                            .max(f64::from(tw)) as u32;
+                        let ph = (f64::from(height) * self.thumbnail_scale)
+                            .round()
+                            .max(f64::from(th)) as u32;
                         ExtentOptions { size: ExtentSize::Exact { width: pw, height: ph }, ..*opts }
                     }
                 };
@@ -217,13 +225,6 @@ impl PreviewSession {
                 )
             }
         }
-    }
-
-    /// How many bytes the cached thumbnail occupies if we upload it to the
-    /// GPU as an RGBA texture. Useful to sanity-check memory on very
-    /// large selections.
-    pub fn thumbnail_rgba_bytes(&self) -> usize {
-        (self.thumbnail.width() as usize) * (self.thumbnail.height() as usize) * 4
     }
 
     /// Expose the thumbnail directly — GUI uses this when no op has been
@@ -313,6 +314,23 @@ mod tests {
         }
         img.save(&path).unwrap();
         path
+    }
+
+    /// Guards: process boundary: a preview relayed by the decoder worker is
+    /// checked before it is used.
+    #[test]
+    fn from_cached_refuses_invalid_previews() {
+        let thumbnail = |w, h| DynamicImage::new_rgb8(w, h);
+        let accepted = |natural, image| {
+            PreviewSession::from_cached(natural, Format::Png, image, false).is_ok()
+        };
+        assert!(accepted((1600, 900), thumbnail(800, 450)));
+        assert!(!accepted((0, 900), thumbnail(800, 450)));
+        assert!(!accepted((1600, 0), thumbnail(800, 450)));
+        assert!(!accepted((1600, 900), thumbnail(0, 450)));
+        assert!(!accepted((1600, 900), thumbnail(800, 0)));
+        assert!(!accepted((1600, 900), thumbnail(PREVIEW_MAX_EDGE + 1, 450)));
+        assert!(!accepted((900, 1600), thumbnail(450, PREVIEW_MAX_EDGE + 1)));
     }
 
     #[test]

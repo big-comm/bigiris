@@ -86,40 +86,13 @@ fn fill_adjust_dialog(
     content.append(&group_tone);
     content.append(&group_color);
     content.append(&group_out);
-    content.append(&status);
-    content.append(&actions_box);
-
-    let scrolled = gtk::ScrolledWindow::builder()
-        .hexpand(true)
-        .vexpand(true)
-        .hscrollbar_policy(gtk::PolicyType::Never)
-        .vscrollbar_policy(gtk::PolicyType::Automatic)
-        .child(&content)
-        .build();
-    scrolled.set_size_request(420, -1);
-
-    // Two-column layout: scrollable form on the left, live preview column
-    // on the right (when a session is available).
-    let main_box = gtk::Box::builder()
-        .orientation(gtk::Orientation::Horizontal)
-        .spacing(16)
-        .margin_top(0)
-        .margin_bottom(0)
-        .build();
-    main_box.append(&scrolled);
-
-    let preview_picture: Option<gtk::Picture> = if let Some(sess) = preview_session.as_ref() {
-        let (picture, column) = build_preview_column(sess);
-        column.set_margin_top(16);
-        column.set_margin_bottom(16);
-        column.set_margin_end(16);
-        main_box.append(&column);
-        Some(picture)
-    } else {
-        None
-    };
-
-    set_dialog_content(&window, &header, &main_box);
+    let preview_picture = set_preview_dialog_content(
+        &window,
+        &header,
+        &content,
+        &[status.upcast_ref(), actions_box.upcast_ref()],
+        preview_session.as_deref(),
+    );
 
     // Wire live preview on every slider / gamma change.
     if let (Some(picture), Some(session)) = (preview_picture.as_ref(), preview_session.as_ref()) {
@@ -153,23 +126,18 @@ fn fill_adjust_dialog(
     close_on_click(&window, &cancel_btn);
 
     {
-        let files = files.clone();
-        let brightness = brightness.clone();
-        let contrast = contrast.clone();
-        let saturation = saturation.clone();
-        let gamma = gamma.clone();
-        let target_row = target_row.clone();
-        let overwrite_row = overwrite_row.clone();
-        let status = status.clone();
-        let apply_btn = apply_btn.clone();
         let window = window.clone();
-        dialog_signal!(window, apply_btn.clone(), connect_clicked, move |_| {
+        dialog_signal!(window, apply_btn, connect_clicked, move |_| {
             let ops = AdjustOps {
                 brightness: brightness.value() as i32,
                 contrast: contrast.value() as f32,
                 saturation: saturation.value() as f32,
                 gamma: gamma.value() as f32,
             };
+            if ops == AdjustOps::default() {
+                status.set_text(&gettext("Every value is neutral: nothing would change."));
+                return;
+            }
             let target = selected_target_format(&target_row);
             let policy = selected_overwrite(&overwrite_row);
 
@@ -179,6 +147,11 @@ fn fill_adjust_dialog(
             let work_files: Vec<PathBuf> = (*files).clone();
             run_batch_async(
                 work_files,
+                crate::output_plan::Naming::image(
+                    target,
+                    policy,
+                    crate::output_plan::OutputSuffix::Fixed(ops.filename_suffix()),
+                ),
                 move |f| adjust_file(f, ops, target, policy),
                 gettext("Adjusting"),
                 status.clone(),

@@ -3,8 +3,8 @@
 //! its SSIMULACRA2 target, is much smaller than the previous encoders,
 //! keeps metadata, and same-format conversions are never larger.
 use bigimage_core::{
-    convert_file_report, save_image, save_image_preserving_metadata, EncodeOptions, Format,
-    OverwritePolicy, QualityTarget, SourceMetadata,
+    EncodeOptions, Format, OverwritePolicy, QualityTarget, SourceMetadata, convert_file_report,
+    save_image, save_image_preserving_metadata,
 };
 use fast_ssim2::{PixelDescriptor, PixelSlice, Ssimulacra2Reference};
 use image::{DynamicImage, ImageEncoder, RgbaImage};
@@ -30,9 +30,14 @@ fn score(reference: &RgbaImage, distorted: &RgbaImage) -> f64 {
         .map(|bg| {
             let a = composite(reference, bg);
             let b = composite(distorted, bg);
-            let sa = PixelSlice::new(&a, w, h, w as usize * 3, PixelDescriptor::RGB8_SRGB).unwrap();
-            let sb = PixelSlice::new(&b, w, h, w as usize * 3, PixelDescriptor::RGB8_SRGB).unwrap();
-            Ssimulacra2Reference::new(&sa).unwrap().compare(&sb).unwrap()
+            let slice = |rgb| {
+                PixelSlice::new(rgb, w, h, w as usize * 3, PixelDescriptor::RGB8_SRGB)
+                    .expect("composite returns three bytes per pixel")
+            };
+            Ssimulacra2Reference::new(&slice(&a))
+                .expect("reference image too small for SSIMULACRA2")
+                .compare(&slice(&b))
+                .expect("images of different sizes")
         })
         .fold(f64::INFINITY, f64::min)
 }
@@ -72,8 +77,9 @@ fn displayed(image: &DynamicImage, format: Format) -> RgbaImage {
         return rgba;
     }
     let rgb = composite(&rgba, 255);
-    DynamicImage::ImageRgb8(image::RgbImage::from_raw(rgba.width(), rgba.height(), rgb).unwrap())
-        .into_rgba8()
+    let rgb = image::RgbImage::from_raw(rgba.width(), rgba.height(), rgb)
+        .expect("composite returns three bytes per pixel");
+    DynamicImage::ImageRgb8(rgb).into_rgba8()
 }
 
 fn save(
@@ -83,8 +89,8 @@ fn save(
     dir: &std::path::Path,
 ) -> Vec<u8> {
     let path = dir.join(format!("out-{:?}-{:?}.{}", opts.target, opts.quality, format.extension()));
-    save_image(image.clone(), &path, format, opts, OverwritePolicy::Replace).unwrap();
-    std::fs::read(&path).unwrap()
+    save_image(image.clone(), &path, format, opts, OverwritePolicy::Replace).expect("save");
+    std::fs::read(&path).expect("read the saved file")
 }
 
 #[test]
@@ -111,7 +117,7 @@ fn lossy_and_palette_outputs_meet_every_target() {
     let bytes = save(&graphic(), Format::Gif, &opts, dir.path());
     let decoded = image::load_from_memory(&bytes).unwrap().into_rgba8();
     let flat = graphic().to_rgba8();
-    let mut binary = flat.clone();
+    let mut binary = flat;
     for px in binary.pixels_mut() {
         px[3] = if px[3] < 128 { 0 } else { 255 };
     }
@@ -210,7 +216,8 @@ fn searched_outputs_still_embed_exif_and_icc() {
     use image::ImageDecoder;
     let dir = tempfile::tempdir().unwrap();
     let p3 = moxcms::ColorProfile::new_display_p3().encode().unwrap();
-    let source = SourceMetadata { exif: Some(tiff_exif()), icc: Some(p3.clone()) };
+    let source =
+        SourceMetadata { exif: Some(tiff_exif()), icc: Some(p3.clone()), ..Default::default() };
     for format in [Format::Jpeg, Format::Png, Format::WebP] {
         let path = dir.path().join(format!("meta.{}", format.extension()));
         save_image_preserving_metadata(
@@ -281,4 +288,18 @@ fn same_format_conversion_never_grows_the_file() {
             .unwrap();
     assert!(!report.kept_original);
     assert!(image::open(report.outcome.path()).is_ok());
+
+    // A larger original of the same format gives way to the smaller encode.
+    let smooth =
+        image::RgbImage::from_fn(64, 64, |x, y| image::Rgb([x as u8 * 4, y as u8 * 4, 90]));
+    let heavy = dir.path().join("heavy.jpg");
+    image::codecs::jpeg::JpegEncoder::new_with_quality(std::fs::File::create(&heavy).unwrap(), 100)
+        .encode_image(&smooth)
+        .unwrap();
+    let report =
+        convert_file_report(&heavy, Some(&out), Format::Jpeg, &opts, OverwritePolicy::Replace)
+            .unwrap();
+    assert!(!report.kept_original);
+    let written = std::fs::metadata(report.outcome.path()).unwrap().len();
+    assert!(written < std::fs::metadata(&heavy).unwrap().len());
 }

@@ -240,6 +240,9 @@ you already had. If you do not have that file yet, it starts as a copy of
 actions are not hidden. The packages do not install `/etc/xdg/Thunar/uca.xml`:
 that file belongs to the `thunar` package. Thunar users must run the command
 above once per user (`install.sh` already does).
+`bigiris uninstall-integrations` removes only the BigIris actions; a
+`uca.xml` left without any action keeps hiding the system's defaults until
+you delete it.
 
 With the package installed, `install-integrations --user` does not write
 personal copies of the integrations the package already provides in
@@ -275,6 +278,7 @@ bigiris --dialog=convert *.jpg
 bigiris --dialog=resize *.png
 bigiris --dialog=crop photo.jpg
 bigiris --dialog=adjust *.jpg
+bigiris --dialog=metadata photo.jpg
 bigiris --dialog=compare before.png after.png
 bigiris --dialog=remove-bg photo.jpg
 bigiris --dialog=upscale photo.jpg
@@ -283,11 +287,16 @@ bigiris --dialog=upscale photo.jpg
 bigiris convert --to avif --overwrite increment *.jpg
 bigiris convert --to webp --target smallest *.png
 bigiris convert --to jpg --quality 90 photo.png
+bigiris convert --to png --target maximum --optimize --in-place photo.png
+bigiris strip-metadata --overwrite increment photo.jpeg  # photo_1.jpeg, no EXIF
 bigiris resize --max-edge 1080 *.png
+bigiris resize --percent 50 photo.jpg
+bigiris resize --fit 1920x1080 --filter catmull-rom *.jpg
 bigiris rotate --degrees 90 photo.jpg
 bigiris flip --axis horizontal photo.jpg
 bigiris crop --rect 800x600+100+50 photo.jpg
 bigiris adjust --brightness 15 --contrast 10 photo.jpg
+bigiris extent --aspect 4:5 --bg "#0d0e12" --gravity north photo.jpg
 bigiris animate -o output.gif --delay 100 frame_*.png
 bigiris remove-bg --overwrite increment photo.jpg
 bigiris upscale --factor 4 photo.jpg               # Real-ESRGAN, or Lanczos3
@@ -312,6 +321,15 @@ the output shows `skip`. This also applies to `animate` (the target `.gif`),
 Outputs that would collide with each other in the same command are refused
 before anything is written.
 
+An output in the input's own format keeps the input's file name and extension
+(`photo.PNG` writes `photo.PNG`, `photo.jpeg` with `increment` writes
+`photo_1.jpeg`); converting to another format, or a file without an
+extension, uses the standard extension (`photo.jpeg` to PNG writes
+`photo.png`). The same rule names the outputs of the menus and the dialogs.
+
+- `convert --in-place` writes each output over its own input and refuses an
+  input whose output would be another file (another format, or no
+  extension); the "Optimize PNG" menu action uses it.
 - `upscale --engine` accepts `auto` (default: Real-ESRGAN if installed,
   otherwise Lanczos3), `realesrgan` (fails if the package is missing) and
   `lanczos`.

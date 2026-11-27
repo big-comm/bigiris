@@ -11,7 +11,7 @@ use std::path::Path;
 use image::DynamicImage;
 
 use crate::convert::{ConvertOutcome, OverwritePolicy};
-use crate::{pipeline, BigImageError, Format, Result};
+use crate::{BigImageError, Format, Result};
 
 /// All four adjustments bundled. Any axis left at its neutral value is
 /// skipped entirely to avoid needless pixel churn.
@@ -37,8 +37,14 @@ impl Default for AdjustOps {
 }
 
 impl AdjustOps {
+    /// What [`adjust_file`] appends to the input's stem: `_` and
+    /// [`AdjustOps::suffix_tag`].
+    pub fn filename_suffix(&self) -> String {
+        format!("_{}", self.suffix_tag())
+    }
+
     /// Short human-readable tag suitable for file suffixes, showing only
-    /// non-neutral axes: `"b10"`, `"c-20_s40"`, `"g1.8"`, etc.
+    /// non-neutral axes: `"b10"`, `"c-20_s40"`, `"g1.80"`, etc.
     pub fn suffix_tag(&self) -> String {
         let mut parts: Vec<String> = Vec::new();
         if self.brightness != 0 {
@@ -53,11 +59,7 @@ impl AdjustOps {
         if (self.gamma - 1.0).abs() > 0.001 {
             parts.push(format!("g{:.2}", self.gamma));
         }
-        if parts.is_empty() {
-            "adj".to_string()
-        } else {
-            parts.join("_")
-        }
+        if parts.is_empty() { "adj".to_string() } else { parts.join("_") }
     }
 
     fn validate(&self) -> Result<()> {
@@ -81,7 +83,7 @@ impl AdjustOps {
         }
         if !self.gamma.is_finite() || !(0.1..=10.0).contains(&self.gamma) {
             return Err(BigImageError::InvalidInput(format!(
-                "gamma outside (0.1, 10.0]: {}",
+                "gamma outside [0.1, 10.0]: {}",
                 self.gamma
             )));
         }
@@ -100,6 +102,10 @@ impl AdjustOps {
 ///
 /// Output naming carries a compact tag from [`AdjustOps::suffix_tag`] so
 /// independent tweaks don't step on each other: `foo_b10_c-20.png`.
+///
+/// # Errors
+///
+/// As [`adjust_file_with_options`].
 pub fn adjust_file(
     input: impl AsRef<Path>,
     ops: AdjustOps,
@@ -110,6 +116,11 @@ pub fn adjust_file(
 }
 
 /// Like [`adjust_file`], with caller-supplied encoder options.
+///
+/// # Errors
+///
+/// [`BigImageError::InvalidInput`] when a value of `ops` is out of range;
+/// otherwise as [`crate::transform_file`].
 pub fn adjust_file_with_options(
     input: impl AsRef<Path>,
     ops: AdjustOps,
@@ -118,30 +129,9 @@ pub fn adjust_file_with_options(
     policy: OverwritePolicy,
 ) -> Result<ConvertOutcome> {
     ops.validate()?;
-
-    let input = input.as_ref();
-    let suffix_tag = ops.suffix_tag();
-    let suffix = format!("_{suffix_tag}");
-    if let Some(skipped) =
-        pipeline::skip_before_decode(input, &suffix, target, policy, pipeline::any_size)?
-    {
-        return Ok(skipped);
-    }
-
-    let (src, src_format) = pipeline::decode_with_source_format(input)?;
-    let target = target.unwrap_or(src_format);
-
-    let output = pipeline::resolve_output(input, Some(&suffix), target, policy)?;
-
-    if pipeline::existing_output(&output, target, policy) {
-        tracing::debug!(?output, "adjust: skipping existing output");
-        return Ok(ConvertOutcome::Skipped { output });
-    }
-
-    tracing::debug!(?input, ?output, ?ops, "adjust: applying");
-    let tweaked = if ops.is_identity() { src } else { apply_to(src, ops) };
-
-    pipeline::encode_output(tweaked, output, target, opts, policy)
+    crate::transform_file(input, &ops.filename_suffix(), target, opts, policy, |src| {
+        Ok(if ops.is_identity() { src } else { apply_to(src, ops) })
+    })
 }
 
 /// Pure in-memory variant of [`adjust_file`] — applies `ops` to an already-
@@ -382,7 +372,7 @@ mod tests {
 
         // Brightness alone must be visible on 16-bit (it used to add 20 of
         // 65535) and match the 8-bit shift: +20/255 of full scale.
-        let bright = apply_to(rgb16.clone(), AdjustOps { brightness: 20, ..AdjustOps::default() });
+        let bright = apply_to(rgb16, AdjustOps { brightness: 20, ..AdjustOps::default() });
         let px = bright.as_rgb16().unwrap().get_pixel(0, 0).0;
         let expected = 20000 + (20.0f32 * 65535.0 / 255.0).round() as u16;
         assert!(px[0].abs_diff(expected) <= 1, "got {px:?}, expected {expected}");

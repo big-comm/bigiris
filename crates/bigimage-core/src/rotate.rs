@@ -1,16 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-//! Lossy rotation pipeline (90 / 180 / 270 via `image::imageops`).
-//!
-//! Arbitrary-angle rotation (with bicubic interpolation) and truly lossless
-//! JPEG DCT-level rotation are tracked as follow-up iterations — see PLAN.md.
-//! Everything here re-encodes from scratch, which is correct for every format
-//! we ship but can lose quality for JPEG sources; the viewer path will use
-//! the lossless variant when it lands.
+//! Rotation: quarter turns, baking the EXIF orientation into the pixels,
+//! and [`straighten`] by any angle with a crop to the largest rectangle
+//! inside. Every path decodes and re-encodes, so a JPEG source loses some
+//! quality; there is no lossless DCT-level rotation.
 
 use std::path::Path;
 
 use crate::convert::{ConvertOutcome, OverwritePolicy};
-use crate::{pipeline, Format, Result};
+use crate::{Format, Result, pipeline};
 
 /// Cardinal rotation amount.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -24,7 +21,8 @@ pub enum Rotation {
 }
 
 impl Rotation {
-    fn filename_suffix(&self) -> &'static str {
+    /// What [`rotate_file`] appends to the input's stem (`_rot90`).
+    pub fn filename_suffix(&self) -> &'static str {
         match self {
             Rotation::Deg90 => "_rot90",
             Rotation::Deg180 => "_rot180",
@@ -34,6 +32,10 @@ impl Rotation {
 }
 
 /// Rotate a single file.
+///
+/// # Errors
+///
+/// As [`crate::transform_file`].
 pub fn rotate_file(
     input: impl AsRef<Path>,
     rotation: Rotation,
@@ -44,6 +46,10 @@ pub fn rotate_file(
 }
 
 /// Like [`rotate_file`], with caller-supplied encoder options.
+///
+/// # Errors
+///
+/// As [`crate::transform_file`].
 pub fn rotate_file_with_options(
     input: impl AsRef<Path>,
     rotation: Rotation,
@@ -51,30 +57,9 @@ pub fn rotate_file_with_options(
     opts: &crate::EncodeOptions,
     policy: OverwritePolicy,
 ) -> Result<ConvertOutcome> {
-    let input = input.as_ref();
-    if let Some(skipped) = pipeline::skip_before_decode(
-        input,
-        rotation.filename_suffix(),
-        target,
-        policy,
-        pipeline::any_size,
-    )? {
-        return Ok(skipped);
-    }
-
-    let (src, src_format) = pipeline::decode_with_source_format(input)?;
-    let target = target.unwrap_or(src_format);
-
-    let output = pipeline::resolve_output(input, Some(rotation.filename_suffix()), target, policy)?;
-
-    if pipeline::existing_output(&output, target, policy) {
-        tracing::debug!(?output, "rotate: skipping existing output");
-        return Ok(ConvertOutcome::Skipped { output });
-    }
-
-    tracing::debug!(?input, ?output, ?target, ?rotation, "rotate: computing");
-    let rotated = apply_to(&src, rotation);
-    pipeline::encode_output(rotated, output, target, opts, policy)
+    crate::transform_file(input, rotation.filename_suffix(), target, opts, policy, |src| {
+        Ok(apply_to(&src, rotation))
+    })
 }
 
 /// Pure in-memory rotation — shared with preview pipeline.
@@ -86,44 +71,17 @@ pub fn apply_to(src: &image::DynamicImage, rotation: Rotation) -> image::Dynamic
     }
 }
 
-/// Apply the transformation implied by an EXIF orientation tag (1..=8).
-/// The tag describes how the pixel array was stored relative to the scene
-/// the camera saw, so "un-applying" it produces the upright image the
-/// user actually wants. Unknown values pass through untouched — better
-/// than silently garbling orientation.
-///
-/// Mapping (per EXIF 2.32):
-/// 1. Top-left (identity)
-/// 2. Top-right → horizontal flip
-/// 3. Bottom-right → 180° rotation
-/// 4. Bottom-left → vertical flip
-/// 5. Left-top → rotate 90° then flip horizontal (transpose)
-/// 6. Right-top → rotate 90°
-/// 7. Right-bottom → rotate 270° then flip horizontal (transverse)
-/// 8. Left-bottom → rotate 270°
-pub fn apply_exif_orientation(img: image::DynamicImage, orientation: u16) -> image::DynamicImage {
-    match orientation {
-        1 => img,
-        2 => img.fliph(),
-        3 => img.rotate180(),
-        4 => img.flipv(),
-        5 => img.rotate90().fliph(),
-        6 => img.rotate90(),
-        7 => img.rotate270().fliph(),
-        8 => img.rotate270(),
-        _ => img,
-    }
-}
-
 /// "Bake" the EXIF orientation of `input` into the pixels and write the
 /// upright result with an `_auto` suffix.
 ///
-/// The central decode path ([`crate::pipeline::decode_with_source_format`])
-/// already applies the orientation tag, so this command no longer rotates a
-/// second time — it simply materialises that upright image to disk (the
-/// encode step strips the now-redundant tag). Images without EXIF or with
+/// Every decode already applies the orientation tag, so this writes that
+/// upright image to disk (the encode drops the now-redundant tag). Images without EXIF or with
 /// orientation `1` are a harmless re-encode, keeping the return type
 /// consistent for callers counting "written vs skipped".
+///
+/// # Errors
+///
+/// As [`crate::transform_file`].
 pub fn rotate_file_auto(
     input: impl AsRef<Path>,
     target: Option<crate::Format>,
@@ -132,32 +90,23 @@ pub fn rotate_file_auto(
     rotate_file_auto_with_options(input, target, &crate::EncodeOptions::default(), policy)
 }
 
+/// What [`rotate_file_auto`] appends to the input's stem.
+pub const AUTO_ROTATE_SUFFIX: &str = "_auto";
+
 /// Like [`rotate_file_auto`], with caller-supplied encoder options.
+///
+/// # Errors
+///
+/// As [`crate::transform_file`].
 pub fn rotate_file_auto_with_options(
     input: impl AsRef<Path>,
     target: Option<crate::Format>,
     opts: &crate::EncodeOptions,
     policy: OverwritePolicy,
 ) -> Result<ConvertOutcome> {
-    let input = input.as_ref();
-    if let Some(skipped) =
-        pipeline::skip_before_decode(input, "_auto", target, policy, pipeline::any_size)?
-    {
-        return Ok(skipped);
-    }
-
-    // `src` arrives already upright — decode_with_source_format honours the
-    // orientation tag for every op. Re-applying it here would double-rotate.
-    let (src, src_format) = crate::pipeline::decode_with_source_format(input)?;
-    let target = target.unwrap_or(src_format);
-
-    let output = crate::pipeline::resolve_output(input, Some("_auto"), target, policy)?;
-    if pipeline::existing_output(&output, target, policy) {
-        return Ok(ConvertOutcome::Skipped { output });
-    }
-
-    tracing::debug!(?input, ?output, "rotate: bake EXIF orientation");
-    pipeline::encode_output(src, output, target, opts, policy)
+    // Every decode applies the orientation tag already: the upright pixels
+    // are written as they are.
+    crate::transform_file(input, AUTO_ROTATE_SUFFIX, target, opts, policy, Ok)
 }
 
 /// Largest axis-aligned rectangle (width, height) that fits inside a
@@ -183,11 +132,7 @@ pub fn inscribed_size(width: u32, height: u32, degrees: f64) -> (f64, f64) {
     if short <= 2.0 * sin * cos * long || (sin - cos).abs() < 1e-12 {
         // Half-constrained: two opposite corners touch the longer sides.
         let x = 0.5 * short;
-        if wide {
-            (x / sin, x / cos)
-        } else {
-            (x / cos, x / sin)
-        }
+        if wide { (x / sin, x / cos) } else { (x / cos, x / sin) }
     } else {
         // Fully constrained: all four corners touch the rotated sides.
         let cos2 = cos * cos - sin * sin;
@@ -211,20 +156,23 @@ pub fn straightened_size(width: u32, height: u32, degrees: f64) -> (u32, u32) {
 /// largest axis-aligned rectangle inside, so no empty corner is left.
 /// Bilinear sampling, clamped to the source edge; the sample type and
 /// channel layout of the source are kept.
-pub fn straighten(src: &image::DynamicImage, degrees: f64) -> image::DynamicImage {
+///
+/// # Errors
+///
+/// [`crate::BigImageError::InvalidInput`] when the source widened to RGBA
+/// at its sample depth exceeds the processing limits.
+pub fn straighten(src: &image::DynamicImage, degrees: f64) -> Result<image::DynamicImage> {
     use image::DynamicImage as D;
     if !degrees.is_finite() || degrees.abs() < 1e-9 || src.width() == 0 || src.height() == 0 {
-        return src.clone();
+        return Ok(src.clone());
     }
+    let sample_bytes = src.color().bytes_per_pixel() / src.color().channel_count();
+    pipeline::check_dimensions(src.width(), src.height(), 4 * sample_bytes)?;
     let size = straightened_size(src.width(), src.height(), degrees);
-    match src {
+    Ok(match src {
         D::ImageRgb32F(_) | D::ImageRgba32F(_) => {
             let out = D::ImageRgba32F(rotate_buffer(&src.to_rgba32f(), degrees, size));
-            if src.color().has_alpha() {
-                out
-            } else {
-                D::ImageRgb32F(out.to_rgb32f())
-            }
+            if src.color().has_alpha() { out } else { D::ImageRgb32F(out.to_rgb32f()) }
         }
         D::ImageLuma16(_) | D::ImageLumaA16(_) | D::ImageRgb16(_) | D::ImageRgba16(_) => {
             let out = D::ImageRgba16(rotate_buffer(&src.to_rgba16(), degrees, size));
@@ -244,7 +192,7 @@ pub fn straighten(src: &image::DynamicImage, degrees: f64) -> image::DynamicImag
                 _ => out,
             }
         }
-    }
+    })
 }
 
 /// A sample type [`straighten`] can interpolate.
@@ -379,7 +327,7 @@ mod straighten_tests {
             image::Rgb([255, 255, 255]),
         ));
         for degrees in [-45.0, -12.3, 0.1, 3.0, 30.0] {
-            let out = straighten(&white, degrees);
+            let out = straighten(&white, degrees).unwrap();
             assert_eq!(out.color(), image::ColorType::Rgb8);
             assert_eq!(
                 (out.width(), out.height()),
@@ -393,10 +341,10 @@ mod straighten_tests {
             40,
             image::Rgba([1000u16, 2000, 3000, 65535]),
         ));
-        let out = straighten(&alpha, 10.0);
+        let out = straighten(&alpha, 10.0).unwrap();
         assert_eq!(out.color(), image::ColorType::Rgba16);
         assert!(out.to_rgba16().pixels().all(|p| p.0 == [1000, 2000, 3000, 65535]));
-        assert_eq!(straighten(&white, 0.0), white);
+        assert_eq!(straighten(&white, 0.0).unwrap(), white);
     }
 
     #[test]
@@ -409,12 +357,12 @@ mod straighten_tests {
                 img.put_pixel(x, y, image::Luma([0]));
             }
         }
-        let out = straighten(&image::DynamicImage::ImageLuma8(img), 20.0).to_luma8();
+        let out = straighten(&image::DynamicImage::ImageLuma8(img), 20.0).unwrap().to_luma8();
         let (w, h) = out.dimensions();
         let darkest = out
             .enumerate_pixels()
             .min_by_key(|(_, _, p)| p.0[0])
-            .map(|(x, y, _)| (x as i64 - w as i64 / 2, y as i64 - h as i64 / 2))
+            .map(|(x, y, _)| (i64::from(x) - i64::from(w) / 2, i64::from(y) - i64::from(h) / 2))
             .unwrap();
         assert!(darkest.0 > 0 && darkest.1 > 5, "dot at {darkest:?}");
     }
@@ -510,22 +458,6 @@ mod tests {
             _ => panic!("expected write"),
         };
         assert_eq!(dims(&out), (20, 40));
-    }
-
-    #[test]
-    fn exif_orientation_dispatches_correctly() {
-        let src = image::DynamicImage::new_rgb8(40, 20);
-        let wh = |img: &image::DynamicImage| (img.width(), img.height());
-        // Case 1: identity
-        assert_eq!(wh(&apply_exif_orientation(src.clone(), 1)), (40, 20));
-        // Case 3: 180° keeps dims
-        assert_eq!(wh(&apply_exif_orientation(src.clone(), 3)), (40, 20));
-        // Case 6: 90° swaps dims
-        assert_eq!(wh(&apply_exif_orientation(src.clone(), 6)), (20, 40));
-        // Case 8: 270° swaps dims
-        assert_eq!(wh(&apply_exif_orientation(src.clone(), 8)), (20, 40));
-        // Unknown → pass-through
-        assert_eq!(wh(&apply_exif_orientation(src.clone(), 99)), (40, 20));
     }
 
     #[test]

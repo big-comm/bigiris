@@ -42,15 +42,9 @@ fn fill_upscale_dialog(
     );
     header.set_title_widget(Some(&title));
 
-    let content_h = padded_box(gtk::Orientation::Horizontal, 16);
-
     let natural = preview_session.as_ref().map(|s| s.natural_size()).unwrap_or((0, 0));
 
-    let form_col = gtk::Box::builder()
-        .orientation(gtk::Orientation::Vertical)
-        .spacing(12)
-        .width_request(340)
-        .build();
+    let form_col = padded_box(gtk::Orientation::Vertical, 12);
 
     // Real-ESRGAN when its package is installed; the row says what to
     // install otherwise and Lanczos3 runs instead.
@@ -61,7 +55,6 @@ fn fill_upscale_dialog(
         .sensitive(ai_unavailable.is_none())
         .build();
     {
-        let title = title.clone();
         dialog_signal!(window, engine_row, connect_active_notify, move |row| {
             title.set_subtitle(if row.is_active() {
                 "Prisma · Real-ESRGAN"
@@ -110,8 +103,8 @@ fn fill_upscale_dialog(
             let sub = if natural == (0, 0) {
                 fill(&gettext("× {factor} (size unavailable)"), &[("factor", &f.to_string())])
             } else {
-                let w = (natural.0 as u64) * (f as u64);
-                let h = (natural.1 as u64) * (f as u64);
+                let w = u64::from(natural.0) * u64::from(f);
+                let h = u64::from(natural.1) * u64::from(f);
                 format!("≈ {w} × {h} px")
             };
             predicted_row_c.set_subtitle(&sub);
@@ -136,22 +129,21 @@ fn fill_upscale_dialog(
     form_col.append(&group);
 
     let status = status_label();
-    form_col.append(&status);
 
     let (cancel_btn, apply_btn, actions) = action_buttons(&gettext("Upscale"));
-    form_col.append(&actions);
-
-    content_h.append(&form_col);
 
     // Preview column shows an upscaled thumbnail of the first file as a
     // sanity check — PreviewOp::Resize respects the Lanczos3 filter.
-    if let Some(sess) = preview_session.as_ref() {
-        let (picture, column) = build_preview_column(sess);
-        content_h.append(&column);
-
+    let picture = set_preview_dialog_content(
+        &window,
+        &header,
+        &form_col,
+        &[status.upcast_ref(), actions.upcast_ref()],
+        preview_session.as_deref(),
+    );
+    if let (Some(sess), Some(picture)) = (preview_session.as_ref(), picture) {
         let refresh = {
             let session = sess.clone();
-            let picture = picture.clone();
             let factor_row = factor_row.clone();
             move || {
                 let f = UPSCALE_FACTORS[factor_row.selected() as usize].1;
@@ -169,20 +161,11 @@ fn fill_upscale_dialog(
         dialog_signal!(window, factor_row, connect_selected_notify, move |_| refresh());
     }
 
-    set_dialog_content(&window, &header, &content_h);
-
     close_on_click(&window, &cancel_btn);
 
     {
-        let files = files.clone();
-        let factor_row = factor_row.clone();
-        let engine_row = engine_row.clone();
-        let target_row = target_row.clone();
-        let overwrite_row = overwrite_row.clone();
-        let status = status.clone();
-        let apply_btn = apply_btn.clone();
         let window = window.clone();
-        dialog_signal!(window, apply_btn.clone(), connect_clicked, move |_| {
+        dialog_signal!(window, apply_btn, connect_clicked, move |_| {
             let factor = UPSCALE_FACTORS[factor_row.selected() as usize].1;
             let target = selected_target_format(&target_row);
             let policy = selected_overwrite(&overwrite_row);
@@ -202,6 +185,11 @@ fn fill_upscale_dialog(
             let loaded = loaded.clone();
             run_batch_async(
                 work_files,
+                crate::output_plan::Naming::image(
+                    target,
+                    policy,
+                    crate::output_plan::OutputSuffix::Fixed(suffix.clone()),
+                ),
                 move |f| {
                     if !ai {
                         return resize_file(f, mode, Filter::Lanczos3, target, &opts, policy);

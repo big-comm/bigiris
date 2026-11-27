@@ -25,10 +25,7 @@ pub(in crate::gui) fn build_properties_window(
     app: &adw::Application,
     path: &Path,
 ) -> adw::ApplicationWindow {
-    let filename = path
-        .file_name()
-        .map(|n| n.to_string_lossy().into_owned())
-        .unwrap_or_else(|| path.display().to_string());
+    let filename = crate::codec::printable_name(path);
 
     let window = adw::ApplicationWindow::builder()
         .application(app)
@@ -43,9 +40,11 @@ pub(in crate::gui) fn build_properties_window(
     // Awaited on the GTK loop instead of polled on a timer.
     let job = gio::spawn_blocking(move || {
         crate::codec::with_cancel(cancel, || {
-            let info = crate::codec::information(&input).ok();
-            let fsmeta = std::fs::metadata(&input).map_err(|e| e.to_string());
-            (info, fsmeta)
+            let information = crate::codec::information(&input)
+                .map_err(|error| crate::error_text::image_error_text(&error));
+            let fsmeta =
+                std::fs::metadata(&input).map_err(|error| crate::error_text::io_error_text(&error));
+            (information, fsmeta)
         })
     });
     let spinner = adw::Spinner::new();
@@ -55,51 +54,52 @@ pub(in crate::gui) fn build_properties_window(
     glib::MainContext::default().spawn_local(async move {
         // A panicking reader still replaces the spinner with what the
         // file system knows.
-        let (info, fsmeta) = job
-            .await
-            .unwrap_or_else(|_| (None, Err(gettext("Could not read the file information"))));
+        let (information, fsmeta) = job.await.unwrap_or_else(|_| {
+            let failure = gettext("Could not read the file information");
+            (Err(failure.clone()), Err(failure))
+        });
         let Some(window) = weak.upgrade() else { return };
         // Closed (or destroyed by the viewer) while reading.
         if !window.is_visible() {
             return;
         }
-        fill_properties_window(window, &input, info.as_ref(), fsmeta.as_ref());
+        fill_properties_window(window, &input, information.as_ref(), fsmeta.as_ref());
     });
     window
 }
 fn fill_properties_window(
     window: adw::ApplicationWindow,
     path: &Path,
-    info: Option<&crate::codec::Information>,
+    information: std::result::Result<&crate::codec::Information, &String>,
     fsmeta: std::result::Result<&std::fs::Metadata, &String>,
 ) -> adw::ApplicationWindow {
-    let filename = path.file_name().unwrap_or_default().to_string_lossy();
+    let filename = crate::codec::printable_name(path);
 
     let header = adw::HeaderBar::new();
     header.set_title_widget(Some(&adw::WindowTitle::new(&gettext("Properties"), &filename)));
 
     let page = adw::PreferencesPage::new();
-    page.add(&build_properties_file_group(path, info, fsmeta));
-    page.add(&build_properties_image_group(info));
+    page.add(&build_properties_file_group(path, information.ok(), fsmeta));
+    page.add(&build_properties_image_group(information));
 
-    if let Some(meta) = info.and_then(|i| i.metadata.as_ref()) {
-        if !meta.is_empty() {
-            if meta.has_gps || meta.has_camera_info {
-                let warning = adw::PreferencesGroup::builder().title(gettext("Privacy")).build();
-                let row = adw::ActionRow::builder()
-                    .use_markup(false)
-                    .title(if meta.has_gps {
-                        gettext("GPS coordinates present")
-                    } else {
-                        gettext("Camera/software identification present")
-                    })
-                    .subtitle(gettext("Remove it before publishing if it is sensitive."))
-                    .build();
-                warning.add(&row);
-                page.add(&warning);
-            }
-            page.add(&build_properties_exif_group(meta));
+    if let Some(meta) = information.ok().and_then(|i| i.metadata.as_ref())
+        && !meta.is_empty()
+    {
+        if meta.has_gps || meta.has_camera_info {
+            let warning = adw::PreferencesGroup::builder().title(gettext("Privacy")).build();
+            let row = adw::ActionRow::builder()
+                .use_markup(false)
+                .title(if meta.has_gps {
+                    gettext("GPS coordinates present")
+                } else {
+                    gettext("Camera/software identification present")
+                })
+                .subtitle(gettext("Remove it before publishing if it is sensitive."))
+                .build();
+            warning.add(&row);
+            page.add(&warning);
         }
+        page.add(&build_properties_exif_group(meta));
     }
 
     set_dialog_content(&window, &header, &page);
@@ -109,19 +109,15 @@ fn fill_properties_window(
 
 fn build_properties_file_group(
     path: &Path,
-    info: Option<&crate::codec::Information>,
+    information: Option<&crate::codec::Information>,
     fsmeta: std::result::Result<&std::fs::Metadata, &String>,
 ) -> adw::PreferencesGroup {
     let group = adw::PreferencesGroup::builder().title(gettext("File")).build();
 
-    let filename = path
-        .file_name()
-        .map(|n| n.to_string_lossy().into_owned())
-        .unwrap_or_else(|| path.display().to_string());
-    group.add(&info_row(&gettext("Name"), &filename));
+    group.add(&info_row(&gettext("Name"), &crate::codec::printable_name(path)));
 
     if let Some(parent) = path.parent() {
-        let parent_str = parent.display().to_string();
+        let parent_str = crate::codec::printable_path(parent);
         if !parent_str.is_empty() {
             group.add(&info_row(&gettext("Folder"), &parent_str));
         }
@@ -137,7 +133,7 @@ fn build_properties_file_group(
         other => other.to_string(),
     };
     let ext = path.extension().map(|e| canonical(&e.to_string_lossy()));
-    let sniffed = info.and_then(|i| i.format.as_deref()).map(canonical);
+    let sniffed = information.and_then(|i| i.format.as_deref()).map(canonical);
     match (sniffed, ext) {
         (Some(s), Some(e)) if s != e => {
             group.add(&info_row(
@@ -155,7 +151,10 @@ fn build_properties_file_group(
 
     match fsmeta {
         Ok(fsmeta) => {
-            group.add(&info_row(&gettext("Size"), &format_bytes(fsmeta.len())));
+            group.add(&info_row(
+                &gettext("Size"),
+                &glib::format_size_full(fsmeta.len(), glib::FormatSizeFlags::LONG_FORMAT),
+            ));
             if let Ok(mtime) = fsmeta.modified() {
                 group.add(&info_row(&gettext("Modified"), &format_system_time(mtime)));
             }
@@ -171,62 +170,80 @@ fn build_properties_file_group(
     group
 }
 
-fn build_properties_image_group(info: Option<&crate::codec::Information>) -> adw::PreferencesGroup {
+fn build_properties_image_group(
+    information: std::result::Result<&crate::codec::Information, &String>,
+) -> adw::PreferencesGroup {
     let group = adw::PreferencesGroup::builder().title(gettext("Image")).build();
+    let orientation =
+        information.ok().and_then(|i| i.metadata.as_ref()).and_then(|m| m.orientation);
 
-    match info.and_then(|i| i.dimensions) {
-        Some((w, h)) => {
-            let color = info.and_then(|i| i.color).and_then(|id| match id {
-                1 => Some(image::ColorType::L8),
-                2 => Some(image::ColorType::La8),
-                3 => Some(image::ColorType::Rgb8),
-                4 => Some(image::ColorType::Rgba8),
-                5 => Some(image::ColorType::L16),
-                6 => Some(image::ColorType::La16),
-                7 => Some(image::ColorType::Rgb16),
-                8 => Some(image::ColorType::Rgba16),
-                9 => Some(image::ColorType::Rgb32F),
-                10 => Some(image::ColorType::Rgba32F),
-                _ => None,
-            });
-            group.add(&info_row(&gettext("Dimensions"), &format!("{w} × {h} px")));
-
-            let mp = (f64::from(w) * f64::from(h)) / 1_000_000.0;
-            if mp >= 0.1 {
-                group.add(&info_row(&gettext("Megapixels"), &format!("{mp:.1} MP")));
-            }
-            if w > 0 && h > 0 {
-                let (rw, rh) = simplify_ratio(w, h);
-                group.add(&info_row(&gettext("Aspect ratio"), &format!("{rw}:{rh}")));
-            }
+    match information.map(|i| i.dimensions) {
+        Ok(Some((w, h))) => {
+            let color = information.ok().and_then(crate::codec::Information::color_type);
+            add_size_rows(&group, (w, h), orientation);
             if let Some(color) = color {
                 group.add(&info_row(&gettext("Color mode"), &color_type_label(color)));
                 group.add(&info_row(&gettext("Bits per channel"), color_type_bits(color)));
             }
         }
-        None => {
+        Ok(None) => {
             group.add(&info_row(
                 &gettext("Dimensions"),
-                &gettext("(failed: could not identify the format from the content)"),
+                &gettext("(could not read the image data)"),
+            ));
+        }
+        Err(error) => {
+            group.add(&info_row(
+                &gettext("Dimensions"),
+                &fill(&gettext("(unavailable: {error})"), &[("error", error)]),
             ));
         }
     }
 
     // Shown only for an EXIF orientation other than 1 (upright).
-    if let Some(meta) = info.and_then(|i| i.metadata.as_ref()) {
-        if let Some(o) = meta.orientation {
-            if o != 1 {
-                group.add(&info_row(
-                    &gettext("EXIF orientation"),
-                    &fill(
-                        &gettext("{orientation} · use Rotate ▸ Automatic to fix it"),
-                        &[("orientation", &o.to_string())],
-                    ),
-                ));
-            }
-        }
+    if let Some(o) = orientation
+        && o != 1
+    {
+        group.add(&info_row(
+            &gettext("EXIF orientation"),
+            &fill(
+                &gettext("{orientation} · use Rotate ▸ Automatic to fix it"),
+                &[("orientation", &o.to_string())],
+            ),
+        ));
     }
     group
+}
+
+/// Dimensions, megapixels and aspect ratio of a `stored` size. Orientations
+/// 5 to 8 turn the stored pixels a quarter: every other view of the file
+/// (viewer, dialogs) shows them upright, so the rows do too.
+fn add_size_rows(group: &adw::PreferencesGroup, stored: (u32, u32), orientation: Option<u16>) {
+    let (w, h) = stored;
+    let turned = matches!(orientation, Some(5..=8));
+    let (uw, uh) = if turned { (h, w) } else { (w, h) };
+    let dimensions = if turned {
+        fill(
+            &gettext("{width} × {height} px (stored as {stored_width} × {stored_height})"),
+            &[
+                ("width", &uw.to_string()),
+                ("height", &uh.to_string()),
+                ("stored_width", &w.to_string()),
+                ("stored_height", &h.to_string()),
+            ],
+        )
+    } else {
+        format!("{w} × {h} px")
+    };
+    group.add(&info_row(&gettext("Dimensions"), &dimensions));
+    let mp = (f64::from(w) * f64::from(h)) / 1_000_000.0;
+    if mp >= 0.1 {
+        group.add(&info_row(&gettext("Megapixels"), &format!("{mp:.1} MP")));
+    }
+    if w > 0 && h > 0 {
+        let (rw, rh) = simplify_ratio(uw, uh);
+        group.add(&info_row(&gettext("Aspect ratio"), &format!("{rw}:{rh}")));
+    }
 }
 
 /// Friendly label for the decoded pixel layout, matching what the Convert
@@ -258,11 +275,7 @@ fn color_type_bits(c: image::ColorType) -> &'static str {
 /// dialog so 1920×1080 shows as 16:9 instead of opaque pixel counts.
 fn simplify_ratio(w: u32, h: u32) -> (u32, u32) {
     fn gcd(a: u32, b: u32) -> u32 {
-        if b == 0 {
-            a
-        } else {
-            gcd(b, a % b)
-        }
+        if b == 0 { a } else { gcd(b, a % b) }
     }
     let d = gcd(w, h);
     (w / d, h / d)
@@ -276,32 +289,42 @@ fn build_properties_exif_group(meta: &metadata::Metadata) -> adw::PreferencesGro
             &[("count", &meta.tags.len().to_string())],
         ))
         .build();
-    for (name, value) in &meta.tags {
-        group.add(&info_row(name, value));
+    for (tag, value) in &meta.tags {
+        let title =
+            EXIF_TITLES.iter().find(|(name, _)| name == tag).map(|(_, title)| gettext(*title));
+        group.add(&info_row(title.as_deref().unwrap_or(tag), value));
     }
     group
 }
+
+/// Titles for the EXIF tags people look for; any other tag shows its name.
+const EXIF_TITLES: [(&str, &str); 20] = [
+    ("Make", n_("Camera maker")),
+    ("Model", n_("Camera model")),
+    ("LensModel", n_("Lens")),
+    ("Software", n_("Software")),
+    ("Artist", n_("Author")),
+    ("Copyright", n_("Copyright")),
+    ("ImageDescription", n_("Description")),
+    ("DateTimeOriginal", n_("Date taken")),
+    ("DateTime", n_("Date modified")),
+    ("Orientation", n_("Orientation")),
+    ("ExposureTime", n_("Exposure time")),
+    ("FNumber", n_("Aperture")),
+    ("PhotographicSensitivity", n_("ISO")),
+    ("ExposureBiasValue", n_("Exposure compensation")),
+    ("FocalLength", n_("Focal length")),
+    ("Flash", n_("Flash")),
+    ("WhiteBalance", n_("White balance")),
+    ("GPSLatitude", n_("Latitude")),
+    ("GPSLongitude", n_("Longitude")),
+    ("GPSAltitude", n_("Altitude")),
+];
 
 fn info_row(title: &str, value: &str) -> adw::ActionRow {
     let row = adw::ActionRow::builder().use_markup(false).title(title).build();
     row.set_subtitle(value);
     row
-}
-
-/// Human-readable size in binary (1024-based) units.
-fn format_bytes(n: u64) -> String {
-    const UNITS: [&str; 4] = ["B", "KB", "MB", "GB"];
-    let mut v = n as f64;
-    let mut u = 0usize;
-    while v >= 1024.0 && u + 1 < UNITS.len() {
-        v /= 1024.0;
-        u += 1;
-    }
-    if u == 0 {
-        format!("{n} B")
-    } else {
-        format!("{v:.1} {} ({n} bytes)", UNITS[u])
-    }
 }
 
 /// Local `YYYY-MM-DD HH:MM`; glib handles the time zone and calendar.

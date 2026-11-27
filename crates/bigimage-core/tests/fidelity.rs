@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-use bigimage_core::{convert_file_to, open_image, EncodeOptions, Format, OverwritePolicy};
+use bigimage_core::{EncodeOptions, Format, OverwritePolicy, convert_file_to, open_image};
 use image::{DynamicImage, ImageEncoder};
 
 #[test]
@@ -86,42 +86,86 @@ fn all_eight_embedded_exif_orientations_are_applied_once() {
     }
 }
 
+/// CRC-32 (ISO-HDLC) of a PNG chunk's type and data.
+fn crc32(bytes: &[u8]) -> u32 {
+    let mut crc = !0u32;
+    for &byte in bytes {
+        crc ^= u32::from(byte);
+        for _ in 0..8 {
+            crc = if crc & 1 == 0 { crc >> 1 } else { (crc >> 1) ^ 0xedb8_8320 };
+        }
+    }
+    !crc
+}
+
+/// Guards: data loss: each animation or page container the decode path
+/// must refuse before a static edit drops its other frames.
 #[test]
-fn static_edits_refuse_animated_gif_and_preserve_destination() {
+fn static_edits_refuse_animations_and_pages() {
     let dir = tempfile::tempdir().unwrap();
-    let input = dir.path().join("animated.gif");
-    let output = dir.path().join("keep.png");
-    let mut encoder = image::codecs::gif::GifEncoder::new(std::fs::File::create(&input).unwrap());
-    for v in [50, 150] {
-        encoder
-            .encode_frame(image::Frame::new(image::RgbaImage::from_pixel(
-                2,
-                2,
-                image::Rgba([v, 0, 0, 255]),
-            )))
-            .unwrap();
+    let out = dir.path().join("out");
+    std::fs::create_dir(&out).unwrap();
+    let frames =
+        [50u8, 150].map(|v| image::RgbaImage::from_pixel(2, 2, image::Rgba([v, 0, 0, 255])));
+
+    let gif = dir.path().join("gif.gif");
+    let mut encoder = image::codecs::gif::GifEncoder::new(std::fs::File::create(&gif).unwrap());
+    for frame in &frames {
+        encoder.encode_frame(image::Frame::new(frame.clone())).unwrap();
     }
     drop(encoder);
-    assert!(open_image(&input).is_ok(), "viewer can still inspect the first frame");
-    std::fs::write(&output, b"previous file").unwrap();
-    assert!(convert_file_to(
-        &input,
-        Some(&output),
-        Format::Png,
-        &EncodeOptions::default(),
-        OverwritePolicy::Replace
-    )
-    .is_err());
-    assert_eq!(std::fs::read(output).unwrap(), b"previous file");
+
+    // A PNG whose acTL chunk (after the 33 bytes of signature and IHDR)
+    // announces two frames.
+    let apng = dir.path().join("apng.png");
+    let mut png = Vec::new();
+    image::codecs::png::PngEncoder::new(&mut png)
+        .write_image(frames[0].as_raw(), 2, 2, image::ExtendedColorType::Rgba8)
+        .unwrap();
+    let actl = [&b"acTL"[..], &2u32.to_be_bytes(), &0u32.to_be_bytes()].concat();
+    let chunk = [&8u32.to_be_bytes()[..], &actl, &crc32(&actl).to_be_bytes()].concat();
+    std::fs::write(&apng, [&png[..33], &chunk, &png[33..]].concat()).unwrap();
+
+    let webp = dir.path().join("webp.webp");
+    let config = webp::WebPConfig::new().unwrap();
+    let mut animation = webp::AnimEncoder::new(2, 2, &config);
+    for (i, frame) in frames.iter().enumerate() {
+        animation.add_frame(webp::AnimFrame::from_rgba(frame.as_raw(), 2, 2, 100 * i as i32));
+    }
+    std::fs::write(&webp, &*animation.try_encode().unwrap()).unwrap();
+
+    let tiff = dir.path().join("tiff.tiff");
+    let mut encoder =
+        tiff::encoder::TiffEncoder::new(std::fs::File::create(&tiff).unwrap()).unwrap();
+    for frame in &frames {
+        encoder.write_image::<tiff::encoder::colortype::RGBA8>(2, 2, frame.as_raw()).unwrap();
+    }
+    drop(encoder);
+
+    for input in [gif, apng, webp, tiff] {
+        assert!(open_image(&input).is_ok(), "{input:?}: the viewer still shows the first frame");
+        let output = out.join(input.with_extension("png").file_name().unwrap());
+        std::fs::write(&output, b"previous file").unwrap();
+        let result = convert_file_to(
+            &input,
+            Some(&out),
+            Format::Png,
+            &EncodeOptions::default(),
+            OverwritePolicy::Replace,
+        );
+        assert!(
+            matches!(result, Err(bigimage_core::BigImageError::NotStatic)),
+            "{input:?}: {result:?}"
+        );
+        assert_eq!(std::fs::read(output).unwrap(), b"previous file");
+    }
 }
 
 #[test]
 fn preview_huge_resize_and_canvas_remain_bounded() {
     use bigimage_core::{ExtentOptions, ExtentSize, Filter, PreviewOp, PreviewSession, ResizeMode};
     let source = DynamicImage::new_rgb8(800, 600);
-    let session =
-        PreviewSession::from_cached("source.png".into(), (800, 600), Format::Png, source, false)
-            .unwrap();
+    let session = PreviewSession::from_cached((800, 600), Format::Png, source, false).unwrap();
     for op in [
         PreviewOp::Resize {
             mode: ResizeMode::Exact { width: u32::MAX, height: u32::MAX },
@@ -151,12 +195,59 @@ fn oversized_gif_frame_is_rejected_without_allocating_its_pixels() {
     assert!(bigimage_core::content::ensure_static_local(&path).is_err());
 }
 
+/// A well-formed GIF whose only frame is wider than its logical screen.
+#[test]
+fn gif_frame_past_screen_refused() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("wide-frame.gif");
+    let mut bytes = Vec::new();
+    {
+        let mut encoder = gif::Encoder::new(&mut bytes, 2, 2, &[0, 0, 0, 255, 255, 255]).unwrap();
+        let frame = gif::Frame {
+            width: 2,
+            height: 2,
+            buffer: vec![0, 1, 1, 0].into(),
+            ..Default::default()
+        };
+        encoder.write_frame(&frame).unwrap();
+    }
+    // Logical screen width (bytes 6-7) shrunk to one pixel.
+    bytes[6] = 1;
+    std::fs::write(&path, &bytes).unwrap();
+    assert!(bigimage_core::content::ensure_static_local(&path).is_err());
+    assert!(open_image(&path).is_err());
+}
+
 #[test]
 fn avif_declared_box_beyond_file_is_rejected_before_allocation() {
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().join("malformed.avif");
     std::fs::write(&path, include_bytes!("fixtures/avif-box-overrun.avif")).unwrap();
     assert!(open_image(&path).is_err());
+    assert!(bigimage_core::image_dimensions(&path).is_err());
+}
+
+/// A box structure the AV1 container parser tolerates (an unknown
+/// top-level box nested past the depth limit) is still refused up front.
+#[test]
+fn avif_deep_box_nesting_refused() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("nested.avif");
+    bigimage_core::save_image(
+        DynamicImage::new_rgb8(4, 4),
+        &path,
+        Format::Avif,
+        &EncodeOptions { quality: Some(50), ..EncodeOptions::default() },
+        OverwritePolicy::Replace,
+    )
+    .unwrap();
+    let nested = (0..17).fold(Vec::new(), |inner: Vec<u8>, _| {
+        [&(inner.len() as u32 + 8).to_be_bytes()[..], b"iprp", &inner].concat()
+    });
+    let mut bytes = std::fs::read(&path).unwrap();
+    bytes.extend_from_slice(&nested);
+    std::fs::write(&path, bytes).unwrap();
+    assert!(matches!(open_image(&path), Err(image::ImageError::IoError(_))));
     assert!(bigimage_core::image_dimensions(&path).is_err());
 }
 
@@ -229,16 +320,37 @@ fn camera_exif() -> Vec<u8> {
     exif
 }
 
+/// TIFF EXIF with Make and a `UserComment` that brings it to about `len`
+/// bytes, written by kamadak-exif.
+fn large_exif(len: usize) -> Vec<u8> {
+    use exif::{Field, In, Tag, Value};
+    let fields = [
+        Field { tag: Tag::Make, ifd_num: In::PRIMARY, value: Value::Ascii(vec![b"Cam".to_vec()]) },
+        Field {
+            tag: Tag::UserComment,
+            ifd_num: In::PRIMARY,
+            value: Value::Undefined(vec![b'c'; len], 0),
+        },
+    ];
+    let mut writer = exif::experimental::Writer::new();
+    for field in &fields {
+        writer.push_field(field);
+    }
+    let mut out = std::io::Cursor::new(Vec::new());
+    writer.write(&mut out, true).expect("write EXIF");
+    out.into_inner()
+}
+
 fn icc_of(path: &std::path::Path) -> Option<Vec<u8>> {
     use image::ImageDecoder;
     image::ImageReader::open(path)
-        .unwrap()
+        .expect("open")
         .with_guessed_format()
-        .unwrap()
+        .expect("read the header")
         .into_decoder()
-        .unwrap()
+        .expect("decoder")
         .icc_profile()
-        .unwrap()
+        .expect("read the ICC profile")
 }
 
 #[test]
@@ -286,14 +398,74 @@ fn in_place_save_keeps_exif_and_wide_gamut_profile() {
 }
 
 #[test]
+fn in_place_avif_save_keeps_exif() {
+    use bigimage_core::{SourceMetadata, open_image_for_resave, save_image_preserving_metadata};
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("photo.avif");
+    let rgb = DynamicImage::ImageRgb8(image::RgbImage::from_pixel(8, 8, image::Rgb([90, 120, 30])));
+    let save = |image: DynamicImage, source: &SourceMetadata| {
+        save_image_preserving_metadata(
+            image,
+            &path,
+            Format::Avif,
+            &EncodeOptions { quality: Some(80), ..EncodeOptions::default() },
+            OverwritePolicy::Replace,
+            source,
+        )
+        .unwrap();
+    };
+    save(rgb, &SourceMetadata { exif: Some(camera_exif()), icc: None, ..Default::default() });
+
+    let (image, source) = open_image_for_resave(&path).unwrap();
+    assert_eq!(source.exif.as_deref().and_then(|e| e.get(..2)), Some(&b"II"[..]));
+    save(image.fliph(), &source);
+    let meta = bigimage_core::metadata::read(&path).unwrap();
+    assert!(meta.has_camera_info, "Make lost: {:?}", meta.tags);
+}
+
+/// An Exif item over what the container reader accepts (64 KiB) cannot be
+/// kept; the save says so instead of dropping it silently.
+#[test]
+fn unreadable_avif_exif_is_reported() {
+    use bigimage_core::{
+        MetadataLoss, SourceMetadata, open_image_for_resave, save_image_preserving_metadata_report,
+    };
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("photo.avif");
+    let large = large_exif(70_000);
+    let opts = EncodeOptions { quality: Some(80), ..EncodeOptions::default() };
+    let save = |source: &SourceMetadata| {
+        let image = DynamicImage::new_rgb8(8, 8);
+        save_image_preserving_metadata_report(
+            image,
+            &path,
+            Format::Avif,
+            &opts,
+            OverwritePolicy::Replace,
+            source,
+        )
+        .unwrap()
+        .dropped
+    };
+    assert_eq!(save(&SourceMetadata { exif: Some(large), ..Default::default() }), []);
+    let (_, source) = open_image_for_resave(&path).unwrap();
+    assert!(source.exif.is_none() && source.exif_unreadable, "{source:?}");
+    assert_eq!(save(&source), [MetadataLoss::ExifInvalid]);
+}
+
+#[test]
 fn preserving_save_matches_profile_to_pixels_or_falls_back_to_srgb() {
-    use bigimage_core::{metadata, save_image_preserving_metadata, SourceMetadata};
+    use bigimage_core::{SourceMetadata, metadata, save_image_preserving_metadata};
     let dir = tempfile::tempdir().unwrap();
     let p3 = moxcms::ColorProfile::new_display_p3().encode().unwrap();
     let gray = moxcms::ColorProfile::new_gray_with_gamma(1.8).encode().unwrap();
     let save = |image: DynamicImage, name: &str, format: Format, icc: &[u8]| {
         let path = dir.path().join(name);
-        let source = SourceMetadata { exif: Some(camera_exif()), icc: Some(icc.to_vec()) };
+        let source = SourceMetadata {
+            exif: Some(camera_exif()),
+            icc: Some(icc.to_vec()),
+            ..Default::default()
+        };
         save_image_preserving_metadata(
             image,
             &path,
@@ -343,7 +515,7 @@ fn preserving_save_matches_profile_to_pixels_or_falls_back_to_srgb() {
 
 #[test]
 fn preserving_save_reports_what_it_dropped() {
-    use bigimage_core::{save_image_preserving_metadata_report, MetadataLoss, SourceMetadata};
+    use bigimage_core::{MetadataLoss, SourceMetadata, save_image_preserving_metadata_report};
     let dir = tempfile::tempdir().unwrap();
     let p3 = moxcms::ColorProfile::new_display_p3().encode().unwrap();
     let gray = moxcms::ColorProfile::new_gray_with_gamma(1.8).encode().unwrap();
@@ -351,7 +523,7 @@ fn preserving_save_reports_what_it_dropped() {
     cmyk[16..20].copy_from_slice(b"CMYK");
     let rgb = DynamicImage::ImageRgb8(image::RgbImage::from_pixel(4, 3, image::Rgb([90, 90, 90])));
     let report = |name: &str, format: Format, exif: Option<Vec<u8>>, icc: &[u8]| {
-        let source = SourceMetadata { exif, icc: Some(icc.to_vec()) };
+        let source = SourceMetadata { exif, icc: Some(icc.to_vec()), ..Default::default() };
         let result = save_image_preserving_metadata_report(
             rgb.clone(),
             dir.path().join(name),
@@ -379,11 +551,20 @@ fn preserving_save_reports_what_it_dropped() {
         report("bad.png", Format::Png, Some(b"not exif".to_vec()), &p3),
         [MetadataLoss::ExifInvalid]
     );
-    let mut huge = camera_exif();
-    huge.resize(70_000, 0);
+    let huge = large_exif(70_000);
     assert_eq!(
         report("huge.jpg", Format::Jpeg, Some(huge.clone()), &p3),
         [MetadataLoss::ExifTooLarge]
     );
     assert_eq!(report("huge.png", Format::Png, Some(huge), &p3), []);
+    // A field of an unknown TIFF type next to Make: Make kept, the loss said.
+    let mut unknown = vec![b'I', b'I', 42, 0, 8, 0, 0, 0, 2, 0];
+    unknown.extend_from_slice(&[0x0f, 0x01, 2, 0, 4, 0, 0, 0, b'C', b'a', b'm', 0]);
+    unknown.extend_from_slice(&[0x99, 0x99, 99, 0, 1, 0, 0, 0, 1, 2, 3, 4, 0, 0, 0, 0]);
+    assert_eq!(
+        report("unknown.png", Format::Png, Some(unknown), &p3),
+        [MetadataLoss::ExifFieldsDropped]
+    );
+    let meta = bigimage_core::metadata::read(dir.path().join("unknown.png")).unwrap();
+    assert!(meta.has_camera_info, "{:?}", meta.tags);
 }

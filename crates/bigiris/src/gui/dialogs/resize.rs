@@ -88,7 +88,7 @@ fn fill_resize_dialog(
     page_fit.add(&fit_w);
     page_fit.add(&fit_h);
 
-    let stack = gtk::Stack::new();
+    let stack = gtk::Stack::builder().vhomogeneous(false).build();
     stack.add_named(&page_max_edge, Some("max-edge"));
     stack.add_named(&page_percent, Some("percent"));
     stack.add_named(&page_exact, Some("exact"));
@@ -143,41 +143,17 @@ fn fill_resize_dialog(
     content.append(&group_mode);
     content.append(&stack);
     content.append(&group_options);
-    content.append(&status);
-    content.append(&actions);
-
-    // Scroll the whole content in case the resize dialog overflows a small
-    // screen — it's taller than the convert dialog.
-    let scrolled = gtk::ScrolledWindow::builder()
-        .hexpand(true)
-        .vexpand(true)
-        .hscrollbar_policy(gtk::PolicyType::Never)
-        .vscrollbar_policy(gtk::PolicyType::Automatic)
-        .child(&content)
-        .build();
-    scrolled.set_size_request(420, -1);
-
-    let main_box =
-        gtk::Box::builder().orientation(gtk::Orientation::Horizontal).spacing(16).build();
-    main_box.append(&scrolled);
-    let preview_picture: Option<gtk::Picture> = if let Some(sess) = preview_session.as_ref() {
-        let (picture, column) = build_preview_column(sess);
-        column.set_margin_top(16);
-        column.set_margin_bottom(16);
-        column.set_margin_end(16);
-        main_box.append(&column);
-        Some(picture)
-    } else {
-        None
-    };
-
-    set_dialog_content(&window, &header, &main_box);
+    let preview_picture = set_preview_dialog_content(
+        &window,
+        &header,
+        &content,
+        &[status.upcast_ref(), actions.upcast_ref()],
+        preview_session.as_deref(),
+    );
 
     // Live preview: any change in mode / filter / dimensions re-renders.
     if let (Some(picture), Some(session)) = (preview_picture.as_ref(), preview_session.as_ref()) {
         let debounce = PreviewDebounce::new();
-        let mode_row_clone = mode_row.clone();
-        let filter_row_clone = filter_row.clone();
         let max_edge_clone = max_edge_spin.clone();
         let percent_clone = percent_spin.clone();
         let exact_w_clone = exact_w.clone();
@@ -185,11 +161,10 @@ fn fill_resize_dialog(
         let fit_w_clone = fit_w.clone();
         let fit_h_clone = fit_h.clone();
         let schedule = {
-            let debounce = debounce.clone();
             let session = session.clone();
             let picture = picture.clone();
-            let mode_row = mode_row_clone.clone();
-            let filter_row = filter_row_clone.clone();
+            let mode_row = mode_row.clone();
+            let filter_row = filter_row.clone();
             let max_edge_spin = max_edge_clone.clone();
             let percent_spin = percent_clone.clone();
             let exact_w = exact_w_clone.clone();
@@ -221,11 +196,11 @@ fn fill_resize_dialog(
         // Mode / filter combo changes
         {
             let s = schedule.clone();
-            dialog_signal!(window, mode_row_clone, connect_selected_notify, move |_| s());
+            dialog_signal!(window, mode_row, connect_selected_notify, move |_| s());
         }
         {
             let s = schedule.clone();
-            dialog_signal!(window, filter_row_clone, connect_selected_notify, move |_| s());
+            dialog_signal!(window, filter_row, connect_selected_notify, move |_| s());
         }
         // Spin changes in each mode page
         for row in
@@ -239,21 +214,8 @@ fn fill_resize_dialog(
     close_on_click(&window, &cancel_btn);
 
     {
-        let files = files.clone();
-        let mode_row = mode_row.clone();
-        let filter_row = filter_row.clone();
-        let target_row = target_row.clone();
-        let overwrite_row = overwrite_row.clone();
-        let max_edge_spin = max_edge_spin.clone();
-        let percent_spin = percent_spin.clone();
-        let exact_w = exact_w.clone();
-        let exact_h = exact_h.clone();
-        let fit_w = fit_w.clone();
-        let fit_h = fit_h.clone();
-        let status = status.clone();
-        let apply_btn = apply_btn.clone();
         let window = window.clone();
-        dialog_signal!(window, apply_btn.clone(), connect_clicked, move |_| {
+        dialog_signal!(window, apply_btn, connect_clicked, move |_| {
             let mode = match mode_row.selected() {
                 0 => ResizeMode::MaxEdge(max_edge_spin.value() as u32),
                 1 => ResizeMode::Percent(percent_spin.value() as f32),
@@ -276,6 +238,11 @@ fn fill_resize_dialog(
             let work_files: Vec<PathBuf> = (*files).clone();
             run_batch_async(
                 work_files,
+                crate::output_plan::Naming::image(
+                    target,
+                    policy,
+                    crate::output_plan::OutputSuffix::Fixed(mode.filename_suffix()),
+                ),
                 move |f| resize_file(f, mode, filter, target, &opts, policy),
                 gettext("Resizing"),
                 status.clone(),
@@ -293,11 +260,11 @@ mod apply_tests {
     use super::*;
 
     fn find_apply(widget: &gtk::Widget, label: &str) -> Option<gtk::Button> {
-        if let Some(button) = widget.downcast_ref::<gtk::Button>() {
-            if button.has_css_class("suggested-action") && button.label().as_deref() == Some(label)
-            {
-                return Some(button.clone());
-            }
+        if let Some(button) = widget.downcast_ref::<gtk::Button>()
+            && button.has_css_class("suggested-action")
+            && button.label().as_deref() == Some(label)
+        {
+            return Some(button.clone());
         }
         let mut child = widget.first_child();
         while let Some(current) = child {
@@ -346,7 +313,8 @@ mod apply_tests {
 
         let dir = tempfile::tempdir().unwrap();
         let source = dir.path().join("photo.png");
-        image::RgbImage::from_pixel(320, 200, image::Rgb([30, 120, 200])).save(&source).unwrap();
+        // Past the default 1920 px bound, or the run would change nothing.
+        image::RgbImage::from_pixel(2400, 1500, image::Rgb([30, 120, 200])).save(&source).unwrap();
 
         let window = build_resize_dialog(&app, Rc::new(vec![source.clone()]));
         window.present();

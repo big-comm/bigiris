@@ -1,31 +1,44 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //! Nemo (Cinnamon) — `.nemo_action` files. Nemo doesn't support nested
-//! submenus, so each action ends up flat with a `Íris ▸ <submenu> ▸ <label>`
-//! prefix to preserve some sense of hierarchy.
+//! submenus, so each action ends up flat with a `BigIris ▸ <submenu> ▸
+//! <label>` prefix to preserve some sense of hierarchy.
 
 use std::io;
 use std::path::PathBuf;
 
-use crate::action::{Action, ACTIONS, TOP_LEVEL_LABEL};
-use crate::safe_fs::safe_write;
-use crate::scope::{remove_matching, ScopePaths};
+use crate::action::{ACTIONS, Action, TOP_LEVEL_LABEL};
+use crate::safe_fs::FileMode;
+use crate::scope::{Installed, ScopePaths, remove_generated, replace_generated};
 
-/// Install one `.nemo_action` per [`Action`].
-pub fn install(paths: &ScopePaths) -> io::Result<Vec<PathBuf>> {
-    let dir = paths.nemo_actions();
-    std::fs::create_dir_all(&dir)?;
-    let mut written = Vec::new();
-    for action in ACTIONS {
-        let file = dir.join(format!("bigiris-{}.nemo_action", action.id));
-        safe_write(&file, render(action), paths.scope)?;
-        written.push(file);
-    }
-    Ok(written)
+const SUFFIX: &str = ".nemo_action";
+
+/// Install one `.nemo_action` per [`Action`], removing those of actions a
+/// release dropped.
+///
+/// # Errors
+///
+/// An I/O error when the actions folder cannot be listed or created, or an
+/// action file cannot be written or a stale one removed.
+pub fn install(paths: &ScopePaths) -> io::Result<Installed> {
+    let files =
+        ACTIONS.iter().map(|action| (format!("bigiris-{}{SUFFIX}", action.id), render(action)));
+    replace_generated(
+        &paths.nemo_actions(),
+        SUFFIX,
+        files.collect(),
+        paths.scope,
+        FileMode::Exact(0o644),
+    )
 }
 
 /// Remove every file we own in `~/.local/share/nemo/actions/`.
+///
+/// # Errors
+///
+/// An I/O error when the actions folder cannot be listed or a file we own
+/// cannot be removed.
 pub fn uninstall(paths: &ScopePaths) -> io::Result<Vec<PathBuf>> {
-    remove_matching(&paths.nemo_actions(), "bigiris-", ".nemo_action")
+    remove_generated(&paths.nemo_actions(), SUFFIX, &[])
 }
 
 fn render(action: &Action) -> String {
@@ -70,7 +83,7 @@ mod tests {
     fn install_writes_expected_files() {
         let tmp = TempDir::new().unwrap();
         let paths = ScopePaths::rooted_at(tmp.path());
-        let written = install(&paths).unwrap();
+        let written = install(&paths).unwrap().files;
         assert_eq!(written.len(), ACTIONS.len());
         for path in &written {
             assert!(path.exists());

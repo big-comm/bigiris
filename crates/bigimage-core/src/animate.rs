@@ -16,7 +16,7 @@ use crate::{BigImageError, ConvertOutcome, OverwritePolicy, Result};
 pub enum LoopMode {
     /// Play through the frames once and stop on the last one.
     Once,
-    /// Repeat a fixed number of times (full cycles; 0 becomes `Once`).
+    /// Play a fixed number of full cycles (0 and 1 play once).
     Finite(u16),
     /// Loop forever — what most users expect from a "GIF".
     #[default]
@@ -27,7 +27,9 @@ impl LoopMode {
     fn to_gif_repeat(self) -> gif::Repeat {
         match self {
             LoopMode::Once => gif::Repeat::Finite(0),
-            LoopMode::Finite(n) => gif::Repeat::Finite(n),
+            // The NETSCAPE loop count is the number of repeats after the
+            // first play.
+            LoopMode::Finite(n) => gif::Repeat::Finite(n.saturating_sub(1)),
             LoopMode::Infinite => gif::Repeat::Infinite,
         }
     }
@@ -66,6 +68,10 @@ impl Default for AnimateOptions {
 ///
 /// An existing `output` is replaced; see [`make_gif_with_policy`] to skip or
 /// pick a free name instead.
+///
+/// # Errors
+///
+/// As [`make_gif_with_policy`].
 pub fn make_gif(frames: &[PathBuf], output: &Path, opts: AnimateOptions) -> Result<PathBuf> {
     make_gif_with_policy(frames, output, opts, OverwritePolicy::Replace)
         .map(|outcome| outcome.path().to_path_buf())
@@ -74,6 +80,17 @@ pub fn make_gif(frames: &[PathBuf], output: &Path, opts: AnimateOptions) -> Resu
 /// Like [`make_gif`], honouring `policy` when `output` already exists:
 /// `Skip` returns [`ConvertOutcome::Skipped`] without decoding any frame,
 /// `Increment` publishes to `name_1.gif`, `name_2.gif`, … atomically.
+///
+/// # Errors
+///
+/// - [`BigImageError::InvalidInput`]: `frames` is empty, or the first frame
+///   exceeds the processing limits.
+/// - [`BigImageError::NotStatic`]: a frame is itself animated or multi-page.
+/// - [`BigImageError::Decode`] or [`BigImageError::UnsupportedFormat`]: a frame
+///   cannot be read or decoded.
+/// - [`BigImageError::Encode`] or [`BigImageError::Io`]: the GIF cannot be
+///   encoded, synced or published.
+/// - [`BigImageError::NoFreeName`]: `Increment` finds every numbered name taken.
 pub fn make_gif_with_policy(
     frames: &[PathBuf],
     output: &Path,
@@ -90,6 +107,8 @@ pub fn make_gif_with_policy(
     // Decode first frame to lock canvas dimensions.
     let (first_img, _fmt) = pipeline::decode_with_source_format(&frames[0])?;
     let (w, h) = (first_img.width(), first_img.height());
+    // Every frame is widened to an RGBA8 canvas of this size.
+    pipeline::check_dimensions(w, h, 4)?;
     let delay_cs = u16::try_from(opts.delay_ms.max(MIN_DELAY_MS) / 10).unwrap_or(u16::MAX);
     let speed = (opts.speed.clamp(1, 30) + 2) / 3;
     let encode_error = |source| BigImageError::Encode { path: output.to_path_buf(), source };
@@ -138,7 +157,7 @@ fn normalise_frame(img: DynamicImage, w: u32, h: u32) -> Result<RgbaImage> {
     let mut canvas = RgbaImage::from_pixel(w, h, image::Rgba([0, 0, 0, 0]));
     let dx = (w - scaled_rgba.width()) / 2;
     let dy = (h - scaled_rgba.height()) / 2;
-    image::imageops::overlay(&mut canvas, &scaled_rgba, dx as i64, dy as i64);
+    image::imageops::overlay(&mut canvas, &scaled_rgba, i64::from(dx), i64::from(dy));
     Ok(canvas)
 }
 
@@ -227,16 +246,24 @@ mod tests {
     }
 
     #[test]
-    fn finite_loop_writes_without_error() {
+    fn finite_loop_counts_full_plays() {
         let dir = TempDir::new().unwrap();
         let f = fixture(dir.path(), "f.png", 16, 16, [0; 3]);
         let out = dir.path().join("loop.gif");
-        let opts = AnimateOptions {
-            loop_mode: LoopMode::Finite(3),
-            delay_ms: 50,
-            ..AnimateOptions::default()
-        };
-        make_gif(&[f], &out, opts).unwrap();
-        assert!(out.exists());
+        // The NETSCAPE 2.0 loop count is the repeats after the first play.
+        for (mode, repeats) in [
+            (LoopMode::Once, gif::Repeat::Finite(0)),
+            (LoopMode::Finite(0), gif::Repeat::Finite(0)),
+            (LoopMode::Finite(1), gif::Repeat::Finite(0)),
+            (LoopMode::Finite(3), gif::Repeat::Finite(2)),
+            (LoopMode::Infinite, gif::Repeat::Infinite),
+        ] {
+            let opts = AnimateOptions { loop_mode: mode, ..AnimateOptions::default() };
+            make_gif(std::slice::from_ref(&f), &out, opts).unwrap();
+            let mut decoder =
+                gif::DecodeOptions::new().read_info(std::fs::File::open(&out).unwrap()).unwrap();
+            while decoder.read_next_frame().unwrap().is_some() {}
+            assert_eq!(decoder.repeat(), repeats, "{mode:?}");
+        }
     }
 }

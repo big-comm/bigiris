@@ -162,6 +162,7 @@ fn not_regular(path: &Path) -> io::Error {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::os::unix::fs::FileTypeExt;
     use tempfile::TempDir;
 
     const SYS: Scope = Scope::System;
@@ -302,6 +303,22 @@ mod tests {
         assert_eq!(std::fs::read_to_string(&real).unwrap(), "new");
         assert_eq!(mode_of(&real), 0o600);
         assert!(leftovers(&dotfiles).is_empty());
+        assert!(leftovers(tmp.path()).is_empty());
+    }
+
+    #[test]
+    fn non_regular_target_refused() {
+        // A socket, unlike a directory, can be renamed over, so only the
+        // regular-file check keeps it.
+        let tmp = TempDir::new().unwrap();
+        let socket = tmp.path().join("socket");
+        let _listener = std::os::unix::net::UnixListener::bind(&socket).unwrap();
+        let link = tmp.path().join("link.xml");
+        std::os::unix::fs::symlink(&socket, &link).unwrap();
+        for (path, scope) in [(&socket, SYS), (&socket, USER), (&link, USER)] {
+            assert!(safe_write(path, "x", scope).is_err(), "{path:?} {scope:?}");
+            assert!(std::fs::symlink_metadata(&socket).unwrap().file_type().is_socket());
+        }
         assert!(leftovers(tmp.path()).is_empty());
     }
 

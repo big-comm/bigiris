@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //! Bounded, cancellable preview preparation and rendering.
 use super::*;
+use std::sync::PoisonError;
 
 /// Turn a `DynamicImage` into a `gdk::Texture` suitable for `gtk::Picture`.
 /// Consumes the image (the RGBA buffer is handed to a `glib::Bytes` that
@@ -14,7 +15,8 @@ pub(super) fn dynamic_image_to_texture(img: DynamicImage) -> gdk::Texture {
         .upcast()
 }
 
-/// Build the preview-area column every dialog uses on its right-hand side.
+/// Build the preview-area column every dialog uses on its right-hand side,
+/// with the window margins on its outer sides.
 /// Returns the `gtk::Picture` the caller drives via `set_paintable` and the
 /// outer container to append into the dialog's horizontal box.
 pub(super) fn build_preview_column(session: &PreviewSession) -> (gtk::Picture, gtk::Box) {
@@ -38,8 +40,8 @@ pub(super) fn build_preview_column(session: &PreviewSession) -> (gtk::Picture, g
     let original = gettext("Original: {width}×{height} px")
         .replace("{width}", &nw.to_string())
         .replace("{height}", &nh.to_string());
-    let info = gtk::Label::builder().label(original).xalign(0.0).build();
-    info.add_css_class("dim-label");
+    let original_size = gtk::Label::builder().label(original).xalign(0.0).build();
+    original_size.add_css_class("dim-label");
 
     let frame = gtk::Frame::new(None);
     frame.set_child(Some(&picture));
@@ -49,10 +51,13 @@ pub(super) fn build_preview_column(session: &PreviewSession) -> (gtk::Picture, g
         .spacing(8)
         .hexpand(true)
         .vexpand(true)
+        .margin_top(16)
+        .margin_bottom(16)
+        .margin_end(16)
         .build();
     column.append(&heading);
     column.append(&frame);
-    column.append(&info);
+    column.append(&original_size);
 
     (picture, column)
 }
@@ -86,8 +91,8 @@ impl PreviewDebounce {
     }
 }
 
-/// Apply `op` to `session` and push the resulting thumbnail into `picture`.
-/// Errors are logged and the previous paintable is left untouched.
+/// The newest render request of one preview and its latest result, by
+/// revision; older requests are dropped unrendered.
 struct PreviewRenderQueue {
     stopped: bool,
     next: Option<(u64, PreviewOp)>,
@@ -102,7 +107,7 @@ struct PreviewRenderer {
 impl Drop for PreviewRenderer {
     fn drop(&mut self) {
         let (lock, wake) = &*self.queue;
-        let mut pending = lock.lock().unwrap();
+        let mut pending = lock.lock().unwrap_or_else(PoisonError::into_inner);
         pending.stopped = true;
         pending.next = None;
         pending.result = None;
@@ -119,31 +124,35 @@ fn spawn_render_thread(
     queue: Arc<(Mutex<PreviewRenderQueue>, Condvar)>,
     rendered: viewer::Wake,
 ) {
-    std::thread::spawn(move || loop {
-        let (lock, wake) = &*queue;
-        let request = {
-            let mut pending = lock.lock().unwrap();
-            while !pending.stopped && pending.next.is_none() {
-                pending = wake.wait(pending).unwrap();
+    std::thread::spawn(move || {
+        loop {
+            let (lock, wake) = &*queue;
+            let request = {
+                let mut pending = lock.lock().unwrap_or_else(PoisonError::into_inner);
+                loop {
+                    if pending.stopped {
+                        return;
+                    }
+                    if let Some(request) = pending.next.take() {
+                        break request;
+                    }
+                    pending = wake.wait(pending).unwrap_or_else(PoisonError::into_inner);
+                }
+            };
+            // A panicking transform must not kill the renderer and freeze
+            // the preview; report it like any other failed render.
+            let image = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                session
+                    .apply(&request.1)
+                    .map(|img| DynamicImage::ImageRgba8(bigimage_core::into_srgb_rgba8(img)))
+                    .map_err(|error| crate::error_text::core_error_text(&error))
+            }))
+            .unwrap_or_else(|_| Err("preview renderer panicked".to_string()));
+            let mut pending = lock.lock().unwrap_or_else(PoisonError::into_inner);
+            if !pending.stopped {
+                pending.result = Some((request.0, image));
+                rendered.notify();
             }
-            if pending.stopped {
-                break;
-            }
-            pending.next.take().unwrap()
-        };
-        // A panicking transform must not kill the renderer and freeze
-        // the preview; report it like any other failed render.
-        let image = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-            session
-                .apply(&request.1)
-                .map(|img| DynamicImage::ImageRgba8(bigimage_core::into_srgb_rgba8(img)))
-                .map_err(|e| e.to_string())
-        }))
-        .unwrap_or_else(|_| Err("preview renderer panicked".to_string()));
-        let mut pending = lock.lock().unwrap();
-        if !pending.stopped {
-            pending.result = Some((request.0, image));
-            rendered.notify();
         }
     });
 }
@@ -167,15 +176,16 @@ fn start_renderer(session: &PreviewSession, picture: &gtk::Picture) -> Rc<Previe
             let (Some(picture), Some(renderer)) = (weak.upgrade(), weak_renderer.upgrade()) else {
                 return;
             };
-            let result = renderer.queue.0.lock().unwrap().result.take();
-            if let Some((revision, result)) = result {
-                if revision == renderer.revision.get() {
-                    match result {
-                        Ok(image) => {
-                            picture.set_paintable(Some(&dynamic_image_to_texture(image)));
-                        }
-                        Err(error) => tracing::warn!(%error, "preview: apply failed"),
+            let result =
+                renderer.queue.0.lock().unwrap_or_else(PoisonError::into_inner).result.take();
+            if let Some((revision, result)) = result
+                && revision == renderer.revision.get()
+            {
+                match result {
+                    Ok(image) => {
+                        picture.set_paintable(Some(&dynamic_image_to_texture(image)));
                     }
+                    Err(error) => tracing::warn!(%error, "preview: apply failed"),
                 }
             }
         }
@@ -190,6 +200,9 @@ fn start_renderer(session: &PreviewSession, picture: &gtk::Picture) -> Rc<Previe
     });
     renderer
 }
+/// Apply `op` to `session` off the GTK loop and push the resulting thumbnail
+/// into `picture`. Errors are logged and the previous paintable is left
+/// untouched.
 pub(super) fn refresh_preview(session: &PreviewSession, picture: &gtk::Picture, op: &PreviewOp) {
     let renderer = PREVIEW_RENDERERS.with(|renderers| {
         let mut renderers = renderers.borrow_mut();
@@ -206,7 +219,7 @@ pub(super) fn refresh_preview(session: &PreviewSession, picture: &gtk::Picture, 
     let revision = renderer.revision.get().wrapping_add(1);
     renderer.revision.set(revision);
     let (lock, wake) = &*renderer.queue;
-    lock.lock().unwrap().next = Some((revision, *op));
+    lock.lock().unwrap_or_else(PoisonError::into_inner).next = Some((revision, *op));
     wake.notify_one();
 }
 
@@ -243,38 +256,120 @@ pub(super) fn prepare_dialog(
     let cancel = Arc::new(AtomicBool::new(false));
     let closing = cancel.clone();
     window.connect_unrealize(move |_| closing.store(true, Ordering::Release));
-    let input = files.first().cloned();
+    // The preview shows the first file that opens; the operation still runs
+    // on every file, so one unreadable file does not block the others.
+    let inputs = files.to_vec();
     let job = gio::spawn_blocking(move || {
         crate::codec::with_cancel(cancel, || {
-            input
-                .ok_or_else(|| gettext("No image selected"))
-                .and_then(|path| PreviewSession::open(path).map_err(|e| e.to_string()))
+            let mut first_failure = None;
+            for path in inputs {
+                if crate::codec::cancelled() {
+                    break;
+                }
+                match PreviewSession::open(path) {
+                    Ok(session) => return Ok((session, first_failure)),
+                    Err(error) => {
+                        first_failure
+                            .get_or_insert_with(|| crate::error_text::core_error_text(&error));
+                    }
+                }
+            }
+            Err(first_failure.unwrap_or_else(|| gettext("No image selected")))
         })
     });
     let weak = window.downgrade();
+    let weak_toolbar = toolbar.downgrade();
     glib::MainContext::default().spawn_local(async move {
         let result = job.await;
-        let Some(window) = weak.upgrade() else { return };
+        let (Some(window), Some(toolbar)) = (weak.upgrade(), weak_toolbar.upgrade()) else {
+            return;
+        };
         if !window.is_visible() {
             return;
         }
+        let result = result.unwrap_or_else(|_| Err(gettext("Preparation was interrupted")));
         match result {
-            Ok(Ok(session)) => {
-                fill(window, files, Some(Rc::new(session)));
+            Ok((session, failure)) => {
+                let window = fill(window, files, Some(Rc::new(session)));
+                if let Some(failure) = failure
+                    && let Some(toolbar) = window.content().and_downcast::<adw::ToolbarView>()
+                {
+                    let banner = adw::Banner::builder()
+                        .title(failure)
+                        .use_markup(false)
+                        .revealed(true)
+                        .build();
+                    toolbar.add_top_bar(&banner);
+                }
             }
-            Ok(Err(error)) => {
+            Err(error) => {
+                let close = gtk::Button::builder()
+                    .label(gettext("Close"))
+                    .halign(gtk::Align::Center)
+                    .css_classes(["pill"])
+                    .build();
+                let weak = window.downgrade();
+                close.connect_clicked(move |_| {
+                    if let Some(window) = weak.upgrade() {
+                        window.close();
+                    }
+                });
                 let page = adw::StatusPage::builder()
                     .title(gettext("Could not open the image"))
-                    .description(error)
+                    .description(glib::markup_escape_text(&error))
                     .icon_name("dialog-error-symbolic")
+                    .child(&close)
                     .build();
-                window.set_content(Some(&page));
-            }
-            Err(_) => {
-                window.set_content(Some(&gtk::Label::new(Some(&gettext(
-                    "Preparation was interrupted",
-                )))));
+                toolbar.set_content(Some(&page));
             }
         }
     });
+}
+
+#[cfg(test)]
+mod prepare_tests {
+    use super::*;
+
+    /// An unreadable first file leaves the rest of the selection workable:
+    /// the form previews the next file under a banner naming the failure;
+    /// with nothing readable, the window keeps its header and a Close button.
+    #[test]
+    #[ignore = "requires a graphical display; run alone with GSETTINGS_BACKEND=memory"]
+    fn dialog_survives_unreadable_first_file() {
+        let app = dialogs::probe_app("com.biglinux.Iris.PrepareProbe");
+        let dir = tempfile::tempdir().unwrap();
+        let good = dir.path().join("good.png");
+        image::RgbImage::new(64, 48).save(&good).unwrap();
+        let broken = dir.path().join("broken.png");
+        std::fs::write(&broken, &std::fs::read(&good).unwrap()[..40]).unwrap();
+
+        let window = build_convert_dialog(&app, Rc::new(vec![broken.clone(), good]));
+        window.present();
+        let root: gtk::Widget = window.clone().upcast();
+        let banner = || dialogs::find_widget(&root, &|banner: &adw::Banner| banner.is_revealed());
+        dialogs::pump_until("banner", &|| banner().is_some());
+        let title = banner().unwrap().title();
+        assert!(title.contains("broken.png"), "{title}");
+        let convert = gettext("Convert");
+        let apply = dialogs::find_widget(&root, &|button: &gtk::Button| {
+            button.label().as_deref() == Some(convert.as_str())
+        });
+        assert!(apply.is_some_and(|button| button.is_sensitive()));
+        window.destroy();
+
+        let window = build_convert_dialog(&app, Rc::new(vec![broken]));
+        window.present();
+        let root: gtk::Widget = window.clone().upcast();
+        let page = || dialogs::find_widget::<adw::StatusPage>(&root, &|_| true);
+        dialogs::pump_until("failure page", &|| page().is_some());
+        let close = gettext("Close");
+        assert!(
+            dialogs::find_widget(&root, &|button: &gtk::Button| {
+                button.label().as_deref() == Some(close.as_str())
+            })
+            .is_some()
+        );
+        assert!(dialogs::find_widget::<adw::HeaderBar>(&root, &|_| true).is_some());
+        window.destroy();
+    }
 }

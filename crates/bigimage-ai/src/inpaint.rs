@@ -89,7 +89,7 @@ pub fn availability() -> Availability {
     MODEL.availability()
 }
 
-/// Where the loaded model runs; `None` before the first run.
+/// Where the loaded model runs; `None` while none is loaded.
 pub fn device() -> Option<Device> {
     SLOT.device()
 }
@@ -337,6 +337,18 @@ pub fn mask_from_image(image: &DynamicImage) -> GrayImage {
 
 /// Fill the pixels of `input` where `mask` (same size, one byte per pixel)
 /// is at least [`MASK_THRESHOLD`]. An empty mask returns the image as is.
+///
+/// # Errors
+///
+/// - [`AiError::Processing`]: `mask` is not the size of `input`, a side is
+///   under [`MIN_SIDE`], or `input` is over the RGBA size limit.
+/// - [`AiError::Disabled`]: the build has no `native` engines.
+/// - [`AiError::Missing`] or [`AiError::Unreadable`]: the weights are not
+///   installed or cannot be read.
+/// - [`AiError::Memory`] or [`AiError::MemoryUnknown`]: free RAM is short for
+///   the step, or cannot be read.
+/// - [`AiError::Cancelled`]: `progress` breaks.
+/// - [`AiError::Inference`] or [`AiError::Gpu`]: the engine fails.
 pub fn inpaint(
     input: &DynamicImage,
     mask: &GrayImage,
@@ -747,11 +759,7 @@ mod tests {
                         state ^= state << 13;
                         state ^= state >> 7;
                         state ^= state << 17;
-                        if state % 256 < density {
-                            255
-                        } else {
-                            0
-                        }
+                        if state % 256 < density { 255 } else { 0 }
                     })
                     .collect();
                 for radius in [0, 1, 2, 5, 12] {

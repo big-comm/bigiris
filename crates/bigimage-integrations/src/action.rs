@@ -27,7 +27,7 @@ pub struct Action {
     /// (kebab-case, no spaces, ASCII only).
     pub id: &'static str,
     /// Optional grouping. `None` means the action sits at the top of the
-    /// Íris submenu itself.
+    /// BigIris menu itself.
     pub submenu: Option<Submenu>,
     /// User-visible label.
     pub label: &'static str,
@@ -45,6 +45,9 @@ pub const TOP_LEVEL_LABEL: &str = "BigIris";
 
 /// Mime filter reused for every action (all image formats).
 const IMAGE_MIME: &[&str] = &["image/*"];
+/// Optimize PNG rewrites PNG files in place; `--in-place` also refuses a
+/// PNG whose output would be another file (no `.png` extension).
+const PNG_MIME: &[&str] = &["image/png"];
 const DIRECTORY_MIME: &[&str] = &["inode/directory"];
 
 /// Mime filter for documents LibreOffice converts to PDF: the text,
@@ -111,7 +114,8 @@ pub const SUB_AI: Submenu =
     Submenu { id: "ai", label: n_("AI"), icon: "applications-science-symbolic" };
 
 /// Submenu: convert a document to PDF through LibreOffice. Shown only when
-/// the selection matches [`DOC_MIME`]; images go through Convert ▸.
+/// the selection matches the document MIME types; images go through
+/// Convert ▸.
 pub const SUB_PDF: Submenu =
     Submenu { id: "pdf", label: n_("PDF"), icon: "application-pdf-symbolic" };
 
@@ -123,9 +127,9 @@ pub const SUB_PDF: Submenu =
 /// single-click action: open the image in BigIris) deliberately sits
 /// at the top, ahead of the multi-step Convert/Resize/etc. submenus.
 ///
-/// `--overwrite skip` means the quick actions never clobber an existing
-/// sibling file; users who want to replace or increment go through the
-/// modal "More options…" path.
+/// Quick actions never clobber an existing sibling file: most keep the
+/// default `--overwrite skip`, `increment` writes a numbered copy, and
+/// Optimize PNG uses `--in-place`, which only ever replaces its own input.
 pub const ACTIONS: &[Action] = &[
     // View (top level, one click): the most common entry point.
     Action {
@@ -413,10 +417,9 @@ pub const ACTIONS: &[Action] = &[
         id: "web-optimize-png",
         submenu: Some(SUB_WEB),
         label: n_("Optimize PNG (maximum compression)"),
-        command:
-            "bigiris --notify convert --to png --target maximum --optimize --overwrite replace %F",
+        command: "bigiris --notify convert --to png --target maximum --optimize --in-place %F",
         icon: "applications-internet-symbolic",
-        mime_types: IMAGE_MIME,
+        mime_types: PNG_MIME,
     },
     // Letterbox presets extend the canvas instead of cropping when a network
     // forces a fixed ratio; 0d0e12 (soft black) matches the YouTube and
@@ -466,9 +469,7 @@ pub const ACTIONS: &[Action] = &[
         id: "metadata-strip-all",
         submenu: Some(SUB_METADATA),
         label: n_("Remove all metadata (clean re-encode)"),
-        // Convert re-encodes without EXIF, IPTC or XMP, so stripping
-        // everything is a convert to the same format.
-        command: "bigiris --dialog=convert %F",
+        command: "bigiris --notify strip-metadata --overwrite increment %F",
         icon: "edit-delete-symbolic",
         mime_types: IMAGE_MIME,
     },
@@ -534,11 +535,11 @@ pub fn submenus() -> Vec<Submenu> {
     let mut seen: Vec<&'static str> = Vec::new();
     let mut out: Vec<Submenu> = Vec::new();
     for action in ACTIONS {
-        if let Some(sub) = action.submenu {
-            if !seen.contains(&sub.id) {
-                seen.push(sub.id);
-                out.push(sub);
-            }
+        if let Some(sub) = action.submenu
+            && !seen.contains(&sub.id)
+        {
+            seen.push(sub.id);
+            out.push(sub);
         }
     }
     out
@@ -572,6 +573,13 @@ mod tests {
     fn every_command_uses_file_placeholder() {
         for a in ACTIONS {
             assert!(a.command.contains("%F"), "command without %F: {}: {}", a.id, a.command);
+        }
+    }
+
+    #[test]
+    fn no_action_replaces_other_files() {
+        for a in ACTIONS {
+            assert!(!a.command.contains("--overwrite replace"), "{}: use --in-place", a.id);
         }
     }
 

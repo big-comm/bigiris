@@ -1,32 +1,45 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //! elementary Files — Contractor `.contract` files in
-//! `~/.local/share/contractor/`. Flat list, same "Íris ▸ …" convention as
-//! Nemo/PCManFM-Qt.
+//! `~/.local/share/contractor/`. Flat list, same "BigIris ▸ …" convention
+//! as Nemo.
 
 use std::io;
 use std::path::PathBuf;
 
-use crate::action::{Action, ACTIONS};
+use crate::action::{ACTIONS, Action};
 use crate::nemo::flat_label;
-use crate::safe_fs::safe_write;
-use crate::scope::{remove_matching, ScopePaths};
+use crate::safe_fs::FileMode;
+use crate::scope::{Installed, ScopePaths, remove_generated, replace_generated};
 
-/// Install one `.contract` per [`Action`].
-pub fn install(paths: &ScopePaths) -> io::Result<Vec<PathBuf>> {
-    let dir = paths.contractor();
-    std::fs::create_dir_all(&dir)?;
-    let mut written = Vec::new();
-    for action in ACTIONS {
-        let file = dir.join(format!("bigiris-{}.contract", action.id));
-        safe_write(&file, render(action), paths.scope)?;
-        written.push(file);
-    }
-    Ok(written)
+const SUFFIX: &str = ".contract";
+
+/// Install one `.contract` per [`Action`], removing those of actions a
+/// release dropped.
+///
+/// # Errors
+///
+/// An I/O error when the contractor folder cannot be listed or created, or a
+/// contract file cannot be written or a stale one removed.
+pub fn install(paths: &ScopePaths) -> io::Result<Installed> {
+    let files =
+        ACTIONS.iter().map(|action| (format!("bigiris-{}{SUFFIX}", action.id), render(action)));
+    replace_generated(
+        &paths.contractor(),
+        SUFFIX,
+        files.collect(),
+        paths.scope,
+        FileMode::Exact(0o644),
+    )
 }
 
 /// Remove every file we own in `~/.local/share/contractor/`.
+///
+/// # Errors
+///
+/// An I/O error when the contractor folder cannot be listed or a file we own
+/// cannot be removed.
 pub fn uninstall(paths: &ScopePaths) -> io::Result<Vec<PathBuf>> {
-    remove_matching(&paths.contractor(), "bigiris-", ".contract")
+    remove_generated(&paths.contractor(), SUFFIX, &[])
 }
 
 fn render(action: &Action) -> String {

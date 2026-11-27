@@ -49,8 +49,8 @@ pub(in crate::gui) fn decide_drag_mode(
     let (sx, sy) = click_widget;
     let (rx, ry, rw, rh) = rect;
     let (scale, ox, oy) = fit;
-    let nat_w = natural.0 as f64;
-    let nat_h = natural.1 as f64;
+    let nat_w = f64::from(natural.0);
+    let nat_h = f64::from(natural.1);
     let click_nat = (((sx - ox) / scale).clamp(0.0, nat_w), ((sy - oy) / scale).clamp(0.0, nat_h));
 
     // Widget-space corners of the current rect.
@@ -92,8 +92,8 @@ pub(in crate::gui) fn apply_drag(
     delta_nat: (f64, f64),
     natural: (u32, u32),
 ) -> (f64, f64, f64, f64) {
-    let nat_w = natural.0 as f64;
-    let nat_h = natural.1 as f64;
+    let nat_w = f64::from(natural.0);
+    let nat_h = f64::from(natural.1);
     let (dx, dy) = delta_nat;
     match mode {
         CropDragMode::NewSelection { anchor_nat: (ax, ay) } => {
@@ -171,9 +171,9 @@ fn build_crop_preview_column(
         let w_spin = w_spin.clone();
         let h_spin = h_spin.clone();
         selection_area.set_draw_func(move |_area, cr, ww, wh| {
-            let ww = ww as f64;
-            let wh = wh as f64;
-            let (scale, ox, oy) = contain_fit(ww, wh, natural.0 as f64, natural.1 as f64);
+            let ww = f64::from(ww);
+            let wh = f64::from(wh);
+            let (scale, ox, oy) = contain_fit(ww, wh, f64::from(natural.0), f64::from(natural.1));
             let rx = ox + x_spin.value() * scale;
             let ry = oy + y_spin.value() * scale;
             let rw = w_spin.value() * scale;
@@ -203,10 +203,11 @@ fn build_crop_preview_column(
         });
     }
 
-    // Spin changes → queue redraw of the overlay.
+    // Redraw on the committed value: `changed` fires per keystroke, before
+    // the typed text becomes the value the overlay reads.
     for spin in [x_spin, y_spin, w_spin, h_spin] {
         let area = selection_area.clone();
-        spin.connect_changed(move |_| area.queue_draw());
+        spin.connect_value_notify(move |_| area.queue_draw());
     }
 
     // Drag semantics — three modes, decided at drag_begin from the click
@@ -226,10 +227,10 @@ fn build_crop_preview_column(
         let h_spin = h_spin.clone();
         drag.connect_drag_begin(move |_, sx, sy| {
             let (scale, ox, oy) = contain_fit(
-                area.width() as f64,
-                area.height() as f64,
-                natural.0 as f64,
-                natural.1 as f64,
+                f64::from(area.width()),
+                f64::from(area.height()),
+                f64::from(natural.0),
+                f64::from(natural.1),
             );
             if scale <= 0.0 {
                 return;
@@ -249,17 +250,17 @@ fn build_crop_preview_column(
     }
     {
         let area = selection_area.clone();
-        let mode = drag_mode.clone();
+        let mode = drag_mode;
         let x_spin = x_spin.clone();
         let y_spin = y_spin.clone();
         let w_spin = w_spin.clone();
         let h_spin = h_spin.clone();
         drag.connect_drag_update(move |_, dx, dy| {
             let (scale, _ox, _oy) = contain_fit(
-                area.width() as f64,
-                area.height() as f64,
-                natural.0 as f64,
-                natural.1 as f64,
+                f64::from(area.width()),
+                f64::from(area.height()),
+                f64::from(natural.0),
+                f64::from(natural.1),
             );
             if scale <= 0.0 {
                 return;
@@ -277,7 +278,12 @@ fn build_crop_preview_column(
     overlay.set_child(Some(&picture));
     overlay.add_overlay(&selection_area);
 
-    let column = gtk::Box::builder().orientation(gtk::Orientation::Vertical).build();
+    let column = gtk::Box::builder()
+        .orientation(gtk::Orientation::Vertical)
+        .margin_top(16)
+        .margin_bottom(16)
+        .margin_end(16)
+        .build();
     column.append(&overlay);
 
     let hint = gtk::Label::builder()
@@ -290,6 +296,34 @@ fn build_crop_preview_column(
     column.append(&hint);
 
     column
+}
+
+/// Keep `origin + size` within `extent` (the first image's side) on one
+/// axis: a new origin lowers the size to what fits, a new size moves the
+/// origin back.
+fn keep_crop_inside(
+    window: &adw::ApplicationWindow,
+    origin: &adw::SpinRow,
+    size: &adw::SpinRow,
+    extent: u32,
+) {
+    let extent = f64::from(extent);
+    {
+        let size = size.clone();
+        dialog_signal!(window, origin, connect_value_notify, move |origin| {
+            if origin.value() + size.value() > extent {
+                size.set_value(extent - origin.value());
+            }
+        });
+    }
+    {
+        let origin = origin.clone();
+        dialog_signal!(window, size, connect_value_notify, move |size| {
+            if origin.value() + size.value() > extent {
+                origin.set_value(extent - size.value());
+            }
+        });
+    }
 }
 
 /// Crop modal: rectangular window by (x, y, w, h) with live preview.
@@ -320,7 +354,7 @@ fn fill_crop_dialog(
     let header = adw::HeaderBar::new();
     header.set_title_widget(Some(&adw::WindowTitle::new(&gettext("Crop"), "Prisma")));
 
-    let content_h = padded_box(gtk::Orientation::Horizontal, 16);
+    let content_h = gtk::Box::new(gtk::Orientation::Horizontal, 16);
 
     // Preview is keyed off the first file — multi-file dialogs share the
     // rect and per-file validation catches out-of-bounds at apply time.
@@ -328,11 +362,8 @@ fn fill_crop_dialog(
     let initial = default_crop(natural.0, natural.1);
 
     // Form column — native-width controls for coordinates and size.
-    let form_col = gtk::Box::builder()
-        .orientation(gtk::Orientation::Vertical)
-        .spacing(12)
-        .width_request(360)
-        .build();
+    let form_col = padded_box(gtk::Orientation::Vertical, 12);
+    form_col.set_width_request(360);
 
     let files_row = selection_row(&gettext("Selected files"), &files);
 
@@ -344,21 +375,24 @@ fn fill_crop_dialog(
 
     // Ranges clamp to the first file's natural dims. For multi-file sets
     // with different sizes, per-file validation handles the rest.
-    let x_spin = adw::SpinRow::with_range(0.0, (natural.0.saturating_sub(1)) as f64, 1.0);
+    let x_spin = adw::SpinRow::with_range(0.0, f64::from(natural.0.saturating_sub(1)), 1.0);
     x_spin.set_title(&gettext("X (px)"));
-    x_spin.set_value(initial.x as f64);
+    x_spin.set_value(f64::from(initial.x));
 
-    let y_spin = adw::SpinRow::with_range(0.0, (natural.1.saturating_sub(1)) as f64, 1.0);
+    let y_spin = adw::SpinRow::with_range(0.0, f64::from(natural.1.saturating_sub(1)), 1.0);
     y_spin.set_title(&gettext("Y (px)"));
-    y_spin.set_value(initial.y as f64);
+    y_spin.set_value(f64::from(initial.y));
 
-    let w_spin = adw::SpinRow::with_range(1.0, natural.0 as f64, 1.0);
+    let w_spin = adw::SpinRow::with_range(1.0, f64::from(natural.0), 1.0);
     w_spin.set_title(&gettext("Width (px)"));
-    w_spin.set_value(initial.width as f64);
+    w_spin.set_value(f64::from(initial.width));
 
-    let h_spin = adw::SpinRow::with_range(1.0, natural.1 as f64, 1.0);
+    let h_spin = adw::SpinRow::with_range(1.0, f64::from(natural.1), 1.0);
     h_spin.set_title(&gettext("Height (px)"));
-    h_spin.set_value(initial.height as f64);
+    h_spin.set_value(f64::from(initial.height));
+
+    keep_crop_inside(&window, &x_spin, &w_spin, natural.0);
+    keep_crop_inside(&window, &y_spin, &h_spin, natural.1);
 
     let target_row = target_format_row();
 
@@ -376,14 +410,11 @@ fn fill_crop_dialog(
     form_col.append(&group);
 
     let status = status_label();
-    form_col.append(&status);
 
     let reset_btn = gtk::Button::with_label(&gettext("Centered 50%"));
     let (cancel_btn, apply_btn, actions) = action_buttons(&gettext("Crop"));
     actions.prepend(&reset_btn);
-    form_col.append(&actions);
-
-    content_h.append(&form_col);
+    content_h.append(&form_column(&form_col, &[status.upcast_ref(), actions.upcast_ref()]));
 
     // Interactive preview: full thumbnail + DrawingArea overlay that strokes
     // the selection rect and shades the outside. Spin rows are the source of
@@ -403,27 +434,18 @@ fn fill_crop_dialog(
         let h_spin = h_spin.clone();
         dialog_signal!(window, reset_btn, connect_clicked, move |_| {
             let d = default_crop(natural.0, natural.1);
-            w_spin.set_value(d.width as f64);
-            h_spin.set_value(d.height as f64);
-            x_spin.set_value(d.x as f64);
-            y_spin.set_value(d.y as f64);
+            w_spin.set_value(f64::from(d.width));
+            h_spin.set_value(f64::from(d.height));
+            x_spin.set_value(f64::from(d.x));
+            y_spin.set_value(f64::from(d.y));
         });
     }
 
     close_on_click(&window, &cancel_btn);
 
     {
-        let files = files.clone();
-        let x_spin = x_spin.clone();
-        let y_spin = y_spin.clone();
-        let w_spin = w_spin.clone();
-        let h_spin = h_spin.clone();
-        let target_row = target_row.clone();
-        let overwrite_row = overwrite_row.clone();
-        let status = status.clone();
-        let apply_btn = apply_btn.clone();
         let window = window.clone();
-        dialog_signal!(window, apply_btn.clone(), connect_clicked, move |_| {
+        dialog_signal!(window, apply_btn, connect_clicked, move |_| {
             let rect = CropRect::new(
                 x_spin.value() as u32,
                 y_spin.value() as u32,
@@ -439,6 +461,11 @@ fn fill_crop_dialog(
             let work_files: Vec<PathBuf> = (*files).clone();
             run_batch_async(
                 work_files,
+                crate::output_plan::Naming::image(
+                    target,
+                    policy,
+                    crate::output_plan::OutputSuffix::Fixed(rect.filename_suffix()),
+                ),
                 move |f| crop_file(f, rect, target, policy),
                 gettext("Cropping"),
                 status.clone(),
@@ -449,4 +476,36 @@ fn fill_crop_dialog(
     }
 
     window
+}
+
+#[cfg(test)]
+mod bounds_tests {
+    use super::*;
+
+    /// Typing an X near the right edge lowers the width so the rectangle
+    /// stays inside the 640 px image, and a wider width moves X back.
+    #[test]
+    #[ignore = "requires a graphical display; run alone with GSETTINGS_BACKEND=memory"]
+    fn crop_rectangle_stays_inside_the_image() {
+        let app = probe_app("com.biglinux.Iris.CropBoundsProbe");
+        let dir = tempfile::tempdir().unwrap();
+        let source = dir.path().join("photo.png");
+        image::RgbImage::new(640, 480).save(&source).unwrap();
+
+        let window = build_crop_dialog(&app, Rc::new(vec![source]));
+        window.present();
+        let root: gtk::Widget = window.clone().upcast();
+        let spin = |title: &str| {
+            let title = gettext(title);
+            find_widget(&root, &|row: &adw::SpinRow| row.title() == title)
+        };
+        pump_until("crop form", &|| spin("X (px)").is_some());
+        let (x, width) = (spin("X (px)").unwrap(), spin("Width (px)").unwrap());
+        assert_eq!((x.value(), width.value()), (160.0, 320.0));
+        x.set_value(600.0);
+        assert_eq!((x.value(), width.value()), (600.0, 40.0));
+        width.set_value(500.0);
+        assert_eq!((x.value(), width.value()), (140.0, 500.0));
+        window.destroy();
+    }
 }

@@ -7,7 +7,7 @@ use std::borrow::Cow;
 
 use image::{DynamicImage, ExtendedColorType, ImageEncoder, ImageResult, RgbaImage};
 
-use super::metric::{Metric, FULL_RES_PIXELS};
+use super::metric::{FULL_RES_PIXELS, Metric};
 use super::palette::{self, Paletted};
 use super::{encode_error, rgb_of};
 use crate::encode::EncodeOptions;
@@ -128,7 +128,7 @@ pub(crate) fn ico(image: &RgbaImage, opts: &EncodeOptions) -> ImageResult<Vec<u8
 /// TIFF: Deflate (level 9) with the horizontal predictor; ICC profile tag
 /// when one is given. Lossless.
 pub(crate) fn tiff(image: &DynamicImage, icc: Option<&[u8]>) -> ImageResult<Vec<u8>> {
-    use tiff::encoder::{colortype, Compression, DeflateLevel, TiffEncoder};
+    use tiff::encoder::{Compression, DeflateLevel, TiffEncoder, colortype};
     use tiff::tags::{Predictor, Tag};
     let tiff_error = |e: tiff::TiffError| encode_error(image::ImageFormat::Tiff, e.to_string());
     let (w, h) = (image.width(), image.height());
@@ -139,7 +139,7 @@ pub(crate) fn tiff(image: &DynamicImage, icc: Option<&[u8]>) -> ImageResult<Vec<
             .with_compression(Compression::Deflate(DeflateLevel::Best))
             .with_predictor(Predictor::Horizontal);
         macro_rules! write {
-            ($kind:ty, $data:expr) => {{
+            ($kind:ty, $data:expr_2021) => {{
                 let mut img = encoder.new_image::<$kind>(w, h).map_err(tiff_error)?;
                 if let Some(icc) = icc {
                     img.encoder().write_tag(Tag::IccProfile, icc).map_err(tiff_error)?;

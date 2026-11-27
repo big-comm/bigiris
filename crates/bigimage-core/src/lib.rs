@@ -4,6 +4,18 @@
 //! Brand-agnostic on purpose: this crate must stay usable if the project ever
 //! splits into multiple binaries. It owns decode/encode/transform pipelines;
 //! GUI code never lives here.
+//!
+//! - `pipeline`: decode, output naming, `Skip` checks and atomic publication
+//!   every transform shares; `backend`: the sandboxed decoder the binary
+//!   installs; `container_bounds` and `content`: refusals before a codec
+//!   allocates or a static edit drops frames, pages or entries.
+//! - Transforms: `convert`, `resize`, `rotate`, `flip`, `crop`, `extent`,
+//!   `adjust`, `animate`; `preview` replays them on a thumbnail.
+//! - Encoding: `format`, `encode` (settings), `optimize` (the encoders and
+//!   their quality search), `color` (ICC normalization and the sRGB profile).
+//! - Metadata: `metadata` (EXIF reading, what a save keeps), `exif_resave`
+//!   (the EXIF an in-place save writes), `metadata_scan` (whether original
+//!   bytes may be republished); `resources`: batch concurrency.
 
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
@@ -21,10 +33,12 @@ pub mod content;
 mod convert;
 pub mod crop;
 mod encode;
+mod exif_resave;
 pub mod extent;
 pub mod flip;
 mod format;
 pub mod metadata;
+mod metadata_scan;
 mod optimize;
 mod pipeline;
 pub mod preview;
@@ -32,26 +46,26 @@ pub mod resize;
 pub mod resources;
 pub mod rotate;
 
-pub use adjust::{adjust_file, adjust_file_with_options, AdjustOps};
-pub use animate::{make_gif, make_gif_with_policy, AnimateOptions, LoopMode};
+pub use adjust::{AdjustOps, adjust_file, adjust_file_with_options};
+pub use animate::{AnimateOptions, LoopMode, make_gif, make_gif_with_policy};
 pub use convert::{
-    convert_file, convert_file_report, convert_file_to, into_srgb_rgba8, ConvertOutcome,
-    ConvertReport, OverwritePolicy,
+    ConvertOutcome, ConvertReport, OverwritePolicy, convert_file, convert_file_report,
+    convert_file_to, into_srgb_rgba8,
 };
-pub use crop::{crop_file, crop_file_with_options, CropRect};
+pub use crop::{CropRect, crop_file, crop_file_with_options};
 pub use encode::{EncodeOptions, QualityTarget};
 pub use extent::{
-    extent_file, extent_file_with_options, parse_hex_color, ExtentOptions, ExtentSize, Gravity,
+    ExtentOptions, ExtentSize, Gravity, extent_file, extent_file_with_options, parse_hex_color,
 };
-pub use flip::{flip_file, flip_file_with_options, FlipAxis};
+pub use flip::{FlipAxis, flip_file, flip_file_with_options};
 pub use format::Format;
 pub use metadata::{Metadata, MetadataLoss, MetadataSupport, SourceMetadata};
 pub use pipeline::TEMP_FILE_PREFIX;
 pub use preview::{PreviewOp, PreviewSession};
-pub use resize::{resize_file, Filter, ResizeMode};
+pub use resize::{Filter, ResizeMode, resize_file};
 pub use rotate::{
-    rotate_file, rotate_file_auto, rotate_file_auto_with_options, rotate_file_with_options,
-    Rotation,
+    Rotation, rotate_file, rotate_file_auto, rotate_file_auto_with_options,
+    rotate_file_with_options,
 };
 
 /// Crate version.
@@ -68,6 +82,11 @@ pub fn version() -> &'static str {
 /// "extension not recognized as an image format" even though the bytes are a
 /// valid PNG/JPEG/etc. Sniffing the header avoids the false negative; on a
 /// well-named file it costs the same.
+///
+/// # Errors
+///
+/// An [`image::ImageError`] when `path` cannot be read, is not a regular file,
+/// exceeds the decoding limits or holds no image a decoder accepts.
 pub fn open_image(path: impl AsRef<std::path::Path>) -> image::ImageResult<image::DynamicImage> {
     let path = path.as_ref();
     pipeline::decode_image(path).map(|(img, _)| img)
@@ -75,9 +94,23 @@ pub fn open_image(path: impl AsRef<std::path::Path>) -> image::ImageResult<image
 
 /// Decode `input`, apply `transform` and write the result next to it as
 /// `<stem><suffix>.<ext>`, with the naming, `Skip` short-circuit (before
-/// decoding), size limits and atomic publication of the built-in
-/// transforms. `target` defaults to the source format. For transforms
-/// that live outside this crate, such as the AI tools.
+/// decoding), size limits and atomic publication every transform without
+/// its own validation shares (flip, rotate, adjust, the AI tools). `target`
+/// defaults to the source format.
+///
+/// # Errors
+///
+/// - [`BigImageError::NotStatic`] or [`BigImageError::SeveralEntries`]: the
+///   output would drop frames, pages or entries of `input` (as
+///   [`BigImageError::Decode`] with the worker's text when a backend is configured).
+/// - [`BigImageError::Decode`]: `input` cannot be read or decoded.
+/// - [`BigImageError::UnsupportedFormat`]: no format is recognized in `input`.
+/// - [`BigImageError::InvalidInput`]: `input` has no file name, or the result
+///   exceeds the processing limits.
+/// - Any error `transform` returns.
+/// - [`BigImageError::Encode`] or [`BigImageError::Io`]: the output cannot be
+///   encoded, synced or published.
+/// - [`BigImageError::NoFreeName`]: `Increment` finds every numbered name taken.
 pub fn transform_file(
     input: impl AsRef<std::path::Path>,
     suffix: &str,
@@ -92,15 +125,35 @@ pub fn transform_file(
     {
         return Ok(skipped);
     }
-    let (src, src_format) = pipeline::decode_with_source_format(input)?;
-    let target = target.unwrap_or(src_format);
-    let output = pipeline::resolve_output(input, Some(suffix), target, policy)?;
+    let (src, target) = pipeline::decode_for_target(input, target)?;
+    let output = pipeline::resolve_output(input, Some(suffix), target)?;
     if pipeline::existing_output(&output, target, policy) {
         return Ok(ConvertOutcome::Skipped { output });
     }
     let result = transform(src)?;
     pipeline::check_dimensions(result.width(), result.height(), result.color().bytes_per_pixel())?;
     pipeline::encode_output(result, output, target, opts, policy)
+}
+
+/// Publish `finished`, a complete file another program wrote on the file
+/// system of `output` (in a private folder beside it), as `output` under
+/// `policy`, with the guarantees of every core output: the file and then
+/// its folder are synced, a replaced file keeps its permission bits, and
+/// `Skip` and `Increment` never overwrite. `finished` is moved, never
+/// copied; it is removed when the policy skips.
+///
+/// # Errors
+///
+/// [`BigImageError::Io`] when `finished` cannot be opened, synced or moved,
+/// and [`BigImageError::NoFreeName`] when `Increment` runs out of names.
+pub fn publish_finished_file(
+    finished: &std::path::Path,
+    output: std::path::PathBuf,
+    policy: OverwritePolicy,
+) -> Result<ConvertOutcome> {
+    let path = tempfile::TempPath::try_from_path(finished).map_err(BigImageError::Io)?;
+    let file = std::fs::File::open(&path).map_err(BigImageError::Io)?;
+    pipeline::publish_temp(tempfile::NamedTempFile::from_parts(file, path), output, policy)
 }
 
 /// Format of an image file by its content (magic bytes), with the extension
@@ -118,6 +171,11 @@ pub fn within_limits(width: u32, height: u32, bytes_per_pixel: u8) -> bool {
 
 /// Read just the dimensions of an image, dispatching the decoder by content.
 /// See [`open_image`] for why this matters.
+///
+/// # Errors
+///
+/// An [`image::ImageError`] when `path` cannot be read, is not a regular file,
+/// has no header a decoder accepts or declares a size over the limits.
 pub fn image_dimensions(path: impl AsRef<std::path::Path>) -> image::ImageResult<(u32, u32)> {
     if let Some(backend) = backend::configured() {
         return (backend.dimensions)(path.as_ref());
@@ -156,6 +214,14 @@ pub fn image_dimensions(path: impl AsRef<std::path::Path>) -> image::ImageResult
 /// above 1.0). Float outputs replace NaN and -inf with 0 and clamp +inf to
 /// a large finite value the encoders can represent. PNG and JPEG outputs
 /// carry a generated sRGB ICC profile; no source metadata is written (see [`save_image_preserving_metadata`]).
+///
+/// # Errors
+///
+/// - [`BigImageError::InvalidInput`]: the pixels prepared for `target` exceed
+///   the processing limits.
+/// - [`BigImageError::Encode`] or [`BigImageError::Io`]: the output cannot be
+///   encoded, synced or published.
+/// - [`BigImageError::NoFreeName`]: `Increment` finds every numbered name taken.
 pub fn save_image(
     image: image::DynamicImage,
     output: impl AsRef<std::path::Path>,
@@ -174,6 +240,11 @@ pub fn save_image(
 /// installed by [`backend::configure_resave`]; if none was installed the
 /// pixels come back sRGB-normalised with empty metadata (nothing can be
 /// re-attached, and no codec runs in this process).
+///
+/// # Errors
+///
+/// An [`image::ImageError`] when `path` cannot be read, is not a regular file,
+/// exceeds the decoding limits or holds no image a decoder accepts.
 pub fn open_image_for_resave(
     path: impl AsRef<std::path::Path>,
 ) -> image::ImageResult<(image::DynamicImage, SourceMetadata)> {
@@ -201,14 +272,23 @@ pub fn open_image_for_resave(
 /// [`save_image_preserving_metadata_report`]. `options.strip_metadata` is
 /// ignored: the whole point of this call is to keep the user's own metadata.
 ///
-/// EXIF `PixelXDimension`/`PixelYDimension` are updated to the saved size
-/// and the embedded IFD1 thumbnail (which would show the image before the
-/// edit) is dropped. XMP is not carried: the vendored encoders cannot write
-/// it.
+/// EXIF is rebuilt from the source's primary-image fields (IFD0, Exif, GPS,
+/// interoperability) with `Orientation` 1 and `PixelXDimension`/
+/// `PixelYDimension` set to the saved size; the IFD1 thumbnail, which shows
+/// the image before the edit, is not written. The `MakerNote` is copied as
+/// opaque bytes: a vendor note addressed by absolute offsets loses its
+/// meaning, and previews inside it stay. Fields the writer cannot encode are
+/// reported as [`MetadataLoss::ExifFieldsDropped`]. XMP is not carried: the
+/// vendored encoders cannot write it.
 ///
 /// `options` is used as given. For an in-place JPEG save pass the source's
-/// quality, e.g. `quality: metadata::estimate_jpeg_quality(path)`, or the
-/// encoder default (75) re-compresses a high-quality original.
+/// quality, e.g. `quality: metadata::estimate_jpeg_quality(path)`: with
+/// `None` the encoder searches for `options.target`, which can re-compress
+/// a high-quality original below its own quality.
+///
+/// # Errors
+///
+/// As [`save_image`]; metadata that cannot be written is dropped, never an error.
 pub fn save_image_preserving_metadata(
     image: image::DynamicImage,
     output: impl AsRef<std::path::Path>,
@@ -233,7 +313,12 @@ pub struct ResaveOutcome {
 
 /// [`save_image_preserving_metadata`], also reporting which source
 /// metadata could not be written, so the UI can tell the user (e.g. "the
-/// colour profile was converted to sRGB", "EXIF too large for JPEG").
+/// colour profile was converted to sRGB", "EXIF too large for this format").
+///
+/// # Errors
+///
+/// As [`save_image`]; metadata that cannot be written is reported in
+/// [`ResaveOutcome::dropped`], never as an error.
 pub fn save_image_preserving_metadata_report(
     image: image::DynamicImage,
     output: impl AsRef<std::path::Path>,
@@ -242,8 +327,7 @@ pub fn save_image_preserving_metadata_report(
     policy: OverwritePolicy,
     source: &SourceMetadata,
 ) -> Result<ResaveOutcome> {
-    use metadata::MetadataLoss;
-    const MAX_BLOB: usize = 4 * 1024 * 1024;
+    use metadata::{MAX_RESAVE_BLOB, MetadataLoss};
     // JPEG APP1 segments hold at most 65533 bytes, including `Exif\0\0`.
     const MAX_JPEG_EXIF: usize = 65_533 - 6;
     let mut image = image;
@@ -257,12 +341,11 @@ pub fn save_image_preserving_metadata_report(
             Some(b"GRAY") => gray,
             _ => false,
         };
-        if support.icc && matches_pixels && icc.len() <= MAX_BLOB {
+        if support.icc && matches_pixels && icc.len() <= MAX_RESAVE_BLOB {
             extras.icc = Some(icc.to_vec());
         } else {
             let loss = match color::normalize_srgb_applied(&mut image, icc) {
                 Ok(true) if !support.icc => MetadataLoss::IccUnsupported,
-                Ok(true) if icc.len() > MAX_BLOB => MetadataLoss::IccTooLarge,
                 Ok(true) => MetadataLoss::IccMismatched,
                 Ok(false) => MetadataLoss::IccDiscarded,
                 Err(error) => {
@@ -274,13 +357,27 @@ pub fn save_image_preserving_metadata_report(
         }
     }
     if let Some(exif) = source.exif.as_deref().filter(|exif| !exif.is_empty()) {
-        let limit = if target == Format::Jpeg { MAX_JPEG_EXIF } else { MAX_BLOB };
-        match metadata::resave_exif(exif, Some((image.width(), image.height()))) {
-            _ if !support.exif => dropped.push(MetadataLoss::ExifUnsupported),
-            None => dropped.push(MetadataLoss::ExifInvalid),
-            Some(exif) if exif.len() > limit => dropped.push(MetadataLoss::ExifTooLarge),
-            Some(exif) => extras.exif = Some(exif),
+        let limit = if target == Format::Jpeg { MAX_JPEG_EXIF } else { MAX_RESAVE_BLOB };
+        if !support.exif {
+            dropped.push(MetadataLoss::ExifUnsupported);
+        } else if exif.len() > MAX_RESAVE_BLOB {
+            dropped.push(MetadataLoss::ExifTooLarge);
+        } else {
+            match exif_resave::resave_exif(exif, (image.width(), image.height())) {
+                None => dropped.push(MetadataLoss::ExifInvalid),
+                Some(rebuilt) if rebuilt.tiff.len() > limit => {
+                    dropped.push(MetadataLoss::ExifTooLarge);
+                }
+                Some(rebuilt) => {
+                    if rebuilt.dropped_fields {
+                        dropped.push(MetadataLoss::ExifFieldsDropped);
+                    }
+                    extras.exif = Some(rebuilt.tiff);
+                }
+            }
         }
+    } else if source.exif_unreadable {
+        dropped.push(MetadataLoss::ExifInvalid);
     }
     let outcome = pipeline::encode_and_cleanup_with(
         image,
@@ -293,9 +390,9 @@ pub fn save_image_preserving_metadata_report(
     Ok(ResaveOutcome { outcome, dropped })
 }
 
-/// Errors returned by core pipelines.
+/// Errors returned by core pipelines. Exhaustive, so the app's translated
+/// text for each variant fails to build when one is added.
 #[derive(Debug, Error)]
-#[non_exhaustive]
 pub enum BigImageError {
     /// IO failure.
     #[error("io: {0}")]
@@ -333,6 +430,23 @@ pub enum BigImageError {
     #[error("cancelled")]
     Cancelled,
 
+    /// An animated or multi-page image given to an edit that writes one
+    /// picture, which would drop the other frames or pages.
+    #[error("animated or multi-page image: static editing stopped to avoid losing content")]
+    NotStatic,
+
+    /// An icon with several sizes or a multi-part OpenEXR written back to
+    /// its own format, which would keep only one entry.
+    #[error("icon with several sizes or multi-part EXR: writing it back would keep only one")]
+    SeveralEntries,
+
+    /// `increment` found every numbered name up to `_9999` taken.
+    #[error("too many files with the same name: {}", .output.display())]
+    NoFreeName {
+        /// The name the numbering started from.
+        output: PathBuf,
+    },
+
     /// Catch-all for messages not yet promoted to variants.
     #[error("{0}")]
     Other(String),
@@ -340,30 +454,6 @@ pub enum BigImageError {
 
 /// Alias for pipeline results.
 pub type Result<T> = std::result::Result<T, BigImageError>;
-
-/// One conversion job, input to output. Left intentionally thin in M1 —
-/// batch orchestration (`Pipeline` trait with progress + cancel) will layer
-/// on top once more than a single transform type exists.
-#[derive(Debug, Clone)]
-pub struct ConvertJob {
-    /// Source path.
-    pub input: PathBuf,
-    /// Destination path (resolved by naming strategy upstream).
-    pub output: PathBuf,
-    /// Target format.
-    pub target_format: Format,
-}
-
-impl ConvertJob {
-    /// Create a new job with input, output, and target format.
-    pub fn new(
-        input: impl Into<PathBuf>,
-        output: impl Into<PathBuf>,
-        target_format: Format,
-    ) -> Self {
-        Self { input: input.into(), output: output.into(), target_format }
-    }
-}
 
 #[cfg(test)]
 mod tests {
@@ -404,12 +494,6 @@ mod tests {
         );
         assert!(failed.unwrap_err().to_string().contains("model missing"));
         assert!(!dir.path().join("photo_err.jpg").exists());
-    }
-
-    #[test]
-    fn convert_job_roundtrip() {
-        let job = ConvertJob::new("a.jpg", "a.png", Format::Png);
-        assert_eq!(job.target_format, Format::Png);
     }
 
     #[test]

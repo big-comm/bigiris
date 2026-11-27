@@ -3,7 +3,7 @@
 //! `bigiris --dialog=<name>`. Shared form helpers live here; each dialog
 //! has its own module.
 
-use super::batch_runner::{format_size, run_batch_async};
+use super::batch_runner::run_batch_async;
 use super::*;
 
 pub(in crate::gui) use crate::fill;
@@ -26,7 +26,7 @@ fn disconnect_with_window(
 }
 
 macro_rules! dialog_signal {
-    ($window:expr, $object:expr, $method:ident, $callback:expr) => {{
+    ($window:expr_2021, $object:expr_2021, $method:ident, $callback:expr_2021) => {{
         let owner = $window.clone();
         let object = $object.clone();
         let handler = object.$method($callback);
@@ -155,8 +155,20 @@ fn run_dialog_app(activate: impl Fn(&adw::Application) + 'static) -> i32 {
         .flags(gio::ApplicationFlags::NON_UNIQUE)
         .build();
     app.connect_activate(activate);
+    app.connect_window_added(|_, window| close_on_escape(window));
     let code = app.run_with_args::<&str>(&[]);
     i32::from(u8::from(code))
+}
+
+/// Escape closes `window`. The shortcut runs in the bubble phase, so an
+/// open popover, drop-down or alert takes the key first.
+pub(in crate::gui) fn close_on_escape(window: &gtk::Window) {
+    let controller = gtk::ShortcutController::new();
+    controller.add_shortcut(gtk::Shortcut::new(
+        Some(gtk::KeyvalTrigger::new(gdk::Key::Escape, gdk::ModifierType::empty())),
+        Some(gtk::NamedAction::new("window.close")),
+    ));
+    window.add_controller(controller);
 }
 
 /// "Target format" combo listing [`CONVERT_FORMATS`].
@@ -206,6 +218,54 @@ fn selected_overwrite(row: &adw::ComboRow) -> OverwritePolicy {
     OVERWRITE_CHOICES[row.selected() as usize].1
 }
 
+/// Run `start` once the user agrees to overwrite the inputs that `naming`
+/// would replace (Cancel is the default), at once when there are none. The
+/// count, slow on a network folder, runs off the GTK loop with Apply held.
+fn confirm_replacing_originals(
+    window: &adw::ApplicationWindow,
+    apply_btn: &gtk::Button,
+    files: &[PathBuf],
+    naming: &crate::output_plan::Naming,
+    start: impl FnOnce() + 'static,
+) {
+    apply_btn.set_sensitive(false);
+    let (files, naming) = (files.to_vec(), naming.clone());
+    let job = gio::spawn_blocking(move || crate::output_plan::replaced_inputs(&files, &naming));
+    let (window, apply_btn) = (window.clone(), apply_btn.clone());
+    glib::MainContext::default().spawn_local(async move {
+        let count = job.await.unwrap_or_else(|panic| std::panic::resume_unwind(panic));
+        if count == 0 {
+            start();
+            return;
+        }
+        if !window.is_visible() {
+            return;
+        }
+        let alert = adw::AlertDialog::builder()
+            .heading(gettext("Replace the original files?"))
+            .body(fill(
+                &gettext("Originals that will be overwritten: {count}. This cannot be undone."),
+                &[("count", &count.to_string())],
+            ))
+            .build();
+        alert.add_response("cancel", &gettext("Cancel"));
+        alert.add_response("replace", &gettext("Replace"));
+        alert.set_response_appearance("replace", adw::ResponseAppearance::Destructive);
+        alert.set_default_response(Some("cancel"));
+        alert.set_close_response("cancel");
+        let start = Cell::new(Some(start));
+        alert.connect_response(None, move |_, response| match response {
+            "replace" => {
+                if let Some(start) = start.take() {
+                    start();
+                }
+            }
+            _ => apply_btn.set_sensitive(true),
+        });
+        alert.present(Some(&window));
+    });
+}
+
 /// "<title>: N" row summarizing the selected files.
 fn selection_row(title: &str, files: &[PathBuf]) -> adw::ActionRow {
     let row = adw::ActionRow::builder()
@@ -240,6 +300,50 @@ fn set_dialog_content(
     window.set_content(Some(&toolbar_view));
 }
 
+/// Make `form` with `status` and Cancel and `apply_label` buttons below it
+/// the whole of `window` under `header`; Cancel closes the window. Returns
+/// the apply button.
+fn set_form_dialog_content(
+    window: &adw::ApplicationWindow,
+    header: &adw::HeaderBar,
+    form: &impl IsA<gtk::Widget>,
+    status: &gtk::Label,
+    apply_label: &str,
+) -> gtk::Button {
+    let (cancel_btn, apply_btn, actions) = action_buttons(apply_label);
+    set_dialog_content(
+        window,
+        header,
+        &form_column(form, &[status.upcast_ref(), actions.upcast_ref()]),
+    );
+    close_on_click(window, &cancel_btn);
+    apply_btn
+}
+
+/// Make `form` (with `footer` below it, see [`form_column`]) and the
+/// preview of `session` side by side the whole of `window` under `header`.
+/// Returns the preview picture, for dialogs that redraw it.
+fn set_preview_dialog_content(
+    window: &adw::ApplicationWindow,
+    header: &adw::HeaderBar,
+    form: &impl IsA<gtk::Widget>,
+    footer: &[&gtk::Widget],
+    session: Option<&PreviewSession>,
+) -> Option<gtk::Picture> {
+    let column = form_column(form, footer);
+    column.set_hexpand(true);
+    column.set_size_request(420, -1);
+    let main_box = gtk::Box::new(gtk::Orientation::Horizontal, 16);
+    main_box.append(&column);
+    let picture = session.map(|session| {
+        let (picture, preview) = build_preview_column(session);
+        main_box.append(&preview);
+        picture
+    });
+    set_dialog_content(window, header, &main_box);
+    picture
+}
+
 /// Fill `window` with a warning about the selection and a Close button.
 fn show_selection_problem(
     window: &adw::ApplicationWindow,
@@ -261,11 +365,49 @@ fn show_selection_problem(
     set_dialog_content(window, header, content);
 }
 
-/// Dimmed, wrapping status line under a dialog form.
+/// Dimmed status line under a dialog form. A long report (a failure with
+/// its path) is cut at four lines so the buttons stay in view; the tooltip
+/// holds the whole text.
 fn status_label() -> gtk::Label {
-    let status = gtk::Label::builder().label("").wrap(true).xalign(0.0).build();
+    let status = gtk::Label::builder()
+        .label("")
+        .wrap(true)
+        .wrap_mode(gtk::pango::WrapMode::WordChar)
+        .ellipsize(gtk::pango::EllipsizeMode::End)
+        .lines(4)
+        .xalign(0.0)
+        .build();
     status.add_css_class("dim-label");
+    status.connect_label_notify(|status| {
+        let text = status.label();
+        status.set_tooltip_text(Some(text.as_str()).filter(|text| !text.is_empty()));
+    });
     status
+}
+
+/// A dialog's form column: `form` scrolls when the window is shorter than
+/// it, while `footer` (status line, progress, buttons) stays in view below.
+fn form_column(form: &impl IsA<gtk::Widget>, footer: &[&gtk::Widget]) -> gtk::Box {
+    let scroller = gtk::ScrolledWindow::builder()
+        .hscrollbar_policy(gtk::PolicyType::Never)
+        .propagate_natural_height(true)
+        .vexpand(true)
+        .child(form)
+        .build();
+    let bottom = gtk::Box::builder()
+        .orientation(gtk::Orientation::Vertical)
+        .spacing(12)
+        .margin_start(16)
+        .margin_end(16)
+        .margin_bottom(16)
+        .build();
+    for widget in footer {
+        bottom.append(*widget);
+    }
+    let column = gtk::Box::new(gtk::Orientation::Vertical, 0);
+    column.append(&scroller);
+    column.append(&bottom);
+    column
 }
 
 /// End-aligned Cancel + suggested `apply_label` buttons.
@@ -294,7 +436,7 @@ fn files_subtitle(files: &[PathBuf]) -> String {
     if files.is_empty() {
         return "—".to_string();
     }
-    let first = files[0].file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
+    let first = crate::codec::printable_name(&files[0]);
     if files.len() == 1 {
         first
     } else {
@@ -336,7 +478,7 @@ fn output_folder_row(
         let folder_row = folder_row.clone();
         let clear_btn = clear_folder_btn.clone();
         let window = window.clone();
-        dialog_signal!(window, folder_row.clone(), connect_activated, move |_| {
+        dialog_signal!(window, folder_row, connect_activated, move |_| {
             pick_output_folder(&window, &output_dir, &folder_row, &clear_btn);
         });
     }
@@ -370,10 +512,57 @@ fn pick_output_folder(
     dialog.select_folder(Some(&parent), None::<&gio::Cancellable>, move |result| {
         let Ok(folder) = result else { return };
         let Some(path) = folder.path() else { return };
-        row.set_subtitle(&path.display().to_string());
+        row.set_subtitle(&crate::codec::printable_path(&path));
         *output_dir.borrow_mut() = Some(path);
         clear_btn.set_visible(true);
     });
+}
+
+/// An application for one GUI test, registered so its windows can open.
+#[cfg(test)]
+pub(in crate::gui) fn probe_app(id: &str) -> adw::Application {
+    adw::init().expect("GTK display required");
+    let app = adw::Application::builder()
+        .application_id(id)
+        .flags(gio::ApplicationFlags::NON_UNIQUE)
+        .build();
+    app.register(None::<&gio::Cancellable>).unwrap();
+    app
+}
+
+/// Run the main loop until `done`, failing after 30 s with `what`.
+#[cfg(test)]
+pub(in crate::gui) fn pump_until(what: &str, done: &dyn Fn() -> bool) {
+    let context = glib::MainContext::default();
+    let deadline = std::time::Instant::now() + Duration::from_secs(30);
+    while !done() {
+        while context.pending() {
+            context.iteration(false);
+        }
+        assert!(std::time::Instant::now() < deadline, "timed out: {what}");
+        std::thread::sleep(Duration::from_millis(5));
+    }
+}
+
+/// The first widget under `root` (inclusive) that `matches`.
+#[cfg(test)]
+pub(in crate::gui) fn find_widget<W: IsA<gtk::Widget>>(
+    root: &gtk::Widget,
+    matches: &dyn Fn(&W) -> bool,
+) -> Option<W> {
+    if let Some(widget) = root.downcast_ref::<W>()
+        && matches(widget)
+    {
+        return Some(widget.clone());
+    }
+    let mut child = root.first_child();
+    while let Some(current) = child {
+        if let Some(found) = find_widget(&current, matches) {
+            return Some(found);
+        }
+        child = current.next_sibling();
+    }
+    None
 }
 
 mod adjust;
@@ -422,6 +611,9 @@ mod fill_tests {
         let three = vec![one[0].clone(), PathBuf::from("b.png"), PathBuf::from("c.png")];
         assert_eq!(files_subtitle(&three), "{count}.png and 2 more");
         assert_eq!(files_subtitle(&three[..2]), "{count}.png and 1 more");
+        // A right-to-left override would reorder the rest of the line.
+        let spoofed = vec![PathBuf::from("/x/ab\u{202E}gnp.exe.png")];
+        assert_eq!(files_subtitle(&spoofed), "ab\u{FFFD}gnp.exe.png");
     }
 }
 

@@ -16,21 +16,22 @@ use crate::BigImageError;
 pub enum Format {
     /// PNG (lossless, 8/16-bit).
     Png,
-    /// JPEG (quality 0..=100).
+    /// JPEG (quality 1..=100).
     Jpeg,
-    /// WebP (lossless via image's built-in encoder; lossy needs libwebp).
+    /// WebP through libwebp: lossy, lossless or near-lossless, whichever
+    /// is smallest at the target (lossless at a fixed quality of 100).
     WebP,
     /// AVIF (AV1 Image File Format). Encode via ravif, decode via libdav1d.
     Avif,
-    /// TIFF (multi-page support landing later).
+    /// TIFF (one page is written).
     Tiff,
     /// BMP.
     Bmp,
-    /// GIF (static; animated support later).
+    /// GIF (static here; [`crate::animate::make_gif`] writes animations).
     Gif,
-    /// ICO (Windows icon, multi-size).
+    /// ICO (Windows icon, one entry of at most 256 px).
     Ico,
-    /// Netpbm: PPM/PGM/PBM.
+    /// Netpbm: PGM or PPM written, PBM and PAM also read.
     Pnm,
     /// Truevision TGA (game-dev textures).
     Tga,
@@ -62,6 +63,19 @@ impl Format {
         }
     }
 
+    /// Extension of an output in this format made from `input`: the input's
+    /// own spelling when it already names this format (`photo.JPEG`,
+    /// `scan.tif`), so a same-format output keeps the input's name, and
+    /// [`Format::extension`] otherwise. PNM always takes the standard one,
+    /// since its extension follows the pixels ([`Format::extension_for`]).
+    pub fn output_extension(self, input: &std::path::Path) -> &std::ffi::OsStr {
+        let names_self = |ext: &&std::ffi::OsStr| {
+            self != Format::Pnm
+                && ext.to_str().and_then(|ext| Format::parse(ext).ok()) == Some(self)
+        };
+        input.extension().filter(names_self).unwrap_or(std::ffi::OsStr::new(self.extension()))
+    }
+
     /// Extension for a file of this format holding pixels of colour type
     /// `color`, as the pipelines write it: PNM is `pgm` for gray (PGM, P5)
     /// and `ppm` for colour (PPM, P6) — alpha is flattened, so PAM is never
@@ -77,44 +91,45 @@ impl Format {
         }
     }
 
-    /// MIME type.
-    pub fn mime(&self) -> &'static str {
+    /// Whether an output in this format keeps an alpha channel: JPEG and
+    /// PNM composite it over white, Radiance HDR drops it.
+    pub fn stores_alpha(self) -> bool {
+        !matches!(self, Format::Jpeg | Format::Pnm | Format::Hdr)
+    }
+
+    /// Every spelling [`Format::parse`] accepts for this format, lowercase:
+    /// the file extensions it goes by and its name.
+    pub fn spellings(self) -> &'static [&'static str] {
         match self {
-            Format::Png => "image/png",
-            Format::Jpeg => "image/jpeg",
-            Format::WebP => "image/webp",
-            Format::Avif => "image/avif",
-            Format::Tiff => "image/tiff",
-            Format::Bmp => "image/bmp",
-            Format::Gif => "image/gif",
-            Format::Ico => "image/vnd.microsoft.icon",
-            Format::Pnm => "image/x-portable-anymap",
-            Format::Tga => "image/x-tga",
-            Format::Qoi => "image/qoi",
-            Format::Hdr => "image/vnd.radiance",
-            Format::OpenExr => "image/x-exr",
+            Format::Png => &["png"],
+            Format::Jpeg => &["jpg", "jpeg", "jpe"],
+            Format::WebP => &["webp"],
+            Format::Avif => &["avif"],
+            Format::Tiff => &["tif", "tiff"],
+            Format::Bmp => &["bmp", "dib"],
+            Format::Gif => &["gif"],
+            Format::Ico => &["ico"],
+            Format::Pnm => &["pnm", "ppm", "pgm", "pbm", "pam"],
+            Format::Tga => &["tga", "targa"],
+            Format::Qoi => &["qoi"],
+            Format::Hdr => &["hdr", "rgbe"],
+            Format::OpenExr => &["exr", "openexr"],
         }
     }
 
-    /// Parse a format from a user-provided string (case-insensitive). Accepts
-    /// extension-like and name-like spellings.
+    /// Parse a format from a user-provided string (case-insensitive), one of
+    /// its [`Format::spellings`].
+    ///
+    /// # Errors
+    ///
+    /// [`BigImageError::UnsupportedFormat`] when `s` is none of the spellings.
     pub fn parse(s: &str) -> Result<Self, BigImageError> {
-        match s.trim().to_ascii_lowercase().as_str() {
-            "png" => Ok(Format::Png),
-            "jpg" | "jpeg" | "jpe" => Ok(Format::Jpeg),
-            "webp" => Ok(Format::WebP),
-            "avif" => Ok(Format::Avif),
-            "tif" | "tiff" => Ok(Format::Tiff),
-            "bmp" | "dib" => Ok(Format::Bmp),
-            "gif" => Ok(Format::Gif),
-            "ico" => Ok(Format::Ico),
-            "pnm" | "ppm" | "pgm" | "pbm" | "pam" => Ok(Format::Pnm),
-            "tga" | "targa" => Ok(Format::Tga),
-            "qoi" => Ok(Format::Qoi),
-            "hdr" | "rgbe" => Ok(Format::Hdr),
-            "exr" | "openexr" => Ok(Format::OpenExr),
-            other => Err(BigImageError::UnsupportedFormat(other.to_string())),
-        }
+        let spelling = s.trim().to_ascii_lowercase();
+        Format::all()
+            .iter()
+            .copied()
+            .find(|format| format.spellings().contains(&spelling.as_str()))
+            .ok_or(BigImageError::UnsupportedFormat(spelling))
     }
 
     /// Map an [`ImageFormat`] back to one of our variants. Returns `None` if
@@ -182,6 +197,32 @@ mod tests {
     use super::*;
 
     #[test]
+    fn output_extension_keeps_own_spelling() {
+        let ext = |name: &str, format: Format| {
+            format.output_extension(std::path::Path::new(name)).to_str().unwrap().to_owned()
+        };
+        assert_eq!(ext("a.PNG", Format::Png), "PNG");
+        assert_eq!(ext("a.jpeg", Format::Jpeg), "jpeg");
+        assert_eq!(ext("a.TIF", Format::Tiff), "TIF");
+        assert_eq!(ext("a.jpeg", Format::Png), "png");
+        assert_eq!(ext("a", Format::Png), "png");
+        assert_eq!(ext("a.tar.gz", Format::Png), "png");
+        assert_eq!(ext("a.PGM", Format::Pnm), "ppm", "PNM follows the pixels");
+    }
+
+    #[test]
+    fn every_spelling_parses_back() {
+        for &format in Format::all() {
+            for spelling in format.spellings() {
+                assert_eq!(Format::parse(spelling).unwrap(), format);
+                assert_eq!(Format::parse(&spelling.to_uppercase()).unwrap(), format);
+            }
+        }
+        assert!(Format::parse("").is_err());
+        assert!(Format::parse("heic").is_err());
+    }
+
+    #[test]
     fn parse_accepts_common_spellings() {
         assert_eq!(Format::parse("png").unwrap(), Format::Png);
         assert_eq!(Format::parse("JPG").unwrap(), Format::Jpeg);
@@ -230,13 +271,5 @@ mod tests {
             assert_eq!(Format::Pnm.extension_for(color), ext, "{color:?}");
         }
         assert_eq!(Format::Png.extension_for(ColorType::L8), "png");
-    }
-
-    #[test]
-    fn mime_never_empty() {
-        for f in Format::all() {
-            assert!(!f.mime().is_empty());
-            assert!(f.mime().contains('/'));
-        }
     }
 }

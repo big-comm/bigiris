@@ -4,21 +4,23 @@ use std::path::{Path, PathBuf};
 use std::sync::{Arc, Barrier};
 
 use bigimage_core::{
-    convert_file_to, make_gif, open_image, AnimateOptions, ConvertOutcome, EncodeOptions,
-    ExtentOptions, ExtentSize, Filter, Format, Gravity, OverwritePolicy, ResizeMode,
+    AnimateOptions, ConvertOutcome, EncodeOptions, ExtentOptions, ExtentSize, Filter, Format,
+    Gravity, OverwritePolicy, ResizeMode, convert_file_to, make_gif, open_image,
 };
 use image::{DynamicImage, GenericImageView, Rgb, RgbImage};
 
 fn fixture(dir: &Path, name: &str, color: u8) -> PathBuf {
-    std::fs::create_dir_all(dir).unwrap();
+    std::fs::create_dir_all(dir).expect("create the fixture folder");
     let path = dir.join(name);
-    RgbImage::from_pixel(32, 24, Rgb([color, 20, 30])).save(&path).unwrap();
+    RgbImage::from_pixel(32, 24, Rgb([color, 20, 30])).save(&path).expect("save the fixture");
     path
 }
 
 fn assert_no_partials(dir: &Path) {
-    for entry in std::fs::read_dir(dir).unwrap() {
-        assert!(!entry.unwrap().file_name().to_string_lossy().starts_with(".bigiris-"));
+    for entry in std::fs::read_dir(dir).expect("list the output folder") {
+        assert!(
+            !entry.expect("folder entry").file_name().to_string_lossy().starts_with(".bigiris-")
+        );
     }
 }
 
@@ -155,12 +157,38 @@ fn oversized_file_and_pixel_headers_are_rejected_by_viewer() {
     let sparse = dir.path().join("huge.png");
     std::fs::File::create(&sparse).unwrap().set_len(1024 * 1024 * 1024 + 1).unwrap();
     assert!(matches!(open_image(&sparse), Err(image::ImageError::Limits(_))));
-    let pixels = dir.path().join("pixels.ppm");
-    std::fs::write(&pixels, b"P6\n100000 100000\n255\n").unwrap();
-    assert!(matches!(open_image(&pixels), Err(image::ImageError::Limits(_))));
-    // Below the pixel limit, but RGB16 requires >512 MiB.
-    std::fs::write(&pixels, b"P6\n16000 12000\n65535\n").unwrap();
-    assert!(matches!(open_image(&pixels), Err(image::ImageError::Limits(_))));
+    let pixels = dir.path().join("pixels.pnm");
+    for header in [
+        &b"P6\n100000 100000\n255\n"[..],
+        // Past the pixel limit, but 300 MB of gray fits the buffer limit.
+        b"P5\n20000 15000\n255\n",
+        // Below the pixel limit, but RGB16 requires >512 MiB.
+        b"P6\n16000 12000\n65535\n",
+    ] {
+        std::fs::write(&pixels, header).unwrap();
+        let name = String::from_utf8_lossy(header);
+        assert!(matches!(open_image(&pixels), Err(image::ImageError::Limits(_))), "{name}");
+        let dimensions = bigimage_core::image_dimensions(&pixels);
+        assert!(matches!(dimensions, Err(image::ImageError::Limits(_))), "{name}");
+    }
+}
+
+#[test]
+fn encode_refuses_oversized_buffer() {
+    // 36 MB of gray becomes 576 MB of RGBA float for OpenEXR.
+    let dir = tempfile::tempdir().unwrap();
+    let gray = DynamicImage::ImageLuma8(image::GrayImage::new(6000, 6000));
+    let output = dir.path().join("big.exr");
+    let result = bigimage_core::save_image(
+        gray,
+        &output,
+        Format::OpenExr,
+        &EncodeOptions::default(),
+        OverwritePolicy::Replace,
+    );
+    assert!(matches!(result, Err(bigimage_core::BigImageError::InvalidInput(_))), "{result:?}");
+    assert!(!output.exists());
+    assert_no_partials(dir.path());
 }
 
 #[test]
@@ -190,14 +218,16 @@ fn truncated_images_fail_without_panicking_or_publishing() {
     for len in [0, 1, 8, 16, bytes.len() / 2] {
         std::fs::write(&bad, &bytes[..len]).unwrap();
         assert!(open_image(&bad).is_err());
-        assert!(convert_file_to(
-            &bad,
-            Some(&out),
-            Format::Jpeg,
-            &EncodeOptions::default(),
-            OverwritePolicy::Replace
-        )
-        .is_err());
+        assert!(
+            convert_file_to(
+                &bad,
+                Some(&out),
+                Format::Jpeg,
+                &EncodeOptions::default(),
+                OverwritePolicy::Replace
+            )
+            .is_err()
+        );
         assert!(!out.join("bad.jpg").exists());
     }
 }
@@ -460,6 +490,17 @@ fn skip_policy_still_rejects_invalid_operations() {
     existing("src_extent-30x30.png");
     assert_eq!(crop_file(&src, crop, None, skip).unwrap_err().to_string(), fresh_crop);
     assert_eq!(extent_file(&src, extent, None, skip).unwrap_err().to_string(), fresh_extent);
+    let opts = EncodeOptions::default();
+    for (mode, name) in [
+        (ResizeMode::Percent(2000.0), "src_2000pct.png"),
+        (ResizeMode::Exact { width: 0, height: 5 }, "src_0x5.png"),
+        (ResizeMode::Fit { width: 5, height: 0 }, "src_fit-5x0.png"),
+    ] {
+        let resize = || resize_file(&src, mode, Filter::Lanczos3, None, &opts, skip);
+        let fresh = resize().unwrap_err().to_string();
+        existing(name);
+        assert_eq!(resize().unwrap_err().to_string(), fresh, "{mode:?}");
+    }
     // Valid only once transposed (as for an EXIF-rotated photo): still
     // skipped before decoding, the decode path stays authoritative.
     existing("src_crop-20x30+0+0.png");
@@ -468,17 +509,16 @@ fn skip_policy_still_rejects_invalid_operations() {
 
     // Animated input: refused, never reported as skipped.
     let gif = dir.path().join("anim.gif");
-    make_gif(&[src.clone(), fixture(dir.path(), "b.png", 200)], &gif, AnimateOptions::default())
-        .unwrap();
+    make_gif(&[src, fixture(dir.path(), "b.png", 200)], &gif, AnimateOptions::default()).unwrap();
     existing("anim_rot90.gif");
     existing("anim.png");
     assert!(matches!(
         rotate_file(&gif, Rotation::Deg90, None, skip),
-        Err(BigImageError::InvalidInput(_))
+        Err(BigImageError::NotStatic)
     ));
     assert!(matches!(
         convert_file(&gif, Format::Png, &EncodeOptions::default(), skip),
-        Err(BigImageError::InvalidInput(_))
+        Err(BigImageError::NotStatic)
     ));
 }
 
@@ -514,6 +554,24 @@ fn pnm_outputs_are_named_after_the_written_pixels() {
     assert_eq!(std::fs::read(dir.path().join("gray_rot90.pgm")).unwrap(), b"keep");
     let skipped = convert_file(&gray, Format::Pnm, &opts, OverwritePolicy::Skip).unwrap();
     assert_eq!(skipped, ConvertOutcome::Skipped { output: dir.path().join("gray.pgm") });
+    // An existing file of the naive .ppm name is not the output of gray pixels.
+    let fresh = dir.path().join("fresh.png");
+    std::fs::copy(&gray, &fresh).unwrap();
+    std::fs::write(dir.path().join("fresh.ppm"), b"keep").unwrap();
+    let written = convert_file(&fresh, Format::Pnm, &opts, OverwritePolicy::Skip).unwrap();
+    assert_eq!(written, ConvertOutcome::Written { output: dir.path().join("fresh.pgm") });
+    std::fs::write(dir.path().join("fresh_rot90.ppm"), b"keep").unwrap();
+    let rotated =
+        rotate_file(&fresh, Rotation::Deg90, Some(Format::Pnm), OverwritePolicy::Skip).unwrap();
+    assert_eq!(rotated, ConvertOutcome::Written { output: dir.path().join("fresh_rot90.pgm") });
+
+    // A smaller PBM original is never published under the .pgm name.
+    let pbm = dir.path().join("mono.pbm");
+    std::fs::write(&pbm, b"P4\n6 4\n\0\0\0\0").unwrap();
+    let keep = EncodeOptions { strip_metadata: false, ..EncodeOptions::default() };
+    let report = convert_file_report(&pbm, None, Format::Pnm, &keep, replace).unwrap();
+    assert_eq!(report.outcome.path(), dir.path().join("mono.pgm"));
+    assert_eq!(&std::fs::read(report.outcome.path()).unwrap()[..2], b"P5");
     assert_no_partials(dir.path());
 }
 
@@ -648,6 +706,7 @@ fn every_colour_type_saves_to_every_format() {
         let source = bigimage_core::SourceMetadata {
             exif: None,
             icc: Some(if gray { gray_icc.clone() } else { rgb_icc.clone() }),
+            ..Default::default()
         };
         for &format in Format::all() {
             let name = format!("{:?}-{format:?}.{}", image.color(), format.extension());
@@ -685,7 +744,7 @@ fn add_primary_irot(file: &[u8], angle: u8) -> Vec<u8> {
         bytes.windows(4).position(|w| w == kind).expect("box present") - 4
     }
     fn size(bytes: &[u8], at: usize) -> usize {
-        u32::from_be_bytes(bytes[at..at + 4].try_into().unwrap()) as usize
+        u32::from_be_bytes([bytes[at], bytes[at + 1], bytes[at + 2], bytes[at + 3]]) as usize
     }
     fn grow(bytes: &mut [u8], at: usize, by: usize) {
         let new = (size(bytes, at) + by) as u32;
@@ -778,4 +837,86 @@ fn avif_irot_property_of_primary_item_is_applied_on_decode() {
     let bottom = decoded.get_pixel(0, 3).0;
     assert!(top[2] > 200 && top[0] < 60, "top {top:?}");
     assert!(bottom[0] > 200 && bottom[2] < 60, "bottom {bottom:?}");
+}
+
+/// An icon holding one PNG entry per size in `sizes`.
+fn write_multi_size_icon(path: &Path, sizes: &[u32]) {
+    let entries: Vec<_> = sizes
+        .iter()
+        .map(|&size| {
+            let pixels = image::RgbaImage::from_pixel(size, size, image::Rgba([9, 90, 200, 255]));
+            image::codecs::ico::IcoFrame::as_png(
+                pixels.as_raw(),
+                size,
+                size,
+                image::ExtendedColorType::Rgba8,
+            )
+            .expect("encode an icon entry")
+        })
+        .collect();
+    image::codecs::ico::IcoEncoder::new(std::fs::File::create(path).expect("create the icon"))
+        .encode_images(&entries)
+        .expect("encode the icon");
+}
+
+/// A 4x4 OpenEXR with two parts.
+fn write_two_part_exr(path: &Path) {
+    use exr::prelude::{
+        Encoding, Image, ImageAttributes, IntegerBounds, Layer, LayerAttributes, SpecificChannels,
+        Vec2, WritableImage,
+    };
+    let layer = |name: &str| {
+        Layer::new(
+            (4, 4),
+            LayerAttributes::named(name),
+            Encoding::FAST_LOSSLESS,
+            SpecificChannels::rgba(|_: Vec2<usize>| (0.5f32, 0.25f32, 0.125f32, 1.0f32)),
+        )
+    };
+    Image::from_layers(
+        ImageAttributes::new(IntegerBounds::from_dimensions((4, 4))),
+        vec![layer("a"), layer("b")],
+    )
+    .write()
+    .to_file(path)
+    .expect("write the OpenEXR file");
+}
+
+/// Guards: data loss: the decoder returns one entry of these containers, so
+/// writing one back as its own format would drop the others.
+#[test]
+fn multi_entry_containers_refuse_own_format() {
+    use bigimage_core::*;
+    let dir = tempfile::tempdir().unwrap();
+    let opts = EncodeOptions::default();
+    let replace = OverwritePolicy::Replace;
+    let icon = dir.path().join("icon.ico");
+    write_multi_size_icon(&icon, &[16, 32, 64]);
+    let parts = dir.path().join("parts.exr");
+    write_two_part_exr(&parts);
+
+    for (source, own) in [(&icon, Format::Ico), (&parts, Format::OpenExr)] {
+        let before = std::fs::read(source).unwrap();
+        let flipped = flip_file(source, FlipAxis::Horizontal, None, replace);
+        assert!(matches!(flipped, Err(BigImageError::SeveralEntries)), "{own:?}: {flipped:?}");
+        let converted = convert_file_to(source, None, own, &opts, replace);
+        assert!(matches!(converted, Err(BigImageError::SeveralEntries)), "{own:?}");
+        assert!(content::ensure_single_entry(source, Some(own)).is_err());
+        assert_eq!(std::fs::read(source).unwrap(), before);
+        // Another format keeps working with the entry the decoder picks.
+        let png = convert_file_to(source, None, Format::Png, &opts, replace).unwrap();
+        let largest = if own == Format::Ico { (64, 64) } else { (4, 4) };
+        assert_eq!(open_image(png.path()).unwrap().dimensions(), largest);
+    }
+    // Refused rather than reported skipped when the output exists.
+    std::fs::write(dir.path().join("icon_flipH.ico"), b"keep").unwrap();
+    let skipped = flip_file(&icon, FlipAxis::Horizontal, None, OverwritePolicy::Skip);
+    assert!(matches!(skipped, Err(BigImageError::SeveralEntries)), "{skipped:?}");
+    // An icon under a PNG name, converted to PNG over itself.
+    let named_png = dir.path().join("named.png");
+    std::fs::copy(&icon, &named_png).unwrap();
+    let over_itself = convert_file_to(&named_png, None, Format::Png, &opts, replace);
+    assert!(matches!(over_itself, Err(BigImageError::SeveralEntries)), "{over_itself:?}");
+    assert_eq!(std::fs::read(&named_png).unwrap(), std::fs::read(&icon).unwrap());
+    assert_no_partials(dir.path());
 }

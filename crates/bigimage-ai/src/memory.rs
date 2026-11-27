@@ -13,7 +13,6 @@
 use crate::AiError;
 
 pub(crate) const MIB: u64 = 1024 * 1024;
-const GIB: u64 = 1024 * MIB;
 
 fn kilobytes(text: &str, key: &str) -> Option<u64> {
     let rest = text.lines().find_map(|line| line.strip_prefix(key))?;
@@ -37,20 +36,15 @@ fn cgroup_room(maximum: u64, current: u64, inactive_file: u64) -> u64 {
     maximum.saturating_sub(current.saturating_sub(inactive_file))
 }
 
-fn decide(model: &str, available: u64, need: u64) -> Result<(), AiError> {
+fn decide(model: &'static str, available: u64, need: u64) -> Result<(), AiError> {
     if available < need {
-        return Err(AiError::Memory(format!(
-            "{model} needs about {:.2} GiB of free RAM for this step; available now: {:.2} GiB. \
-             Close other programs or use a smaller image. Swap does not count as free RAM.",
-            need as f64 / GIB as f64,
-            available as f64 / GIB as f64,
-        )));
+        return Err(AiError::Memory { model, need, available });
     }
     Ok(())
 }
 
 fn unknown(error: impl std::fmt::Display) -> AiError {
-    AiError::Memory(format!("could not check the memory budget: {error}"))
+    AiError::MemoryUnknown(error.to_string())
 }
 
 fn process_value(key: &str) -> Result<u64, AiError> {
@@ -111,25 +105,14 @@ pub(crate) fn available() -> Result<u64, AiError> {
 }
 
 /// Refuse to start when `need` bytes are not available now.
-pub(crate) fn admit(model: &str, need: u64) -> Result<(), AiError> {
+pub(crate) fn admit(model: &'static str, need: u64) -> Result<(), AiError> {
     decide(model, available()?, need)
-}
-
-/// Resident memory of this process (`VmRSS`), for measurements.
-#[allow(dead_code)]
-pub(crate) fn resident_bytes() -> Result<u64, AiError> {
-    process_value("VmRSS:")
-}
-
-/// Peak resident memory of this process (`VmHWM`), for measurements.
-#[allow(dead_code)]
-pub(crate) fn peak_bytes() -> Result<u64, AiError> {
-    process_value("VmHWM:")
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    const GIB: u64 = 1024 * MIB;
 
     #[test]
     fn admission_compares_the_estimate_with_what_is_free() {
@@ -171,6 +154,5 @@ mod tests {
             Ok(available) => assert!(available > 0),
             Err(error) => eprintln!("memory budget unknown here: {error}"),
         }
-        assert!(resident_bytes().unwrap() > 0 && peak_bytes().unwrap() > 0);
     }
 }

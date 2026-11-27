@@ -7,9 +7,9 @@
 //! image (multiplied into any alpha it already had). The output is always
 //! 8-bit RGBA; 16-bit and float sources are converted to 8-bit sRGB first.
 //!
-//! **Batch use:** the loaded model is kept for the process (see
-//! [`unload`]), so [`BgSession`] is only a handle: build one per batch and
-//! call [`BgSession::process`] per image.
+//! **Batch use:** the loaded model is kept until [`unload`] or
+//! [`crate::unload_all`], so [`BgSession`] is only a handle: build one per
+//! batch and call [`BgSession::process`] per image.
 //!
 //! The weights come from the BigLinux package `birefnet-native` (MIT);
 //! `BIGIRIS_BIREFNET_WEIGHTS` points at another file.
@@ -57,7 +57,7 @@ pub fn availability() -> Availability {
     MODEL.availability()
 }
 
-/// Where the loaded model runs; `None` before the first run.
+/// Where the loaded model runs; `None` while none is loaded.
 pub fn device() -> Option<Device> {
     SLOT.device()
 }
@@ -100,12 +100,27 @@ pub(crate) fn logit_alpha(value: f32) -> u8 {
 
 /// One-shot background removal. Loads the model the first time and keeps
 /// it for later calls.
+///
+/// # Errors
+///
+/// As [`remove_background_with_progress`], which this never cancels.
 pub fn remove_background(input: &DynamicImage) -> Result<DynamicImage, AiError> {
     remove_background_with_progress(input, |_| ControlFlow::Continue(()))
 }
 
 /// [`remove_background`] reporting [`Stage`]s; breaking cancels before
 /// the network starts (BiRefNet runs as one step).
+///
+/// # Errors
+///
+/// - [`AiError::Disabled`]: the build has no `native` engines.
+/// - [`AiError::Missing`] or [`AiError::Unreadable`]: the weights are not
+///   installed or cannot be read.
+/// - [`AiError::Memory`] or [`AiError::MemoryUnknown`]: free RAM is short for
+///   the step, or cannot be read.
+/// - [`AiError::Processing`]: `input` is empty or over the RGBA size limit.
+/// - [`AiError::Cancelled`]: `progress` breaks.
+/// - [`AiError::Inference`] or [`AiError::Gpu`]: the engine fails.
 pub fn remove_background_with_progress(
     input: &DynamicImage,
     mut progress: impl FnMut(Stage) -> ControlFlow<()>,
@@ -122,6 +137,10 @@ impl BgSession {
     /// Check that the model is installed and load it now (reporting
     /// [`Stage::Loading`]), so the first [`process`](Self::process) does
     /// not pay for it and errors show before any file is touched.
+    ///
+    /// # Errors
+    ///
+    /// As [`preload`].
     pub fn new(mut progress: impl FnMut(Stage) -> ControlFlow<()>) -> Result<Self, AiError> {
         preload(&mut progress)?;
         Ok(Self { _private: () })
@@ -133,11 +152,19 @@ impl BgSession {
     }
 
     /// Remove the background of `input`.
+    ///
+    /// # Errors
+    ///
+    /// As [`remove_background_with_progress`].
     pub fn process(&mut self, input: &DynamicImage) -> Result<DynamicImage, AiError> {
         remove_background(input)
     }
 
     /// [`process`](Self::process) with progress and cancellation.
+    ///
+    /// # Errors
+    ///
+    /// As [`remove_background_with_progress`].
     pub fn process_with_progress(
         &mut self,
         input: &DynamicImage,
@@ -148,6 +175,16 @@ impl BgSession {
 }
 
 /// Load the model (when it is not loaded yet) without running it.
+///
+/// # Errors
+///
+/// - [`AiError::Disabled`]: the build has no `native` engines.
+/// - [`AiError::Missing`] or [`AiError::Unreadable`]: the weights are not
+///   installed or cannot be read.
+/// - [`AiError::Memory`] or [`AiError::MemoryUnknown`]: free RAM is short for
+///   the model, or cannot be read.
+/// - [`AiError::Cancelled`]: `progress` breaks.
+/// - [`AiError::Inference`] or [`AiError::Gpu`]: the engine cannot load it.
 pub fn preload(progress: &mut dyn FnMut(Stage) -> ControlFlow<()>) -> Result<Device, AiError> {
     #[cfg(feature = "native")]
     {

@@ -290,6 +290,13 @@ pub(in crate::gui) fn nudge(
     if !resize {
         return drag_to(Drag::Move { start: rect }, delta, natural, ratio);
     }
+    // Under a fixed ratio the corner moves along the diagonal: a one-axis
+    // step would be undone, since the ratio keeps the larger side.
+    let delta = match ratio {
+        Some(r) if dirs.0 != 0.0 => (delta.0, delta.0 / r),
+        Some(r) => (delta.1 * r, delta.1),
+        None => delta,
+    };
     // Shrinking stops at one pixel instead of flipping past the anchor.
     let delta = (delta.0.max(1.0 - rect.w), delta.1.max(1.0 - rect.h));
     drag_to(Drag::Resize { start: rect, handle: Handle::SE }, delta, natural, ratio)
@@ -374,7 +381,15 @@ const SUSPENDED_ACTIONS: [&str; 22] = [
 ];
 
 pub(in crate::gui) fn build() -> CropUi {
-    let area = gtk::DrawingArea::builder().hexpand(true).vexpand(true).visible(false).build();
+    // Focusable, so Return and the arrows reach the selection once crop
+    // mode starts, whatever had the focus before.
+    let area = gtk::DrawingArea::builder()
+        .hexpand(true)
+        .vexpand(true)
+        .visible(false)
+        .focusable(true)
+        .build();
+    area.update_property(&[gtk::accessible::Property::Label(&gettext("Crop selection"))]);
     let labels: Vec<String> = PRESETS
         .iter()
         .map(|(label, _)| match *label {
@@ -409,7 +424,6 @@ pub(in crate::gui) fn build() -> CropUi {
     let pill = gtk::Box::new(gtk::Orientation::Horizontal, 0);
     pill.add_css_class("osd");
     pill.add_css_class("toolbar");
-    pill.add_css_class("crop-bar");
     pill.append(&row);
     let bar = gtk::Revealer::builder()
         .transition_type(gtk::RevealerTransitionType::SlideUp)
@@ -458,7 +472,10 @@ pub(in crate::gui) fn current_fit(s: &ViewerState, natural: (u32, u32)) -> Fit {
 fn refresh(s: &ViewerState) {
     if let Some(session) = s.crop.as_ref() {
         let (_, _, w, h) = to_pixels(session.rect, session.natural);
-        s.crop_ui.size_label.set_text(&format!("{w} × {h} px"));
+        s.crop_ui.size_label.set_text(&fill(
+            &gettext("{width} × {height} px"),
+            &[("width", &w.to_string()), ("height", &h.to_string())],
+        ));
     }
     s.crop_ui.area.queue_draw();
 }
@@ -511,15 +528,11 @@ pub(in crate::gui) fn connect(state: &Rc<RefCell<ViewerState>>, window: &adw::Ap
             if fit.scale <= 0.0 {
                 return;
             }
-            if let Some(session) = s.crop.as_mut() {
-                if let Some(drag) = session.drag {
-                    session.rect = drag_to(
-                        drag,
-                        (dx / fit.scale, dy / fit.scale),
-                        session.natural,
-                        session.ratio,
-                    );
-                }
+            if let Some(session) = s.crop.as_mut()
+                && let Some(drag) = session.drag
+            {
+                session.rect =
+                    drag_to(drag, (dx / fit.scale, dy / fit.scale), session.natural, session.ratio);
             }
             refresh(&s);
         });
@@ -536,15 +549,19 @@ pub(in crate::gui) fn connect(state: &Rc<RefCell<ViewerState>>, window: &adw::Ap
         });
     }
     area.add_controller(drag);
-    // Double-click inside the selection crops, like confirming in most editors.
+    // Double-click inside the selection crops, like confirming in most
+    // editors; outside it, where a new selection starts, it does nothing.
     let click = gtk::GestureClick::builder().button(1).build();
     {
         let weak = Rc::downgrade(state);
-        click.connect_pressed(move |_, presses, _, _| {
-            if presses == 2 {
-                if let Some(state) = weak.upgrade() {
-                    apply(&state);
-                }
+        click.connect_pressed(move |_, presses, x, y| {
+            let Some(state) = weak.upgrade() else { return };
+            let inside = state.borrow().crop.as_ref().is_some_and(|session| {
+                let fit = current_fit(&state.borrow(), session.natural);
+                matches!(hit((x, y), session.rect, fit, session.natural), Drag::Move { .. })
+            });
+            if presses == 2 && inside {
+                apply(&state);
             }
         });
     }
@@ -621,8 +638,10 @@ pub(in crate::gui) fn enter(state: &Rc<RefCell<ViewerState>>) {
         }
         if s.saving {
             Some(gettext("Wait for saving to finish"))
+        } else if s.edit.busy() {
+            Some(gettext("Wait for the running tool to finish"))
         } else if !s.current_ready {
-            return;
+            Some(gettext("Wait for the image to finish loading"))
         } else {
             None
         }
@@ -635,12 +654,15 @@ pub(in crate::gui) fn enter(state: &Rc<RefCell<ViewerState>>) {
     if let Some(id) = state.borrow_mut().slideshow_source.take() {
         id.remove();
     }
+    // The selection is drawn against the edited image: stop showing the
+    // original, as closing the panel does.
+    super::edit_panel::hide_original(state);
     set_zoom(state, ZoomState::Fit);
     // Back to "free" before the session exists, so the preset handler
     // (which needs the state) runs now and finds nothing to update.
     let aspect = state.borrow().crop_ui.aspect.clone();
     aspect.set_selected(0);
-    let window = state.borrow().window().clone();
+    let window = state.borrow().window();
     let suspended = SUSPENDED_ACTIONS
         .iter()
         .filter_map(|name| window.lookup_action(name)?.downcast::<gio::SimpleAction>().ok())
@@ -677,6 +699,7 @@ pub(in crate::gui) fn enter(state: &Rc<RefCell<ViewerState>>) {
     area.set_visible(true);
     bar.set_visible(true);
     bar.set_reveal_child(true);
+    area.grab_focus();
     osd_label.set_text(&gettext(
         "Drag the corners to resize · inside the crop to move · outside it for a new selection.",
     ));
@@ -871,6 +894,19 @@ mod tests {
         let r = Rect { x: 100.0, y: 50.0, w: 200.0, h: 100.0 };
         let moved = drag_to(Drag::Move { start: r }, (1000.0, -1000.0), NAT, None);
         assert!(close(moved, Rect { x: 200.0, y: 0.0, w: 200.0, h: 100.0 }));
+    }
+
+    /// Shift+Left or Shift+Up shrinks a selection under a fixed ratio by one
+    /// step (1 % of 400 px) on both sides, the ratio kept.
+    #[test]
+    fn ratio_nudge_shrinks_both_sides() {
+        let r = Rect { x: 50.0, y: 0.0, w: 300.0, h: 300.0 };
+        for dirs in [(-1.0, 0.0), (0.0, -1.0)] {
+            let shrunk = nudge(r, dirs, true, NAT, Some(1.0));
+            assert!(close(shrunk, Rect { x: 50.0, y: 0.0, w: 296.0, h: 296.0 }), "{shrunk:?}");
+        }
+        let free = nudge(r, (-1.0, 0.0), true, NAT, None);
+        assert!(close(free, Rect { x: 50.0, y: 0.0, w: 296.0, h: 300.0 }), "{free:?}");
     }
 
     #[test]

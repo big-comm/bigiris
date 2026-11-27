@@ -16,7 +16,6 @@ pub(in crate::gui) fn build_flip_dialog(
     let window = adw::ApplicationWindow::builder()
         .application(app)
         .default_width(440)
-        .default_height(340)
         .title(gettext("Flip images — Prisma"))
         .build();
 
@@ -44,26 +43,13 @@ pub(in crate::gui) fn build_flip_dialog(
 
     let status = status_label();
 
-    let (cancel_btn, apply_btn, actions) = action_buttons(&gettext("Flip"));
-
     let content = padded_box(gtk::Orientation::Vertical, 16);
     content.append(&group);
-    content.append(&status);
-    content.append(&actions);
-
-    set_dialog_content(&window, &header, &content);
-
-    close_on_click(&window, &cancel_btn);
+    let apply_btn = set_form_dialog_content(&window, &header, &content, &status, &gettext("Flip"));
 
     {
-        let files = files.clone();
-        let axis_row = axis_row.clone();
-        let target_row = target_row.clone();
-        let overwrite_row = overwrite_row.clone();
-        let status = status.clone();
-        let apply_btn = apply_btn.clone();
         let window = window.clone();
-        dialog_signal!(window, apply_btn.clone(), connect_clicked, move |_| {
+        dialog_signal!(window, apply_btn, connect_clicked, move |_| {
             let axis = match axis_row.selected() {
                 0 => FlipAxis::Horizontal,
                 _ => FlipAxis::Vertical,
@@ -77,6 +63,11 @@ pub(in crate::gui) fn build_flip_dialog(
             let work_files: Vec<PathBuf> = (*files).clone();
             run_batch_async(
                 work_files,
+                crate::output_plan::Naming::image(
+                    target,
+                    policy,
+                    crate::output_plan::OutputSuffix::Fixed(axis.filename_suffix().into()),
+                ),
                 move |f| flip_file(f, axis, target, policy),
                 gettext("Flipping"),
                 status.clone(),
